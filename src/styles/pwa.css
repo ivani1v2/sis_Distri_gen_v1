@@ -1,0 +1,22 @@
+/* Bloquea scroll del viewport y el pull-to-refresh */
+html, body {
+  height: 100%;
+  overflow: hidden;             /* el body ya no scrollea */
+  overscroll-behavior-y: none;  /* evita refresco del viewport */
+}
+
+/* Asegura altura completa en Vuetify */
+#app,
+.v-application,
+.v-application--wrap {
+  height: 100%;
+}
+
+/* El contenedor que SÍ scrollea */
+.viewport-scroll {
+  height: 100svh;                    /* mejor para móviles con barras dinámicas */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* inercia iOS */
+  overscroll-behavior-y: contain;    /* evita encadenar al viewport */
+  /* Si quieres bloquear también el "rebote", usa: overscroll-behavior-y: none; */
+}

@@ -1,0 +1,716 @@
+<template>
+    <div content-class="dialogo-cantidad-centrado">
+        <v-autocomplete v-if="!activaproductos && x_categoria" v-model="producto_sele" :items="productosFiltrados"
+            item-text="displayText" item-value="id" :filter="filtrarProductos"
+            :label="muestra_tabla ? 'Buscar Productos (F1)' : 'Buscar Productos'" clearable :auto-select-first="true"
+            menu-props="{ maxHeight: '300px', auto: true }" outlined dense ref="buscarField"
+            @keydown.native="detectarEntrada" :autofocus="!$store.state.esmovil && muestra_tabla"
+            append-icon="mdi-magnify" :loading="cargando" :search-input.sync="buscar"
+            no-data-text="No se encontraron productos" @change="prod_selecto" >
+            <template v-slot:item="{ item }">
+                <v-list-item-content>
+                    <v-list-item-title>
+                        <span class="text-caption grey--text text--darken-2">
+                            {{ (item.categoria || '').slice(0, 4).toUpperCase() }}
+                        </span>
+                        — {{ item.nombre }}
+                        <small v-if="$store.state.configuracion && $store.state.configuracion.mostrar_codigo"
+                            class="grey--text text--darken-1">
+                            ({{ item.id }})
+                        </small>
+                        — <strong class="red--text">S/. {{ Number(item.precio || 0).toFixed(2) }}</strong>
+                    </v-list-item-title>
+                </v-list-item-content>
+            </template>
+
+        </v-autocomplete>
+        <v-card class="elevation-6" v-show="muestra_tabla" v-if="x_categoria">
+
+
+            <v-simple-table v-if="!activaproductos" fixed-header class="pa-1 mt-n3"
+                style="height: calc(80vh - 80px); overflow-y: auto;">
+                <template v-slot:default>
+                    <thead></thead>
+                    <tbody>
+                        <v-row class="mt-1 mb-4 mx-auto text-center" dense>
+                            <v-col v-for="item in $store.state.categorias" :key="item.id" cols="6" class="pa-1">
+                                <v-card class="hoverable" @click.prevent="iraproductos(item)"
+                                    style="height: 65px; overflow: hidden;">
+                                    <v-card-text class="text-center"
+                                        style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                                        <span class="text-body-5 font-weight-medium">{{ item.nombre }}</span>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                    </tbody>
+                </template>
+            </v-simple-table>
+            <div v-if="activaproductos">
+                <v-card-title>
+                    <v-btn icon class="ml-2 mt-n1" @click="regresar">
+                        <v-icon color="red">mdi-arrow-left</v-icon>
+                    </v-btn>
+                    <v-spacer></v-spacer>
+                    <v-text-field ref="buscarField" class="mb-n1 mt-n2" outlined dense v-model="buscar"
+                        append-icon="mdi-magnify" label="Buscar" single-line hide-details
+                        :autofocus="!$store.state.esmovil"></v-text-field>
+                </v-card-title>
+                <v-simple-table fixed-header height="65vh" dense class="elevation-6">
+                    <template v-slot:default>
+                        <thead>
+                            <tr>
+                                <th class="text-left">Nombre</th>
+                                <th class="text-left">Stock</th>
+                                <th class="text-left">Precio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in listafiltrada" :key="item.id" @click="prod_selecto2(item)">
+                                <td class=" text-body-2"><span v-if="$store.state.configuracion.mostrar_codigo">{{
+                                    item.id }}-</span>{{ item.nombre }}</td>
+                                <td class="text-body-2">{{ convierte_stock(item.stock, item.factor) }}</td>
+                                <td class="text-body-2">{{ item.precio }}</td>
+                            </tr>
+                        </tbody>
+                    </template>
+                </v-simple-table>
+            </div>
+        </v-card>
+        <v-card class="elevation-6" v-show="muestra_tabla" v-if="!x_categoria">
+
+            <div>
+                <v-card-title>
+                    <v-text-field ref="buscarField" class="mb-n1 mt-n2" outlined dense v-model="buscar"
+                        append-icon="mdi-magnify" label="Buscar" single-line hide-details
+                        :autofocus="!$store.state.esmovil"></v-text-field>
+                </v-card-title>
+                <v-simple-table fixed-header height="65vh" dense class="elevation-6">
+                    <template v-slot:default>
+                        <thead>
+                            <tr>
+                                <th class="text-left">Nombre</th>
+                                <th class="text-left">Stock</th>
+                                <th class="text-left">Precio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in listafiltrada" :key="item.id" @click="prod_selecto2(item)">
+                                <td style="font-size:75%;"><span v-if="$store.state.configuracion.mostrar_codigo">{{
+                                    item.id }}-</span> {{ item.nombre }}</td>
+                                <td style="font-size:75%;">{{ convierte_stock(item.stock, item.factor) }}</td>
+                                <td style="font-size:75%;">{{ item.precio }}</td>
+                            </tr>
+                        </tbody>
+                    </template>
+                </v-simple-table>
+            </div>
+        </v-card>
+        <v-dialog v-model="dialo_cantidad" max-width="300px">
+            <v-card>
+                <v-system-bar window dark>
+                    <v-icon @click="dialo_cantidad = false">mdi-close</v-icon>
+                    <v-spacer></v-spacer>
+                </v-system-bar>
+                <v-card-text class="mt-4">
+                    <!-- Selector CAJAS + UND simultáneos -->
+                    <div class="text-caption grey--text text--darken-1" v-if="getFactor(producto_selecto) > 1">
+                        Stock:
+                        <strong>{{ Math.floor(Number(producto_selecto.stock || 0) / getFactor(producto_selecto))
+                        }}</strong>
+                        cajas
+                        + <strong>{{ Number(producto_selecto.stock || 0) % getFactor(producto_selecto) }}</strong> und
+                        (total <strong>{{ producto_selecto.stock }}</strong> und) — Factor: {{
+                            getFactor(producto_selecto) }}
+                        und/caja
+                    </div>
+                    <v-row class="pa-1" v-if="producto_selecto && getFactor(producto_selecto) > 1">
+                        <v-col cols="6">
+                            <v-btn small block :outlined="modoVenta !== 'entero'"
+                                :color="modoVenta === 'entero' ? 'success' : undefined"
+                                :disabled="getFactor(producto_selecto) <= 1" @click="seleeciona_modo('entero')">
+                                {{ producto_selecto.medida || 'CAJA' }}
+                            </v-btn>
+                        </v-col>
+                        <v-col cols="6">
+                            <v-btn small block :outlined="modoVenta !== 'fraccion'"
+                                :color="modoVenta === 'fraccion' ? 'success' : undefined"
+                                @click="seleeciona_modo('fraccion')">
+                                UND.
+                            </v-btn>
+                        </v-col>
+                    </v-row>
+
+                    <div class="mb-3 text-center" v-if="producto_selecto && this.buscar_activo_precio(1)"">
+                        <!-- Precio normal -->
+                        <v-tooltip bottom>
+                            <template v-slot:activator="{ on, attrs }">
+                        <v-chip x-small class="ma-1" outlined :color="tierVisual === 1 ? 'red' : 'grey lighten-2'"
+                            :text-color="tierVisual === 1 ? 'black' : 'black'" :input-value="tierVisual === 1"
+                            @click="precioSeleccionado = 1">
+                            S/ {{ fmt(precioChip(producto_selecto, 1)) }}
+                            <span class="ml-1 caption grey--text text--darken-1" v-if="tieneMay1(producto_selecto)">
+                                (&lt; {{ producto_selecto.escala_may1 }})
+                            </span>
+                            <v-icon x-small class="ml-1"
+                                v-if="precioSeleccionado === null && _tierSugerido === 1">mdi-robot</v-icon>
+                        </v-chip>
+
+</template>
+<span v-if="tieneMay1(producto_selecto)">
+    Aplica cuando la cantidad es menor a {{ producto_selecto.escala_may1 }} unidades.
+</span>
+<span v-else>Precio sin mayoreo.</span>
+</v-tooltip>
+
+<!-- Mayoreo 1 -->
+<v-tooltip bottom v-if="tieneMay1(producto_selecto) && this.buscar_activo_precio(2)">
+    <template v-slot:activator="{ on, attrs }">
+        <v-chip x-small class="ma-1" outlined :color="tierVisual === 2 ? 'red' : 'grey lighten-2'"
+            :text-color="tierVisual === 2 ? 'black' : 'black'" :input-value="tierVisual === 2"
+            @click="precioSeleccionado = 2">
+            S/ {{ fmt(precioChip(producto_selecto, 2)) }}
+            <span class="ml-1 caption grey--text text--darken-1">
+                (desde {{ producto_selecto.escala_may1 }})
+            </span>
+            <v-icon x-small class="ml-1" v-if="precioSeleccionado === null && _tierSugerido === 2">mdi-robot</v-icon>
+        </v-chip>
+
+    </template>
+    <span v-if="tieneMay2(producto_selecto)">
+        Aplica desde {{ producto_selecto.escala_may1 }} hasta antes de {{
+            producto_selecto.escala_may2
+        }} unidades.
+    </span>
+    <span v-else>
+        Aplica desde {{ producto_selecto.escala_may1 }} unidades en adelante.
+    </span>
+</v-tooltip>
+
+<!-- Mayoreo 2 -->
+<v-tooltip bottom v-if="tieneMay2(producto_selecto) && this.buscar_activo_precio(3)"">
+                            <template v-slot:activator="{ on, attrs }">
+    <v-chip class="ma-1" outlined :color="tierVisual === 3 ? 'red' : 'grey lighten-2'"
+        :text-color="tierVisual === 3 ? 'black' : 'black'" :input-value="tierVisual === 3"
+        @click="precioSeleccionado = 3">
+        S/ {{ fmt(precioChip(producto_selecto, 3)) }}
+        <span class="ml-1 caption grey--text text--darken-1">
+            (desde {{ producto_selecto.escala_may2 }})
+        </span>
+        <v-icon x-small class="ml-1" v-if="precioSeleccionado === null && _tierSugerido === 3">mdi-robot</v-icon>
+    </v-chip>
+    </template>
+    <span>Aplica desde {{ producto_selecto.escala_may2 }} unidades en adelante.</span>
+</v-tooltip>
+
+<!-- Botón para volver a AUTO -->
+<div class="mt-2" v-if="false">
+    <v-btn x-small text color="primary" @click="precioSeleccionado = null">
+        Usar precio automático por cantidad
+    </v-btn>
+</div>
+</div>
+
+<div v-if="producto_selecto" class="mb-2">
+    <v-row dense>
+        <v-col cols="12">
+            <v-text-field type="number" outlined dense v-model.number="cantidadInput" :label="modoVenta === 'entero'
+                ? `Cantidad (${producto_selecto.medida || 'CAJA'})`
+                : 'Cantidad (UND)'" min="0" @focus="$event.target.select()" autofocus
+                @keydown.enter="agrega_con_cantidad()" />
+        </v-col>
+    </v-row>
+
+    <div class="text-caption mt-1">
+        Total a vender: <strong>{{ totalUnidades }}</strong> und
+    </div>
+</div>
+<v-text-field ref="cantidadRef" v-if="false" type="number" autofocus outlined dense v-model="cantidad" label="CANTIDAD"
+    @focus="$event.target.select(); centrarDialogoLuego()" @keydown.enter="agrega_con_cantidad()"></v-text-field>
+</v-card-text>
+
+<v-card-actions>
+    <v-btn class="mt-n7" color="red" @click="agrega_con_cantidad()" block>OK</v-btn>
+</v-card-actions>
+</v-card>
+
+</v-dialog>
+<v-snackbar v-if="muestra_tabla" v-model="snackAgregar" :timeout="2000" top right color="success" elevation="2"
+    content-class="d-flex align-center">
+    <v-icon left small class="mr-2">mdi-check-circle</v-icon>
+    {{ snackMsg }}
+</v-snackbar>
+</div>
+</template>
+
+<script>
+import store from '@/store/index'
+export default {
+    name: 'caja',
+
+    props: {
+        data: [],
+        muestra_tabla: null,
+        x_categoria: true,
+        lista_precios: {
+            type: Array,
+            default: () => ['1', '2', '3']
+        }
+    },
+    data() {
+        return {
+            activaproductos: false,
+            producto_sele: '',
+            buscar: '',
+            cantidad: '',
+            producto_selecto: '',
+            dialo_cantidad: false,
+            categoriaselecta: '',
+            cargando: false,
+            tiempoBusqueda: null,
+            tiempoUltimaTecla: 0,
+            esCodigoDeBarras: false,
+            codigoIngresado: '',
+            precioSeleccionado: null,
+            modoVenta: 'fraccion',
+            cantidadInput: 1,
+            cantCajas: 0,
+            cantUnd: 0,
+            snackAgregar: false,
+            snackMsg: 'Producto agregado',
+        }
+    },
+    computed: {
+        totalUnidades() {
+            if (!this.producto_selecto) return 0;
+            const f = this.getFactor(this.producto_selecto);
+            const q = Number(this.cantidadInput || 0);
+            return this.modoVenta === 'entero' ? q * f : q; // entero=cajas→unidades, fraccion=unidades directas
+        },
+        listafiltrada() {
+            var invent = store.state.productos
+            return invent.filter((item) =>
+                (item.activo) == true)
+                .filter((item) => (item.categoria)
+                    .toLowerCase().includes(this.categoriaselecta.toLowerCase()))
+                .filter((item) => (item.nombre + item.id)
+                    .toLowerCase().includes(this.buscar.toLowerCase()))
+
+        },
+        productosFiltrados() {
+            if (store.state.configuracion.mostrar_codigo) {
+                return store.state.productos
+                    .filter(item => item.activo) // Solo productos activos
+                    .map(item => ({
+                        ...item,
+                        displayText: `${item.id} ${item.nombre} (${item.codbarra})` // Concatenamos nombre y código de barras
+                    }));
+            } else {
+                return store.state.productos
+                    .filter(item => item.activo) // Solo productos activos
+                    .map(item => ({
+                        ...item,
+                        displayText: `${item.nombre} (${item.codbarra})` // Concatenamos nombre y código de barras
+                    }));
+            }
+
+        },
+        tierVisual() {
+            return (this.precioSeleccionado === null || this.precioSeleccionado === undefined)
+                ? this._tierSugerido
+                : this.precioSeleccionado;
+        },
+    },
+    mounted() {
+        window.addEventListener("keydown", this.detectarTecla);
+    },
+    beforeDestroy() {
+        window.removeEventListener("keydown", this.detectarTecla);
+    },
+
+    watch: {
+        cantidadInput() {
+            if (this.producto_selecto && this.precioSeleccionado === null) {
+                this._tierSugerido = this.sugerirTier(this.producto_selecto, this.totalUnidades);
+            }
+        },
+        modoVenta() {
+            if (this.producto_selecto && this.precioSeleccionado === null) {
+                this._tierSugerido = this.sugerirTier(this.producto_selecto, this.totalUnidades);
+            }
+        },
+        cantidad(nv) {
+            // si está en modo auto (null), ajusta chip sugerido visualmente
+            if (this.producto_selecto && this.precioSeleccionado === null) {
+                const tier = this.sugerirTier(this.producto_selecto, this.toNum(nv || 1, 1));
+                // solo pinta los chips; sigue en auto (null)
+                this._tierSugerido = tier;
+            }
+        },
+        producto_selecto(nv) {
+            if (nv) {
+                // reinicia auto
+                this.precioSeleccionado = null;
+                const tier = this.sugerirTier(nv, this.toNum(this.cantidad || 1, 1));
+                this._tierSugerido = tier;
+            }
+        },
+        cantCajas() {
+            if (this.producto_selecto && this.precioSeleccionado === null) {
+                this._tierSugerido = this.sugerirTier(this.producto_selecto, this.totalUnidades);
+            }
+        },
+        cantUnd() {
+            if (this.producto_selecto && this.precioSeleccionado === null) {
+                this._tierSugerido = this.sugerirTier(this.producto_selecto, this.totalUnidades);
+            }
+        },
+    },
+    created() {
+        this.buscar = ''
+        this._tierSugerido = 1; // estado interno para pintar sugerencia
+    },
+    methods: {
+
+        precioChip(producto, tier) {
+            const base = this.precioPorTier(producto, tier);      // precio por UNIDAD según tier
+            const f = this.getFactor(producto);
+            return (this.modoVenta === 'entero' && f > 1) ? base * f : base; // si es CAJA, multiplica
+        },
+        fmt(v) {
+            return (Number(v) || 0).toFixed(2);
+        },
+        seleeciona_modo(m) {
+            if (m === 'entero' && this.getFactor(this.producto_selecto) <= 1) return;
+            this.modoVenta = m === 'entero' ? 'entero' : 'fraccion';
+            // Por UX, si estaba en 0, pon 1
+            if (!Number(this.cantidadInput)) this.cantidadInput = 1;
+        },
+        getFactor(p) {
+            const f = Number(p && p.factor);
+            return Number.isFinite(f) && f > 0 ? f : 1;
+        },
+        filtrarProductos(item, queryText, itemText) {
+            // Convertimos todo a minúsculas y eliminamos espacios extra
+            const textoItem = itemText.toLowerCase().trim();
+            const palabrasQuery = queryText.toLowerCase().trim().split(/\s+/);
+
+            // Verificamos que cada palabra escrita esté presente en el texto del item
+            return palabrasQuery.every(palabra => textoItem.includes(palabra));
+        },
+        detectarTecla(event) {
+            if (event.key === "F1") {
+                event.preventDefault();
+                this.enfocarInput();
+            }
+
+        },
+        enfocarInput() {
+            this.$nextTick(() => {
+                this.$refs.buscarField.focus(); // Método para enfocar el campo
+            })
+        },
+        detectarEntrada(event) {
+            const ahora = new Date().getTime();
+            const diferencia = ahora - this.tiempoUltimaTecla;
+            this.tiempoUltimaTecla = ahora;
+            console.log(diferencia)
+            if (diferencia < 50) {
+                // Se asume que es lector de código de barra
+                this.esCodigoDeBarras = true;
+                this.codigoIngresado += event.key;
+                
+            } else {
+                // Se asume que es teclado
+                this.esCodigoDeBarras = false;
+                this.codigoIngresado = event.key;
+            }
+        },
+        agrega_con_cantidad() {
+            const factor = this.getFactor(this.producto_selecto);
+            const q = this.toNum(this.cantidadInput, 0);
+            const unidadesTotal = this.modoVenta === 'entero' ? q * factor : q; // SIEMPRE en unidades para validar
+
+            if (!unidadesTotal || unidadesTotal <= 0) {
+                store.commit("dialogosnackbar", "Ingrese una cantidad mayor a 0");
+                return;
+            }
+
+            if (this.producto_selecto.controstock) {
+                const stockDisponible = Number(this.producto_selecto.stock || 0);
+                if (unidadesTotal > stockDisponible) {
+                    store.commit("dialogosnackbar", "Cantidad supera el stock disponible");
+                    return;
+                }
+            }
+
+            this.dialo_cantidad = false;
+
+            // Tier: respeta manual; si no, por unidades totales
+            const tier = (this.precioSeleccionado ?? this.sugerirTier(this.producto_selecto, unidadesTotal));
+            const precioUnidad = this.precioPorTier(this.producto_selecto, tier);
+
+            const esCaja = (this.modoVenta === 'entero');
+
+            // 🔴 Precio a emitir:
+            // - CAJA  : precio por caja = precioUnidad * factor
+            // - UNIDAD: precio por unidad
+            const precioEmitido = esCaja ? (precioUnidad * factor) : precioUnidad;
+
+            // Cantidad a emitir (para visual / total de línea):
+            // - CAJA  : cantidad = número de cajas (q)
+            // - UNIDAD: cantidad = unidades (q)
+            const cantidadEmitida = q;
+            const medidaEmitida = (factor === 1)
+                ? (this.producto_selecto.medida || 'UNIDAD')
+                : (esCaja ? (this.producto_selecto.medida || 'CAJA') : 'UNIDAD');
+            const linea = {
+                ...this.producto_selecto,
+                cantidad: cantidadEmitida,                       // cajas o unidades, según modo
+                precio: Number(precioEmitido.toFixed(4)),        // precio por caja o por unidad
+                medida: medidaEmitida,
+                factor: factor,
+                _precio_tier: tier,
+                _unidades: unidadesTotal, // opcional: unidades reales para auditoría/stock
+            };
+
+            this.$emit('agrega_lista', linea);
+            this.avisarAgregado();
+            // Bonos calculados una sola vez sobre UNIDADES TOTALES
+            if (this.producto_selecto.tiene_bono && Array.isArray(this.producto_selecto.lista_bono)) {
+                const bonosOrdenados = [...this.producto_selecto.lista_bono]
+                    .map(b => ({ ...b, apartir_de: this.toNum(b.apartir_de, 0), cantidad: this.toNum(b.cantidad, 0) }))
+                    .sort((a, b) => b.apartir_de - a.apartir_de);
+
+                let cantidadRestante = unidadesTotal;
+
+                bonosOrdenados.forEach(bono => {
+                    const veces = Math.floor(cantidadRestante / bono.apartir_de);
+                    if (veces >= 1) {
+                        const productoBono = store.state.productos.find(p => p.id === bono.cod_producto);
+                        if (productoBono) {
+                            //console.log('precio bono',precioUnidad)
+                            this.$emit('agrega_lista', {
+                                ...productoBono,
+                                operacion: 'GRATUITA',
+                                medida: 'UNIDAD',
+                                factor: factor,
+                                cantidad: veces * bono.cantidad, // en unidades
+                                precio: precioUnidad,
+                                observacion: ''
+                            });
+                            cantidadRestante -= veces * bono.apartir_de;
+                        }
+                    }
+                });
+            }
+
+            // reset UI
+
+            this.$nextTick(() => {
+                this.observacionesSeleccionadas = [];
+                this.observacion_can = '';
+                this.$refs.buscarField && this.$refs.buscarField.focus();
+            });
+        },
+
+
+
+        prod_selecto(valor) {
+            //  console.log(this.esCodigoDeBarras + `🔎 prod_selecto ejecutado con valor: ${valor}`);
+
+            if (!valor) return; // Si no hay valor seleccionado, no hacer nada
+            this.$nextTick(() => {
+                this.producto_sele = "";
+            });
+            // Buscar el producto seleccionado en la lista del store
+            const producto = store.state.productos.find(p => p.id === valor);
+            //console.log(producto)
+            if (producto.controstock && producto.stock <= 0) {
+                store.commit("dialogosnackbar", 'sin stock');
+                return;
+            }
+            if (producto) {
+                if (this.esCodigoDeBarras) {
+                    producto.cantidad = 1
+                    this.buscar = ''
+                    this.$emit('agrega_lista', producto)
+
+                    this.$nextTick(() => {
+                        this.observacionesSeleccionadas = [];
+                        this.observacion_can = ''
+                        this.$refs.buscarField.focus();
+                    });
+                    return
+                }
+                this.cantidadInput = 1;
+                this.producto_selecto = producto;
+                this.dialo_cantidad = true;
+                this.cantCajas = 0;
+                this.cantUnd = 1; // por defecto 1 und para no quedar en 0
+                this.precioSeleccionado = null;
+                this._tierSugerido = this.sugerirTier(this.producto_selecto, this.totalUnidades);
+            }
+        },
+        prod_selecto2(valor) {
+            //console.log(valor)
+            if (valor.controstock && valor.stock <= 0) {
+                store.commit("dialogosnackbar", 'sin stock');
+                return;
+            }
+            if (!valor) return; // Si no hay valor seleccionado, no hacer nada
+            this.$nextTick(() => {
+                this.producto_sele = "";
+            });
+            // Buscar el producto seleccionado en la lista del store
+            if (valor) {
+                // Filtrar las observaciones disponibles
+                this.cantidadInput = 1;
+                this.producto_selecto = valor;
+                this.precioSeleccionado = null;
+                this.dialo_cantidad = true;
+                this.cantCajas = 0;
+                this.cantUnd = 1; // por defecto 1 und para no quedar en 0
+                this.precioSeleccionado = null;
+                this._tierSugerido = this.sugerirTier(this.producto_selecto, this.totalUnidades);
+            }
+        },
+        iraproductos(item) {
+            this.buscar = ''
+            this.categoriaselecta = item.nombre
+            if (this.listafiltrada != '') {
+                this.activaproductos = true
+            }
+
+        },
+        regresar() {
+            this.activaproductos = false
+        },
+        // --- Helpers numéricos seguros
+        toNum(v, def = 0) {
+            const n = Number(v);
+            return Number.isFinite(n) ? n : def;
+        },
+        tieneMay1(p) {
+            return this.toNum(p && p.precio_may1, 0) > 0 && this.toNum(p && p.escala_may1, 0) > 0;
+        },
+        tieneMay2(p) {
+            return this.toNum(p && p.precio_may2, 0) > 0 && this.toNum(p && p.escala_may2, 0) > 0;
+        },
+
+        // --- Devuelve 1=precio normal, 2=may1, 3=may2 según cantidad
+        sugerirTier(producto, cantidadRaw) {
+            // ✅ Si solo hay una lista activa, usa esa (1:precio, 2:may1, 3:may2)
+            const only = this.singleListId();
+            if (only) return only;
+
+            const cantidad = this.toNum(cantidadRaw, 0);
+            const hayMay1 = this.tieneMay1(producto);
+            const hayMay2 = this.tieneMay2(producto);
+
+            if (!hayMay1 && !hayMay2) return 1;
+
+            if (hayMay1 && !hayMay2 && this.buscar_activo_precio(2)) {
+                const esc1 = this.toNum(producto.escala_may1, Infinity);
+                return cantidad >= esc1 ? 2 : 1;
+            }
+
+            if (hayMay1 && hayMay2) {
+                // Si no está activa la 3, igual permite caer en 2 si la 2 está activa
+                const esc1 = this.toNum(producto.escala_may1, Infinity);
+                const esc2 = this.toNum(producto.escala_may2, Infinity);
+                const lim1 = Math.min(esc1, esc2);
+                const lim2 = Math.max(esc1, esc2);
+
+                if (this.buscar_activo_precio(3) && cantidad >= lim2) return 3;
+                if (this.buscar_activo_precio(2) && cantidad >= lim1) return 2;
+                return 1;
+            }
+
+            // solo may2 (raro)
+            if (!hayMay1 && hayMay2) {
+                const esc2 = this.toNum(producto.escala_may2, Infinity);
+                return (this.buscar_activo_precio(3) && cantidad >= esc2) ? 3 : 1;
+            }
+
+            return 1;
+        },
+
+
+        precioPorTier(producto, tier) {
+            // ✅ Si solo hay una lista activa, usa SIEMPRE esa
+            const only = this.singleListId();
+            if (only === 3) return this.toNum(producto.precio_may2, this.toNum(producto.precio, 0));
+            if (only === 2) return this.toNum(producto.precio_may1, this.toNum(producto.precio, 0));
+            if (only === 1) return this.toNum(producto.precio, 0);
+
+            // 🔁 Lógica original (respetando tier)
+            if (tier === 3) return this.toNum(producto.precio_may2, this.toNum(producto.precio, 0));
+            if (tier === 2) return this.toNum(producto.precio_may1, this.toNum(producto.precio, 0));
+            return this.toNum(producto.precio, 0);
+        },
+        singleListId() {
+            const arr = (this.lista_precios || []).map(x => Number(x)).filter(Number.isFinite);
+            return arr.length === 1 ? arr[0] : null; // 1 | 2 | 3 | null
+        },
+        convierte_stock(stock, factor) {
+            const s = Number(stock);
+            const f = Number(factor);
+
+            // Si factor es 1, null, undefined, NaN o <= 1 → devuelve el stock tal cual
+            if (!Number.isFinite(f) || f <= 1) return String(stock);
+
+            if (!Number.isFinite(s)) return String(stock); // por si viene algo no numérico
+
+            const cajas = Math.floor(s / f);
+            const und = s - cajas * f;
+            return `${cajas}/${und}`;
+        },
+        centrarDialogoLuego() {
+            // espera 500ms para que el teclado/viewport termine de moverse
+            this.$nextTick(() => {
+                setTimeout(() => {
+                    // fuerza centrado del overlay activo del diálogo
+                    const overlay = document.querySelector('.v-dialog__content.v-dialog__content--active');
+                    if (overlay) {
+                        overlay.style.display = 'flex';
+                        overlay.style.alignItems = 'center';
+                        overlay.style.justifyContent = 'center';
+                        // opcional: asegura alto de viewport para que el centrado vertical funcione
+                        overlay.style.height = '100vh';
+                    }
+
+                    // centra el input en el viewport (por si hay scroll interno)
+                    const input = this.$refs.cantidadRef && (this.$refs.cantidadRef.$el.querySelector('input'));
+                    if (input && input.scrollIntoView) {
+                        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 200);
+            });
+        },
+
+        buscar_activo_precio(num) {
+            return this.lista_precios.includes(String(num))
+        },
+        avisarAgregado(msg = 'Producto Agregado') {
+            console.log(this.muestra_tabla)
+            if (this.muestra_tabla) {
+                this.snackMsg = msg;
+                // Reinicia el snackbar para que vuelva a mostrarse si se agrega otra vez rápido
+                this.$nextTick(() => { this.snackAgregar = true; });
+            }
+        },
+
+    },
+
+}
+</script>
+<style scoped>
+.dialogo-cantidad-centrado {
+    display: flex !important;
+    align-items: center !important;
+    /* centra vertical */
+    justify-content: center !important;
+    /* centra horizontal */
+}
+</style>

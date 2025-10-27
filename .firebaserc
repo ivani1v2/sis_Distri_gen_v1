@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "sis-distribucion",
+    "pry": "sis-distribucion",
+    "domotica": "sis-distribucion"
+  }
+}
