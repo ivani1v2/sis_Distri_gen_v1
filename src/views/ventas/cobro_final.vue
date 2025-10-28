@@ -136,7 +136,7 @@
                 </v-system-bar>
             </div>
 
-            <v-card class="mb-1" height="350px"><!-- >>> CAMBIO altura -->
+            <v-card class="mb-1" height="750px"><!-- >>> CAMBIO altura -->
                 <!-- CUOTAS A CRÉDITO -->
                 <v-simple-table fixed-header height="150px" dense> <!-- >>> CAMBIO altura -->
                     <thead>
@@ -166,15 +166,27 @@
                 </v-simple-table>
 
                 <!-- Selección de método de pago aplicado a esta venta al crédito -->
-              <div class="px-3 pt-4" v-if="sumaCuotasCredito != total">
+                <div class="px-3 pt-4" v-if="sumaCuotasCredito != total">
                     <h4 class="subtitle-2 font-weight-bold mb-2">
-                        Método Pago Restante
+                        Pago inicial  -  Falta : {{ money(montoRestanteCredito, moneda) }}
                     </h4>
 
-                    <v-select dense outlined v-model="metodo_pago_credito" :items="modopagos.map(p => p.nombre)"
-                        label="Selecciona método (Yape / Transferencia / Efectivo / etc.)" hide-details></v-select>
-                </div>
+                    <!-- igual estilo que dial_pagos, pero usa pagoInicialCredito -->
+                    <v-row class="mt-n3" dense v-for="item in pagoInicialCredito" :key="item.nombre">
+                        <v-col cols="12">
+                            <v-row dense no-gutters>
 
+
+                                <v-col cols="12">
+                                    <v-text-field :prefix="moneda" outlined dense type="number" :label="item.nombre"
+                                        v-model="item.monto" @focus="$event.target.select()"></v-text-field>
+                                </v-col>
+                            </v-row>
+                        </v-col>
+                    </v-row>
+
+                
+                </div>
 
                 <v-card-actions>
                     <v-spacer></v-spacer>
@@ -253,7 +265,8 @@ export default {
     },
     data() {
         return {
-            metodo_pago_credito: '',
+            metodo_pago_credito: '', // <-- lo vamos a convertir en objeto al final
+            pagoInicialCredito: [],  // 👈 NUEVO
             cliente_selecto: [],
             dialogoMapa: false,
             dial_cliente: false,
@@ -322,18 +335,30 @@ export default {
                 monto: mont
             })
         }
+        this.pagoInicialCredito = this.modopagos.map(m => ({
+            nombre: m.nombre,
+            monto: ''
+        }))
         this.dial = true
 
     },
 
     computed: {
-sumaCuotasCredito() {
-    // suma todos los importes de las cuotas a crédito
-    return this.cuotasCredito.reduce((acc, c) => {
-        const n = parseFloat(c.importe) || 0
-        return acc + n
-    }, 0)
-},
+        sumaCuotasCredito() {
+            return this.cuotasCredito.reduce((acc, c) => {
+                const n = parseFloat(c.importe) || 0
+                return acc + n
+            }, 0)
+        },
+
+        // cuánto falta pagar hoy (total - sumaCuotasCredito)
+        montoRestanteCredito() {
+            const t = parseFloat(this.total) || 0
+            const pagadoEnCuotas = this.sumaCuotasCredito || 0
+            // si cuotas cubren todo, queda 0
+            const falta = t - pagadoEnCuotas
+            return falta < 0 ? 0 : falta
+        },
         formatItemText() {
             return (item) => `${item.nom} - ${item.porcentaje}%`;
         },
@@ -368,6 +393,23 @@ sumaCuotasCredito() {
         window.removeEventListener("keydown", this.detectarTecla);
     },
     methods: {
+        money(v, mon) {
+            const n = parseFloat(v) || 0
+            return `${mon} ${n.toFixed(2)}`
+        },
+        seleccionaPagoCredito(itemSel) {
+            // cuánto falta (ej. total 100, cuotas suman 60 => falta 40)
+            const falta = this.montoRestanteCredito
+
+            // limpia todos
+            this.pagoInicialCredito.forEach(p => {
+                p.monto = ''
+            })
+
+            // pone el monto faltante en el método elegido
+            itemSel.monto = falta > 0 ? falta.toFixed(2) : '0.00'
+        },
+
         ver_direcciones() {
             try {
                 // Documento del cliente (prioriza lo digitado; si no, el del prop cliente)
@@ -571,7 +613,15 @@ sumaCuotasCredito() {
             this.cabecera.placa_cliente = this.placa_cliente
             this.cabecera.automata = auto
             this.cabecera.modopago = this.modopagos
-            this.cabecera.metodo_pago_credito = this.metodo_pago_credito || ''
+
+            const metodosConMonto = this.pagoInicialCredito.filter(p => parseFloat(p.monto) > 0)
+
+            // Solo guarda si hay alguno
+            if (metodosConMonto.length > 0) {
+                this.cabecera.metodo_pago_credito = metodosConMonto
+            } else {
+                delete this.cabecera.metodo_pago_credito // no guardar campo vacío
+            }
             this.cabecera.ubicacion = this.$store.getters.ubicacionActual || ''
             this.cabecera.cod_vendedor = store.state.sedeActual.codigo
 

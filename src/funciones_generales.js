@@ -119,6 +119,7 @@ async function completa_items(arrays) {
       total_antes_impuestos: antesimpuesto.toFixed(2),
       total_impuestos: totalImpuesto.toFixed(2),
       precioVentaUnitario: redondear(precio_item),
+      uuid: crypto.randomUUID() || "",
     });
   }
 
@@ -133,6 +134,7 @@ async function completa_items(arrays) {
     total_cargo: total_cargo.toFixed(2),
   };
 }
+
 export const cobrar_js = async (arrayCabecera, array_item) => {
   await Promise.all([
     grabaCabecera(arrayCabecera.numeracion, arrayCabecera),

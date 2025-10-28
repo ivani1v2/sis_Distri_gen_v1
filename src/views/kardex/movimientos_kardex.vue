@@ -39,6 +39,9 @@
                 <template v-slot:default>
                     <thead>
                         <tr>
+                             <th class="text-left">
+                                Id mov
+                            </th>
                             <th class="text-left">
                                 Razon social
                             </th>
@@ -67,7 +70,8 @@
                     </thead>
                     <tbody>
                         <tr v-for="item in listafiltrada" :key="item.id">
-
+ <td>{{ item.id }}</td>
+                            <td>{{ conviertefecha(item.fecha_ingreso) }}</td>
                             <td>{{ item.num_doc }}-{{ item.nom_proveedor }}</td>
                             <td v-if="item.operacion == 'COMPRA'">
                                 {{ item.tipodocumento }}

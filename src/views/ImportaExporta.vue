@@ -539,7 +539,7 @@ export default {
               ubigeo: r.ubigeo || '',
               tipocomprobante: r.tipocomprobante || 'T',
               zona: r.zona || '',
-              dia: r.dia || '',
+              dia: [r.dia] || '',
               latitud: String(r.latitud ?? ''),
               longitud: String(r.longitud ?? ''),
               editado: ahora,

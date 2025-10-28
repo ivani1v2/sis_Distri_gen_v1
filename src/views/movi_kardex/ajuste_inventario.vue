@@ -215,6 +215,7 @@ import {
     modifica_stock_array,
     modifica_stock_unitario
 } from '../../control_stock'
+import { fs, colempresa } from '../../db_firestore'
 export default {
     name: 'caja',
 
@@ -378,6 +379,7 @@ export default {
             return parseFloat(valor).toFixed(store.state.configuracion.decimal)
         },
         editaProducto(val) {
+            console.log(this.data, val)
             const index = this.lista_productos.findIndex(p => p.uuid === val.uuid);
             if (index !== -1) {
                 const producto = this.lista_productos[index];
@@ -390,14 +392,38 @@ export default {
             }
         },
 
-        eliminar() {
+        async eliminar() {
+            store.commit("dialogoprogress");
             var modo = 'RESTA'
             if (this.arra_cabe_doC.modo_ajuste == 'SALIDA') {
                 modo = 'SUMA'
             }
-            modifica_stock_unitario(modo, this.selecto)
+            await modifica_stock_unitario(modo, this.selecto)
+
+            await this.eliminar_mov()
             this.lista_productos.splice(this.codigoedita, 1)
             this.dialogoProducto = false
+            this.genera_compra(false)
+            store.commit("dialogoprogress");
+        },
+        async eliminar_mov() {
+            if (this.selecto && this.selecto.id && this.selecto.uuid) {
+                const pid = String(this.selecto.id);
+                const lineId = this.data.id + '_' + String(this.selecto.uuid);
+
+                await colempresa()
+                    .doc("kardex")
+                    .collection("historial")
+                    .doc(pid)
+                    .collection("detalle")
+                    .doc(lineId)
+                    .delete()
+                    .catch(e => {
+                        console.error("No se pudo borrar linea kardex:", e);
+                    });
+            } else {
+                console.warn("No hay pid/line_id para borrar en kardex, skip.");
+            }
         },
         grabaEdita() {
             this.lista_productos[this.codigoedita].operacion = this.operacion_edita.toString().trim()
@@ -452,7 +478,7 @@ export default {
 
                 // Objeto que se registra en la lista (cantidad en unidades base)
                 const item = {
-                    uuid: this.create_UUID().slice(-7),
+                    uuid: crypto.randomUUID() || "",
                     id: prod.id,
                     nombre: this.nombreEdita || prod.nombre,
                     medida: this.modo === 'entero' ? (prod.medida || 'PAQ') : 'UND',
@@ -471,7 +497,8 @@ export default {
                 await modifica_stock_unitario(modoStock, {
                     ...item,
                     // Por compatibilidad, algunos helpers esperan "cantidad" como unidades
-                    cantidad: unidades
+                    cantidad: unidades,
+                  //  uuid: crypto.randomUUID(),
                 });
 
                 // Cerrar diálogo y refrescar lista

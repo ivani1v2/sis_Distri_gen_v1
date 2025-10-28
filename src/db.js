@@ -389,13 +389,7 @@ export const grabaCabecera = (numeracion, array) => {
     .child("comprobantecabecera")
     .child(numeracion)
     .set(array)
-    .then(() => {
-      return true;
-    })
-    .catch(function (error) {
-      return error;
-    });
-  return c;
+
 };
 export const grabaDetalle = (numeracion, array) => {
   return db

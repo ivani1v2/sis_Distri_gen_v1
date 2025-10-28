@@ -33,11 +33,21 @@
         </v-col>
       </v-row>
       <h4 class="mt-n6">Total S/.{{ suma_total().toFixed(2) }}</h4>
-      <v-data-table :headers="headersCxc" :items="listafiltrada" dense fixed-header height="65vh" :items-per-page="-1"
-        class="elevation-1">
+      <v-data-table
+  :headers="headersCxc"
+  :items="listafiltrada"
+  dense
+  fixed-header
+  height="65vh"
+  :items-per-page="-1"
+  class="elevation-1"
+  :sort-by.sync="sortBy"
+  :sort-desc.sync="sortDesc"
+>
+     
         <!-- cliente -->
         <template v-slot:item.cliente="{ item }">
-          {{ item.documento }} - {{ item.nombre }}
+          {{ item.nombre }}
         </template>
 
         <!-- emision -->
@@ -359,7 +369,9 @@ export default {
     busca_p: '',
     arra_empleados: [],
     liquida_to: false,
-    a_cuenta: 0
+    a_cuenta: 0,
+      sortBy: ['cliente'],   // ordena inicialmente por cliente
+  sortDesc: [false],     // false = A→Z, true = Z→A
   }),
   created() {
 
@@ -432,29 +444,39 @@ export default {
       this.filtra()
       store.commit("dialogoprogress", 1)
     },
-    async filtra() {
-      var array = []
-      var cli = this.busca_p.split('/')[0].trim()
-      if (this.busca_p == '') {
-        var a = await allcuentaxcobrar().once("value");
-      } else {
-        var a = await allcuentaxcobrar().orderByChild("documento").equalTo(cli).once("value");
-      }
-      if (a.exists()) {
-        console.log(a.val())
-        a.forEach((item) => {
-          var data = item.val()
-          if (data.estado == this.cuenta_estado) {
-            if (data.nombre == undefined) {
-              data.nombre = data.cliente
-            }
-            array.push(data)
-          }
-        })
-        this.desserts = array
-      }
+ async filtra() {
+  var array = []
+  var cli = this.busca_p.split('/')[0].trim()
 
-    },
+  let snap
+  if (this.busca_p == '') {
+    snap = await allcuentaxcobrar().once("value")
+  } else {
+    snap = await allcuentaxcobrar()
+      .orderByChild("documento")
+      .equalTo(cli)
+      .once("value")
+  }
+
+  if (snap.exists()) {
+    snap.forEach(item => {
+      const data = item.val()
+
+      if (data.estado === this.cuenta_estado) {
+        // normalizamos nombre / cliente
+        const nom = data.nombre || data.cliente || ''
+        array.push({
+          ...data,
+          nombre: nom,
+          cliente: nom, // 👈 clave nueva usada para ordenar en la tabla
+        })
+      }
+    })
+  }
+
+  this.desserts = array
+},
+
     async imprime_cuenta() {
       store.commit("dialogoprogress", 1)
       var array = []

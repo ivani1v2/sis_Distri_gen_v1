@@ -413,7 +413,7 @@ export default {
             var a = axios({
                 method: 'POST',
                 url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
-                //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
+               //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
                 headers: {},
                 data: {
                     "bd": store.state.baseDatos.bd,

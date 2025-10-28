@@ -181,7 +181,7 @@
                     <v-row v-if="!btn" class="pa-1">
                         <v-col cols="6">
                             <v-btn color="success" block @click="seleeciona_modo('entero')">{{ this.selecto.medida
-                            }}</v-btn>
+                                }}</v-btn>
                         </v-col>
                         <v-col cols="6">
                             <v-btn color="success" block @click="seleeciona_modo('fraccion')">UND.</v-btn>
@@ -313,6 +313,7 @@ import {
     modifica_stock_array,
     modifica_stock_unitario
 } from '../../control_stock'
+import { fs, colempresa } from '../../db_firestore'
 export default {
     name: 'caja',
 
@@ -485,10 +486,32 @@ export default {
             }
             this.dialogoProducto = true
         },
-        eliminar() {
+        async eliminar() {
+             store.commit("dialogoprogress");
             modifica_stock_unitario('RESTA', this.selecto)
+                    await this.eliminar_mov()
             this.lista_productos.splice(this.codigoedita, 1)
+             store.commit("dialogoprogress");
             this.dialogoProducto = false
+        },
+         async eliminar_mov() {
+            if (this.selecto && this.selecto.id && this.selecto.uuid) {
+                const pid = String(this.selecto.id);
+                const lineId = this.data.id + '_' + String(this.selecto.uuid);
+
+                await colempresa()
+                    .doc("kardex")
+                    .collection("historial")
+                    .doc(pid)
+                    .collection("detalle")
+                    .doc(lineId)
+                    .delete()
+                    .catch(e => {
+                        console.error("No se pudo borrar linea kardex:", e);
+                    });
+            } else {
+                console.warn("No hay pid/line_id para borrar en kardex, skip.");
+            }
         },
         grabaEdita() {
             this.lista_productos[this.codigoedita].operacion = this.operacion_edita.toString().trim()
@@ -518,7 +541,7 @@ export default {
             // if (this.modo === 'entero') costoConIgv = costoConIgv / factor
 
             const array_producto = {
-                uuid: this.create_UUID().substring(29),
+                uuid: crypto.randomUUID() || "",
                 id: prod.id,
                 cantidad: cantidadFinal,
                 nombre: prod.nombre,
@@ -531,6 +554,7 @@ export default {
                 // metadatos útiles (no rompen nada existente)
                 factor_paquete: factor,
                 modo_ingreso: this.modo         // 'entero' (paquete) | 'fraccion' (unidad)
+
             }
 
             await modifica_stock_unitario('SUMA', array_producto)
@@ -549,7 +573,6 @@ export default {
             array.tot_exonerada = this.tot_exonerada
             array.total = this.totaliza
             array.data = this.lista_productos
-
             await nuevoMovimiento(array.id, array)
             if (cierra) {
                 this.$emit('cierra_compra', false)

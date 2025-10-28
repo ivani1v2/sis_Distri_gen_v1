@@ -53,7 +53,7 @@
                         <tr v-for="item in listafiltrada" :key="item.id">
                             <td style="font-size:75%;">{{ item.numeracion }}</td>
                             <td style="font-size:75%;" v-if="!$store.state.esmovil">{{ item.dni + ' - ' + item.cliente
-                                }}
+                            }}
                             </td>
                             <td>{{ conviertefecha(item.fecha) }}</td>
                             <td>
@@ -206,6 +206,7 @@ import {
 import {
     modifica_stock_array
 } from '../../control_stock'
+import { fs, colempresa } from '../../db_firestore'
 export default {
     components: {
         imprime,
@@ -329,6 +330,7 @@ export default {
             return color
         },
         selecciona_item(item) {
+            console.log(item)
             this.seleccionado = item
             this.genera_pdf = true
         },
@@ -340,31 +342,107 @@ export default {
                     pdfGenera(arraydatos, '', '', item, "caja")
                 }
             })
-
         },
-
         consultaApisunat(item) {
-            if (item.estado == 'ANULADO') {
+            console.log(item)
+            /*if (item.estado == 'ANULADO') {
                 alert('TICKET ANULADO')
                 return
-            }
+            }*/
             this.seleccionado = item
             this.dialogocomprobante = true
         },
-        async anulaticket() {
-            if (confirm('seguro que anular?')) {
-                store.commit("dialogoprogress", 1)
-                await grabaEstadoComprobante(this.seleccionado.numeracion, 'ANULADO', 'ANULADO', 'ANULADO', '')
-                if (!this.seleccionado.regesa_stock) {
-                    await grabaCabecera(this.seleccionado.numeracion + '/regesa_stock', true)
-                    var snap = await consultaDetalle(this.seleccionado.numeracion).once("value")
-                    await modifica_stock_array('SUMA', snap.val())
+    async anulaticket() {
+    if (confirm('seguro que anular?')) {
+        store.commit("dialogoprogress", 1);
+
+        // 1. marcar cabecera anulada
+        await grabaEstadoComprobante(
+            this.seleccionado.numeracion,
+            'ANULADO',
+            'ANULADO',
+            'ANULADO',
+            ''
+        );
+
+        // 2. si aún no devolvimos stock antes, devolver stock ahora
+        let detallesVenta = [];
+        if (!this.seleccionado.regesa_stock) {
+            await grabaCabecera(this.seleccionado.numeracion + '/regesa_stock', true);
+
+            const snap = await consultaDetalle(this.seleccionado.numeracion).once("value");
+            if (snap.exists()) {
+                detallesVenta = Object.values(snap.val());
+            }
+
+            await modifica_stock_array('SUMA', detallesVenta);
+        } else {
+            // igual necesitamos los detalles para limpiar kardex
+            const snap = await consultaDetalle(this.seleccionado.numeracion).once("value");
+            if (snap.exists()) {
+                detallesVenta = Object.values(snap.val());
+            }
+        }
+
+        // 3. limpiar kardex de esa venta
+        await this.eliminar_mov(this.seleccionado, detallesVenta);
+
+        // 4. cerrar diálogo, refrescar pantalla
+        this.dialogocomprobante = false;
+        this.busca();
+        store.commit("dialogoprogress", 1);
+    }
+},
+
+        async eliminar_mov(cabecera, detalles) {
+            try {
+                // cabecera.numeracion es el doc_src en kardex para las ventas
+                const docSrc = String(cabecera.numeracion || "");
+
+                if (!docSrc) {
+                    console.warn("No hay docSrc válido para eliminar_mov");
+                    return;
                 }
-                this.dialogocomprobante = false
-                this.busca()
-                store.commit("dialogoprogress", 1)
+
+                // detalles es el array de líneas de venta de ese comprobante
+                // cada línea debe tener:
+                //   - id   (id del producto)
+                //   - uuid_linea (o uuid) único estable por línea
+                // si falta uuid_linea, usamos uuid. Si ninguna existe... no podemos borrar esa línea.
+                for (const det of detalles) {
+                    const pid = String(det.id || "");
+                    const uuidLinea = det.uuid_linea || det.uuid || "";
+
+                    if (!pid || !uuidLinea) {
+                        console.warn("detalle sin pid o uuid_linea, skip:", det);
+                        continue;
+                    }
+
+                    const lineId = docSrc + "_" + uuidLinea;
+
+                    // ruta al documento de kardex que queremos borrar:
+                    // /{empresa}/kardex/historial/{pid}/detalle/{lineId}
+                    await colempresa()
+                        .doc("kardex")
+                        .collection("historial")
+                        .doc(pid)
+                        .collection("detalle")
+                        .doc(lineId)
+                        .delete()
+                        .catch(e => {
+                            console.error("No se pudo borrar linea kardex:", e);
+                        });
+                }
+
+                // opcional: también podríamos actualizar el saldo_final del producto en kardex,
+                // pero eso ya es recalcular kardex, cosa más pesada → lo dejamos fuera por ahora.
+
+                console.log("✔ eliminar_mov completado para doc", docSrc);
+            } catch (err) {
+                console.error("Error en eliminar_mov:", err);
             }
         },
+
         conviertefecha(date) {
             return moment.unix(date).format('DD/MM/YYYY hh:mm A')
         },

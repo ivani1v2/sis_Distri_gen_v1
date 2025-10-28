@@ -1,7 +1,10 @@
 <template>
     <div class="mb-6 mt-1 pa-2">
         <!-- Resumen de saldos -->
-
+        <v-btn v-if="false" color="primary" @click="saldo_inicial_todos">
+            <v-icon left>mdi-magnify</v-icon>
+            crea saldos iniciales
+        </v-btn>
 
         <v-row dense>
             <!-- Selección de periodo -->
@@ -40,9 +43,8 @@
 
             </v-col>
             <v-col cols="6">
-                <v-btn x-small color="primary" @click="procesa_kardex" :disabled="cargando">
-                    <v-icon left>mdi-cog</v-icon>
-                    Procesa kardex
+                <v-btn color="blue darken-2" dark small @click="procesaKardex()">
+                    Procesar Kardex
                 </v-btn>
             </v-col>
         </v-row>
@@ -85,11 +87,14 @@
         <!-- Diálogo de progreso -->
         <v-dialog persistent v-model="cargando" max-width="260">
             <v-card class="pa-6 d-flex flex-column align-center">
-                <v-progress-circular :size="70" :width="8" :value="progreso" />
-                <div class="mt-3 subtitle-2">Procesando kardex…</div>
+                <!-- animación: si progreso==0 uso indeterminate -->
+                <v-progress-circular :size="70" :width="8" :value="progreso"
+                    :indeterminate="progreso === 0 || progreso >= 100" />
+                <div class="mt-3 subtitle-2">{{ estadoTexto }}</div>
                 <div class="caption grey--text">{{ progreso }}%</div>
             </v-card>
         </v-dialog>
+
 
     </div>
 </template>
@@ -114,6 +119,8 @@ export default {
         cargando: false,
         factorConv: 1,
         progreso: 0,
+        estadoTexto: 'Procesando kardex…',
+        last_sync_unix: 0, // <-- nuevo
     }),
 
     computed: {
@@ -129,9 +136,143 @@ export default {
 
     },
 
-    created() { this.inicio() },
+    created() {
+        this.inicio()
+
+    },
 
     methods: {
+        async saldo_inicial_todos() {
+            this.cargando = true
+            this.progreso = 0
+            this.estadoTexto = "Creando saldos iniciales…"
+
+            const prods = store.state.productos || []
+            let hechos = 0
+
+            for (const p of prods) {
+                await this.creaSaldoInicialProducto(p.id)
+                hechos++
+                // opcional: barra de progreso
+                this.progreso = Math.round((hechos / prods.length) * 100)
+            }
+
+            this.cargando = false
+            alert("Ajuste inicial procesado para todos los productos.")
+
+            // refresca vista actual
+            this.inicio()
+        },
+        async creaSaldoInicialProducto(productoId) {
+            try {
+                // 1. buscamos el producto en el store para saber stock actual
+                const prod = store.state.productos.find(p => String(p.id) === String(productoId))
+                if (!prod) {
+                    console.warn("Producto no encontrado en store:", productoId)
+                    return { ok: false, error: "Producto no encontrado" }
+                }
+
+                const stockReal = Number(prod.stock) || 0  // <-- stock que tú confías como verdad
+
+                // 2. leemos TODOS los movimientos actuales del kardex en Firestore
+                //    ruta: /kardex/historial/{productoId}/detalle
+                const prodRef = colempresa()
+                    .doc("kardex")
+                    .collection("historial")
+                    .doc(String(productoId))
+
+                const detalleRef = prodRef.collection("detalle")
+                const snapMov = await detalleRef.orderBy("f").get()
+
+                // reconstruimos saldoFinal actual recorriendo movimientos en orden
+                // OJO: ignoramos líneas con op === "INICIAL" porque son ajustes viejos
+                let saldoSimulado = 0
+                const movimientosOrd = []
+                snapMov.forEach(doc => {
+                    const x = doc.data()
+                    movimientosOrd.push({
+                        id: doc.id,
+                        f: x.f || 0,
+                        op: (x.op || "").toString().toUpperCase(),
+                        cant: Number(x.cant || 0),
+                    })
+                })
+
+                movimientosOrd
+                    .sort((a, b) => (a.f || 0) - (b.f || 0))
+                    .forEach(m => {
+                        if (m.op === "INICIAL") {
+                            // ignoramos INICIAL existente para este cálculo
+                            return
+                        }
+                        saldoSimulado += m.cant
+                    })
+
+                const saldoFinalKardex = saldoSimulado
+
+                // 3. calculamos cuánto saldo inicial necesitamos para cuadrar
+                //    fórmula: inicial = stockReal - saldoFinalKardex
+                const saldoInicialNecesario = stockReal - saldoFinalKardex
+                // ejemplo: stockReal=11, saldoFinalKardex=-9 -> inicial=20
+
+                // si ya cuadra no hacemos nada
+                if (saldoInicialNecesario === 0) {
+                    console.log("Este producto ya está cuadrado, no se crea saldo inicial.")
+                    return {
+                        ok: true,
+                        mensaje: "Sin diferencias. No se creó asiento INICIAL.",
+                        stockReal,
+                        saldoFinalKardex,
+                        saldoInicialNecesario,
+                    }
+                }
+
+                // 4. grabamos un movimiento "INICIAL" con esa cantidad
+                // usamos un line_id único
+                const lineId = `INICIAL_${productoId}_${Date.now()}`
+                const ahoraUnix = moment().unix()
+
+                await detalleRef.doc(lineId).set({
+                    line_id: lineId,
+                    f: ahoraUnix,                 // fecha del asiento inicial (ahora mismo)
+                    op: "INICIAL",
+                    doc: "SALDO INICIAL AUTO",
+                    rs: "SISTEMA",
+                    cant: saldoInicialNecesario,  // ESTE es el ajuste
+                    saldo: saldoInicialNecesario, // opcional: puedes guardar saldo base aquí
+                    costo: Number(prod.costo) || 0,
+                    med: prod.medida || "UNIDAD",
+                    updated_unix: ahoraUnix,
+                    doc_src: "saldo_inicial",
+                }, { merge: true })
+
+                // 5. opcional: actualizar metadata del producto en kardex/historial/{id}
+                await prodRef.set({
+                    producto_id: String(productoId),
+                    producto: prod.nombre || "",
+                    last_update_unix: ahoraUnix,
+                }, { merge: true })
+
+                console.log("✅ Saldo inicial creado para", productoId,
+                    "ajuste:", saldoInicialNecesario)
+
+                return {
+                    ok: true,
+                    mensaje: "Saldo inicial creado",
+                    stockReal,
+                    saldoFinalKardex,
+                    saldoInicialNecesario,
+                }
+
+            } catch (err) {
+                console.error("❌ Error creando saldo inicial:", err)
+                return { ok: false, error: String(err) }
+            }
+        },
+        muestraFecha(unix) {
+            if (!unix || unix === 0) return '— nunca —'
+            return moment.unix(unix).format('DD/MM/YYYY HH:mm')
+        },
         esGratuita(op) {
             if (!op) return false
             const s = String(op).toUpperCase()
@@ -167,60 +308,115 @@ export default {
                 }
 
                 const prodId = String(this.buscar)
-                const prodSel = (this.$store.state.productos || []).find(p => String(p.id) === prodId)
-                const nombreProd = prodSel ? prodSel.nombre : '(sin nombre)'
+                const prodSel = (this.$store.state.productos || [])
+                    .find(p => String(p.id) === prodId)
 
-                // ← guarda el factor para cabecera y filas
+                const nombreProd = prodSel ? prodSel.nombre : '(sin nombre)'
                 this.factorConv = Number(
-                    prodSel?.factor ?? prodSel?.factor_paquete ?? prodSel?.factor_conversion ?? 1
+                    prodSel?.factor ??
+                    prodSel?.factor_paquete ??
+                    prodSel?.factor_conversion ??
+                    1
                 )
 
+                // 🔸 Rango unix del periodo elegido
                 const [ini, fin] = this.rangoDesdePeriodo(this.periodo)
 
+                // 🔸 Refs Firestore
                 const raiz = colempresa().doc('kardex')
                 const prodRef = raiz.collection('historial').doc(prodId)
                 const movCol = prodRef.collection('detalle')
 
-                const qs = await movCol.orderBy('f').startAt(ini).endAt(fin).get()
+                // 🔸 Leer todos los movimientos
+                const snapAll = await movCol.orderBy('f').get()
+                const movimientosTodos = []
 
-                const rows = []
-                let prevSaldo = 0
-                let lastSaldo = null
-                let index = 0
-
-                qs.forEach(d => {
-                    const x = d.data()
-                    const saldoMov = x.saldo ?? 0
-                    const cantAbs = x.cant ?? 0
-
-                    if (index === 0) this.saldoInicial = prevSaldo
-                    lastSaldo = saldoMov
-                    index++
-
-                    const stockInicialFila = prevSaldo
-
-                    rows.push({
-                        id: x.doc || d.id,
-                        modo_ajuste: x.op || '',
-                        fecha_ingreso: x.f || 0,
-                        motivo: x.rs || '',
-                        equivalente: this.eqStr(saldoMov, this.factorConv),   // ← usa helper
-                        data: [{
-                            uuid: d.id,
-                            id: prodId,
-                            nombre: nombreProd,
-                            cantidad: cantAbs,
-                            costo: x.costo ?? 0,
-                            stock_inicial: stockInicialFila,
-                            saldo_final: saldoMov
-                        }]
+                snapAll.forEach(doc => {
+                    const x = doc.data()
+                    movimientosTodos.push({
+                        uuid: doc.id,
+                        f: x.f || 0,
+                        op: (x.op || '').toUpperCase(),
+                        docref: x.doc || doc.id,
+                        rs: x.rs || '',
+                        cant: Number(x.cant || 0),
+                        costo: x.costo ?? 0,
+                        med: x.med || '',
                     })
-
-                    prevSaldo = saldoMov
                 })
 
+                console.log('=== MOVIMIENTOS ===')
+                console.table(movimientosTodos.map(m => ({
+                    fecha: moment.unix(m.f).format('DD/MM/YYYY'),
+                    op: m.op,
+                    cant: m.cant,
+                    rs: m.rs,
+                    doc: m.docref
+                })))
+
+                // 🔹 Buscar saldo inicial base
+                let saldoInicialBase = 0
+
+                const inicialAntes = movimientosTodos
+                    .filter(m => m.op === 'INICIAL' && m.f < ini)
+                    .sort((a, b) => a.f - b.f)
+
+                const inicialDentro = movimientosTodos
+                    .filter(m => m.op === 'INICIAL' && m.f >= ini && m.f <= fin)
+                    .sort((a, b) => a.f - b.f)
+
+                if (inicialAntes.length > 0) {
+                    const ultima = inicialAntes[inicialAntes.length - 1]
+                    saldoInicialBase = Number(ultima.cant || 0)
+                } else if (inicialDentro.length > 0) {
+                    const primera = inicialDentro[0]
+                    saldoInicialBase = Number(primera.cant || 0)
+                } else {
+                    movimientosTodos
+                        .filter(m => m.f < ini)
+                        .forEach(m => { saldoInicialBase += Number(m.cant || 0) })
+                }
+
+                // 🔹 Filtrar movimientos del periodo (ocultando INICIAL)
+                const movimientosPeriodo = movimientosTodos
+                    .filter(m => m.f >= ini && m.f <= fin && m.op !== 'INICIAL')
+                    .sort((a, b) => a.f - b.f)
+
+                // 🔹 Calcular saldos paso a paso
+                let saldoAcum = saldoInicialBase
+                const rows = []
+
+                movimientosPeriodo.forEach(mov => {
+                    const stockInicialFila = saldoAcum
+                    saldoAcum += mov.cant
+                    const saldoFinalFila = saldoAcum
+
+                    rows.push({
+                        id: mov.docref,
+                        modo_ajuste: mov.op,
+                        fecha_ingreso: mov.f,
+                        motivo: mov.rs,
+                        equivalente: this.eqStr(saldoFinalFila, this.factorConv),
+                        data: [{
+                            uuid: mov.uuid,
+                            id: prodId,
+                            nombre: nombreProd,
+                            cantidad: mov.cant,
+                            costo: mov.costo ?? 0,
+                            stock_inicial: stockInicialFila,
+                            saldo_final: saldoFinalFila,
+                        }]
+                    })
+                })
+
+                // 🔹 Actualizar cabecera
+                this.saldoInicial = saldoInicialBase
+                this.saldoFinal = saldoAcum
                 this.listafiltrada = rows
-                this.saldoFinal = lastSaldo ?? this.saldoInicial
+
+                console.log('Saldo Inicial:', this.saldoInicial)
+                console.log('Saldo Final:', this.saldoFinal)
+
             } catch (e) {
                 console.error('Error cargando historial:', e)
                 this.listafiltrada = []
@@ -229,212 +425,59 @@ export default {
                 this.factorConv = 1
             }
         },
-        
 
-        async procesa_kardex() {
-            this.cargando = true
+
+
+        async api_rest(data, metodo) {
+            console.log(data)
+            var a = axios({
+                method: 'POST',
+                //url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
+                url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
+                headers: {},
+                data: {
+                    "bd": store.state.baseDatos.bd,
+                    "data": data,
+                    "metodo": metodo
+                }
+            }).then(response => {
+                console.log(response.data)
+                return response
+            })
+            return a
+        },
+
+        async procesaKardex() {
             try {
-                // Periodo & rango
-                const [ini, fin] = this.rangoDesdePeriodo(this.periodo)
-                const periodoKey = (this.periodo.length === 7)
-                    ? this.periodo.split('-').reverse().join('-')   // "YYYY-MM"
-                    : this.periodo                                  // "YYYY"
+                store.commit("dialogoprogress", 1) // si ya usas este loader
 
-                // Helpers
-                const n = (v) => {
-                    if (v === undefined || v === null || v === '') return 0
-                    const s = typeof v === 'string' ? v.replace(',', '.').trim() : v
-                    const num = Number(s)
-                    return Number.isFinite(num) ? num : 0
-                }
-                const toSafe = v => (v === undefined || Number.isNaN(v) ? null : v)
-                // Reemplaza commitInChunks dentro de procesa_kardex():
-                const commitInChunks = async (ops, chunkSize = 400) => {
-                    const total = ops.length || 1
-                    let done = 0
-                    this.progreso = 0
+                const bd = store.state.baseDatos.bd// o como llames tu bd actual
 
-                    for (let i = 0; i < ops.length; i += chunkSize) {
-                        const batch = fs.batch()
-                        const slice = ops.slice(i, i + chunkSize)
-                        slice.forEach(({ ref, data, merge }) => batch.set(ref, data, { merge }))
-                        await batch.commit()
-
-                        done += slice.length
-                        this.progreso = Math.min(100, Math.round((done / total) * 100))
-                    }
+                // payload NUEVO: sin periodo
+                const payload = {
+                    bd,
+                    periodo: this.periodo,
                 }
 
+                var json = await this.api_rest(payload, 'genera_historial')
 
-                // Acumulador por producto
-                const porProd = new Map()
-
-                // --- 1) VENTAS (cabeceras + detalle) ---
-                const cabSnap = await allCabecera()
-                    .orderByChild('fecha').startAt(ini).endAt(fin).once('value')
-
-                if (cabSnap.exists()) {
-                    const cabeceras = cabSnap.val()
-                    await Promise.all(Object.keys(cabeceras).map(async (cabId) => {
-                        const cab = cabeceras[cabId]
-                        const detSnap = await consultaDetalle(cabId).once('value')
-                        const detalle = detSnap.exists() ? Object.values(detSnap.val()) : []
-
-                        detalle.forEach(d => {
-                            const pid = String(d.id)
-                            const arr = porProd.get(pid) || []
-
-                            // ---- CANTIDAD con REGLA DE FACTOR ----
-                            let qty = n(d.cant_ingresada) || n(d.cantidad)
-                            const factor = n(d.factor || d.factor_paquete || 1)
-                            const medidaStr = String(d.medida || d.cod_medida || '').toUpperCase()
-                            if (factor > 1 && medidaStr !== 'UNIDAD' && medidaStr !== 'NIU') {
-                                qty = qty * factor
-                            }
-                            // --------------------------------------
-
-                            arr.push({
-                                f: Number(cab.fecha) || 0, // unix s
-                                op: 'VENTA',
-                                doc: cab.numeracion || `${cab.serie || ''}-${cab.correlativoDocEmitido || ''}` || String(cabId),
-                                rs: cab.cliente || '',
-                                cant: -qty,                 // venta => salida
-                                costo: n(d.costo),
-                                pid,
-                                p: d.nombre || '',
-                                med: d.medida || d.cod_medida || 'NIU'
-                            })
-                            porProd.set(pid, arr)
-                        })
-                    }))
+                if (!json) {
+                    alert('Error: ' + (json.error || 'no se pudo procesar kardex'))
+                } else {
+                    alert('Kardex actualizado.')
                 }
 
-                // --- 2) MOVIMIENTOS (COMPRA / AJUSTE ENTRADA / AJUSTE SALIDA / etc.) ---
-                const movSnap = await allMovimientos()
-                    .orderByChild('fecha_emision')
-                    .startAt(ini)
-                    .endAt(fin)
-                    .once('value')
+                // refrescar la última sync mostrada en pantalla
+                await this.cargaLastSync()
 
-                if (movSnap.exists()) {
-                    const movs = Object.values(movSnap.val())
-                    movs.forEach(m => {
-                        const fecha = Number(m.fecha_emision || m.fecha_ingreso || m.fecha_creacion || 0)
-                        const opBase = String(m.operacion || '').toUpperCase()     // COMPRA | AJUSTE | ...
-                        const modo = m.modo_ajuste ? String(m.modo_ajuste).toUpperCase() : '' // ENTRADA/SALIDA
-                        const op = modo ? `${opBase} ${modo}` : opBase
-                        const doc = m.tipodocumento ? `${m.tipodocumento}-${m.id || ''}` : (m.id || '')
-                        const rs = m.nom_proveedor || m.motivo || ''
-
-                            ; (m.data || []).forEach(d => {
-                                const pid = String(d.id)
-                                const arr = porProd.get(pid) || []
-
-                                // ---- CANTIDAD con REGLA DE FACTOR ----
-                                let qty = n(d.cant_ingresada) || n(d.cantidad)
-                                const factor = n(d.factor || d.factor_paquete || 1)
-                                const medidaStr = String(d.medida || d.cod_medida || '').toUpperCase()
-                                if (factor > 1 && medidaStr !== 'UNIDAD' && medidaStr !== 'NIU') {
-                                    qty = qty * factor
-                                }
-                                // --------------------------------------
-
-                                // Signo por operación
-                                let signo = 0
-                                if (opBase === 'COMPRA') signo = +1
-                                else if (opBase === 'AJUSTE') {
-                                    if (modo === 'ENTRADA') signo = +1
-                                    else if (modo === 'SALIDA') signo = -1
-                                } else if (modo === 'ENTRADA') signo = +1
-                                else if (modo === 'SALIDA') signo = -1
-
-                                if (qty !== 0 && signo !== 0) {
-                                    arr.push({
-                                        f: fecha || 0,
-                                        op: op,
-                                        doc: doc,
-                                        rs: rs,
-                                        cant: signo * qty,         // + entra, - sale
-                                        costo: n(d.costo),
-                                        pid,
-                                        p: d.nombre || '',
-                                        med: d.medida || d.cod_medida || 'NIU'
-                                    })
-                                    porProd.set(pid, arr)
-                                }
-                            })
-                    })
-                }
-
-                // --- 3) Guardar en Firestore (subcolección detalle por producto) ---
-                const ops = []
-
-                porProd.forEach((arr, pid) => {
-                    if (this.buscar && String(pid) !== String(this.buscar)) return
-
-                    arr.sort((a, b) => a.f - b.f)
-                    let saldo = 0 // si tienes saldo inicial real, colócalo aquí
-
-                    const raiz = colempresa().doc('kardex')
-                    const prodRef = raiz.collection('historial').doc(String(pid))
-                    const movCol = prodRef.collection('detalle')
-
-                    // Resumen
-                    ops.push({
-                        ref: prodRef,
-                        data: {
-                            producto_id: pid,
-                            producto: arr[0]?.p || '',
-                            periodo: periodoKey,
-                            saldo_inicial: 0,
-                            saldo_final: 0
-                        },
-                        merge: true
-                    })
-
-                    // Saldo inicial
-                    ops.push({
-                        ref: movCol.doc('000000'),
-                        data: { f: toSafe(ini), op: 'SALDO INICIAL', doc: '', rs: '', cant: 0, saldo: 0 },
-                        merge: true
-                    })
-
-                    // Movimientos
-                    arr.forEach((m, idx) => {
-                        saldo += m.cant
-                        const mid = String(idx + 1).padStart(6, '0')
-                        ops.push({
-                            ref: movCol.doc(mid),
-                            data: {
-                                f: toSafe(m.f),
-                                op: toSafe(m.op),
-                                doc: toSafe(m.doc),
-                                rs: toSafe(m.rs),
-                                cant: Math.abs(toSafe(m.cant) ?? 0),
-                                saldo: toSafe(saldo),
-                                costo: toSafe(m.costo),
-                                med: toSafe(m.med)
-                            },
-                            merge: true
-                        })
-                    })
-
-                    // Saldos finales
-                    ops.push({
-                        ref: prodRef,
-                        data: { saldo_final: toSafe(saldo) },
-                        merge: true
-                    })
-                })
-
-                await commitInChunks(ops, 400)
-                console.info('✅ Kardex (con factor aplicado por medida) guardado:', periodoKey)
+                store.commit("dialogoprogress", 1)
             } catch (e) {
-                console.error('❌ Error procesando kardex:', e)
-            } finally {
-                this.cargando = false
+                console.error(e)
+                alert('Error interno procesando kardex')
+                store.commit("dialogoprogress", 1)
             }
         },
+
 
 
         formatFecha(segundos) {
