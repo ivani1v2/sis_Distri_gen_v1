@@ -33,18 +33,9 @@
         </v-col>
       </v-row>
       <h4 class="mt-n6">Total S/.{{ suma_total().toFixed(2) }}</h4>
-      <v-data-table
-  :headers="headersCxc"
-  :items="listafiltrada"
-  dense
-  fixed-header
-  height="65vh"
-  :items-per-page="-1"
-  class="elevation-1"
-  :sort-by.sync="sortBy"
-  :sort-desc.sync="sortDesc"
->
-     
+      <v-data-table :headers="headersCxc" :items="listafiltrada" dense fixed-header height="65vh" :items-per-page="-1"
+        class="elevation-1" :sort-by.sync="sortBy" :sort-desc.sync="sortDesc">
+
         <!-- cliente -->
         <template v-slot:item.cliente="{ item }">
           {{ item.nombre }}
@@ -140,6 +131,7 @@
         <v-system-bar window dark>
           <v-icon @click="dialog_liquidacion = false">mdi-close</v-icon>
           <v-spacer></v-spacer>
+          <v-icon color="red" large @click.prevent="eliminar(item_selecto)">mdi-delete</v-icon>
         </v-system-bar>
       </div>
       <v-card class="pa-1">
@@ -370,8 +362,8 @@ export default {
     arra_empleados: [],
     liquida_to: false,
     a_cuenta: 0,
-      sortBy: ['cliente'],   // ordena inicialmente por cliente
-  sortDesc: [false],     // false = A→Z, true = Z→A
+    sortBy: ['cliente'],   // ordena inicialmente por cliente
+    sortDesc: [false],     // false = A→Z, true = Z→A
   }),
   created() {
 
@@ -444,39 +436,56 @@ export default {
       this.filtra()
       store.commit("dialogoprogress", 1)
     },
- async filtra() {
-  var array = []
-  var cli = this.busca_p.split('/')[0].trim()
+    async filtra() {
+      var array = []
+      var cli = this.busca_p.split('/')[0].trim()
 
-  let snap
-  if (this.busca_p == '') {
-    snap = await allcuentaxcobrar().once("value")
-  } else {
-    snap = await allcuentaxcobrar()
-      .orderByChild("documento")
-      .equalTo(cli)
-      .once("value")
-  }
+      let snap
+      if (this.busca_p == '') {
+        snap = await allcuentaxcobrar().once("value")
+      } else {
+        snap = await allcuentaxcobrar()
+          .orderByChild("documento")
+          .equalTo(cli)
+          .once("value")
+      }
 
-  if (snap.exists()) {
-    snap.forEach(item => {
-      const data = item.val()
+      if (snap.exists()) {
+        snap.forEach(item => {
+          const data = item.val()
 
-      if (data.estado === this.cuenta_estado) {
-        // normalizamos nombre / cliente
-        const nom = data.nombre || data.cliente || ''
-        array.push({
-          ...data,
-          nombre: nom,
-          cliente: nom, // 👈 clave nueva usada para ordenar en la tabla
+          if (data.estado === this.cuenta_estado) {
+            // normalizamos nombre / cliente
+            const nom = data.nombre || data.cliente || ''
+            array.push({
+              ...data,
+              nombre: nom,
+              cliente: nom, // 👈 clave nueva usada para ordenar en la tabla
+            })
+          }
         })
       }
-    })
-  }
 
-  this.desserts = array
-},
-
+      this.desserts = array
+    },
+    async eliminar(item) {
+      const confirmado = confirm(`¿Eliminar la cuenta por cobrar del cliente ${item.nombre} con comprobante ${item.doc_ref}? Esta acción no se puede deshacer.`)
+      if (!confirmado) {
+        return
+      }
+      store.commit("dialogoprogress", 1)
+      try {
+        await editaCuentaxCobrar(item.doc_ref, 'estado', 'ELIMINADO')
+        this.filtra()
+        this.dialog_liquidacion = false
+        alert('Cuenta por cobrar eliminada correctamente.')
+      } catch (error) {
+        console.error('Error al eliminar la cuenta por cobrar:', error)
+        alert('Ocurrió un error al eliminar la cuenta por cobrar. Por favor, inténtelo de nuevo.')
+      } finally {
+        store.commit("dialogoprogress", 1)
+      }
+    },
     async imprime_cuenta() {
       store.commit("dialogoprogress", 1)
       var array = []

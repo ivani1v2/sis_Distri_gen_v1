@@ -1,0 +1,21 @@
+[debug] [2025-11-01T14:13:26.021Z] ----------------------------------------------------------------------
+[debug] [2025-11-01T14:13:26.023Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\USER\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js serve
+[debug] [2025-11-01T14:13:26.023Z] CLI Version:   14.15.2
+[debug] [2025-11-01T14:13:26.023Z] Platform:      win32
+[debug] [2025-11-01T14:13:26.024Z] Node Version:  v22.19.0
+[debug] [2025-11-01T14:13:26.024Z] Time:          Sat Nov 01 2025 09:13:26 GMT-0500 (hora estándar de Perú)
+[debug] [2025-11-01T14:13:26.024Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-11-01T14:13:26.140Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-11-01T14:13:26.141Z] > authorizing via signed-in user (domoticacliente2@gmail.com)
+[debug] [2025-11-01T14:13:26.141Z] [iam] checking project sis-distribucion for permissions ["firebase.projects.get"]
+[debug] [2025-11-01T14:13:26.141Z] Checked if tokens are valid: false, expires at: 1761946926175
+[debug] [2025-11-01T14:13:26.141Z] Checked if tokens are valid: false, expires at: 1761946926175
+[debug] [2025-11-01T14:13:26.142Z] > refreshing access token with scopes: []
+[debug] [2025-11-01T14:13:26.143Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-11-01T14:13:26.143Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-01T14:13:26.343Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-11-01T14:13:26.343Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-01T14:13:26.347Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/sis-distribucion:testIamPermissions [none]
+[debug] [2025-11-01T14:13:26.348Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/sis-distribucion:testIamPermissions x-goog-quota-user=projects/sis-distribucion
+[debug] [2025-11-01T14:13:26.348Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/sis-distribucion:testIamPermissions {"permissions":["firebase.projects.get"]}

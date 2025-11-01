@@ -510,6 +510,7 @@ export default {
             this.crea_ajuste = false
         },
         edita_compra(data) {
+            console .log(data)
             this.data_edita = data
             if (data.operacion == 'DEVOLUCION DE COMPRA') {
                 this.dialo_nc = true

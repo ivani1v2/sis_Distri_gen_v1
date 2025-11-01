@@ -216,6 +216,14 @@
                         <v-list-item-title>Pedidos</v-list-item-title>
                     </template>
                     <v-container>
+                         <v-list-item  link @click.prevent="router('lista')">
+                            <v-list-item-icon>
+                                <v-icon>mdi-clipboard-list</v-icon>
+                            </v-list-item-icon>
+                            <v-list-item-content>
+                                <v-list-item-title>Lista Visitas</v-list-item-title>
+                            </v-list-item-content>
+                        </v-list-item>
                         <v-list-item  link @click.prevent="router('lista_pedidos')">
                             <v-list-item-icon>
                                 <v-icon>mdi-clipboard-list</v-icon>
@@ -457,12 +465,12 @@
                                 <v-list-item-title> X Sede</v-list-item-title>
                             </v-list-item-content>
                         </v-list-item>
-                        <v-list-item @click.prevent="router('reportes')">
+                        <v-list-item @click.prevent="router('reg_contables')">
                             <v-list-item-icon>
                                 <v-icon>mdi-finance</v-icon>
                             </v-list-item-icon>
                             <v-list-item-content>
-                                <v-list-item-title>Ranking Semanal</v-list-item-title>
+                                <v-list-item-title>Reg. Contable</v-list-item-title>
                             </v-list-item-content>
                         </v-list-item>
                     </v-container>

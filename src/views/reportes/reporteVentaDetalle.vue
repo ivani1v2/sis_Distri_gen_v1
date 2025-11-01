@@ -20,7 +20,8 @@
             <v-col cols="4">
               <v-tooltip bottom>
                 <template v-slot:activator="{ on, attrs }">
-                  <v-icon v-bind="attrs" v-on="on" @click="Exporta_excel()" color="green" large>mdi-microsoft-excel</v-icon>
+                  <v-icon v-bind="attrs" v-on="on" @click="Exporta_excel()" color="green"
+                    large>mdi-microsoft-excel</v-icon>
                 </template>
                 <span>Exportar a Excel</span>
               </v-tooltip>
@@ -28,7 +29,8 @@
             <v-col cols="4">
               <v-tooltip bottom>
                 <template v-slot:activator="{ on, attrs }">
-                  <v-icon v-bind="attrs" v-on="on" @click="dialogo_imprime = true" color="red" large>mdi-file-pdf-box</v-icon>
+                  <v-icon v-bind="attrs" v-on="on" @click="dialogo_imprime = true" color="red"
+                    large>mdi-file-pdf-box</v-icon>
                 </template>
                 <span>Exportar a PDF</span>
               </v-tooltip>
@@ -43,20 +45,12 @@
         <v-col cols="12" md="4">
           <v-row dense>
             <v-col cols="12" md="7">
-              <v-text-field
-                v-model="busqueda"
-                dense outlined hide-details
-                prepend-inner-icon="mdi-magnify"
-                label="Buscar producto..."
-              />
+              <v-text-field v-model="busqueda" dense outlined hide-details prepend-inner-icon="mdi-magnify"
+                label="Buscar producto..." />
             </v-col>
             <v-col cols="12" md="5">
-              <v-select
-                v-model="filtroOperacion"
-                :items="itemsOperacion"
-                dense outlined hide-details
-                label="Operación"
-              />
+              <v-select v-model="filtroOperacion" :items="itemsOperacion" dense outlined hide-details
+                label="Operación" />
             </v-col>
           </v-row>
         </v-col>
@@ -95,10 +89,16 @@
         <v-col cols="12">
           <v-alert border="left" colored-border color="info" elevation="1" dense>
             <v-chip class="ma-1" small color="green" text-color="white">
-              GRAVADA: {{ resumenOperacion.gravada.productos }} prod / {{ resumenOperacion.gravada.unidades }} und — Venta: S/. {{ format2(resumenOperacion.gravada.venta) }} — Utilidad: S/. {{ format2(resumenOperacion.gravada.utilidad) }}
+              GRAVADA: {{ resumenOperacion.gravada.productos }} prod / {{ resumenOperacion.gravada.unidades }} und —
+              Venta:
+              S/. {{ format2(resumenOperacion.gravada.venta) }} — Utilidad: S/. {{
+                format2(resumenOperacion.gravada.utilidad)
+              }}
             </v-chip>
             <v-chip class="ma-1" small color="orange" text-color="white">
-              GRATUITA: {{ resumenOperacion.gratuita.productos }} prod / {{ resumenOperacion.gratuita.unidades }} und — Venta: S/. 0.00 — Costo: S/. {{ format2(resumenOperacion.gratuita.costo) }}
+              GRATUITA: {{ resumenOperacion.gratuita.productos }} prod / {{ resumenOperacion.gratuita.unidades }} und —
+              Venta:
+              S/. 0.00 — Costo: S/. {{ format2(resumenOperacion.gratuita.costo) }}
             </v-chip>
             <v-chip class="ma-1" small outlined>
               Considerar costo catálogo: <strong>{{ costo_catalogo ? 'Sí' : 'No' }}</strong>
@@ -110,34 +110,25 @@
       <!-- Controles de orden -->
       <v-row class="px-4 pb-2" dense>
         <v-col cols="12" md="4">
-          <v-select
-            v-model="ordenPor"
-            :items="itemsOrden"
-            dense outlined hide-details
-            label="Ordenar por"
-          />
+          <v-select v-model="ordenPor" :items="itemsOrden" dense outlined hide-details label="Ordenar por" />
         </v-col>
         <v-col cols="12" md="3">
-          <v-switch v-model="ordenDesc" inset label="Descendente" color="primary"/>
+          <v-switch v-model="ordenDesc" inset label="Descendente" color="primary" />
         </v-col>
       </v-row>
 
       <!-- Tabla -->
       <v-card class="pa-4">
-        <v-data-table
-          dense
-          :headers="headers"
-          :items="itemsOrdenados"
-          :search="busqueda"
-          fixed-header
-          :items-per-page="50"
-          mobile-breakpoint="0"
-          height="60vh"
-          class="elevation-1"
-        >
+        <v-data-table dense :headers="headers" :items="itemsOrdenados" :search="busqueda" fixed-header
+          :items-per-page="50" mobile-breakpoint="0" height="60vh" class="elevation-1">
           <template v-slot:item.cantidad="{ item }">
             <span>{{ format0(item.cantidad) }}</span>
-            <v-chip v-if="item.cantidad_gratuita" x-small class="ml-1" color="orange" text-color="white" title="Unidades gratuitas">
+            <v-chip v-if="false" x-small class="ml-1" color="green" text-color="white"
+              title="Unidades gravadas">
+              {{ format0(item.cantidad_gravada) }} GRV
+            </v-chip>
+            <v-chip v-if="item.cantidad_gratuita" x-small class="ml-1" color="orange" text-color="white"
+              title="Unidades gratuitas">
               {{ format0(item.cantidad_gratuita) }} GRA
             </v-chip>
           </template>
@@ -155,7 +146,7 @@
           </template>
 
           <template v-slot:item.utilidad="{ item }">
-            <span :class="{'text--success': item.utilidad >= 0, 'red--text': item.utilidad < 0}">
+            <span :class="{ 'text--success': item.utilidad >= 0, 'red--text': item.utilidad < 0 }">
               S/. {{ format2(item.utilidad) }}
             </span>
           </template>
@@ -173,10 +164,10 @@
         <v-card class="pa-3 mb-6">
           <div class="subtitle-2 font-weight-bold mb-2">Top 5 más vendidos (unidades)</div>
           <v-list dense>
-            <v-list-item v-for="(p,i) in topMasVendidos" :key="'top-mas-'+i">
+            <v-list-item v-for="(p, i) in topMasVendidos" :key="'top-mas-' + i">
               <v-list-item-content>
                 <v-list-item-title class="d-flex justify-space-between">
-                  <span>{{ i+1 }}. {{ p.nombre }}</span>
+                  <span>{{ i + 1 }}. {{ p.nombre }}</span>
                   <span>{{ format0(p.cantidad) }} und</span>
                 </v-list-item-title>
               </v-list-item-content>
@@ -188,10 +179,10 @@
         <v-card class="pa-3">
           <div class="subtitle-2 font-weight-bold mb-2">Top 5 con mayor utilidad</div>
           <v-list dense>
-            <v-list-item v-for="(p,i) in topMayorUtilidad" :key="'top-util-'+i">
+            <v-list-item v-for="(p, i) in topMayorUtilidad" :key="'top-util-' + i">
               <v-list-item-content>
                 <v-list-item-title class="d-flex justify-space-between">
-                  <span>{{ i+1 }}. {{ p.nombre }}</span>
+                  <span>{{ i + 1 }}. {{ p.nombre }}</span>
                   <span>S/. {{ format2(p.utilidad) }}</span>
                 </v-list-item-title>
               </v-list-item-content>
@@ -203,10 +194,10 @@
         <v-card class="pa-3">
           <div class="subtitle-2 font-weight-bold mb-2">Top 5 menos vendidos (unidades)</div>
           <v-list dense>
-            <v-list-item v-for="(p,i) in topMenosVendidos" :key="'top-menos-'+i">
+            <v-list-item v-for="(p, i) in topMenosVendidos" :key="'top-menos-' + i">
               <v-list-item-content>
                 <v-list-item-title class="d-flex justify-space-between">
-                  <span>{{ i+1 }}. {{ p.nombre }}</span>
+                  <span>{{ i + 1 }}. {{ p.nombre }}</span>
                   <span>{{ format0(p.cantidad) }} und</span>
                 </v-list-item-title>
               </v-list-item-content>
@@ -237,11 +228,8 @@
             <v-switch v-model="costo_catalogo" color="green" label="Usar costo catálogo"></v-switch>
           </v-col>
           <v-col cols="12" md="6">
-            <v-checkbox
-              v-model="incluirGratuitasEnPromedio"
-              label="Incluir gratuitas en precio promedio"
-              hide-details
-            />
+            <v-checkbox v-model="incluirGratuitasEnPromedio" label="Incluir gratuitas en precio promedio"
+              hide-details />
           </v-col>
         </v-row>
         <v-card-actions>
@@ -468,7 +456,7 @@ export default {
             if (!map.has(key)) {
               map.set(key, {
                 id: key,
-                nombre: p.nombre,
+                nombre: p.id+'-'+p.nombre,
                 medida: p.medida,
                 cantidad: 0,                 // totales (grav+grat)
                 cantidad_gravada: 0,
@@ -592,12 +580,14 @@ export default {
   border-radius: 16px;
   box-shadow: 0 4px 12px rgba(33, 33, 33, 0.08) !important;
 }
+
 .hover-card {
   transition: transform .15s ease, box-shadow .15s ease;
   border-radius: 14px;
 }
+
 .hover-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(0,0,0,.08) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .08) !important;
 }
 </style>

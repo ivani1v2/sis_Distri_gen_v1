@@ -1564,6 +1564,15 @@ export const edita_pedidos = () => {
     .child("pedidos")
     .child("cabecera_pedidos")
 };
+export const modifica_pedidos = (id, data) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("pedidos")
+    .child("cabecera_pedidos")
+    .child(id)
+    .set(data)
+};
 export const detalle_pedido = (id) => {
   return db
     .database()
@@ -1587,7 +1596,7 @@ export const Cabecera_p = (id) => {
     .child("cabecera_reparto")
     .child(id);
 };
-export const nueva_cabecera_reparto = (id,array) => {
+export const nueva_cabecera_reparto = (id, array) => {
   return db
     .database()
     .ref(store.state.baseDatos.bd)
@@ -1701,13 +1710,24 @@ export const graba_medida = (data) => {
     .child("medidas")
     .push(data);
 };
-export const graba_cabecera_p = (id,numeracion,array) => {
+export const graba_cabecera_p = (id, numeracion, array) => {
   return db
     .database()
     .ref(store.state.baseDatos.bd).child("pedidos").child('detalle_reparto').child(id).child('data_c').child(numeracion).set(array)
 };
-export const graba_detalle_p = (id,numeracion,array) => {
+export const graba_detalle_p = (id, numeracion, array) => {
   return db
     .database()
     .ref(store.state.baseDatos.bd).child("pedidos").child('detalle_reparto').child(id).child('data_d').child(numeracion).set(array)
+};
+export const nuevo_detalle_entrega = (grupo, numeracion, array) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("pedidos")
+    .child("detalle_reparto")
+    .child(grupo)
+    .child("entregas")
+    .child(numeracion)
+    .set(array)
 };

@@ -13,34 +13,17 @@
           <v-row dense>
             <!-- Tipo de documento -->
             <v-col cols="12">
-              <v-select
-                dense
-                outlined
-                hide-details="auto"
-                label="Tipo de documento"
-                :items="tiposItems"
-                item-text="text"
-                item-value="value"
-                v-model="tipoDoc"
-                :rules="[v => !!v || 'Requerido']"
-              />
+              <v-select dense outlined hide-details="auto" label="Tipo de documento" :items="tiposItems"
+                item-text="text" item-value="value" v-model="tipoDoc" :rules="[v => !!v || 'Requerido']" />
             </v-col>
 
             <!-- Correlativo solo número -->
             <v-col cols="12">
-              <v-text-field
-                dense
-                outlined
-                hide-details="auto"
-                label="Correlativo (solo número)"
-                v-model="correlativo"
+              <v-text-field dense outlined hide-details="auto" label="Correlativo (solo número)" v-model="correlativo"
                 :rules="[
                   v => !!v || 'Requerido',
                   v => /^[0-9]{1,8}$/.test((v || '')) || 'Solo dígitos (máx. 8)'
-                ]"
-                placeholder="Ej: 365"
-                @input="soloNumeros"
-              />
+                ]" placeholder="Ej: 365" @input="soloNumeros" />
               <div class="caption grey--text text--darken-1 mt-1" v-if="idDocumentoCompleto">
                 Se buscará: <strong>{{ idDocumentoCompleto }}</strong>
               </div>
@@ -66,17 +49,8 @@
 
             <!-- Motivo -->
             <v-col cols="12">
-              <v-textarea
-                dense
-                outlined
-                auto-grow
-                rows="2"
-                label="Motivo de anulación"
-                v-model="motivo"
-                :rules="[v => !!(v && v.trim().length) || 'Indica el motivo']"
-                counter="200"
-                hide-details="auto"
-              />
+              <v-textarea dense outlined auto-grow rows="2" label="Motivo de anulación" v-model="motivo"
+                :rules="[v => !!(v && v.trim().length) || 'Indica el motivo']" counter="200" hide-details="auto" />
             </v-col>
           </v-row>
         </v-form>
@@ -85,14 +59,7 @@
       <v-card-actions>
         <v-spacer></v-spacer>
         <v-btn text @click="cierra()">Cancelar</v-btn>
-        <v-btn
-          color="red darken-1"
-          dark
-          depressed
-          :loading="loading"
-          :disabled="!formOk || loading"
-          @click="guardar"
-        >
+        <v-btn color="red darken-1" dark depressed :loading="loading" :disabled="!formOk || loading" @click="guardar">
           Anular documento
         </v-btn>
       </v-card-actions>

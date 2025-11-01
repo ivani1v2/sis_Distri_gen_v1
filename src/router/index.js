@@ -907,6 +907,31 @@ const routes = [
       }
     },
   },
+    {
+    path: "/reg_contables",
+    name: "reg_contables",
+    // route level code-splitting
+    // this generates a separate chunk (Produc.[hash].js) for this route
+    // which is lazy-loaded when the route is visited.
+    component: () =>
+      import(
+        /* webpackChunkName: "carrito" */ "../views/reportes/reg_contables.vue"
+      ),
+    meta: {
+      requireAuth: true,
+    },
+    beforeEnter: (to, from, next) => {
+      if (to.matched.some((ruta) => ruta.meta.requireAuth)) {
+        if (store.state.permisos.moduloreportes) {
+          next();
+        } else {
+          next({
+            name: "panel",
+          });
+        }
+      }
+    },
+  },
   {
     path: "/reportes",
     name: "reportes",

@@ -43,7 +43,7 @@
 
             </v-col>
             <v-col cols="6">
-                <v-btn color="blue darken-2" dark small @click="procesaKardex()">
+                <v-btn v-if="false"  color="blue darken-2" dark small @click="procesaKardex()">
                     Procesar Kardex
                 </v-btn>
             </v-col>
@@ -297,134 +297,141 @@ export default {
             return (k > 1) ? `${Math.floor(s / k)}/${s % k}` : '-'
         },
 
-        async inicio() {
-            try {
-                if (!this.buscar) {
-                    this.listafiltrada = []
-                    this.saldoInicial = 0
-                    this.saldoFinal = 0
-                    this.factorConv = 1
-                    return
-                }
+  async inicio() {
+  try {
+    if (!this.buscar) {
+      this.listafiltrada = []
+      this.saldoInicial = 0
+      this.saldoFinal = 0
+      this.factorConv = 1
+      return
+    }
 
-                const prodId = String(this.buscar)
-                const prodSel = (this.$store.state.productos || [])
-                    .find(p => String(p.id) === prodId)
+    const prodId = String(this.buscar)
+    const prodSel = (this.$store.state.productos || []).find(p => String(p.id) === prodId)
+    const nombreProd = prodSel ? prodSel.nombre : '(sin nombre)'
+    this.factorConv = Number(
+      prodSel?.factor ??
+      prodSel?.factor_paquete ??
+      prodSel?.factor_conversion ??
+      1
+    )
 
-                const nombreProd = prodSel ? prodSel.nombre : '(sin nombre)'
-                this.factorConv = Number(
-                    prodSel?.factor ??
-                    prodSel?.factor_paquete ??
-                    prodSel?.factor_conversion ??
-                    1
-                )
+    // 🔸 Rango unix del periodo elegido
+    const [ini, fin] = this.rangoDesdePeriodo(this.periodo)
 
-                // 🔸 Rango unix del periodo elegido
-                const [ini, fin] = this.rangoDesdePeriodo(this.periodo)
+    // 🔸 Refs Firestore
+    const raiz = colempresa().doc('kardex')
+    const prodRef = raiz.collection('historial').doc(prodId)
+    const movCol = prodRef.collection('detalle')
 
-                // 🔸 Refs Firestore
-                const raiz = colempresa().doc('kardex')
-                const prodRef = raiz.collection('historial').doc(prodId)
-                const movCol = prodRef.collection('detalle')
+    // 🔸 Leer todos los movimientos
+    const snapAll = await movCol.orderBy('f').get()
+    const movimientosTodos = []
 
-                // 🔸 Leer todos los movimientos
-                const snapAll = await movCol.orderBy('f').get()
-                const movimientosTodos = []
+    snapAll.forEach(doc => {
+      const x = doc.data()
+      movimientosTodos.push({
+        uuid: doc.id,
+        f: x.f || 0,
+        op: (x.op || '').toUpperCase(),
+        docref: x.doc || doc.id,
+        rs: x.rs || '',
+        cant: Number(x.cant || 0),
+        costo: x.costo ?? 0,
+        med: x.med || '',
+      })
+    })
 
-                snapAll.forEach(doc => {
-                    const x = doc.data()
-                    movimientosTodos.push({
-                        uuid: doc.id,
-                        f: x.f || 0,
-                        op: (x.op || '').toUpperCase(),
-                        docref: x.doc || doc.id,
-                        rs: x.rs || '',
-                        cant: Number(x.cant || 0),
-                        costo: x.costo ?? 0,
-                        med: x.med || '',
-                    })
-                })
+    // 🔹 Buscar saldo inicial base
+    let saldoInicialBase = 0
 
-                console.log('=== MOVIMIENTOS ===')
-                console.table(movimientosTodos.map(m => ({
-                    fecha: moment.unix(m.f).format('DD/MM/YYYY'),
-                    op: m.op,
-                    cant: m.cant,
-                    rs: m.rs,
-                    doc: m.docref
-                })))
+    const inicialAntes = movimientosTodos
+      .filter(m => m.op === 'INICIAL' && m.f < ini)
+      .sort((a, b) => a.f - b.f)
 
-                // 🔹 Buscar saldo inicial base
-                let saldoInicialBase = 0
+    const inicialDentro = movimientosTodos
+      .filter(m => m.op === 'INICIAL' && m.f >= ini && m.f <= fin)
+      .sort((a, b) => a.f - b.f)
 
-                const inicialAntes = movimientosTodos
-                    .filter(m => m.op === 'INICIAL' && m.f < ini)
-                    .sort((a, b) => a.f - b.f)
+    if (inicialAntes.length > 0) {
+      const ultima = inicialAntes[inicialAntes.length - 1]
+      saldoInicialBase = Number(ultima.cant || 0)
+    } else if (inicialDentro.length > 0) {
+      const primera = inicialDentro[0]
+      saldoInicialBase = Number(primera.cant || 0)
+    } else {
+      movimientosTodos
+        .filter(m => m.f < ini)
+        .forEach(m => { saldoInicialBase += Number(m.cant || 0) })
+    }
 
-                const inicialDentro = movimientosTodos
-                    .filter(m => m.op === 'INICIAL' && m.f >= ini && m.f <= fin)
-                    .sort((a, b) => a.f - b.f)
+    // 🔹 Filtrar movimientos del periodo (ocultando INICIAL)
+    const movimientosPeriodo = movimientosTodos
+      .filter(m => m.f >= ini && m.f <= fin && m.op !== 'INICIAL')
+      .sort((a, b) => a.f - b.f)
 
-                if (inicialAntes.length > 0) {
-                    const ultima = inicialAntes[inicialAntes.length - 1]
-                    saldoInicialBase = Number(ultima.cant || 0)
-                } else if (inicialDentro.length > 0) {
-                    const primera = inicialDentro[0]
-                    saldoInicialBase = Number(primera.cant || 0)
-                } else {
-                    movimientosTodos
-                        .filter(m => m.f < ini)
-                        .forEach(m => { saldoInicialBase += Number(m.cant || 0) })
-                }
+    // 🔹 Calcular saldos paso a paso
+    let saldoAcum = saldoInicialBase
+    const rows = []
 
-                // 🔹 Filtrar movimientos del periodo (ocultando INICIAL)
-                const movimientosPeriodo = movimientosTodos
-                    .filter(m => m.f >= ini && m.f <= fin && m.op !== 'INICIAL')
-                    .sort((a, b) => a.f - b.f)
+    // === NUEVO: insertar una fila inicial independiente ===
+    rows.push({
+      id: 'SALDO INICIAL',
+      modo_ajuste: 'INICIAL',
+      // uso el inicio del periodo para que quede primero
+      fecha_ingreso: ini,
+      motivo: 'Saldo inicial del periodo',
+      equivalente: this.eqStr(saldoInicialBase, this.factorConv),
+      data: [{
+        uuid: `INICIAL_${prodId}_${ini}`,
+        id: prodId,
+        nombre: nombreProd,
+        cantidad: 0,                  // movimiento informativo
+        costo: 0,
+        stock_inicial: saldoInicialBase,
+        saldo_final: saldoInicialBase,
+      }]
+    })
+    // === FIN NUEVO ===
 
-                // 🔹 Calcular saldos paso a paso
-                let saldoAcum = saldoInicialBase
-                const rows = []
+    movimientosPeriodo.forEach(mov => {
+      const stockInicialFila = saldoAcum
+      saldoAcum += mov.cant
+      const saldoFinalFila = saldoAcum
 
-                movimientosPeriodo.forEach(mov => {
-                    const stockInicialFila = saldoAcum
-                    saldoAcum += mov.cant
-                    const saldoFinalFila = saldoAcum
+      rows.push({
+        id: mov.docref,
+        modo_ajuste: mov.op,
+        fecha_ingreso: mov.f,
+        motivo: mov.rs,
+        equivalente: this.eqStr(saldoFinalFila, this.factorConv),
+        data: [{
+          uuid: mov.uuid,
+          id: prodId,
+          nombre: nombreProd,
+          cantidad: mov.cant,
+          costo: mov.costo ?? 0,
+          stock_inicial: stockInicialFila,
+          saldo_final: saldoFinalFila,
+        }]
+      })
+    })
 
-                    rows.push({
-                        id: mov.docref,
-                        modo_ajuste: mov.op,
-                        fecha_ingreso: mov.f,
-                        motivo: mov.rs,
-                        equivalente: this.eqStr(saldoFinalFila, this.factorConv),
-                        data: [{
-                            uuid: mov.uuid,
-                            id: prodId,
-                            nombre: nombreProd,
-                            cantidad: mov.cant,
-                            costo: mov.costo ?? 0,
-                            stock_inicial: stockInicialFila,
-                            saldo_final: saldoFinalFila,
-                        }]
-                    })
-                })
+    // 🔹 Actualizar cabecera
+    this.saldoInicial = saldoInicialBase
+    this.saldoFinal = saldoAcum
+    this.listafiltrada = rows
 
-                // 🔹 Actualizar cabecera
-                this.saldoInicial = saldoInicialBase
-                this.saldoFinal = saldoAcum
-                this.listafiltrada = rows
+  } catch (e) {
+    console.error('Error cargando historial:', e)
+    this.listafiltrada = []
+    this.saldoInicial = 0
+    this.saldoFinal = 0
+    this.factorConv = 1
+  }
+},
 
-                console.log('Saldo Inicial:', this.saldoInicial)
-                console.log('Saldo Final:', this.saldoFinal)
-
-            } catch (e) {
-                console.error('Error cargando historial:', e)
-                this.listafiltrada = []
-                this.saldoInicial = 0
-                this.saldoFinal = 0
-                this.factorConv = 1
-            }
-        },
 
 
 
@@ -432,8 +439,8 @@ export default {
             console.log(data)
             var a = axios({
                 method: 'POST',
-                //url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
-                url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
+                url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
+                //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
                 headers: {},
                 data: {
                     "bd": store.state.baseDatos.bd,

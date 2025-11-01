@@ -417,7 +417,7 @@ export default {
             this.documento = data.tipodoc || '';
             this.nombreCompleto = data.nombre || '';
             this.telfcliente = data.telefono || '';
-
+                 this.tipocomprobante = store.state.configuracion.defecto || 'T';
             // OPCIONAL: si tu componente tiene estas props/campos, completa coords
             if ('latitud' in this) this.latitud = (data.latitud ?? dirPri?.latitud ?? null);
             if ('longitud' in this) this.longitud = (data.longitud ?? dirPri?.longitud ?? null);

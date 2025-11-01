@@ -110,7 +110,7 @@
                     
                         <tbody>
                             <tr v-for="item in arrayConsolidar" :key="item.id" class="">
-                                <td>{{ item.nombre }} - S/.{{ item.precioedita }} x {{ item.medida }}</td>
+                                <td>{{item.id}} - {{ item.nombre }} - S/.{{ item.precioedita }} x {{ item.medida }}</td>
                                 <td>{{ item.cantidad }}</td>
                                 <td v-if="item.operacion == 'GRATUITA'" class="red--text">S/.0.00</td>
                                 <td v-else>S/.{{ redondear(item.precioedita * item.cantidad) }}</td>

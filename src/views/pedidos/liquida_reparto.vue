@@ -58,7 +58,7 @@
                         <v-list-item @click="abare_guias()">
                             <v-list-item-title>GUIA REMISION/REMITENTE</v-list-item-title>
                         </v-list-item>
-                        <v-list-item disabled>
+                        <v-list-item @click="anular_masivo()">
                             <v-list-item-title>Anular masivo</v-list-item-title>
                         </v-list-item>
                     </v-list>
@@ -412,7 +412,7 @@ import {
     eliminar_Movimientos,
     all_serv_imp,
     grabaCabecera_p,
-
+    modifica_pedidos
 } from '../../db'
 
 import store from '@/store/index'
@@ -1409,7 +1409,79 @@ export default {
             console.log(this.pedidoSeleccionado);
             // Aquí puedes abrir un diálogo o hacer lo que necesites con el detalle
 
-        }
+        },
+      async anular_masivo() {
+    // 1. Filtramos sólo los comprobantes seleccionados (checkbox consolida)
+    const seleccionados = this.desserts.filter(d => d.consolida);
+
+    if (seleccionados.length === 0) {
+        this.$store.commit('dialogosnackbar', 'No hay comprobantes seleccionados.');
+        return;
+    }
+
+    // 2. Confirmación al usuario
+    const ok = confirm(
+        '¿Seguro que quieres ANULAR estos comprobantes?\n' +
+        '- Se marcarán como ANULADO en este reparto.\n' +
+        '- Volverán a estado PENDIENTE en la pantalla de Pedidos.'
+    );
+    if (!ok) return;
+
+    try {
+        // 3. Mostrar loader global
+        this.$store.commit("dialogoprogress");
+
+        // 4. Armamos todas las tareas async por cada comprobante seleccionado
+        const tareas = seleccionados.map(comp => {
+            const subtareas = [];
+
+            // 4a. Regresar el pedido original a "pendiente"
+            // asumimos que comp.id_pedido es la key del pedido en /pedidos
+            if (comp.id_pedido) {
+                subtareas.push(
+                    modifica_pedidos(
+                        comp.id_pedido + '/estado',
+                        'pendiente'
+                    )
+                );
+            } else {
+                console.warn('⚠️ Sin id_pedido para', comp);
+            }
+
+            // 4b. Marcar la cabecera del reparto como ANULADO
+            // esto escribe en /Cabecera_p/<grupo>/<numeracion>/estado = 'ANULADO'
+            // usamos this.router_grupo (el reparto actual) y comp.numeracion
+            if (comp.numeracion) {
+                subtareas.push(
+                    grabaCabecera_p(
+                        this.router_grupo,
+                        comp.numeracion + '/estado',
+                        'ANULADO'
+                    )
+                );
+            } else {
+                console.warn('⚠️ Sin numeracion para', comp);
+            }
+
+            // Devolvemos una promesa que espera ambas subtareas
+            return Promise.all(subtareas);
+        });
+
+        // 5. Esperar que TODAS las cabeceras+pedidos terminen
+        await Promise.all(tareas);
+
+        // 6. Feedback al usuario
+        this.$store.commit('dialogosnackbar', 'Comprobantes anulados y devueltos a pendiente.');
+    } catch (e) {
+        console.error('Error en anular_masivo:', e);
+        alert('Ocurrió un error al intentar anular masivamente.');
+    } finally {
+        // 7. Cerrar loader SIEMPRE
+        this.$store.commit("dialogoprogress");
+    }
+}
+
+
 
 
 

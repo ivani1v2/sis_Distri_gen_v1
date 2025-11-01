@@ -1,642 +1,664 @@
 <template>
-    <v-dialog v-model="dial" max-width="1100px">
+    <v-dialog v-model="ui.main" max-width="1100px" persistent>
+        <!-- Barra superior -->
         <div>
             <v-system-bar window dark>
-                <v-icon @click="cierra()">mdi-close</v-icon>
+                <v-icon @click="emitCerrar">mdi-close</v-icon>
                 <v-spacer></v-spacer>
-                <v-icon large color="info" @click="dial_lista = true">mdi-magnify</v-icon>
-                <v-icon color="red" large @click="(dial_anula = true)">mdi-delete</v-icon>
-                <v-icon color="green" large @click="dialogo_genera = true">mdi-content-save</v-icon>
+                <v-icon large color="info" @click="ui.productos = true">mdi-magnify</v-icon>
+                <v-icon color="red" large @click="ui.confirmaAnulacion = true">mdi-delete</v-icon>
+                <v-icon color="green" large @click="ui.confirmaGrabar = true">mdi-content-save</v-icon>
             </v-system-bar>
         </div>
+
         <v-card class="pa-3">
+            <!-- Cabecera -->
             <v-card-text>
-                <v-row class="mb-n5 " dense>
+                <v-row dense class="mb-n5">
                     <v-col cols="6">
-                        <h4>FECHA DE EMISION: {{ conviertefecha(arra_cabe_doC.fecha_emision) }}</h4>
-                        <h4>FECHA DE INGRESO: {{ conviertefecha(arra_cabe_doC.fecha_ingreso) }}</h4>
-                        <h4>DOCUMENTO: {{ arra_cabe_doC.tipodocumento }} /
-                            {{ arra_cabe_doC.sreferencia }}-{{ arra_cabe_doC.creferencia }}</h4>
-                        <h4>Pago: {{ arra_cabe_doC.modo_pago }}</h4>
-                        <v-btn class="mb-1" color="warning" @click="abre_modifica()" x-small> Editar Cabecera </v-btn>
+                        <h4>FECHA DE EMISIÓN: {{ fmtFecha(cabecera.fecha_emision) }}</h4>
+                        <h4>FECHA DE INGRESO: {{ fmtFecha(cabecera.fecha_ingreso) }}</h4>
+                        <h4>
+                            DOCUMENTO: {{ cabecera.tipodocumento }} /
+                            {{ cabecera.sreferencia }}-{{ cabecera.creferencia }}
+                        </h4>
+                        <h4>Pago: {{ cabecera.modo_pago }}</h4>
+                        <v-btn x-small color="warning" class="mb-1" @click="abreEditarCabecera">
+                            Editar Cabecera
+                        </v-btn>
                     </v-col>
                     <v-col cols="6">
-                        <h4>RUC : {{ arra_cabe_doC.num_doc }}</h4>
-                        <h4>RAZON SOCIAL : {{ arra_cabe_doC.nom_proveedor }}</h4>
-                        <h4>Observacion : {{ arra_cabe_doC.observacion }}</h4>
+                        <h4>RUC : {{ cabecera.num_doc }}</h4>
+                        <h4>RAZÓN SOCIAL : {{ cabecera.nom_proveedor }}</h4>
+                        <h4>Observación : {{ cabecera.observacion }}</h4>
+
                         <div class="mt-2 mb-n5" v-if="!$store.state.esmovil">
                             <v-autocomplete autofocus class="mt-n3" label="Busca Producto" auto-select-first
-                                v-model="busca_p" :items="array_productos" @keyup.enter="selecciona()"></v-autocomplete>
+                                v-model="busqueda.texto" :items="busqueda.items" @keyup.enter="onBuscarEnter" />
                         </div>
                     </v-col>
                 </v-row>
             </v-card-text>
+
+            <!-- Detalle -->
             <v-simple-table dark fixed-header height="55vh" dense>
                 <template v-slot:default>
                     <thead>
                         <tr>
-                            <th class="text-left">
-                                Descripcion
-                            </th>
-                            <th class="text-left">
-                                Medida
-                            </th>
-                            <th class="text-left">
-                                Cost Unit
-                            </th>
-                            <th class="text-left">
-                                Cantidad
-                            </th>
-                            <th class="text-left">
-                                Importe
-                            </th>
+                            <th class="text-left">Descripción</th>
+                            <th class="text-left">Medida</th>
+                            <th class="text-left">Cost Unit</th>
+                            <th class="text-left">Cantidad</th>
+                            <th class="text-left">Importe</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="item in lista_productos" :key="item.key">
+                        <tr v-for="it in detalle" :key="it.uuid">
                             <td width="380">
-                                <v-icon color="green" @click="editaProducto(item)" small
-                                    class="mt-n1">mdi-pencil</v-icon>
-                                {{ item.id }} {{ item.nombre }}
+                                <v-icon color="green" small class="mt-n1"
+                                    @click="abreEditarItem(it)">mdi-pencil</v-icon>
+                                {{ it.id }} {{ it.nombre }}
                             </td>
-                            <td width="30">{{ item.medida }}</td>
-                            <td width="35">{{ redondear(item.costo_nuevo) }}</td>
-                            <td width="35">{{ item.cantidad }}</td>
-                            <td width="35" v-if="item.operacion == 'GRAVADA'">S/.{{ redondear(item.cantidad *
-                                item.costo_nuevo) }}</td>
-                            <td width="35" v-if="item.operacion == 'GRATUITA'">S/.0.00</td>
+                            <td width="30">{{ it.medida }}</td>
+                            <td width="35">{{ fmtDec(it.costo_nuevo) }}</td>
+                            <td width="35">{{ it.cantidad }}</td>
+                            <td width="35">
+                                <span v-if="it.operacion === 'GRAVADA'">S/. {{ fmtDec(it.cantidad * it.costo_nuevo)
+                                }}</span>
+                                <span v-else-if="it.operacion === 'GRATUITA'">S/. 0.00</span>
+                                <span v-else>S/. {{ fmtDec(it.cantidad * it.costo_nuevo) }}</span>
+                            </td>
                         </tr>
                     </tbody>
                 </template>
             </v-simple-table>
-            <v-spacer></v-spacer>
-            <v-row dense>
-                <v-col cols="6">
 
-                </v-col>
+            <!-- Totales -->
+            <v-row dense>
+                <v-col cols="6"></v-col>
                 <v-col cols="6" class="text-right">
-                    <h5> Op.Gravada:<span class="red--text"> S/.{{ tot_base_imp }}</span></h5>
-                    <h5> Op.Gratuita: <span class="red--text"> S/.{{ tot_gratuita }}</span></h5>
-                    <h5> Op.Exonerada: <span class="red--text"> S/.{{ tot_exonerada }}</span></h5>
-                    <h5> IGV {{ igv }}%: <span class="red--text"> S/.{{ tot_igv }}</span></h5>
-                    <h5> TOTAL: <span class="red--text"> S/.{{ totaliza }}</span></h5>
+                    <h5> Op. Gravada: <span class="red--text">S/. {{ totales.baseGravada }}</span></h5>
+                    <h5> Op. Gratuita: <span class="red--text">S/. {{ totales.gratuita }}</span></h5>
+                    <h5> Op. Exonerada: <span class="red--text">S/. {{ totales.exonerada }}</span></h5>
+                    <h5> IGV {{ igv }}%: <span class="red--text">S/. {{ totales.igv }}</span></h5>
+                    <h5> TOTAL: <span class="red--text">S/. {{ totales.total }}</span></h5>
                 </v-col>
             </v-row>
         </v-card>
 
-        <v-dialog v-model="dialogo_genera" max-width="460px">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dialogo_genera = !dialogo_genera">mdi-close</v-icon>
-                </v-system-bar>
+        <!-- Confirmar grabar -->
+        <v-dialog v-model="ui.confirmaGrabar" max-width="460px">
+            <div><v-system-bar window dark><v-icon @click="ui.confirmaGrabar = false">mdi-close</v-icon></v-system-bar>
             </div>
-
             <v-card class="pa-3">
                 <v-card-text>
-                    <h2 class="text-center">SEGURO DE CONTINUAR??</h2>
-
+                    <h2 class="text-center">¿SEGURO DE CONTINUAR?</h2>
                 </v-card-text>
-                <v-card-actions>
-                    <v-btn color="success" block @click="genera_compra(true)">SI</v-btn>
-                </v-card-actions>
-
+                <v-card-actions><v-btn color="success" block @click="grabar(true)">Sí</v-btn></v-card-actions>
             </v-card>
         </v-dialog>
-        <v-dialog v-model="dialogoProducto" max-width="390">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dialogoProducto = false">mdi-close</v-icon>
-                </v-system-bar>
+
+        <!-- Editar Item -->
+        <v-dialog v-model="ui.editarItem" max-width="390px">
+            <div><v-system-bar window dark><v-icon @click="ui.editarItem = false">mdi-close</v-icon></v-system-bar>
             </div>
             <v-card class="pa-3">
-                <v-select :items="arrayOperacion" label="Operacion" dense outlined v-model="operacion_edita"></v-select>
-                <v-row class="mx-auto text-center" dense>
-                    <v-col cols="6" class="mb-n4 mt-n1">
-                        <v-text-field dense @keyup.enter="grabaEdita()" class="pa-3" v-model="costo_edita"
-                            label="Costo Unitario"></v-text-field>
-                    </v-col>
-                </v-row>
-                <v-row class="mx-auto text-center" dense>
-                    <v-col cols="12" class="mb-n4 mt-n1">
-                        <v-text-field dense @keyup.enter="grabaEdita()" class="pa-3" v-model="nombreEdita"
-                            label="Nombre"></v-text-field>
-                    </v-col>
-                </v-row>
-                <v-card-actions class="mt-n6">
+                <v-select :items="constantes.operaciones" label="Operación" dense outlined
+                    v-model="formItem.operacion" />
+                <v-text-field dense class="pa-3" v-model="formItem.costo" label="Costo Unitario"
+                    @keyup.enter="guardarItemEditado" />
+                <v-text-field dense class="pa-3" v-model="formItem.nombre" label="Nombre"
+                    @keyup.enter="guardarItemEditado" />
+                <v-card-actions class="mt-n4">
                     <v-spacer></v-spacer>
-                    <v-btn color="error" text @click="eliminar()">
-                        Elimina
-                    </v-btn>
-                    <v-btn color="green darken-1" text @click="grabaEdita()">
-                        Graba
-                    </v-btn>
+                    <v-btn color="error" text @click="eliminarItem">Eliminar</v-btn>
+                    <v-btn color="green darken-1" text @click="guardarItemEditado">Grabar</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
-        <v-dialog v-model="dial_agrega_prod" max-width="390">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dial_agrega_prod = false">mdi-close</v-icon>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <v-select :items="arrayOperacion" label="Operacion" dense outlined v-model="operacion_edita"></v-select>
-                <v-row class="mx-auto text-center" dense>
-                    <v-col cols="6" class="mb-n4 mt-n1">
-                        <v-text-field dense @focus="(foco_igv = false)" class="pa-3" v-model="sin_igv"
-                            label="PRECIO SIN IGV"></v-text-field>
-                    </v-col>
-                    <v-col cols="6" class="mb-n4 mt-n1">
-                        <v-text-field dense @focus="(foco_igv = true)" class="pa-3" v-model="con_igv"
-                            label="PRECIO CON IGV"></v-text-field>
-                    </v-col>
-                </v-row>
-                <v-row class="mx-auto text-center" dense>
-                    <v-col cols="12" class="mb-n4 mt-n1">
-                        <v-text-field dense @keyup.enter="grabaEdita()" class="pa-3" v-model="nombreEdita"
-                            label="Nombre"></v-text-field>
-                    </v-col>
-                </v-row>
-                <v-card-actions class="mt-n6">
-                    <v-spacer></v-spacer>
-                    <v-btn color="error" text @click="(dial_agrega_prod = false)">
-                        Cancela
-                    </v-btn>
-                    <v-btn color="green darken-1" text @click="agregaCatalogo()">
-                        Agrega
-                    </v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
-        <v-dialog v-model="dialo_cantidad" max-width="300px">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dialo_cantidad = !dialo_cantidad">mdi-close</v-icon>
-                    <v-spacer></v-spacer>
-                </v-system-bar>
-            </div>
-            <v-card>
 
-                <v-card-title>
-                    <v-row v-if="!btn" class="pa-1">
-                        <v-col cols="6">
-                            <v-btn color="success" block @click="seleeciona_modo('entero')">{{ this.selecto.medida
-                                }}</v-btn>
-                        </v-col>
-                        <v-col cols="6">
-                            <v-btn color="success" block @click="seleeciona_modo('fraccion')">UND.</v-btn>
-                        </v-col>
-                    </v-row>
-                    <v-row class="mx-auto text-center" dense>
-                        <v-col cols="6" class="mb-n4 mt-n1">
-                            <v-text-field dense @focus="(foco_igv = false)" class="pa-3" v-model="sin_igv"
-                                label="PRECIO SIN IGV"></v-text-field>
-                        </v-col>
-                        <v-col cols="6" class="mb-n4 mt-n1">
-                            <v-text-field dense @focus="(foco_igv = true)" class="pa-3" v-model="con_igv"
-                                label="PRECIO CON IGV"></v-text-field>
-                        </v-col>
-                    </v-row>
-                    <v-text-field type="number" autofocus outlined dense v-model="cantidad" label="CANTIDAD"
-                        @focus="$event.target.select()" @keyup.enter="agregaCatalogo()"></v-text-field>
-                </v-card-title>
-                <v-btn class="mt-n6" color="red" @click="agregaCatalogo()" block>OK</v-btn>
-            </v-card>
-        </v-dialog>
-        <v-dialog v-model="dial_modifica" max-width="800px" persistent>
+        <!-- Agregar Item / Cantidad + Precios -->
+  <!-- Agregar Item / Cantidad + Precios -->
+<v-dialog v-model="ui.agregarItem" max-width="360px">
+  <div>
+    <v-system-bar window dark>
+      <v-icon @click="ui.agregarItem = false">mdi-close</v-icon>
+    </v-system-bar>
+  </div>
+  <v-card class="pa-3">
+    <v-select
+      :items="constantes.operaciones"
+      label="Operación"
+      dense
+      outlined
+      v-model="formNuevo.operacion"
+    />
 
+    <!-- Si NO es exonerada: 2 campos (sin/con IGV) -->
+    <v-row v-if="formNuevo.operacion !== 'EXONERADA'" dense class="mx-auto text-center">
+      <v-col cols="6" class="mb-n1">
+        <v-text-field
+          dense
+          label="PRECIO SIN IGV"
+          v-model="formNuevo.sinIgv"
+          @focus="precioFocus = 'sin'"
+        />
+      </v-col>
+      <v-col cols="6" class="mb-n1">
+        <v-text-field
+          dense
+          label="PRECIO CON IGV"
+          v-model="formNuevo.conIgv"
+          @focus="precioFocus = 'con'"
+        />
+      </v-col>
+    </v-row>
+
+    <!-- Si es exonerada: 1 solo campo -->
+    <v-row v-else dense class="mx-auto text-center">
+      <v-col cols="12" class="mb-n1">
+        <v-text-field
+          dense
+          label="PRECIO EXONERADO"
+          v-model="formNuevo.conIgv"
+          @focus="precioFocus = 'con'"
+        />
+      </v-col>
+    </v-row>
+
+    <v-row dense class="mx-auto text-center">
+      <v-col cols="12" class="mb-n2">
+        <v-text-field dense label="Nombre" v-model="formNuevo.nombre" @keyup.enter="confirmAgregar" />
+      </v-col>
+    </v-row>
+
+    <v-row dense class="mx-auto text-center">
+      <v-col cols="6">
+        <v-btn block color="success" @click="seleccionarModo('entero')">{{ prodSelecto.medida }}</v-btn>
+      </v-col>
+      <v-col cols="6">
+        <v-btn block color="success" @click="seleccionarModo('fraccion')">UND.</v-btn>
+      </v-col>
+    </v-row>
+
+    <v-text-field
+      type="number"
+      outlined
+      dense
+      v-model.number="formNuevo.cantidad"
+      label="CANTIDAD"
+      @focus="$event.target.select()"
+      @keyup.enter="confirmAgregar"
+      class="mt-2"
+    />
+    <v-btn class="mt-2" color="red" block @click="confirmAgregar">OK</v-btn>
+  </v-card>
+</v-dialog>
+
+
+        <!-- Editar Cabecera -->
+        <v-dialog v-model="ui.editarCabecera" max-width="800px" persistent>
             <div>
                 <v-system-bar window dark>
-                    <v-icon @click="(dial_modifica = !dial_modifica)">mdi-close</v-icon>
+                    <v-icon @click="ui.editarCabecera = false">mdi-close</v-icon>
                     <h5 class="text-center">REGISTRO DE COMPRAS</h5>
                     <v-spacer></v-spacer>
                 </v-system-bar>
             </div>
             <v-card class="pa-3">
-                <v-row class="pa-1" dense>
-                    <v-col cols="6">
-                        <v-text-field type="date" outlined dense v-model="date" label="Emision"></v-text-field>
-                    </v-col>
-                    <v-col cols="6">
-                        <v-text-field type="date" outlined dense v-model="date_ingreso"
-                            label="Ingreso Producto"></v-text-field>
-                    </v-col>
+                <v-row dense class="pa-1">
+                    <v-col cols="6"><v-text-field type="date" outlined dense v-model="formCabecera.emision"
+                            label="Emisión" /></v-col>
+                    <v-col cols="6"><v-text-field type="date" outlined dense v-model="formCabecera.ingreso"
+                            label="Ingreso Producto" /></v-col>
                 </v-row>
-                <v-row class="pa-1 mt-n8" dense>
-                    <v-col cols="6">
-                        <v-text-field readonly outlined dense v-model="num_doc" label="N° DOC PROVEE."
-                            append-icon="mdi-magnify"
-                            @click:append="$store.commit('dialogo_tabla_proveedores', false)"></v-text-field>
-                    </v-col>
-                    <v-col cols="6">
-                        <v-text-field readonly outlined dense v-model="nom_proveedor"
-                            label="NOMBRE PROVEEDOR"></v-text-field>
-                    </v-col>
+                <v-row dense class="pa-1 mt-n4">
+                    <v-col cols="6"><v-text-field readonly outlined dense v-model="formCabecera.num_doc"
+                            label="N° DOC PROVEE." append-icon="mdi-magnify"
+                            @click:append="$store.commit('dialogo_tabla_proveedores', false)" /></v-col>
+                    <v-col cols="6"><v-text-field readonly outlined dense v-model="formCabecera.nom_proveedor"
+                            label="NOMBRE PROVEEDOR" /></v-col>
                 </v-row>
-                <v-row class="pa-1 mt-n8" dense>
-                    <v-col cols="4">
-                        <v-select :items="arraydocumento" label="Tipo" dense outlined
-                            v-model="tipodocumento"></v-select>
-                    </v-col>
-                    <v-col cols="4">
-                        <v-text-field :disabled="(num_doc == '')" type="text" outlined dense v-model="sreferencia"
-                            label="Serie Referencia" placeholder="F001"></v-text-field>
-                    </v-col>
-                    <v-col cols="4">
-                        <v-text-field :disabled="(sreferencia == '')" type="number" outlined dense v-model="creferencia"
-                            label="Correlativo Referencia" placeholder="1234"></v-text-field>
-                    </v-col>
+                <v-row dense class="pa-1 mt-n4">
+                    <v-col cols="4"><v-select :items="constantes.tiposDocumento" label="Tipo" dense outlined
+                            v-model="formCabecera.tipodocumento" /></v-col>
+                    <v-col cols="4"><v-text-field type="text" outlined dense v-model="formCabecera.sreferencia"
+                            label="Serie Ref." placeholder="F001" :disabled="!formCabecera.num_doc" /></v-col>
+                    <v-col cols="4"><v-text-field type="number" outlined dense v-model="formCabecera.creferencia"
+                            label="Correlativo Ref." placeholder="1234" :disabled="!formCabecera.sreferencia" /></v-col>
                 </v-row>
-                <v-row class="pa-1 mt-n8" dense>
-                    <v-col cols="3">
-                        <v-select :items="arraymodo" label="Modo Pago" dense outlined v-model="modo_pago"></v-select>
-                    </v-col>
-                    <v-col cols="9">
-                        <v-textarea outlined dense v-model="observacion" auto-grow filled label="OBSERVACION"
-                            rows="1"></v-textarea>
-                    </v-col>
+                <v-row dense class="pa-1 mt-n4">
+                    <v-col cols="3"><v-select :items="constantes.modosPago" label="Modo Pago" dense outlined
+                            v-model="formCabecera.modo_pago" /></v-col>
+                    <v-col cols="9"><v-textarea outlined dense v-model="formCabecera.observacion" auto-grow
+                            label="OBSERVACIÓN" rows="1" /></v-col>
                 </v-row>
-                <v-row class="pa-1 mt-n2" dense>
-                    <v-col cols="12">
-                        <v-btn block class="" @click="guarda_moficacion()" color="success">GUARDA MODIFICACION</v-btn>
-                    </v-col>
+                <v-row dense class="pa-1 mt-n1">
+                    <v-col cols="12"><v-btn block color="success" @click="guardarCabecera">GUARDAR</v-btn></v-col>
                 </v-row>
-
             </v-card>
         </v-dialog>
-        <v-dialog persistent v-model="progress" max-width="250">
+
+        <!-- Progreso -->
+        <v-dialog persistent v-model="ui.progreso" max-width="250px">
             <v-card class="pa-12">
-                <v-progress-linear indeterminate color="blue-grey" height="25">
-                </v-progress-linear>
+                <v-progress-linear indeterminate color="blue-grey" height="25" />
             </v-card>
         </v-dialog>
-        <v-dialog v-model="dial_anula" max-width="460px">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="(dial_anula = !dial_anula)">mdi-close</v-icon>
-                </v-system-bar>
-            </div>
 
+        <!-- Confirmar anulación -->
+        <v-dialog v-model="ui.confirmaAnulacion" max-width="460px">
+            <div><v-system-bar window dark><v-icon
+                        @click="ui.confirmaAnulacion = false">mdi-close</v-icon></v-system-bar>
+            </div>
             <v-card class="pa-3">
                 <v-card-text>
-                    <h2 class="text-center">SEGURO QUE DESEA ANULAR??</h2>
+                    <h2 class="text-center">¿SEGURO QUE DESEA ANULAR?</h2>
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn color="info" @click="anula_mov()">SI</v-btn>
-                    <v-btn color="success" @click="dial_anula = false">NO</v-btn>
+                    <v-btn color="info" @click="anular">Sí</v-btn>
+                    <v-btn color="success" @click="ui.confirmaAnulacion = false">No</v-btn>
                 </v-card-actions>
-
             </v-card>
         </v-dialog>
-        <v-dialog v-model="dial_lista" max-width="800px">
-            <cata_productos v-if="dial_lista" @array="abre_cantidad($event)" @cierra="dial_lista = $event" />
-        </v-dialog>
 
+        <!-- Catálogo de productos -->
+        <v-dialog v-model="ui.productos" max-width="800px">
+            <cata_productos v-if="ui.productos" @array="onProductoSeleccionado" @cierra="ui.productos = $event" />
+        </v-dialog>
     </v-dialog>
 </template>
 
 <script>
-import cateogrias from '@/components/dialogos/dialogocatalogo'
-import clientes from '@/components/dialogos/dialogoClientes'
-import moment from 'moment'
-import store from '@/store/index'
-import catalogo from '@/components/dialogos/dialogocatalogo'
-import tabla_proveedor from '@/components/configEmpresa/tabla_proveedor'
-import cata_productos from '@/views/movi_kardex/lista_productos'
-import {
-    nuevoMovimiento,
-    edita_Movimiento,
-    elmina_mov_kardex
-} from '../../db'
-import {
-    modifica_stock_array,
-    modifica_stock_unitario
-} from '../../control_stock'
-import { fs, colempresa } from '../../db_firestore'
-export default {
-    name: 'caja',
+import moment from "moment"
+import store from "@/store/index"
+import cata_productos from "@/views/movi_kardex/lista_productos"
+import { nuevoMovimiento, edita_Movimiento, elmina_mov_kardex } from "../../db"
+import { modifica_stock_array, modifica_stock_unitario } from "../../control_stock"
+import { fs, colempresa } from "../../db_firestore"
 
-    components: {
-        clientes,
-        cateogrias,
-        catalogo,
-        tabla_proveedor,
-        cata_productos
-    },
-    props: {
-        data: [],
-    },
+export default {
+    name: "RegistroCompras",
+    components: { cata_productos },
+    props: { data: { type: Object, required: true } },
     data() {
         return {
-            dial_lista: false,
-            dial_anula: false,
-            progress: false,
-            dial_modifica: false,
-            dial_agrega_prod: false,
-            dialo_cantidad: false,
-            dialogo_genera: false,
-            dial_configura: false,
-            dialogoProducto: false,
-            arra_cabe_doC: [],
-            array_productos: [],
-            lista_productos: [],
-            arrayOperacion: [
-                'GRAVADA',
-                'GRATUITA'
-            ],
-            operacion_edita: 'GRAVADA',
-            tot_igv: 0.00,
-            tot_base_imp: 0.00,
-            tot_gratuita: 0,
-            tot_exonerada: 0,
+            // Cabecera y detalle
+            cabecera: this.cloneCabecera(this.data),
+            detalle: Array.isArray(this.data?.data) ? [...this.data.data] : [],
+
+            // Parámetros
             igv: 18,
-            busca_p: '',
-            btn: false,
-            modo: '',
-            cantidad: 1,
-            cantidad_und: 1,
-            selecto: '',
-            con_igv: '',
-            sin_igv: '',
-            foco_igv: false,
-            incluye_igv: true,
-            costo_edita: '',
-            nombreEdita: '',
-            producto_ingresado: [],
-            date: moment(String(new Date)).format('YYYY-MM-DD'),
-            date_ingreso: moment(String(new Date)).format('YYYY-MM-DD'),
-            arraymodo: ['CONTADO', 'CREDITO'],
-            modo_pago: 'CONTADO',
-            arraydocumento: ['FACTURA', 'BOLETA', 'NOTA DE VENTA'],
-            tipodocumento: 'FACTURA',
-            edita_app: false,
-            sreferencia: '',
-            creferencia: '',
-            observacion: '',
-            num_doc: '',
-            nom_proveedor: '',
-            dial: false,
+            incluyeIgv: true,
+
+            // UI
+            ui: {
+                main: true,
+                progreso: false,
+                productos: false,
+                editarItem: false,
+                agregarItem: false,
+                editarCabecera: false,
+                confirmaGrabar: false,
+                confirmaAnulacion: false,
+            },
+            formCabecera: {
+                emision: "",
+                ingreso: "",
+                num_doc: "",
+                nom_proveedor: "",
+                tipodocumento: "FACTURA",
+                sreferencia: "",
+                creferencia: "",
+                modo_pago: "CONTADO",
+                observacion: ""
+            },
+            // Búsqueda rápida por autocompletado
+            busqueda: {
+                texto: "",
+                items: this.buildAutocompleteItems(),
+            },
+
+            // Formularios
+            formItem: { index: -1, uuid: "", nombre: "", operacion: "GRAVADA", costo: "" },
+            formNuevo: { operacion: "GRAVADA", sinIgv: "", conIgv: "", nombre: "", cantidad: 1, modo: "fraccion" },
+            prodSelecto: {},
+            precioFocus: "con", // 'con' | 'sin'
+
+            constantes: {
+                operaciones: ["GRAVADA", "GRATUITA", "EXONERADA"],
+                modosPago: ["CONTADO", "CREDITO"],
+                tiposDocumento: ["FACTURA", "BOLETA", "NOTA DE VENTA"],
+            },
         }
     },
-    created() {
-        this.inicio()
-        this.dial = true
-    },
+
     computed: {
-        totaliza() {
-            if (this.foco_igv) {
-                this.sin_igv = (this.con_igv / 1.18).toFixed(4)
-            } else {
-                this.con_igv = (this.sin_igv * 1.18).toFixed(4)
-            }
-
-            var suma_gravada = 0
-            var suma_exo = 0
-            var suma_grati = 0
-            var suma = 0
-            if (this.lista_productos != undefined) {
-                for (var i = 0; i < this.lista_productos.length; i++) {
-                    var data = this.lista_productos[i]
-                    if (data.operacion == 'GRAVADA') {
-                        suma_gravada = suma_gravada + (data.cantidad * data.costo_nuevo)
-                    }
-                    if (data.operacion == 'EXONERADA') {
-                        suma_exo = suma_exo + (data.cantidad * data.costo_nuevo)
-                    }
-                    if (data.operacion == 'GRATUITA') {
-                        suma_grati = suma_grati + (data.cantidad * data.costo_nuevo)
-                    }
-
-                }
-                if (this.incluye_igv) {
-                    this.tot_base_imp = (suma_gravada / (1 + (this.igv) / 100)).toFixed(2)
-                    this.tot_igv = (suma_gravada / (1 + (this.igv) / 100) * (this.igv) / 100).toFixed(2)
-                } else {
-                    this.tot_base_imp = (suma_gravada).toFixed(2)
-                    this.tot_igv = ((suma_gravada) * (this.igv) / 100).toFixed(2)
-                }
-                this.tot_gratuita = (suma_grati / (1 + (this.igv) / 100)).toFixed(2)
-                this.tot_exonerada = suma_exo
-                suma = parseFloat(this.tot_base_imp) + parseFloat(this.tot_igv) + suma_exo
-                return suma.toFixed(2)
+        totales() {
+            const t = this.calcTotales(this.detalle, this.igv, this.incluyeIgv)
+            return {
+                baseGravada: this.fmtDec(t.base),
+                igv: this.fmtDec(t.igv),
+                exonerada: this.fmtDec(t.exo),
+                gratuita: this.fmtDec(t.gratuitaBase),
+                total: this.fmtDec(t.total),
             }
         },
-
     },
+
+watch: {
+  "formNuevo.sinIgv"(v) {
+    if (this.formNuevo.operacion === "EXONERADA") return; // sin IGV = exonerado (se maneja desde conIgv)
+    if (this.precioFocus === "sin") {
+      const n = this.num(v);
+      this.formNuevo.conIgv = n ? (n * (1 + this.igv / 100)).toFixed(4) : "";
+    }
+  },
+  "formNuevo.conIgv"(v) {
+    if (this.formNuevo.operacion === "EXONERADA") {
+      // En exonerada, ambos equivalen
+      this.formNuevo.sinIgv = v;
+      return;
+    }
+    if (this.precioFocus === "con") {
+      const n = this.num(v);
+      this.formNuevo.sinIgv = n ? (n / (1 + this.igv / 100)).toFixed(4) : "";
+    }
+  },
+},
+
     methods: {
-        inicio() {
-            this.arra_cabe_doC = this.data
-            if (this.data.data == undefined) {
-                this.data.data = []
+        // ---------- Utilitarios ----------
+        docCode(tipo) {
+            if (tipo === "FACTURA") return "01";
+            if (tipo === "BOLETA") return "03";
+            if (tipo === "NOTA DE VENTA") return "00";
+            return "00";
+        },
+        cloneCabecera(src) {
+            const d = src || {};
+            const ahora = moment().unix();
+            return {
+                id: d.id || this.uuid4(),
+                fecha_emision: this.asUnix(d.fecha_emision) || this.asUnix(Date.now()),
+                fecha_ingreso: this.asUnix(d.fecha_ingreso) || this.asUnix(Date.now()),
+                fecha_creacion: d.fecha_creacion || ahora,          // NUEVO
+                tipodocumento: d.tipodocumento || "FACTURA",
+                cod_doc: d.cod_doc || this.docCode(d.tipodocumento || "FACTURA"), // NUEVO
+                operacion: d.operacion || "COMPRA",                 // NUEVO
+                periodo: d.periodo || "",                           // NUEVO
+                sreferencia: d.sreferencia || "",
+                creferencia: d.creferencia || "",
+                modo_pago: d.modo_pago || "CONTADO",
+                num_doc: d.num_doc || "",
+                nom_proveedor: d.nom_proveedor || "",
+                observacion: d.observacion || "",
+                responsable: d.responsable || this.usuarioResponsable(), // NUEVO
+                data: [],
+            };
+        },
+        usuarioResponsable() {
+            const correo = store?.state?.permisos?.correo || "";
+            // Ejemplo anterior: slice(0, -13). Alternativa más robusta: quitar dominio.
+            return correo ? correo.replace(/@.*/, "") : "";
+        },
+
+        uuid4() {
+            try { return crypto.randomUUID() } catch { /* fallback */ }
+            const s4 = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)
+            return `${s4()}${s4()}-${s4()}-${s4()}-${s4()}-${s4()}${s4()}${s4()}`
+        },
+        asUnix(msOrUnix) {
+            if (!msOrUnix && msOrUnix !== 0) return 0
+            // si viene en segundos, mantener; si viene en ms, convertir
+            return String(msOrUnix).length > 10 ? Math.floor(Number(msOrUnix) / 1000) : Number(msOrUnix)
+        },
+        fromUnix(u) { return moment.unix(Number(u || 0)).format("YYYY-MM-DD") },
+        toUnix(yyyy_mm_dd) { return Math.floor(moment(String(yyyy_mm_dd)).valueOf() / 1000) },
+        fmtFecha(unix) { return moment.unix(Number(unix || 0)).format("DD/MM/YYYY") },
+        num(v) {
+            if (v === undefined || v === null || v === "") return 0
+            const n = Number(String(v).replace(",", "."))
+            return Number.isFinite(n) ? n : 0
+        },
+        fmtDec(v) {
+            const dec = store?.state?.configuracion?.decimal ?? 2
+            return Number(v || 0).toFixed(dec)
+        },
+        buildAutocompleteItems() {
+            const arr = store?.state?.productos || []
+            return arr.map(p => `${p.id} / ${p.nombre} / ${p.medida}`)
+        },
+
+        // ---------- Cálculos ----------
+        calcTotales(items, igvPct, incluyeIgv) {
+            let grav = 0, exo = 0, gratuita = 0
+            for (const it of items || []) {
+                const base = this.num(it.cantidad) * this.num(it.costo_nuevo)
+                if (it.operacion === "GRAVADA") grav += base
+                else if (it.operacion === "EXONERADA") exo += base
+                else if (it.operacion === "GRATUITA") gratuita += base
             }
-            this.lista_productos = this.data.data
-            var array = store.state.productos
-            for (var i = 0; i < array.length; i++) {
-                this.array_productos[this.array_productos.length] = array[i].id + ' / ' + array[i].nombre + ' / ' + array[i].medida
-            }
-        },
-        conviertefecha(date) {
-            return moment.unix(date).format('DD/MM/YYYY')
-        },
-        selecciona() {
-            var producto = this.busca_p.split('/')[0].trim()
-            var data = store.state.productos.filter(item => item.id == producto)[0]
-            if (data != undefined) {
-                this.abre_cantidad(data)
-            }
-        },
-        abre_cantidad(item) {
-            console.log(item)
-            this.producto_ingresado = item
-            this.operacion_edita = 'GRAVADA'
-            this.nombreEdita = item.nombre
 
-            // Asignamos precios base del producto
-            this.con_igv = Number(item.costo || 0)
-            this.sin_igv = (Number(this.con_igv) / 1.18).toFixed(4)
-
-            // Cantidad por defecto
-            this.cantidad = 1
-
-            // Guardamos selección y preparamos UI de modo
-            this.selecto = item
-            this.modo = 'fraccion'       // por defecto "unidad"
-            this.btn = false             // muestra los botones paquete/unidad
-            this.dialo_cantidad = true
-        },
-        seleeciona_modo(tipo) {
-            // tipo: 'entero' (paquete) | 'fraccion' (unidad)
-            this.modo = tipo
-            this.btn = true              // oculta los botones tras elegir
-        },
-
-        redondear(valor) {
-            return parseFloat(valor).toFixed(store.state.configuracion.decimal)
-        },
-        editaProducto(val) {
-            for (var i = 0; i < this.lista_productos.length; i++) {
-                if (this.lista_productos[i].uuid == val.uuid) {
-                    this.codigoedita = i
-                    this.selecto = this.lista_productos[i]
-                    this.nombreEdita = this.lista_productos[i].nombre
-                    this.operacion_edita = this.lista_productos[i].operacion
-                    this.costo_edita = this.lista_productos[i].costo_nuevo
-                }
-            }
-            this.dialogoProducto = true
-        },
-        async eliminar() {
-             store.commit("dialogoprogress");
-            modifica_stock_unitario('RESTA', this.selecto)
-                    await this.eliminar_mov()
-            this.lista_productos.splice(this.codigoedita, 1)
-             store.commit("dialogoprogress");
-            this.dialogoProducto = false
-        },
-         async eliminar_mov() {
-            if (this.selecto && this.selecto.id && this.selecto.uuid) {
-                const pid = String(this.selecto.id);
-                const lineId = this.data.id + '_' + String(this.selecto.uuid);
-
-                await colempresa()
-                    .doc("kardex")
-                    .collection("historial")
-                    .doc(pid)
-                    .collection("detalle")
-                    .doc(lineId)
-                    .delete()
-                    .catch(e => {
-                        console.error("No se pudo borrar linea kardex:", e);
-                    });
+            let baseImp, igvVal
+            if (incluyeIgv) {
+                baseImp = grav / (1 + igvPct / 100)
+                igvVal = baseImp * (igvPct / 100)
             } else {
-                console.warn("No hay pid/line_id para borrar en kardex, skip.");
+                baseImp = grav
+                igvVal = grav * (igvPct / 100)
             }
+
+            const total = baseImp + igvVal + exo
+            const gratuitaBase = gratuita / (1 + igvPct / 100)
+
+            return { base: baseImp, igv: igvVal, exo, gratuitaBase, total }
         },
-        grabaEdita() {
-            this.lista_productos[this.codigoedita].operacion = this.operacion_edita.toString().trim()
-            this.lista_productos[this.codigoedita].nombre = this.nombreEdita.toString().trim()
-            this.lista_productos[this.codigoedita].costo_nuevo = this.costo_edita
-            this.genera_compra(false)
-            this.dialogoProducto = false
+
+        // ---------- UI / Emisiones ----------
+        emitCerrar() { this.$emit("cierra_compra", false) },
+
+        onBuscarEnter() {
+            const id = String(this.busqueda.texto || "").split("/")[0].trim()
+            if (!id) return
+            const prod = (store?.state?.productos || []).find(p => String(p.id) === id)
+            if (prod) this.preparaAgregar(prod)
         },
-        async agregaCatalogo() {
-            store.commit("dialogoprogress")
-            this.busca_p = ''
 
-            const prod = this.producto_ingresado || {}
+        onProductoSeleccionado(prod) {
+            if (Array.isArray(prod) && prod.length) prod = prod[0]
+            this.preparaAgregar(prod)
+        },
 
-            const factor = Number(prod.factor) > 0 ? Number(prod.factor) : 1
+        preparaAgregar(prod) {
+            this.prodSelecto = prod || {}
+            this.formNuevo = {
+                operacion: "GRAVADA",
+                sinIgv: this.num(prod?.costo) ? (this.num(prod.costo) / (1 + this.igv / 100)).toFixed(4) : "",
+                conIgv: this.num(prod?.costo) ? this.num(prod.costo).toFixed(4) : "",
+                nombre: prod?.nombre || "",
+                cantidad: 1,
+                modo: "fraccion", // por defecto unidad
+            }
+            this.precioFocus = "con"
+            this.ui.agregarItem = true
+        },
 
-            const qtyIngresada = parseFloat(this.cantidad) || 0
-            // Si es paquete ("entero"), multiplicamos por factor
-            const cantidadFinal = (this.modo === 'entero') ? (qtyIngresada) : qtyIngresada
-            console.log(this.modo, prod)
-            const medida = (this.modo === 'entero') ? prod.medida : 'UNIDAD'
-            // Precio que guardas (con IGV como ya lo hacías)
-            let costoConIgv = Number(this.con_igv) || 0
+        seleccionarModo(m) { this.formNuevo.modo = m },
 
-            // 💡 Si quisieras que el precio ingresado sea por PAQUETE y convertirlo a unitario,
-            // usa esta línea en vez de la anterior:
-            // if (this.modo === 'entero') costoConIgv = costoConIgv / factor
+        async confirmAgregar() {
+            const prod = this.prodSelecto || {}
+            const factor = this.num(prod.factor) > 0 ? this.num(prod.factor) : 1
+            const cant = Math.max(0, this.num(this.formNuevo.cantidad))
+            const cantidadFinal = cant // si quieres multiplicar en "entero" por factor, cámbialo aquí
+            const medida = this.formNuevo.modo === "entero" ? prod.medida : "UNIDAD"
 
-            const array_producto = {
-                uuid: crypto.randomUUID() || "",
+            // Precio guardado (usamos CON IGV tal cual)
+            const costoConIgv = this.num(this.formNuevo.conIgv)
+
+            const nuevo = {
+                uuid: this.uuid4(),
                 id: prod.id,
                 cantidad: cantidadFinal,
-                nombre: prod.nombre,
-                medida: medida,            // deja tu medida como la tienes
+                nombre: this.formNuevo.nombre || prod.nombre || "",
+                medida,
                 stock: prod.stock,
-                operacion: this.operacion_edita,
+                operacion: this.formNuevo.operacion,
                 costo: costoConIgv,
                 costo_nuevo: costoConIgv,
-
-                // metadatos útiles (no rompen nada existente)
                 factor_paquete: factor,
-                modo_ingreso: this.modo         // 'entero' (paquete) | 'fraccion' (unidad)
-
+                modo_ingreso: this.formNuevo.modo,
             }
 
-            await modifica_stock_unitario('SUMA', array_producto)
-
-            this.dialo_cantidad = false
-            this.lista_productos.push(array_producto)
-            this.genera_compra(false)
-            store.commit("dialogoprogress")
-        },
-        async genera_compra(cierra) {
-            var array = this.arra_cabe_doC
-            array.baseimponible = this.tot_base_imp
-            array.igv = this.tot_igv
-            array.porc_igv = this.igv
-            array.tot_gratuita = this.tot_gratuita
-            array.tot_exonerada = this.tot_exonerada
-            array.total = this.totaliza
-            array.data = this.lista_productos
-            await nuevoMovimiento(array.id, array)
-            if (cierra) {
-                this.$emit('cierra_compra', false)
-                this.dialogo_genera = false
+            this.ui.progreso = true
+            try {
+                await modifica_stock_unitario("SUMA", nuevo)
+                this.detalle.push(nuevo)
+                await this.grabar(false) // persiste cabecera + detalle
+            } finally {
+                this.ui.progreso = false
+                this.ui.agregarItem = false
+                this.busqueda.texto = ""
             }
         },
-        create_UUID() {
-            var dt = new Date().getTime();
-            var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-                var r = (dt + Math.random() * 16) % 16 | 0;
-                dt = Math.floor(dt / 16);
-                return (c == 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-            });
-            return uuid;
+
+        abreEditarItem(it) {
+            const idx = this.detalle.findIndex(x => x.uuid === it.uuid)
+            if (idx < 0) return
+            this.formItem = {
+                index: idx,
+                uuid: it.uuid,
+                nombre: it.nombre,
+                operacion: it.operacion || "GRAVADA",
+                costo: String(it.costo_nuevo ?? it.costo ?? ""),
+            }
+            this.ui.editarItem = true
         },
-        conviertefecha_unix(date) {
-            return moment(String(date)) / 1000
+
+        async eliminarItem() {
+            const idx = this.formItem.index
+            if (idx < 0) return
+            const it = this.detalle[idx]
+
+            this.ui.progreso = true
+            try {
+                await modifica_stock_unitario("RESTA", it)
+                await this.borrarLineaKardex(it)
+                this.detalle.splice(idx, 1)
+                await this.grabar(false)
+            } finally {
+                this.ui.progreso = false
+                this.ui.editarItem = false
+            }
         },
-        abre_modifica() {
-            console.log(this.arra_cabe_doC)
-            this.date_ingreso = moment.unix(this.arra_cabe_doC.fecha_ingreso).format('YYYY-MM-DD')
-            this.date = moment.unix(this.arra_cabe_doC.fecha_emision).format('YYYY-MM-DD')
-            this.nom_proveedor = this.arra_cabe_doC.nom_proveedor
-            this.num_doc = this.arra_cabe_doC.num_doc
-            this.tipodocumento = this.arra_cabe_doC.tipodocumento
-            this.creferencia = this.arra_cabe_doC.creferencia
-            this.sreferencia = this.arra_cabe_doC.sreferencia
-            this.operacion = this.arra_cabe_doC.operacion
-            this.modo_pago = this.arra_cabe_doC.modo_pago
-            this.dial_modifica = true
+
+        async borrarLineaKardex(it) {
+            if (!(it && it.id && it.uuid)) return
+            const pid = String(it.id)
+            const lineId = `${this.cabecera.id}_${String(it.uuid)}`
+            try {
+                await colempresa().doc("kardex").collection("historial").doc(pid).collection("detalle").doc(lineId).delete()
+            } catch (e) {
+                console.error("No se pudo borrar línea kardex:", e)
+            }
         },
-        async guarda_moficacion() {
-            this.progress = true
-            this.arra_cabe_doC.fecha_ingreso = this.conviertefecha_unix(this.date_ingreso)
-            this.arra_cabe_doC.fecha_emision = this.conviertefecha_unix(this.date)
-            this.arra_cabe_doC.nom_proveedor = this.nom_proveedor
-            this.arra_cabe_doC.num_doc = this.num_doc
-            this.arra_cabe_doC.tipodocumento = this.tipodocumento
-            this.arra_cabe_doC.creferencia = this.creferencia
-            this.arra_cabe_doC.sreferencia = this.sreferencia
-            this.arra_cabe_doC.operacion = this.operacion
-            this.arra_cabe_doC.modo_pago = this.modo_pago
-            await nuevoMovimiento(this.arra_cabe_doC.id, this.arra_cabe_doC)
-            await this.genera_compra(false)
-            this.progress = false
-            this.dial_modifica = false
+
+        async guardarItemEditado() {
+            const idx = this.formItem.index
+            if (idx < 0) return
+            const d = this.detalle[idx]
+            d.operacion = String(this.formItem.operacion || "GRAVADA").trim()
+            d.nombre = String(this.formItem.nombre || "").trim()
+            d.costo_nuevo = this.num(this.formItem.costo)
+
+            this.ui.progreso = true
+            try {
+                await this.grabar(false)
+            } finally {
+                this.ui.progreso = false
+                this.ui.editarItem = false
+            }
         },
-        selec_proveedor(data) {
-            this.num_doc = data.codigo
-            this.nom_proveedor = data.rsocial
-            this.dialogoproveedor = false
+
+        // ---------- Persistencia ----------
+        async grabar(cerrar) {
+            const t = this.calcTotales(this.detalle, this.igv, this.incluyeIgv);
+
+            // Asegurar consistencia de cabecera clave antes de persistir
+            this.cabecera.cod_doc = this.docCode(this.cabecera.tipodocumento);
+            this.cabecera.operacion = this.cabecera.operacion || "COMPRA";
+            this.cabecera.periodo = this.cabecera.periodo ?? "";
+            this.cabecera.fecha_creacion = this.cabecera.fecha_creacion || moment().unix();
+            this.cabecera.responsable = this.cabecera.responsable || this.usuarioResponsable();
+
+            const payload = {
+                ...this.cabecera,
+                baseimponible: Number(t.base).toFixed(2),
+                igv: Number(t.igv).toFixed(2),
+                porc_igv: this.igv,
+                tot_gratuita: Number(t.gratuitaBase).toFixed(2), // base sin IGV
+                tot_exonerada: Number(t.exo).toFixed(2),
+                total: Number(t.total).toFixed(2),
+                data: this.detalle,
+            };
+
+            await nuevoMovimiento(this.cabecera.id, payload);
+            if (cerrar) {
+                this.ui.confirmaGrabar = false;
+                this.emitCerrar();
+            }
         },
-        cierra() {
-            this.$emit('cierra_compra', false)
+
+
+        async anular() {
+            this.ui.progreso = true
+            try {
+                await modifica_stock_array("RESTA", this.detalle)
+                await elmina_mov_kardex(this.cabecera.id)
+            } finally {
+                this.ui.progreso = false
+                this.ui.confirmaAnulacion = false
+                this.emitCerrar()
+            }
         },
-        async anula_mov() {
-            this.progress = true
-            await modifica_stock_array('RESTA', this.lista_productos)
-            await elmina_mov_kardex(this.arra_cabe_doC.id)
-            this.progress = false
-            this.dial_anula = false
-            this.cierra()
-        }
+
+        // ---------- Cabecera ----------
+        abreEditarCabecera() {
+            this.formCabecera = {
+                emision: this.fromUnix(this.cabecera.fecha_emision),
+                ingreso: this.fromUnix(this.cabecera.fecha_ingreso),
+                num_doc: this.cabecera.num_doc,
+                nom_proveedor: this.cabecera.nom_proveedor,
+                tipodocumento: this.cabecera.tipodocumento,
+                sreferencia: this.cabecera.sreferencia,
+                creferencia: this.cabecera.creferencia,
+                modo_pago: this.cabecera.modo_pago,
+                observacion: this.cabecera.observacion,
+            }
+            this.ui.editarCabecera = true
+        },
+
+        async guardarCabecera() {
+            const f = this.formCabecera
+            this.cabecera.fecha_emision = this.toUnix(f.emision)
+            this.cabecera.fecha_ingreso = this.toUnix(f.ingreso)
+            this.cabecera.num_doc = f.num_doc
+            this.cabecera.nom_proveedor = f.nom_proveedor
+            this.cabecera.tipodocumento = f.tipodocumento
+            this.cabecera.sreferencia = f.sreferencia
+            this.cabecera.creferencia = f.creferencia
+            this.cabecera.modo_pago = f.modo_pago
+            this.cabecera.observacion = f.observacion
+
+            this.ui.progreso = true
+            try {
+                await this.grabar(false)
+            } finally {
+                this.ui.progreso = false
+                this.ui.editarCabecera = false
+            }
+        },
     },
-
 }
 </script>

@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="dial" max-width="1100px">
+    <v-dialog v-model="dial" max-width="1100px" persistent>
         <div>
             <v-system-bar window dark>
                 <v-icon @click="cierra()">mdi-close</v-icon>
@@ -463,7 +463,7 @@ export default {
                 }
 
                 // unidades base que se moverán
-                const unidades = this.modo === 'entero' ? (qty * factor) : qty;
+                const unidades = qty;
 
                 // Validación de stock en SALIDA
                 const esSalida = this.arra_cabe_doC.modo_ajuste === 'SALIDA';
@@ -481,7 +481,7 @@ export default {
                     uuid: crypto.randomUUID() || "",
                     id: prod.id,
                     nombre: this.nombreEdita || prod.nombre,
-                    medida: this.modo === 'entero' ? (prod.medida || 'PAQ') : 'UND',
+                    medida: this.modo === 'entero' ? (prod.medida || 'PAQ') : 'UNIDAD',
                     operacion: this.operacion_edita,     // GRAVADA / GRATUITA / EXONERADA
                     costo: costoUnit,                // costo unitario
                     costo_nuevo: costoUnit,                // usado en totaliza()

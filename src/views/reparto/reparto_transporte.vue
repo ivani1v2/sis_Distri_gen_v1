@@ -5,7 +5,7 @@
         <v-app-bar scroll-behavior="hide" class="mt-12" app color="" dark dense>
             <v-row dense>
                 <v-btn v-if="!isMobile" small color="success" dark rounded depressed lock class="mt-1"
-                    @click="dial_repartos = true">
+                    @click="dial_repartos = !dial_repartos">
                     <v-icon left>mdi-truck</v-icon>
                     Buscar Reparto
                 </v-btn>

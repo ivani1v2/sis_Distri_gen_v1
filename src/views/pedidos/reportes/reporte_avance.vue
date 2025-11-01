@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="dial" scrollable max-width="1200px">
+    <v-dialog v-model="dial" scrollable max-width="1200px" persistent>
         <v-card>
             <!-- Barra superior -->
             <v-system-bar window dark>
@@ -131,12 +131,6 @@ export default {
             // Primer item "Todos"
             return [{ label: 'Todos', value: null }].concat(arr.map(v => ({ label: v, value: v })));
         },
-        costoIndex() {
-            const idx = new Map();
-            const cat = (this.$store?.state?.productos || []);
-            for (const p of cat) idx.set(String(p.id), Number(p.costo || 0)); // costo por UNIDAD
-            return idx;
-        },
         // Detalle aplanado con metadatos (para agrupar)
         detallesFlat() {
             const out = [];
@@ -174,11 +168,11 @@ export default {
             for (const l of this.detallesFiltrados) {
                 console.log(l)
                 const key = String(l.idProd);
-                var costo = Number(this.costoIndex.get(l.idProd) || 0)
+                var costo = this.$store.state.productos.find(p => p.id == l.idProd).costo || 0;
                 if (l.factor != 1 && l.medida != 'UNIDAD') {
                     costo = costo * Number(l.factor)
                 }
-
+                console.log(costo)
                 const obj = map.get(key) || {
                     id: l.idProd,
                     nombre: l.nombre || '',

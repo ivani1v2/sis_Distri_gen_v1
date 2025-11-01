@@ -168,7 +168,7 @@
                 <!-- Selección de método de pago aplicado a esta venta al crédito -->
                 <div class="px-3 pt-4" v-if="sumaCuotasCredito != total">
                     <h4 class="subtitle-2 font-weight-bold mb-2">
-                        Pago inicial  -  Falta : {{ money(montoRestanteCredito, moneda) }}
+                        Pago inicial - Falta : {{ money(montoRestanteCredito, moneda) }}
                     </h4>
 
                     <!-- igual estilo que dial_pagos, pero usa pagoInicialCredito -->
@@ -185,7 +185,7 @@
                         </v-col>
                     </v-row>
 
-                
+
                 </div>
 
                 <v-card-actions>
@@ -234,7 +234,7 @@ import {
     nuevoCliente,
     nuevaCuentaxcobrar
 } from '../../db'
-
+import { colClientes } from '../../db_firestore'
 import {
     pdfGenera
 } from '../../pdf_comprobantes'
@@ -310,6 +310,7 @@ export default {
     },
 
     created() {
+        console.log(store.state.configuracion.defecto)
         this.cliente_selecto = this.cliente
         if (this.cliente != '') {
             this.numero = this.cliente.dni
@@ -672,12 +673,40 @@ export default {
                 this.dial_cliente = true
                 return
             }
+
             // Muestra mensaje de carga
             this.text = 'Consultando datos del cliente...'
             this.snackbar = true
+
             try {
                 store.commit("dialogoprogress")
-                // Llama a la acción del store
+
+                const num = String(this.numero).trim()
+
+                // 1. Buscar en tu Firestore interno primero
+                const docSnap = await colClientes().doc(num).get()
+
+                if (docSnap.exists) {
+                    // ✅ Ya está en tu BD local, NO llamamos al dispatch
+                    const data = docSnap.data() || {}
+
+                    // completar campos si existen
+                    if (data.nombre) this.nombreCompleto = data.nombre
+                    if (data.direccion) this.direccion = data.direccion
+                    if (data.departamento) this.departamento = data.departamento
+                    if (data.provincia) this.provincia = data.provincia
+                    if (data.distrito) this.distrito = data.distrito
+                    if (data.ubigeo) this.ubigeo = data.ubigeo
+
+                    // si tienes telf en Firestore lo pasas también
+                    if (data.telefono) this.telfcliente = data.telefono
+
+                    this.text = 'Cliente encontrado (local)'
+                    store.commit("dialogoprogress")
+                    return
+                }
+
+                // 2. Si NO existe en Firestore -> usar tu flujo actual con el store
                 const {
                     nombre,
                     direccion,
@@ -687,28 +716,33 @@ export default {
                     ubigeo,
                     longitud,
                     latitud
-                } =
-                    await this.$store.dispatch('busca_cliente', {
-                        documento: this.documento,
-                        numero: this.numero,
-                    });
+                } = await this.$store.dispatch('busca_cliente', {
+                    documento: this.documento,
+                    numero: this.numero,
+                })
 
-                // Autocompleta los campos
-                if (nombre) this.nombreCompleto = nombre;
-                if (direccion) this.direccion = direccion;
-                if (departamento) this.departamento = departamento;
-                if (provincia) this.provincia = provincia;
-                if (distrito) this.distrito = distrito;
-                if (ubigeo) this.ubigeo = ubigeo;
+                // Autocompleta con resultado remoto / SUNAT / RENIEC, etc.
+                if (nombre) this.nombreCompleto = nombre
+                if (direccion) this.direccion = direccion
+                if (departamento) this.departamento = departamento
+                if (provincia) this.provincia = provincia
+                if (distrito) this.distrito = distrito
+                if (ubigeo) this.ubigeo = ubigeo
 
-                this.text = nombre ? 'Cliente encontrado y autocompletado' : 'No se encontró información';
+                this.text = nombre
+                    ? 'Cliente encontrado y autocompletado'
+                    : 'No se encontró información'
+
                 store.commit("dialogoprogress")
             } catch (error) {
-                this.text = 'Error al obtener datos del cliente';
+                console.error(error)
+                this.text = 'Error al obtener datos del cliente'
                 store.commit("dialogoprogress")
             }
+
             this.snackbar = true
         },
+
 
         agregacliente(data) {
             console.log(data)

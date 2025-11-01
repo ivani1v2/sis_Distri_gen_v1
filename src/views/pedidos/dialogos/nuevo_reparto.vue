@@ -66,6 +66,7 @@
                         <th>Fecha</th>
                         <th>Estado</th>
                         <th>Total</th>
+                        <th>Comprobante</th> <!-- NUEVO -->
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -81,6 +82,17 @@
                             <v-chip x-small :color="chipColor(pedido.estado)" dark />
                         </td>
                         <td style="font-size:75%;">S/.{{ number2(pedido.total) }}</td>
+                        <td style="font-size:70%; min-width:90px;">
+                            <v-chip-group v-model="pedido.tipo_comprobante" mandatory column
+                                active-class="primary white--text" @change="cambiar_comprobante(pedido)">
+                                <v-chip x-small value="T">Nota</v-chip>
+                                <v-chip x-small value="B">Bole</v-chip>
+                                <v-chip x-small value="F">Fact</v-chip>
+                            </v-chip-group>
+                        </td>
+
+
+
                         <td>
                             <v-btn icon small @click="verDetalle(pedido)">
                                 <v-icon color="blue">mdi-eye</v-icon>
@@ -88,6 +100,7 @@
                         </td>
                     </tr>
                 </tbody>
+
             </v-simple-table>
         </v-card>
 
@@ -97,13 +110,13 @@
                 <v-toolbar flat color="black" dark dense>
                     <v-toolbar-title>{{ pedidoSeleccionado ? pedidoSeleccionado.id : '' }}</v-toolbar-title>
                     <v-toolbar-title class="ml-12"> S/ {{ pedidoSeleccionado ? pedidoSeleccionado.total : ''
-                    }}</v-toolbar-title>
+                        }}</v-toolbar-title>
                     <v-spacer></v-spacer>
                     <v-btn icon @click="dialogDetalle = false"><v-icon>mdi-close</v-icon></v-btn>
                 </v-toolbar>
                 <div v-if="pedidoSeleccionado" class="pa-2">
                     <h5>Cliente: <span>{{ pedidoSeleccionado.doc_numero }} - {{ pedidoSeleccionado.cliente_nombre
-                    }}</span></h5>
+                            }}</span></h5>
                     <h5>Direcion: <span>{{ pedidoSeleccionado.cliente_direccion }}</span></h5>
                     <h5>Modo : {{ pedidoSeleccionado.condicion_pago }}</h5>
                     <h5>Comprobante : {{ pedidoSeleccionado.tipo_comprobante }}</h5>
@@ -121,7 +134,8 @@
                     </thead>
                     <tbody>
                         <tr v-for="d in detalleSeleccionado" :key="`${d.id}-${d.nombre}`">
-                            <td style="font-size:75%;">{{ d.nombre }} <strong class="red--text" v-if="d.operacion=='GRATUITA'">{{ d.operacion }}</strong></td>
+                            <td style="font-size:75%;">{{ d.nombre }} <strong class="red--text"
+                                    v-if="d.operacion == 'GRATUITA'">{{ d.operacion }}</strong></td>
                             <td style="font-size:75%;">{{ d.cantidad }}</td>
                             <td style="font-size:75%;">{{ d.medida }}</td>
                             <td style="font-size:75%;">S/.{{ number2(d.precio) }}</td>
@@ -145,17 +159,17 @@
                 </v-toolbar>
 
                 <v-card-text class="pt-4">
-                    <v-row>
+                    <v-row dense>
                         <v-col cols="12" sm="6">
                             <v-text-field dense outlined type="date" label="Fecha de Traslado"
                                 v-model="fechaTraslado" />
                         </v-col>
                         <v-col cols="12" sm="6">
-                            <v-text-field dense outlined type="date" label="Fecha de Emisión" v-model="fechaEmision" />
+                            <v-text-field dense outlined type="date" label="Fecha de Emisión Comprobantes" v-model="fechaEmision" />
                         </v-col>
                     </v-row>
 
-                    <v-row>
+                    <v-row dense>
                         <v-col cols="12" sm="6">
                             <div class="subtitle-2">T. CONTADO:
                                 <span class="red--text font-weight-bold">S/. {{ number2(totalContadoSel) }}</span>
@@ -204,7 +218,7 @@
 
 <script>
 import moment from "moment";
-import { all_pedidos, detalle_pedido } from "../../../db";
+import { all_pedidos, detalle_pedido, modifica_pedidos } from "../../../db";
 import dial_consolidado from "./dialogo_rep_consolidado.vue"
 import store from '@/store/index'
 import axios from "axios";
@@ -231,6 +245,11 @@ export default {
             fechaTraslado: this.date1, // o moment().format("YYYY-MM-DD")
             fechaEmision: this.date2,  // o moment().add(1,'day').format("YYYY-MM-DD")
             blocking: false,
+            opcionesComprobante: [
+                { label: 'TICKET', value: 'T' },
+                { label: 'BOLETA', value: 'B' },
+                { label: 'FACTURA', value: 'F' },
+            ],
         };
     },
     computed: {
@@ -284,6 +303,38 @@ export default {
         vendedor() { this.filtrar(); },
     },
     methods: {
+        async cambiar_comprobante(pedido) {
+            try {
+                // abre loader global si lo usas en la app
+                store.commit("dialogoprogress");
+
+                // seguridad básica
+                if (!pedido || !pedido.id) {
+                    console.warn("Pedido sin id, no puedo actualizar");
+                    return;
+                }
+
+                // valor seleccionado (T, B o F)
+                const nuevoTipo = pedido.tipo_comprobante;
+
+                // acá asumimos que modifica_pedidos(ruta, valor)
+                // ej: modifica_pedidos("V00-000020/tipo_comprobante", "B")
+                await modifica_pedidos(
+                    pedido.id + '/tipo_comprobante',
+                    nuevoTipo
+                );
+
+                // opcional: feedback visual
+                store.commit('dialogosnackbar', 'Comprobante actualizado');
+            } catch (e) {
+                console.error("Error actualizando comprobante:", e);
+                alert("No se pudo actualizar el comprobante");
+            } finally {
+                // cierra loader
+                store.commit("dialogoprogress");
+            }
+        },
+
         async verConsolidado() {
             if (this.selectedIds.length === 0) {
                 this.$toast && this.$toast.info
@@ -375,6 +426,7 @@ export default {
                 const payload = {
                     fecha_traslado: unixTraslado,
                     fecha_emision: moment().unix(),
+                    fecha_comprobantes: unixEmision,
                     vendedor: this.vendedor,
                     pedidos: this.selectedIds,  // IDs seleccionados
                     resumen: {
@@ -413,7 +465,7 @@ export default {
             var a = axios({
                 method: 'POST',
                 url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
-               //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
+                //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
                 headers: {},
                 data: {
                     "bd": store.state.baseDatos.bd,
@@ -465,10 +517,10 @@ export default {
             const arr = [];
             snap.forEach(item => {
                 const data = item.val() || {};
-              if (data?.estado !== 'pendiente' || !(Number(data?.total) > 0)) return;
+                if (data?.estado !== 'pendiente' || !(Number(data?.total) > 0)) return;
                 data.id = item.key;
                 data.fecha = this.formatFecha(data.fecha_emision);
-
+                console.log('data', data)
                 if (this.vendedor && this.vendedor.toString().toLowerCase() !== 'todos') {
                     const cod = (data.cod_vendedor || '').toString().toLowerCase();
                     if (cod !== this.vendedor.toString().toLowerCase()) return;

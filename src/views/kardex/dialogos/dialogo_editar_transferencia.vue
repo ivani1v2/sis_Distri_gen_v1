@@ -28,28 +28,17 @@
               <td>{{ p.nombre }}</td>
               <td>{{ p.codbarra || p.codigo || p.id }}</td>
               <td>
-                <v-text-field
-                  v-model.number="p.cantidad"
-                  type="number"
-                  dense
-                  outlined
-                  hide-details
-                  min="0"
-                />
+                <v-text-field v-model.number="p.cantidad" type="number" dense outlined hide-details min="0" />
               </td>
             </tr>
           </tbody>
         </v-simple-table>
 
-        <v-textarea
-          v-model="observacion"
-          label="Observación"
-          dense
-          outlined
-          class="mt-2"
-        />
+        <v-textarea v-model="observacion" label="Observación" dense outlined class="mt-2" />
       </v-card-text>
-
+   <v-btn color="blue darken-1" text @click="reprocesarTransferencia">
+          🔄 Reprocesar Transferencia
+        </v-btn>
       <v-card-actions>
         <v-spacer></v-spacer>
         <v-btn color="red" text @click="cerrar">Cancelar</v-btn>
@@ -116,18 +105,18 @@ export default {
       const n = Number(String(v).replace(",", "."));
       return isNaN(n) ? def : n;
     },
-  recalculaLinea(p) {
-  const cantidad = Math.max(0, this.toNum(p.cantidad));
-  const precio   = this.toNum(p.precio);
-  const monto    = +(cantidad * precio).toFixed(2); // siempre desde cantidad*precio
+    recalculaLinea(p) {
+      const cantidad = Math.max(0, this.toNum(p.cantidad));
+      const precio = this.toNum(p.precio);
+      const monto = +(cantidad * precio).toFixed(2); // siempre desde cantidad*precio
 
-  return {
-    ...p,
-    cantidad,
-    precio: precio ? +precio.toFixed(2) : p.precio,
-    monto_soles: monto, // sobreescribe siempre
-  };
-},
+      return {
+        ...p,
+        cantidad,
+        precio: precio ? +precio.toFixed(2) : p.precio,
+        monto_soles: monto, // sobreescribe siempre
+      };
+    },
 
     recalculaProductosYTotal(productos = []) {
       const productosCalc = productos.map(this.recalculaLinea);
@@ -162,6 +151,7 @@ export default {
 
         // 3) Ajustes por diferencia (buscar original por ID para mayor robustez)
         for (const nuevo of productosCalc) {
+          
           const original = (this.transferencia.productos || []).find(
             (p) => String(p.id) === String(nuevo.id)
           );
@@ -214,6 +204,57 @@ export default {
         store.commit("dialogoprogress");
       }
     },
+    async reprocesarTransferencia() {
+      try {
+        store.commit("dialogoprogress");
+
+        const { productosCalc } = this.recalculaProductosYTotal(
+          this.productosEdit
+        );
+
+        const [snap_origen, snap_destino] = await Promise.all([
+          allProductoOtraBase(this.transferencia.sede_origen).once("value"),
+          allProductoOtraBase(this.transferencia.sede_destino).once("value"),
+        ]);
+
+        const origen_actual = snap_origen.val()
+          ? Object.values(snap_origen.val())
+          : [];
+        const destino_actual = snap_destino.val()
+          ? Object.values(snap_destino.val())
+          : [];
+
+        // 🔁 Descuenta en origen y suma en destino como si fuera nuevo
+        for (const prod of productosCalc) {
+          const prodOrigen = origen_actual.find(
+            (p) => String(p.id) === String(prod.id)
+          );
+          const stockOrigen = this.toNum(prodOrigen?.stock);
+          await grabarStockOtraBase(
+            this.transferencia.sede_origen,
+            prod.id,
+            stockOrigen - this.toNum(prod.cantidad)
+          );
+
+          const prodDestino = destino_actual.find(
+            (p) => String(p.id) === String(prod.id)
+          );
+          const stockDestino = this.toNum(prodDestino?.stock);
+          await grabarStockOtraBase(
+            this.transferencia.sede_destino,
+            prod.id,
+            stockDestino + this.toNum(prod.cantidad)
+          );
+        }
+
+        alert("✅ Transferencia reprocesada correctamente.");
+      } catch (e) {
+        alert("Error al reprocesar: " + (e?.message || e));
+      } finally {
+        store.commit("dialogoprogress");
+      }
+    },
+  
   },
 };
 </script>
