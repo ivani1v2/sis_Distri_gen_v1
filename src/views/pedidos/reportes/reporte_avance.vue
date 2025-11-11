@@ -54,6 +54,9 @@
                     </div>
                     <v-data-table v-if="!isMobile" :headers="headersProductos" :items="rowsProductos" :search="search"
                         dense :items-per-page="10" class="elevation-1">
+                        <template v-slot:item.unidades="{ item }">
+                            {{ item.unidadesFmt || fmtInt(item.unidades) }}
+                        </template>
                         <template v-slot:item.costoTotal="{ item }">S/{{ n2(item.costoTotal) }}</template>
                         <template v-slot:item.totalSoles="{ item }">S/{{ n2(item.totalSoles) }}</template>
                         <template v-slot:item.utilidad="{ item }">
@@ -79,7 +82,9 @@
                             </v-list-item>
                             <v-divider />
                             <v-card-text class="py-2">
-                                <v-chip x-small class="ma-1" label>Unid: {{ fmtInt(it.unidades) }}</v-chip>
+                                <v-chip x-small class="ma-1" label>
+                                    Cant: {{ it.unidadesFmt || fmtInt(it.unidades) }}
+                                </v-chip>
                                 <v-chip x-small class="ma-1" label>Costo: S/{{ n2(it.costoTotal) }}</v-chip>
                                 <v-chip x-small class="ma-1" label
                                     :class="it.utilidad >= 0 ? 'green lighten-5' : 'red lighten-5'">
@@ -115,6 +120,7 @@ export default {
         dial(v) { this.$emit('input', v); },
     },
     created() {
+        console.log('data', this.data);
         if (this.value === false) this.dial = true; // abre por defecto si no se controla externamente
     },
     computed: {
@@ -123,21 +129,27 @@ export default {
         // Lista única de vendedores
         itemsVendedores() {
             const set = new Set();
-            (Array.isArray(this.data) ? this.data : []).forEach(p => {
-                const cab = p && p.cabecera ? p.cabecera : {};
+            const pedidos = Array.isArray(this.data) ? this.data : [];
+            for (const p of pedidos) {
+                const cab = p?.cabecera || {};
+                const esAnulado = (String(cab.estado || '').toLowerCase() === 'anulado') || !!cab.anulado;
+                if (esAnulado) continue; // ⬅️ ignora anulados
                 if (cab.cod_vendedor) set.add(cab.cod_vendedor);
-            });
+            }
             const arr = Array.from(set).sort();
-            // Primer item "Todos"
             return [{ label: 'Todos', value: null }].concat(arr.map(v => ({ label: v, value: v })));
         },
+
         // Detalle aplanado con metadatos (para agrupar)
         detallesFlat() {
             const out = [];
             const pedidos = Array.isArray(this.data) ? this.data : [];
             for (let i = 0; i < pedidos.length; i++) {
-                const cab = pedidos[i] && pedidos[i].cabecera ? pedidos[i].cabecera : {};
-                const det = pedidos[i] && Array.isArray(pedidos[i].detalle) ? pedidos[i].detalle : [];
+                const cab = pedidos[i]?.cabecera || {};
+                const det = Array.isArray(pedidos[i]?.detalle) ? pedidos[i].detalle : [];
+                const esAnulado = (String(cab.estado || '').toLowerCase() === 'anulado') || !!cab.anulado;
+                if (esAnulado) continue; // ⬅️ ignora pedidos anulados
+
                 for (let j = 0; j < det.length; j++) {
                     const it = det[j] || {};
                     out.push({
@@ -148,13 +160,14 @@ export default {
                         medida: it.medida,
                         cantidad: Number(it.cantidad || 0),
                         totalLinea: Number(
-                            (it.totalLinea != null ? it.totalLinea : (Number(it.precio || 0) * Number(it.cantidad || 0)))
+                            it.totalLinea != null ? it.totalLinea : (Number(it.precio || 0) * Number(it.cantidad || 0))
                         ),
                     });
                 }
             }
             return out;
         },
+
 
         // Aplica filtro por vendedor (si se selecciona)
         detallesFiltrados() {
@@ -166,37 +179,63 @@ export default {
         rowsProductos() {
             const map = new Map();
             for (const l of this.detallesFiltrados) {
-                console.log(l)
+
                 const key = String(l.idProd);
-                var costo = this.$store.state.productos.find(p => p.id == l.idProd).costo || 0;
-                if (l.factor != 1 && l.medida != 'UNIDAD') {
-                    costo = costo * Number(l.factor)
-                }
-                console.log(costo)
+                const prod = this.$store.state.productos.find(p => p.id == l.idProd) || {};
+                const costoBase = Number(prod.costo || 0);
+
                 const obj = map.get(key) || {
                     id: l.idProd,
                     nombre: l.nombre || '',
                     medida: l.medida || '',
                     unidades: 0,
                     totalSoles: 0,
-                    costoUnit: costo,
+                    costoUnit: costoBase,   // ← ahora guarda el costo base por unidad
                     costoTotal: 0,
                     utilidad: 0,
                     margenPct: 0,
+                    cantPorMedida: {},      // ← NUEVO
+                    unidadesFmt: ''         // ← NUEVO
                 };
                 const cant = Number(l.cantidad || 0);
                 const totalLinea = Number(l.totalLinea || 0);
-
+                const unidadesEq = cant * (l.medida !== 'UNIDAD' ? Number(l.factor || 1) : 1);
                 obj.unidades += cant;
                 obj.totalSoles += totalLinea;
+                obj.cantPorMedida[l.medida || ''] = (obj.cantPorMedida[l.medida || ''] || 0) + cant;
+                obj.costoTotal += costoBase * unidadesEq;
                 map.set(key, obj);
             }
 
             // calcula costo total, utilidad y margen
             for (const v of map.values()) {
-                v.costoTotal = v.costoUnit * v.unidades;
                 v.utilidad = v.totalSoles - v.costoTotal;
                 v.margenPct = v.totalSoles > 0 ? (v.utilidad / v.totalSoles) * 100 : 0;
+
+                const cCaja = Number(v.cantPorMedida['CAJA'] || 0);
+                const cUni = Number(v.cantPorMedida['UNIDAD'] || 0);
+
+                if (cCaja > 0 && cUni > 0) {
+                    v.unidadesFmt = `${cCaja}/${cUni}`;
+                } else if (cCaja > 0) {
+                    v.unidadesFmt = `${cCaja}`;
+                } else if (cUni > 0) {
+                    v.unidadesFmt = `${cUni}`;
+                } else {
+                    // No hubo CAJA ni UNIDAD: usar las medidas reales (DISPLAY, PAQUETE, SACO, etc.)
+                    const keys = Object.keys(v.cantPorMedida).filter(k => (v.cantPorMedida[k] || 0) > 0);
+
+                    if (keys.length === 1) {
+                        // Una sola medida → solo el número (si factor=1 también caerá aquí sin "0/1")
+                        v.unidadesFmt = `${v.cantPorMedida[keys[0]]}`;
+                    } else if (keys.length > 1) {
+                        // Varias medidas no estándar → "n1 + n2 + ..."
+                        v.unidadesFmt = keys.map(k => `${v.cantPorMedida[k]}`).join(' + ');
+                        // Si prefieres mostrar etiqueta corta: `${v.cantPorMedida[k]}${k.slice(0,1)}`
+                    } else {
+                        v.unidadesFmt = ''; // sin ventas
+                    }
+                }
             }
 
             return Array.from(map.values()).sort((a, b) => b.totalSoles - a.totalSoles);

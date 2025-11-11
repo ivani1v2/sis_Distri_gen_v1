@@ -39,7 +39,7 @@
                 <template v-slot:default>
                     <thead>
                         <tr>
-                             <th class="text-left">
+                            <th class="text-left">
                                 Id mov
                             </th>
                             <th class="text-left">
@@ -70,7 +70,7 @@
                     </thead>
                     <tbody>
                         <tr v-for="item in listafiltrada" :key="item.id">
- <td>{{ item.id }}</td>
+                            <td>{{ item.id }}</td>
                             <td>{{ conviertefecha(item.fecha_ingreso) }}</td>
                             <td>{{ item.num_doc }}-{{ item.nom_proveedor }}</td>
                             <td v-if="item.operacion == 'COMPRA'">
@@ -217,9 +217,9 @@
                 <v-system-bar window dark>
                     <v-icon @click="dial_detalle = !dial_detalle">mdi-close</v-icon>
                     <v-spacer></v-spacer>
-                <v-icon color="success" @click="impreme_rep()">mdi-printer</v-icon>
+                    <v-icon color="success" @click="impreme_rep()">mdi-printer</v-icon>
                 </v-system-bar>
-                
+
             </div>
             <v-card class="pa-3">
                 <v-row dense>
@@ -342,27 +342,25 @@ export default {
         almacen: '',
         responsable: '',
         item_selecto: [],
+        _subRef: null,
     }),
     mounted() {
-        allMovimientos()
-            .orderByChild('fecha_emision')
-            .startAt(moment(String(this.date1)) / 1000)
-            .endAt(moment(String(this.date2)).add(23, 'h').add(59, 'm').add(59, 's') / 1000)
-            .on("value", this.onDataChange);
+        this.inicio();
+        this.suscribir();
     },
     beforeDestroy() {
-        allMovimientos().off("value", this.onDataChange);
+    if (this._subRef) this._subRef.off('value', this.onDataChange);
     },
     computed: {
-        listafiltrada() {
-            allMovimientos()
-                .orderByChild('fecha_emision')
-                .startAt(moment(String(this.date1)) / 1000)
-                .endAt(moment(String(this.date2)).add(23, 'h').add(59, 'm').add(59, 's') / 1000)
-                .on("value", this.onDataChange);
-            return this.desserts
-        }
+   listafiltrada() {
+    return this.desserts; // o aplica filtros locales
+  }
     },
+    watch: {
+  date1() { this.suscribir(); },
+  date2() { this.suscribir(); },
+},
+
     created() {
         this.inicio()
     },
@@ -387,6 +385,7 @@ export default {
             items.forEach((item) => {
                 let data = item.val();
                 array.push(data);
+                console.log(data);
 
             });
             console.log(array)
@@ -420,52 +419,52 @@ export default {
         },
         async nueva_compra() {
 
-           
-                const snapshot = await obtenContador().once("value")
-                if (this.tipodocumento == 'FACTURA') {
-                    var cod_doc = '01'
-                }
-                if (this.tipodocumento == 'BOLETA') {
-                    var cod_doc = '03'
-                }
-                if (this.tipodocumento == 'NOTA DE VENTA') {
-                    var cod_doc = '00'
-                }
-                var conta = snapshot.val().orden_movimientos
-                if (conta == undefined) {
-                    conta = '00001'
-                }
 
-                var array = {
-                    id: conta,
-                    periodo: this.periodo,
-                    operacion: 'COMPRA',
-                    fecha_creacion: moment().unix(),
-                    fecha_emision: this.conviertefecha_unix(this.date),
-                    fecha_ingreso: this.conviertefecha_unix(this.date_ingreso),
-                    tipodocumento: this.tipodocumento,
-                    cod_doc: cod_doc,
-                    sreferencia: this.sreferencia,
-                    creferencia: this.creferencia,
-                    num_doc: this.num_doc,
-                    nom_proveedor: this.nom_proveedor,
-                    modo_pago: this.modo_pago,
-                    observacion: this.observacion,
-                    baseimponible: 0,
-                    igv: 0,
-                    porc_igv: 0,
-                    tot_gratuita: 0,
-                    tot_exonerada: 0,
-                    total: 0,
-                    responsable: store.state.permisos.correo.slice(0, -13),
-                    data: [],
-                }
-                this.data_edita = array
-                await nuevoMovimiento(array.id, array)
-                await sumaContador("orden_movimientos", (parseInt(array.id) + 1).toString().padStart(5, 0))
-                this.dialo_compras = true
-                this.crea_movimiento = false
-         
+            const snapshot = await obtenContador().once("value")
+            if (this.tipodocumento == 'FACTURA') {
+                var cod_doc = '01'
+            }
+            if (this.tipodocumento == 'BOLETA') {
+                var cod_doc = '03'
+            }
+            if (this.tipodocumento == 'NOTA DE VENTA') {
+                var cod_doc = '00'
+            }
+            var conta = snapshot.val().orden_movimientos
+            if (conta == undefined) {
+                conta = '00001'
+            }
+
+            var array = {
+                id: conta,
+                periodo: this.periodo,
+                operacion: 'COMPRA',
+                fecha_creacion: moment().unix(),
+                fecha_emision: this.conviertefecha_unix(this.date),
+                fecha_ingreso: this.conviertefecha_unix(this.date_ingreso),
+                tipodocumento: this.tipodocumento,
+                cod_doc: cod_doc,
+                sreferencia: this.sreferencia,
+                creferencia: this.creferencia,
+                num_doc: this.num_doc,
+                nom_proveedor: this.nom_proveedor,
+                modo_pago: this.modo_pago,
+                observacion: this.observacion,
+                baseimponible: 0,
+                igv: 0,
+                porc_igv: 0,
+                tot_gratuita: 0,
+                tot_exonerada: 0,
+                total: 0,
+                responsable: store.state.permisos.correo.slice(0, -13),
+                data: [],
+            }
+            this.data_edita = array
+            await nuevoMovimiento(array.id, array)
+            await sumaContador("orden_movimientos", (parseInt(array.id) + 1).toString().padStart(5, 0))
+            this.dialo_compras = true
+            this.crea_movimiento = false
+
         },
         async nuevo_ajuste() {
             if (this.responsable == '') {
@@ -510,7 +509,7 @@ export default {
             this.crea_ajuste = false
         },
         edita_compra(data) {
-            console .log(data)
+            console.log(data)
             this.data_edita = data
             if (data.operacion == 'DEVOLUCION DE COMPRA') {
                 this.dialo_nc = true
@@ -522,11 +521,12 @@ export default {
                 this.dialo_ajuste = true
             }
         },
-        conviertefecha_unix(date) {
-            return moment(String(date)) / 1000
+        conviertefecha_unix(d) {
+            const m = moment(d, 'YYYY-MM-DD', true);
+            return m.isValid() ? m.unix() : moment().unix();
         },
         abre_visualizacion(item) {
-           
+
             console.log(item)
             this.item_selecto = item
             this.arrayConsolidar = item.data
@@ -534,8 +534,30 @@ export default {
         },
         impreme_rep() {
             generarPDFCompra(this.item_selecto)
-        }
+        },
+        unixInicio(d) {
+            const m = moment(d, 'YYYY-MM-DD', true);
+            return m.isValid() ? m.startOf('day').unix() : 0; // fallback seguro
+        },
+        unixFin(d) {
+            const m = moment(d, 'YYYY-MM-DD', true);
+            return m.isValid() ? m.endOf('day').unix() : 4102444799; // 2099-12-31
+        },
 
+        suscribir() {
+            // corta cualquier suscripción previa
+            if (this._subRef) this._subRef.off('value', this.onDataChange);
+
+            const ini = this.unixInicio(this.date1);
+            const fin = this.unixFin(this.date2);
+
+            this._subRef = allMovimientos()
+                .orderByChild('fecha_emision')
+                .startAt(ini)
+                .endAt(fin);
+
+            this._subRef.on('value', this.onDataChange);
+        },
     }
 
 }

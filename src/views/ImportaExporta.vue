@@ -89,9 +89,9 @@
 import XLSX from 'xlsx'
 import moment from 'moment'
 import store from '@/store'
-import { crearOActualizarCliente,colClientes  } from '../db_firestore'
+import { crearOActualizarCliente, colClientes } from '../db_firestore'
 // BD: ajusta estos imports a tu capa real
-import { nuevoProducto, nuevoCliente /*, upsertStockInicial */ } from '@/db'
+import { allClientes, nuevoProducto, nuevoCliente /*, upsertStockInicial */ } from '@/db'
 
 export default {
   name: 'ExcelMasivo',
@@ -262,10 +262,12 @@ export default {
         }))
         name = 'productos'
       } else if (this.target === 'clientes') {
+        //var snap = await allClientes().once('value')  // ← opción con Realtime DB
         const snap = await colClientes().get();   // ← usa el snapshot
 
-    // Mapea los documentos
-    const cli = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Mapea los documentos
+        const cli = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+       // const cli = snap.val() ? Object.keys(snap.val()).map(key => ({ id: key, ...snap.val()[key] })) : [];
 
         filas = cli.map(c => ({
           activo: c.activo !== false,
@@ -273,7 +275,7 @@ export default {
           tipodoc: c.tipodoc || 'DNI',
           documento: c.documento || '',
           nombre: c.nombre || '',
-           giro: c.giro || '', 
+          giro: c.giro || '',
           correo: c.correo || '',
           direccion: c.direccion || '',
           telefono: c.telefono || '',
@@ -290,7 +292,7 @@ export default {
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
             .toLowerCase(),
           latitud: c.latitud || '',
-          longitud: c.latitud || ''
+          longitud: c.longitud || ''
         }))
         name = 'clientes'
       } else {
@@ -405,7 +407,7 @@ export default {
         tipodoc: this._toStr(o.tipodoc || 'DNI').toUpperCase(),
         documento: this._toStr(o.documento),
         nombre: this._toStr(o.nombre),
-            giro: this._toStr(o.giro),            // ← nuevo
+        giro: this._toStr(o.giro),            // ← nuevo
         correo: this._toStr(o.correo),
         direccion: this._toStr(o.direccion),
         telefono: this._toStr(o.telefono),
@@ -526,7 +528,7 @@ export default {
               tipodoc: r.tipodoc || '1',
               documento: r.documento,
               nombre: String(r.nombre || '').trim(),
-              giro: r.giro || '',      
+              giro: r.giro || '',
               correo: r.correo || '',
               direccion: r.direccion || '',
               telefono: r.telefono || '',

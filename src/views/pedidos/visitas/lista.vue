@@ -267,12 +267,12 @@ export default {
     components: { nuevo_cli, dial_mapas, dial_detalle_ped, busca_clis },
     data: () => ({
         headers: [
-  { text: 'Cliente',    value: 'nombre' },
-  { text: 'Dirección',  value: '_dir', sortable: false },
-  { text: 'Zona',       value: 'zona' },
-  { text: 'Estado',     value: 'estado', sortable: false },
-  { text: 'Acción',     value: 'accion', sortable: false },
-],
+            { text: 'Cliente', value: 'nombre' },
+            { text: 'Dirección', value: '_dir', sortable: false },
+            { text: 'Zona', value: 'zona' },
+            { text: 'Estado', value: 'estado', sortable: false },
+            { text: 'Acción', value: 'accion', sortable: false },
+        ],
         cargando: false,
         menuFecha: false,
         error: null,
@@ -285,7 +285,7 @@ export default {
         filtrarPorDia: true,
         dial_cliente: false,
         busca_clientes: false,
-        arra_estado: ['todos', 'atendido', 'pendiente', 'visitado'],
+        arra_estado: ['todos', 'atendido', 'pendiente', 'visita'],
         sede_actual: '',
         estado: 'todos',
         busca_p: '',
@@ -322,9 +322,12 @@ export default {
 
             // Filtro por estado
             if (this.estado && this.estado !== 'todos') {
-                lista = lista.filter(c => (c.estado || '').toLowerCase() === this.estado.toLowerCase())
+                const e = String(this.estado).toLowerCase();
+                const include = e === 'atendido'
+                    ? new Set(['atendido', 'venta', 'pre-venta'])
+                    : new Set([e]);
+                lista = lista.filter(c => include.has(String(c.estado || '').toLowerCase()));
             }
-
             // 🔹 Filtro por zona (omite si es "TODAS")
             if (this.zona && this.zona.toUpperCase() !== 'TODAS') {
                 const z = this.zona.toLowerCase().trim()
@@ -658,9 +661,12 @@ export default {
 
                 // 5️⃣ Filtro visual (por estado)
                 if (this.estado && this.estado !== 'todos') {
-                    const want = String(this.estado).toLowerCase();
+                    const e = String(this.estado).toLowerCase();
+                    const include = e === 'atendido'
+                        ? new Set(['atendido', 'venta', 'pre-venta'])
+                        : new Set([e]);
                     this.lista_clientes = this.lista_clientes.filter(
-                        x => String(x.estado || '').toLowerCase() === want
+                        x => include.has(String(x.estado || '').toLowerCase())
                     );
                 }
             } catch (e) {
@@ -703,8 +709,8 @@ export default {
         },
         async marcar_visita(cliente) {
 
-            const RADIO_PERMITIDO_M = 25;
-
+            const RADIO_PERMITIDO_M = this.$store.state.configuracion.distancia_visita || 15; // metros
+            console.log('marcar_visita para cliente:', RADIO_PERMITIDO_M);
             try {
                 const ua = store.state.ubicacion_actual;
                 if (!ua || ua.lat == null || ua.lng == null) {

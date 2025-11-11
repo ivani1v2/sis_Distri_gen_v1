@@ -2,6 +2,7 @@
   "projects": {
     "default": "sis-distribucion",
     "pry": "sis-distribucion",
-    "domotica": "sis-distribucion"
+    "domotica": "sis-distribucion",
+    "backup": "back-sis-distri"
   }
 }

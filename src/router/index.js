@@ -150,7 +150,7 @@ const routes = [
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
     component: () =>
-      import(/* webpackChunkName: "carrito" */ "../views/pedidos/lista_repartos.vue"),
+      import(/* webpackChunkName: "carrito" */ "../views/reparto/lista_repartos.vue"),
     meta: {
       requireAuth: true,
     },

@@ -32,7 +32,12 @@
                         <v-list dense>
                             <v-list-item @click="crear">
                                 <v-list-item-title>
-                                    <v-icon left>mdi-cash</v-icon> Crear Reparto
+                                    <v-icon left>mdi-cash</v-icon> Crear Reparto Nuevo
+                                </v-list-item-title>
+                            </v-list-item>
+                            <v-list-item @click="agregar_a_reparto_existente">
+                                <v-list-item-title>
+                                    <v-icon left>mdi-cash</v-icon> Agregar a Reparto Existente
                                 </v-list-item-title>
                             </v-list-item>
                             <!-- NUEVO: Ver consolidado -->
@@ -110,13 +115,13 @@
                 <v-toolbar flat color="black" dark dense>
                     <v-toolbar-title>{{ pedidoSeleccionado ? pedidoSeleccionado.id : '' }}</v-toolbar-title>
                     <v-toolbar-title class="ml-12"> S/ {{ pedidoSeleccionado ? pedidoSeleccionado.total : ''
-                        }}</v-toolbar-title>
+                    }}</v-toolbar-title>
                     <v-spacer></v-spacer>
                     <v-btn icon @click="dialogDetalle = false"><v-icon>mdi-close</v-icon></v-btn>
                 </v-toolbar>
                 <div v-if="pedidoSeleccionado" class="pa-2">
                     <h5>Cliente: <span>{{ pedidoSeleccionado.doc_numero }} - {{ pedidoSeleccionado.cliente_nombre
-                            }}</span></h5>
+                    }}</span></h5>
                     <h5>Direcion: <span>{{ pedidoSeleccionado.cliente_direccion }}</span></h5>
                     <h5>Modo : {{ pedidoSeleccionado.condicion_pago }}</h5>
                     <h5>Comprobante : {{ pedidoSeleccionado.tipo_comprobante }}</h5>
@@ -165,7 +170,8 @@
                                 v-model="fechaTraslado" />
                         </v-col>
                         <v-col cols="12" sm="6">
-                            <v-text-field dense outlined type="date" label="Fecha de Emisión Comprobantes" v-model="fechaEmision" />
+                            <v-text-field dense outlined type="date" label="Fecha de Emisión Comprobantes"
+                                v-model="fechaEmision" />
                         </v-col>
                     </v-row>
 
@@ -219,7 +225,7 @@
 <script>
 import moment from "moment";
 import { all_pedidos, detalle_pedido, modifica_pedidos } from "../../../db";
-import dial_consolidado from "./dialogo_rep_consolidado.vue"
+import dial_consolidado from "../../pedidos/dialogos/dialogo_rep_consolidado.vue";
 import store from '@/store/index'
 import axios from "axios";
 export default {
@@ -478,6 +484,95 @@ export default {
             })
             return a
         },
+        async agregar_a_reparto_existente() {
+            try {
+                // Evitar doble clic
+                if (this.blocking) return;
+
+                // Validar que haya seleccionados
+                if (this.selectedIds.length === 0) {
+                    this.$toast && this.$toast.info
+                        ? this.$toast.info("Selecciona al menos un documento.")
+                        : alert("Selecciona al menos un documento.");
+                    return;
+                }
+
+                // Pedir el grupo de reparto existente
+                const grupoInput = prompt(
+                    "Ingresa el número de grupo de reparto al que deseas agregar (ej: 0005):"
+                );
+
+                if (!grupoInput) {
+                    return; // cancelado
+                }
+
+                const grupo = String(grupoInput).trim();
+                if (!grupo) {
+                    this.$toast && this.$toast.error
+                        ? this.$toast.error("Grupo inválido.")
+                        : alert("Grupo inválido.");
+                    return;
+                }
+
+                this.blocking = true;
+
+                // Tomamos la fecha de emisión de comprobantes igual que en crear reparto
+                const fechaEmiStr =
+                    this.fechaEmision ||
+                    this.date2 ||
+                    moment().format("YYYY-MM-DD");
+
+                // a unix (segundos)
+                const unixEmision = moment(String(fechaEmiStr)).unix();
+
+                if (!unixEmision) {
+                    this.$toast && this.$toast.error
+                        ? this.$toast.error("Fecha de emisión inválida.")
+                        : alert("Fecha de emisión inválida.");
+                    return;
+                }
+
+                const payload = {
+                    grupo,                      // 👈 grupo EXISTENTE
+                    fecha_comprobantes: unixEmision,
+                    pedidos: this.selectedIds,  // IDs seleccionados para adicionar
+                    resumen: {
+                        total_contado: this.totalContadoSel.toFixed(2),
+                        total_credito: this.totalCreditoSel.toFixed(2),
+                        peso_total: this.pesoTotalSel.toFixed(2),
+                        total_pedidos: this.totalPedidosSel.toFixed(2),
+                        total_general: this.totalGeneralSel.toFixed(2),
+                    },
+                };
+
+                console.log("Payload adiciona_reparto:", payload);
+
+                const resp = await this.api_rest(payload, "adiciona_reparto");
+
+                // si la función de backend devuelve { ok: true, grupo: '0005' }
+                const grupoResp =
+                    resp?.data?.data?.grupo || grupo;
+
+                // Ir directamente a liquida_reparto del grupo
+                this.$router.push({
+                    path: "/liquida_reparto/" + grupoResp,
+                });
+
+                /* Si quieres solo mensaje:
+                this.$toast?.success
+                    ? this.$toast.success("Pedidos agregados al reparto " + grupoResp)
+                    : alert("Pedidos agregados al reparto " + grupoResp);
+                */
+            } catch (e) {
+                console.error("Error agregando a reparto existente:", e);
+                this.$toast?.error
+                    ? this.$toast.error("Error agregando a reparto existente.")
+                    : alert("Error agregando a reparto existente.");
+            } finally {
+                this.blocking = false;
+            }
+        },
+
         chipColor(estado) {
             const s = (estado || '').toString().toLowerCase();
             if (s === 'anulado') return 'red';

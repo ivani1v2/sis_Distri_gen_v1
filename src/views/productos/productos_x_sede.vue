@@ -26,7 +26,7 @@
                         </v-list-item>
                         <v-list-item>
 
-                            <v-btn v-if="true" dark small color="orange" block @click="setControlStockGlobal(false)">
+                            <v-btn v-if="false" dark small color="orange" block @click="setControlStockGlobal(true)">
                                 <v-icon left>mdi-refresh</v-icon> stock 1
                             </v-btn>
                         </v-list-item>

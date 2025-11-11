@@ -24,6 +24,7 @@
                     <h5>Fecha: : <span class="red--text">{{ conviertefecha(info_cabecera.fecha) }}</span></h5>
                 </v-col>
                 <v-col cols="6">
+                     <h5>Vend : <span class="red--text">{{ info_cabecera.vendedor }}</span></h5>
                     <h5>Modo : <span class="red--text">{{ info_cabecera.forma_pago }}</span>
                         <v-icon color="green" small @click="edita_modo()">mdi-pencil</v-icon>
                     </h5>

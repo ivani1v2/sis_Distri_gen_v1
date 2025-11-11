@@ -30,7 +30,7 @@
                 </thead>
                 <tbody>
                <tr v-for="d in detalleSeleccionado" :key="`${d.id}-${d.nombre}`">
-                            <td style="font-size:75%;">{{ d.nombre }} <strong class="red--text" v-if="d.operacion=='GRATUITA'">{{ d.operacion }}</strong></td>
+                            <td style="font-size:75%;">{{d.id}} - {{ d.nombre }} <strong class="red--text" v-if="d.operacion=='GRATUITA'">{{ d.operacion }}</strong></td>
                             <td style="font-size:75%;">{{ d.cantidad }}</td>
                             <td style="font-size:75%;">{{ d.medida }}</td>
                             <td style="font-size:75%;">S/.{{ number2(d.precio) }}</td>

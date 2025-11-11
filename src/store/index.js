@@ -470,8 +470,12 @@ export default new Vuex.Store({
     zonas: [],
     bonos: [],
     clientessearch: [],
+    lista_productos:[]
   },
   mutations: {
+    lista_productos(state, n) {
+      state.lista_productos = n;
+    },
     bonos(state, n) {
       state.bonos = n;
     },
@@ -839,7 +843,8 @@ export default new Vuex.Store({
         "zona",
         "cliente_selecto",
         "clientessearch",
-        "array_sedes"
+        "array_sedes",
+        "lista_productos"
       ],
     }),
   ],

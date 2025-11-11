@@ -489,7 +489,7 @@ export default {
                 vencimiento: this.conviertefecha(this.fecha_cuota()),
                 estado: 'pendiente',
                 fecha_modificacion: moment().unix(),
-                vendedor: store.state.permisos.correo.slice(0, -13)
+                vendedor: store.state.sedeActual.codigo
             })
             this.dialogocredito = true
         },
@@ -502,7 +502,7 @@ export default {
                 vencimiento: this.conviertefecha(this.fecha_cuota()),
                 estado: 'pendiente',
                 fecha_modificacion: moment().unix(),
-                vendedor: store.state.permisos.correo.slice(0, -13)
+                vendedor: store.state.sedeActual.codigo
             })
         },
         eliminacuota() {
@@ -625,6 +625,7 @@ export default {
             }
             this.cabecera.ubicacion = this.$store.getters.ubicacionActual || ''
             this.cabecera.cod_vendedor = store.state.sedeActual.codigo
+            this.cabecera.vendedor = store.state.sedeActual.codigo
 
             var arrayCabecera = this.cabecera
             var array_item = this.items

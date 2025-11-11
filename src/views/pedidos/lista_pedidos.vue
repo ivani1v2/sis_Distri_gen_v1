@@ -2,7 +2,7 @@
     <div class="pa-3">
         <v-card class="mb-2 pa-2">
             <v-row dense>
-
+                <v-btn v-if="false" @click="actualizarUbicacionesDesdePedidos"> ver ubicacion cliente </v-btn>
                 <v-col cols="6" md="3" sm="6">
                     <v-text-field outlined dense type="date" label="Inicio" v-model="date1" @change="filtrar()" />
                 </v-col>
@@ -42,7 +42,7 @@
                                     <v-icon left>mdi-clipboard-text</v-icon> Rep. Avance Ventas
                                 </v-list-item-title>
                             </v-list-item>
-                            <v-list-item @click="dial_anular=!dial_anular">
+                            <v-list-item @click="dial_anular = !dial_anular">
                                 <v-list-item-title>
                                     <v-icon left>mdi-clipboard-text</v-icon> Anular Pedido
                                 </v-list-item-title>
@@ -104,8 +104,7 @@
                                             </v-btn>
                                         </template>
                                         <v-list dense>
-                                            <v-list-item
-                                                @click='pedidoSeleccionado = pedido, imprimir(pedido)'>
+                                            <v-list-item @click='pedidoSeleccionado = pedido, imprimir(pedido)'>
                                                 <v-list-item-icon>
                                                     <v-icon color="success"> mdi-printer</v-icon>
                                                 </v-list-item-icon>
@@ -171,7 +170,7 @@
                     </v-col>
                 </v-row>
             </v-card>
-        </v-dialog >
+        </v-dialog>
         <dial_rep_avance v-if="dial_avance" :data="result" @cerrar="dial_avance = false" />
         <edita_ped ref="editorDetalle" v-model="showEditorDetalle" :cabecera="editorCabecera" :detalle="editorDetalle"
             :editable-precio="false" @cancelar="showEditorDetalle = false" />
@@ -188,6 +187,8 @@
 <script>
 import moment from "moment";
 import { all_pedidos, detalle_pedido } from "../../db";
+import { crearOActualizarCliente as nuevoCliente, borrarCliente as eliminaCliente } from '../../db_firestore'
+
 import edita_ped from './dialogos/edita_pedido.vue'
 import dial_detalle_ped from './dialogos/dialogo_detalle_ped.vue'
 import dial_consolidado from "./dialogos/dialogo_rep_consolidado.vue"
@@ -207,7 +208,7 @@ export default {
     data() {
         return {
             // estado
-            dial_anular:false,
+            dial_anular: false,
             result: [],
             showEditorDetalle: false,
             vendedor: 'TODOS',
@@ -310,6 +311,39 @@ export default {
     },
 
     methods: {
+        async actualizarUbicacionesDesdePedidos() {
+            const arr = this.pedidosFiltrados || [];
+            if (!arr.length) {
+                console.warn('No hay pedidos filtrados');
+                return;
+            }
+
+            for (const p of arr) {
+                const idCliente = p.doc_numero || p.id;
+                if (!idCliente) continue;
+
+                const lat = p.ubicacion_cliente?.lat ?? p.ubicacion_pedido?.lat ?? null;
+                const lng = p.ubicacion_cliente?.lng ?? p.ubicacion_pedido?.lng ?? null;
+
+                if (lat && lng) {
+                    console.log(
+                        `Actualizando cliente ${idCliente} con lat:${lat}, lng:${lng}`
+                    );
+                    await nuevoCliente(idCliente, {
+                        latitud: String(lat),
+                        longitud: String(lng),
+                        editado: Date.now()
+                    });
+
+                    console.log(
+                        `Cliente ${idCliente} actualizado -> lat:${lat}, lng:${lng}`
+                    );
+                }
+            }
+
+            alert("Ubicaciones actualizadas correctamente");
+        },
+
         _norm(s) {
             return String(s)
                 .toLowerCase()
@@ -372,8 +406,8 @@ export default {
                         items.forEach(d => {
                             const cantidad = Number(d.cantidad || 0);
                             const precio = Number(d.precio || 0).toFixed(2);
-                            const total = Number(d.totalLinea || (cantidad * precio)).toFixed(2);
-
+                            const total = Number(d.totalLinea).toFixed(2);
+                            console.log("Detalle pedido:", d.totalLinea);
                             acumulado.push({
                                 pedidoId: p.id,
                                 fecha: this.formatFecha(p.fecha_emision),
@@ -565,8 +599,8 @@ export default {
             const val = snap.val() || [];
             const items = Array.isArray(val) ? val : Object.values(val);
             store.commit("dialogoprogress")
-           // pdfGenera(pedido, items, tama);
-             pdfGenera(pedido, items, store.state.configImpresora.tamano);
+            // pdfGenera(pedido, items, tama);
+            pdfGenera(pedido, items, store.state.configImpresora.tamano);
         }
     },
 };

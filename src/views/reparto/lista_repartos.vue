@@ -91,9 +91,19 @@
                         <td style="font-size:75%;">S/.{{ pedido.resumen.total_general }}</td>
 
                         <td>
-                            <v-btn icon small @click="ir_reparto(pedido)">
-                                <v-icon color="blue">mdi-eye</v-icon>
+                            <v-row>
+                                <v-col cols="6" xs="6">
+                                    <v-btn icon small @click="ir_reparto(pedido)">
+                                        <v-icon color="blue">mdi-eye</v-icon>
+                                    </v-btn>
+                                </v-col>
+                                <v-col cols="6" xs="6">
+                                       <v-btn icon small @click="repartoActual = pedido.id; dial_cobranza = !dial_cobranza">
+                                <v-icon color="success">mdi-cash-register</v-icon>
                             </v-btn>
+                                </v-col>
+                            </v-row>
+
                         </td>
                     </tr>
                 </tbody>
@@ -143,24 +153,29 @@
 
         <dial_nuevo_rep v-if="nuevo_rep" @cierra="nuevo_rep = false" />
         <dial_sube_rep v-if="dial_sube_excel" @cerrar="dial_sube_excel = false, filtrar" />
+        <cobranza_reparto v-if="dial_cobranza" :pedidos="null" :grupo="repartoActual" @cerrar="dial_cobranza = false" />
     </div>
 </template>
 
 <script>
 import moment from "moment";
 import { all_cabecera_reparto, all_Cabecera_p, all_detalle_p } from "../../db";
-import { reporteProductoClientePDF } from './reportes_pdf'
+import { reporteProductoClientePDF } from '../pedidos/reportes_pdf'
 import store from '@/store/index'
 import dial_nuevo_rep from './dialogos/nuevo_reparto.vue'
 import dial_sube_rep from './dialogos/excel_ruta.vue'
+import cobranza_reparto from '../reparto/dialogos/cobranza_reparto.vue'
 export default {
     components: {
         dial_nuevo_rep,
-        dial_sube_rep
+        dial_sube_rep,
+        cobranza_reparto
     },
     data() {
         return {
             // estado
+            repartoActual: null,
+            dial_cobranza: false,
             dial_rep_consolidado: false,
             selectedIds: [],
             dial_sube_excel: false,

@@ -71,7 +71,7 @@
                                                         style="max-width: 70vw;">
                                                         <span class="font-weight-bold red--text">{{
                                                             Number(item.cantidad)
-                                                        }}×</span>
+                                                            }}×</span>
                                                         {{ item.nombre }}
                                                     </div>
                                                 </div>
@@ -145,7 +145,7 @@
                 <v-system-bar window dark>
                     <v-icon large color="red" @click="dialogoProducto = false">mdi-close</v-icon>
                     <v-spacer></v-spacer>
-                                     <v-checkbox :disabled="!$store.state.permisos.edita_bono" v-model="es_bono"
+                    <v-checkbox :disabled="!$store.state.permisos.edita_bono" v-model="es_bono"
                         label="ES BONO"></v-checkbox>
                 </v-system-bar>
             </div>
@@ -417,16 +417,23 @@ export default {
             this.documento = data.tipodoc || '';
             this.nombreCompleto = data.nombre || '';
             this.telfcliente = data.telefono || '';
-                 this.tipocomprobante = store.state.configuracion.defecto || 'T';
+            this.tipocomprobante = store.state.configuracion.defecto || 'T';
             // OPCIONAL: si tu componente tiene estas props/campos, completa coords
             if ('latitud' in this) this.latitud = (data.latitud ?? dirPri?.latitud ?? null);
             if ('longitud' in this) this.longitud = (data.longitud ?? dirPri?.longitud ?? null);
+        }
+        if ((!this.listaproductos || this.listaproductos.length === 0) &&
+            Array.isArray(store.state.lista_productos) &&
+            store.state.lista_productos.length > 0) {
+            // clon simple para no mutar directamente el state
+            this.listaproductos = JSON.parse(JSON.stringify(store.state.lista_productos));
         }
     },
     beforeDestroy() {
         window.removeEventListener("keydown", this.detectarTecla);
         store.commit("emision", '')
         store.commit("cliente_selecto", '')
+        store.commit("lista_productos", []);
     },
     computed: {
         hoyISO() {
@@ -441,6 +448,12 @@ export default {
             } else {
                 this.fechaVencimiento = '';
             }
+        },
+        listaproductos: {
+            handler(nuevo) {
+                store.commit("lista_productos", nuevo);
+            },
+            deep: true, // importante para detectar cambios dentro del array/objetos
         },
     },
     mounted() {

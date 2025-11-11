@@ -374,6 +374,9 @@ export const allCabecera = () => {
 export const allCabecera_general = (bd) => {
   return db.database().ref(bd).child("comprobantecabecera");
 };
+export const allDetalle_general = (bd,numeracion) => {
+  return db.database().ref(bd).child("comprobantedetalle").child(numeracion);
+};
 export const elimina_Cabecera = (numeracion) => {
   return db
     .database()
@@ -921,6 +924,9 @@ export const consulta_CabeceraNCD = (id) => {
 };
 export const allCabeceraNCD = () => {
   return db.database().ref(store.state.baseDatos.bd).child("ncdcabecera");
+};
+export const allCabeceraNCD_general = (bd) => {
+  return db.database().ref(bd).child("ncdcabecera");
 };
 export const grabaCabeceraNCD = (numeracion, array) => {
   return db
@@ -1730,4 +1736,13 @@ export const nuevo_detalle_entrega = (grupo, numeracion, array) => {
     .child("entregas")
     .child(numeracion)
     .set(array)
+};
+export const all_detalle_entrega = (grupo) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("pedidos")
+    .child("detalle_reparto")
+    .child(grupo)
+    .child("entregas"); 
 };

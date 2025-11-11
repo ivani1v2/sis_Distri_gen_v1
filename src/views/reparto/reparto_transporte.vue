@@ -16,6 +16,11 @@
                 <v-select v-if="!isMobile" v-model="estadoFiltro" :items="estadosEntrega" outlined dense hide-details
                     class="ml-2" label="Estado" />
                 <v-spacer></v-spacer>
+                <v-btn v-if="!isMobile" small color="info" dark rounded depressed lock class="mt-1 mr-2"
+                    @click="dial_cobranza = !dial_cobranza">
+                    <v-icon left>mdi-cash-register</v-icon>
+                    Cobranza
+                </v-btn>
                 <v-btn v-if="!isMobile" small color="error" dark rounded depressed lock class="mt-1"
                     @click="estadoFiltro = 'todos'; dialogoMapa_reparto = !dialogoMapa_reparto">
                     <v-icon left>mdi-map-marker</v-icon>
@@ -37,7 +42,11 @@
                         <v-divider class="my-2" />
 
                         <v-list dense>
-                            <v-list-item @click="dial_repartos = true">
+                                   <v-list-item @click="dial_cobranza = !dial_cobranza">
+                                <v-list-item-icon><v-icon color="info">mdi-cash-register</v-icon></v-list-item-icon>
+                                <v-list-item-title>Ver Cobranza</v-list-item-title>
+                            </v-list-item>
+                            <v-list-item @click="dial_repartos = !dial_repartos">
                                 <v-list-item-icon><v-icon color="error">mdi-truck</v-icon></v-list-item-icon>
                                 <v-list-item-title>Buscar Reparto</v-list-item-title>
                             </v-list-item>
@@ -193,24 +202,27 @@
             </v-row>
             <div class="text-center py-4" v-if="displayedPedidos.length < pedidosFiltrados.length">
                 <v-btn small outlined @click="verMas">Ver más ({{ displayedPedidos.length }}/{{ pedidosFiltrados.length
-                    }})</v-btn>
+                }})</v-btn>
             </div>
         </v-container>
         <dial_mapas v-model="dialogoMapa"
             :clienteEnMapa="{ nombre: item_selecto.cliente, latitud: item_selecto.latitud, longitud: item_selecto.longitud, documento: item_selecto.dni }"
             :ver-todos="false" :guardar_auto="false" @cierra="dialogoMapa = false" />
         <mapa_reparto v-model="dialogoMapa_reparto" :clientes="pedidosFiltrados" />
-        <dial_rechaza v-if="dial_rechazo" :item_selecto="item_selecto" @cerrar="dial_rechazo = false"  @guardado=" dial_rechazo = false"/>
+        <dial_rechaza v-if="dial_rechazo" :item_selecto="item_selecto" @cerrar="dial_rechazo = false"
+            @guardado=" dial_rechazo = false" />
         <busca_reparto v-if="dial_repartos" @seleccionado="ver_reparto($event), dial_repartos = false"
             @cerrar="dial_repartos = false" />
         <div v-if="isMobile && !dialogoMapa_reparto && pedidosFiltrados.length > 0" class="fab-mobile">
 
-            <v-btn   color="success" dark class="mb-2" @click="estadoFiltro = 'todos'; dialogoMapa_reparto = true">
-               Mapa
+            <v-btn color="success" dark class="mb-2" @click="estadoFiltro = 'todos'; dialogoMapa_reparto = true">
+                Mapa
                 <v-icon>mdi-map-marker</v-icon>
             </v-btn>
         </div>
-        <acepta_pedido v-if="dial_aceptado" :item_selecto="item_selecto" @cerrar="dial_aceptado = false" @guardado=" dial_aceptado = false"/>
+        <acepta_pedido v-if="dial_aceptado" :item_selecto="item_selecto" @cerrar="dial_aceptado = false"
+            @guardado=" dial_aceptado = false" />
+        <cobranza_reparto v-if="dial_cobranza" :pedidos="pedidosFiltrados" :grupo="repartoActual" @cerrar="dial_cobranza = false" />
     </div>
 </template>
 
@@ -223,11 +235,13 @@ import mapa_reparto from './mapa_reparto.vue'
 import dial_rechaza from './dialogos/rechaza_pedido.vue'
 import busca_reparto from './dialogos/buscar_reparto.vue'
 import acepta_pedido from './dialogos/acepta_pedido.vue'
+import cobranza_reparto from './dialogos/cobranza_reparto.vue'
 import { llamarCliente, enviarWhatsApp, irGoogleMaps, chipColor, chipColorEntrega } from './funciones'
 export default {
-    components: { dial_mapas, mapa_reparto, dial_rechaza, busca_reparto, acepta_pedido },
+    components: { dial_mapas, mapa_reparto, dial_rechaza, busca_reparto, acepta_pedido, cobranza_reparto },
     data() {
         return {
+            dial_cobranza: false,
             estadoFiltro: 'pendiente',
             estadosEntrega: ['todos', 'pendiente', 'entregado', 'reprogramado', 'rechazado'],
             dial_repartos: false,
@@ -393,11 +407,12 @@ export default {
             this.lista_pedidos = this.lista_pedidos.map(p => {
                 const key = String(p.dni || p.documento || '').trim();
                 const c = byDoc[key];
+                console.log("Enriqueciendo pedido", p.ubicacion, "con cliente:", c);
                 return {
                     ...p,
                     telefono: c?.telefono ?? p.telefono ?? '',
-                    latitud: c?.latitud ?? null,
-                    longitud: c?.longitud ?? null,
+                    latitud: p.ubicacion.lat,
+                    longitud: p.ubicacion.lng,
                 };
             });
         },

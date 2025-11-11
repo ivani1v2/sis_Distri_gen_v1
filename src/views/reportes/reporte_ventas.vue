@@ -4,12 +4,7 @@
 
             <v-row>
                 <v-col cols="12" md="2">
-                    <v-card-title class="mt-n6">📊 Consultar</v-card-title>
-                </v-col>
-
-                <!-- Año -->
-                <v-col cols="12" md="4" v-if="false">
-                    <v-select dense v-model="reporte" :items="array_reporte" label="Reporte" outlined></v-select>
+                    <v-card-title class="mt-n6">📊Consultar</v-card-title>
                 </v-col>
                 <v-col cols="12" md="2">
                     <v-select dense v-model="filtros.year" :items="years" label="Año" outlined></v-select>
@@ -23,6 +18,34 @@
                     <v-btn small color="primary" class="mt-1" @click="consultarVentas">
                         🔍 Consultar
                     </v-btn>
+
+                </v-col>
+                <v-col cols="12" md="2">
+                    <v-menu bottom offset-y v-if="false">
+                        <template v-slot:activator="{ on, attrs }">
+                            <v-btn color="success" block small v-bind="attrs" v-on="on">
+                                <v-icon left>mdi-cog</v-icon> Opciones
+                            </v-btn>
+                        </template>
+                        <v-list dense>
+                            <v-list-item>
+                                <v-btn small color="error" block @click="sincroniza_productos">
+                                    <v-icon left>mdi-chart-bar</v-icon> Sincroniza Productos
+                                </v-btn>
+                            </v-list-item>
+                            <v-list-item v-if="true">
+                                <v-btn small color="warning" block @click="sincroniza_periodo">
+                                    <v-icon left>mdi-chart-bar</v-icon> Sincroniza Periodo
+                                </v-btn>
+                            </v-list-item>
+                            <v-list-item>
+                                <v-btn small color="error" block @click="borra_periodo">
+                                    <v-icon left>mdi-delete</v-icon> Borrar Periodo
+                                </v-btn>
+                            </v-list-item>
+                        </v-list>
+                    </v-menu>
+
                 </v-col>
             </v-row>
 
@@ -47,8 +70,9 @@
 
                 <!-- Vendedor -->
                 <v-col cols="12" md="3">
-                    <v-autocomplete dense v-model="filtros.vendedores" :items="$store.state.array_sedes" label="Vendedores" outlined
-                        clearable multiple chips item-text="nombre" item-value="codigo"></v-autocomplete>
+                    <v-autocomplete dense v-model="filtros.vendedores" :items="$store.state.array_sedes"
+                        label="Vendedores" outlined clearable multiple chips item-text="nombre"
+                        item-value="codigo"></v-autocomplete>
                 </v-col>
             </v-row>
             <v-row class="mt-n8">
@@ -227,17 +251,156 @@ export default {
 
 
     methods: {
+        async borra_periodo() {
+            try {
+                if (!confirm("⚠️ Se eliminarán todos los registros del periodo seleccionado en BigQuery. ¿Desea continuar?")) return;
+
+                const empresa = this.$store.state.baseDatos?.ruc_asociado
+                    || this.$store.state.baseDatos?.ruc;
+                const bd = this.$store.state.baseDatos?.bd;
+
+                if (!empresa || !bd) {
+                    alert("No se encontró información de la empresa o BD. Comuníquese con soporte.");
+                    return;
+                }
+
+                const { year, mes } = this.filtros;
+                if (!year || !mes) {
+                    alert("Debe seleccionar año y mes para borrar el periodo.");
+                    return;
+                }
+
+                const inicioDate = new Date(year, mes - 1, 1, 0, 0, 0);
+                const finDate = new Date(year, mes, 0, 23, 59, 59);
+                const inicio = Math.floor(inicioDate.getTime() / 1000);
+                const fin = Math.floor(finDate.getTime() / 1000);
+
+                store.commit("dialogoprogress");
+
+                const url = "https://southamerica-east1-sis-distribucion.cloudfunctions.net/borra_bigquery_periodo";
+                const payload = { empresa: String(empresa), inicio, fin };
+
+                const response = await axios.post(url, payload, {
+                    headers: { "Content-Type": "application/json" }
+                });
+
+                console.log("🗑️ Periodo borrado:", response.data);
+                store.commit("dialogoprogress");
+                alert("✅ Periodo eliminado correctamente de BigQuery.");
+            } catch (error) {
+                console.error("❌ Error al borrar periodo:", error?.response?.data || error.message || error);
+                store.commit("dialogoprogress");
+                alert("Error al borrar el periodo. Revise la consola o comuníquese con soporte.");
+            }
+        },
+
+        async sincroniza_periodo() {
+            try {
+                alert("Se sincronizarán todas las ventas del periodo seleccionado (año/mes) hacia BigQuery.");
+
+                const empresa = this.$store.state.baseDatos?.ruc_asociado
+                    || this.$store.state.baseDatos?.ruc;
+                const bd = this.$store.state.baseDatos?.bd;
+
+                if (!empresa || !bd) {
+                    console.warn("Faltan datos para sincronizar periodo:", { empresa, bd });
+                    alert("No se encontró información de la empresa o BD. Comuníquese con soporte.");
+                    return;
+                }
+
+                const { year, mes } = this.filtros;
+                if (!year || !mes) {
+                    alert("Debe seleccionar año y mes para sincronizar el periodo.");
+                    return;
+                }
+
+                // ⏱ rango de fechas en epoch (segundos) para TODO el mes
+                const inicioDate = new Date(year, mes - 1, 1, 0, 0, 0);
+                const finDate = new Date(year, mes, 0, 23, 59, 59);
+
+                const inicio = Math.floor(inicioDate.getTime() / 1000);
+                const fin = Math.floor(finDate.getTime() / 1000);
+
+                store.commit("dialogoprogress");
+
+                const url = "https://southamerica-east1-sis-distribucion.cloudfunctions.net/big_query";
+                const payload = {
+                    empresa: String(empresa),
+                    bd: String(bd),
+                    inicio,
+                    fin,
+                };
+
+                const response = await axios.post(url, payload, {
+                    headers: { "Content-Type": "application/json" }
+                });
+
+                console.log("✅ Periodo sincronizado:", response.data);
+                store.commit("dialogoprogress");
+                // aquí podrías disparar un snackbar si quieres
+                // store.commit("dialogosnackbar", "Periodo sincronizado correctamente");
+
+            } catch (error) {
+                console.error("❌ Error al sincronizar periodo:", error?.response?.data || error.message || error);
+                store.commit("dialogoprogress");
+                alert("Ocurrió un error al sincronizar el periodo. Revise la consola o comuníquese con soporte.");
+            }
+        },
+
+        async sincroniza_productos() {
+            // Toma ruc_asociado y hace fallback a ruc si no existe
+            alert("Solo es necesario si se han agregado nuevos productos o se han modificado existentes.");
+            const empresa = this.$store.state.baseDatos?.ruc_asociado
+                || this.$store.state.baseDatos?.ruc;
+            const bd = this.$store.state.baseDatos?.bd;
+
+            if (!empresa || !bd) {
+                console.warn("Faltan datos para sincronizar productos:", { empresa, bd });
+                return;
+            }
+
+            try {
+                store.commit("dialogoprogress");
+                const url = "https://southamerica-east1-sis-distribucion.cloudfunctions.net/big_query_productos";
+                const payload = { empresa: String(empresa), bd: String(bd) };
+
+                const response = await axios.post(url, payload, {
+                    headers: { "Content-Type": "application/json" }
+                });
+
+                console.log("✅ Productos sincronizados:", response.data);
+                store.commit("dialogoprogress");
+                // aquí podrías mostrar un snackbar/toast si quieres
+            } catch (error) {
+                console.error("❌ Error al sincronizar productos:", error?.response?.data || error.message || error);
+                // opcional: mostrar snackbar con el error
+            }
+        },
+
         async consultarVentas() {
             try {
                 store.commit("dialogoprogress");
                 const filtros = this.filtros;
 
-                // --- Condiciones base ---
+                // 🔐 RUC de la empresa (obligatorio)
+                const empresa = String(
+                    this.$store.state.baseDatos?.ruc_asociado ||
+                    this.$store.state.baseDatos?.ruc ||
+                    ""
+                ).trim();
+                if (!empresa) {
+                    console.warn("No hay RUC de empresa para filtrar");
+                    store.commit("dialogoprogress");
+                    return;
+                }
+
+                // --- Condiciones base (VISTA + filtro por RUC) ---
                 let where = `
-      WHERE cab.estado != 'ANULADO'
-      AND det.operacion != 'GRATUITA'
-      AND EXTRACT(YEAR FROM cab.fecha_ts) = @year
-      AND EXTRACT(MONTH FROM cab.fecha_ts) = @mes
+      WHERE id_empresa = @empresa
+      AND estado != 'ANULADO'
+      AND operacion != 'GRATUITA'
+      AND EXTRACT(YEAR  FROM fecha_ts) = @year
+      AND EXTRACT(MONTH FROM fecha_ts) = @mes
     `;
 
                 let groupBy = ``;
@@ -245,41 +408,45 @@ export default {
 
                 // --- Campos base (modo Ninguno) ---
                 let selectFields = `
-      FORMAT_DATE('%Y-%m-%d', DATE(cab.fecha_ts)) AS fecha,
-      cab.vendedor,
-      CONCAT(det.producto_id, ' - ', det.nombre) AS producto,
-      prod.proveedor,
-      prod.marca,
-      prod.categoria,
-      SUM(SAFE_CAST(det.cantidad AS NUMERIC)) AS cantidad,
-      ROUND(SUM(SAFE_CAST(det.valor_total AS NUMERIC) + SAFE_CAST(det.total_impuestos AS NUMERIC)), 2) AS total
+      FORMAT_DATE('%Y-%m-%d', DATE(fecha_ts)) AS fecha,
+      vendedor,
+      CONCAT(producto_id, ' - ', producto_nombre) AS producto,
+      proveedor,
+      marca,
+      categoria,
+      SUM(SAFE_CAST(cantidad_unid AS NUMERIC)) AS cantidad,
+      ROUND(SUM(SAFE_CAST(valor_total AS NUMERIC) + SAFE_CAST(total_impuestos AS NUMERIC)), 2) AS total
     `;
 
-                const params = { year: filtros.year, mes: filtros.mes };
+                const params = {
+                    empresa,                 // ← filtro por RUC
+                    year: filtros.year,
+                    mes: filtros.mes
+                };
 
                 // --- Filtros dinámicos ---
                 if (filtros.vendedores.length) {
-                    where += ` AND cab.vendedor IN UNNEST(@vendedores)`;
+                    where += ` AND vendedor IN UNNEST(@vendedores)`;
                     params.vendedores = filtros.vendedores;
                 }
                 if (filtros.proveedores.length) {
-                    where += ` AND prod.proveedor IN UNNEST(@proveedores)`;
+                    where += ` AND proveedor IN UNNEST(@proveedores)`;
                     params.proveedores = filtros.proveedores;
                 }
                 if (filtros.marcas.length) {
-                    where += ` AND prod.marca IN UNNEST(@marcas)`;
+                    where += ` AND marca IN UNNEST(@marcas)`;
                     params.marcas = filtros.marcas;
                 }
                 if (filtros.categorias.length) {
-                    where += ` AND prod.categoria IN UNNEST(@categorias)`;
+                    where += ` AND categoria IN UNNEST(@categorias)`;
                     params.categorias = filtros.categorias;
                 }
                 if (filtros.cliente.length) {
-                    where += ` AND CAST(cab.dni AS STRING) IN UNNEST(@clientes)`;
+                    where += ` AND CAST(dni AS STRING) IN UNNEST(@clientes)`;
                     params.clientes = filtros.cliente.map(d => String(d));
                 }
                 if (filtros.producto.length) {
-                    where += ` AND det.producto_id IN UNNEST(@productos)`;
+                    where += ` AND producto_id IN UNNEST(@productos)`;
                     params.productos = filtros.producto.map(d => String(d));
                 }
 
@@ -287,12 +454,12 @@ export default {
                 switch (this.criterioAgrupacion) {
                     case "Vendedor":
                         selectFields = `
-          cab.vendedor,
-          COUNT(DISTINCT cab.dni) AS puntos_cobertura,
-          SUM(SAFE_CAST(det.cantidad AS NUMERIC)) AS cantidad,
-          ROUND(SUM(SAFE_CAST(det.valor_total AS NUMERIC) + SAFE_CAST(det.total_impuestos AS NUMERIC)), 2) AS total
+          vendedor,
+          COUNT(DISTINCT dni) AS puntos_cobertura,
+          SUM(SAFE_CAST(cantidad_unid AS NUMERIC)) AS cantidad,
+          ROUND(SUM(SAFE_CAST(valor_total AS NUMERIC) + SAFE_CAST(total_impuestos AS NUMERIC)), 2) AS total
         `;
-                        groupBy = `GROUP BY cab.vendedor`;
+                        groupBy = `GROUP BY vendedor`;
                         orderBy = `ORDER BY total DESC`;
                         this.headers = [
                             { text: "Vendedor", value: "vendedor" },
@@ -301,13 +468,14 @@ export default {
                             { text: "Total (S/)", value: "total", align: "right" }
                         ];
                         break;
+
                     case "Cliente":
                         selectFields = `
-      CONCAT(CAST(cab.dni AS STRING), ' - ', cab.cliente) AS cliente,
-      SUM(SAFE_CAST(det.cantidad AS NUMERIC)) AS cantidad,
-      ROUND(SUM(SAFE_CAST(det.valor_total AS NUMERIC) + SAFE_CAST(det.total_impuestos AS NUMERIC)), 2) AS total
-    `;
-                        groupBy = `GROUP BY cab.dni, cab.cliente`;
+          CONCAT(CAST(dni AS STRING), ' - ', cliente) AS cliente,
+          SUM(SAFE_CAST(cantidad_unid AS NUMERIC)) AS cantidad,
+          ROUND(SUM(SAFE_CAST(valor_total AS NUMERIC) + SAFE_CAST(total_impuestos AS NUMERIC)), 2) AS total
+        `;
+                        groupBy = `GROUP BY dni, cliente`;
                         orderBy = `ORDER BY total DESC`;
                         this.headers = [
                             { text: "Cliente", value: "cliente" },
@@ -318,9 +486,9 @@ export default {
 
                     case "Producto":
                         selectFields = `
-          CONCAT(det.producto_id, ' - ', det.nombre) AS producto,
-          SUM(SAFE_CAST(det.cantidad AS NUMERIC)) AS cantidad,
-          ROUND(SUM(SAFE_CAST(det.valor_total AS NUMERIC) + SAFE_CAST(det.total_impuestos AS NUMERIC)), 2) AS total
+          CONCAT(producto_id, ' - ', producto_nombre) AS producto,
+          SUM(SAFE_CAST(cantidad_unid AS NUMERIC)) AS cantidad,
+          ROUND(SUM(SAFE_CAST(valor_total AS NUMERIC) + SAFE_CAST(total_impuestos AS NUMERIC)), 2) AS total
         `;
                         groupBy = `GROUP BY producto`;
                         orderBy = `ORDER BY total DESC`;
@@ -333,11 +501,11 @@ export default {
 
                     case "Marca":
                         selectFields = `
-          prod.marca,
-          SUM(SAFE_CAST(det.cantidad AS NUMERIC)) AS cantidad,
-          ROUND(SUM(SAFE_CAST(det.valor_total AS NUMERIC) + SAFE_CAST(det.total_impuestos AS NUMERIC)), 2) AS total
+          marca,
+          SUM(SAFE_CAST(cantidad_unid  AS NUMERIC)) AS cantidad,
+          ROUND(SUM(SAFE_CAST(valor_total AS NUMERIC) + SAFE_CAST(total_impuestos AS NUMERIC)), 2) AS total
         `;
-                        groupBy = `GROUP BY prod.marca`;
+                        groupBy = `GROUP BY marca`;
                         orderBy = `ORDER BY total DESC`;
                         this.headers = [
                             { text: "Marca", value: "marca" },
@@ -348,11 +516,11 @@ export default {
 
                     case "Categoria":
                         selectFields = `
-          prod.categoria,
-          SUM(SAFE_CAST(det.cantidad AS NUMERIC)) AS cantidad,
-          ROUND(SUM(SAFE_CAST(det.valor_total AS NUMERIC) + SAFE_CAST(det.total_impuestos AS NUMERIC)), 2) AS total
+          categoria,
+          SUM(SAFE_CAST(cantidad_unid  AS NUMERIC)) AS cantidad,
+          ROUND(SUM(SAFE_CAST(valor_total AS NUMERIC) + SAFE_CAST(total_impuestos AS NUMERIC)), 2) AS total
         `;
-                        groupBy = `GROUP BY prod.categoria`;
+                        groupBy = `GROUP BY categoria`;
                         orderBy = `ORDER BY total DESC`;
                         this.headers = [
                             { text: "Categoría", value: "categoria" },
@@ -363,17 +531,17 @@ export default {
 
                     case "Dia":
                         selectFields = `
-    FORMAT_DATE('%A', DATE(cab.fecha_ts)) AS dia,
-    SUM(SAFE_CAST(det.cantidad AS NUMERIC)) AS cantidad,
-    ROUND(SUM(SAFE_CAST(det.valor_total AS NUMERIC) + SAFE_CAST(det.total_impuestos AS NUMERIC)), 2) AS total
-  `;
+          dia_nombre_es AS dia,
+          SUM(SAFE_CAST(cantidad_unid  AS NUMERIC)) AS cantidad,
+          ROUND(SUM(SAFE_CAST(valor_total AS NUMERIC) + SAFE_CAST(total_impuestos AS NUMERIC)), 2) AS total
+        `;
                         groupBy = `GROUP BY dia`;
                         orderBy = `
-    ORDER BY CASE dia
-      WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3
-      WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6
-      WHEN 'Sunday' THEN 7 ELSE 8 END
-  `;
+          ORDER BY CASE dia
+            WHEN 'Lunes' THEN 1 WHEN 'Martes' THEN 2 WHEN 'Miércoles' THEN 3
+            WHEN 'Jueves' THEN 4 WHEN 'Viernes' THEN 5 WHEN 'Sábado' THEN 6
+            WHEN 'Domingo' THEN 7 ELSE 8 END
+        `;
                         this.headers = [
                             { text: "Día", value: "dia" },
                             { text: "Cantidad", value: "cantidad", align: "right" },
@@ -381,14 +549,13 @@ export default {
                         ];
                         break;
 
-
                     case "Fecha":
                         selectFields = `
-    FORMAT_DATE('%Y-%m-%d', DATE(cab.fecha_ts)) AS fecha,
-    FORMAT_DATE('%A', DATE(cab.fecha_ts)) AS dia,
-    SUM(SAFE_CAST(det.cantidad AS NUMERIC)) AS cantidad,
-    ROUND(SUM(SAFE_CAST(det.valor_total AS NUMERIC) + SAFE_CAST(det.total_impuestos AS NUMERIC)), 2) AS total
-  `;
+          FORMAT_DATE('%Y-%m-%d', DATE(fecha_ts)) AS fecha,
+          dia_nombre_es AS dia,
+          SUM(SAFE_CAST(cantidad_unid AS NUMERIC)) AS cantidad,
+          ROUND(SUM(SAFE_CAST(valor_total AS NUMERIC) + SAFE_CAST(total_impuestos AS NUMERIC)), 2) AS total
+        `;
                         groupBy = `GROUP BY fecha, dia`;
                         orderBy = `ORDER BY fecha ASC`;
                         this.headers = [
@@ -400,9 +567,8 @@ export default {
                         break;
 
                     default:
-                        // ✅ Caso sin agrupación explícita
-                        groupBy = `GROUP BY cab.fecha_ts, cab.vendedor, producto, prod.proveedor, prod.marca, prod.categoria`;
-                        orderBy = `ORDER BY cab.fecha_ts ASC`;
+                        groupBy = `GROUP BY fecha_ts, vendedor, producto, proveedor, marca, categoria`;
+                        orderBy = `ORDER BY fecha_ts ASC`;
                         this.headers = [
                             { text: "Fecha", value: "fecha" },
                             { text: "Vendedor", value: "vendedor" },
@@ -413,23 +579,17 @@ export default {
                         break;
                 }
 
-                // --- Consulta final ---
+                // --- Consulta final a la VISTA (filtrada por RUC) ---
                 const query = `
       SELECT ${selectFields}
-      FROM \`sis-distribucion.firebase.detalle_comprobantes\` AS det
-      JOIN \`sis-distribucion.firebase.cabecera\` AS cab
-        ON cab.id_empresa = det.id_empresa
-       AND cab.numeracion = det.numeracion
-      LEFT JOIN \`sis-distribucion.firebase.productos\` AS prod
-        ON prod.id_empresa = det.id_empresa
-       AND prod.id = det.producto_id
+      FROM \`sis-distribucion.firebase.vw_venta_agregada\`
       ${where}
       ${groupBy}
       ${orderBy}
     `;
 
                 const response = await axios.post(
-                    "http://localhost:5000/sis-distribucion/southamerica-east1/consulta_bigquery",
+                    "https://consulta-bigquery-6sfc6tum4a-rj.a.run.app",
                     { query, params },
                     { headers: { "Content-Type": "application/json" } }
                 );
@@ -446,6 +606,7 @@ export default {
                 store.commit("dialogoprogress");
             }
         },
+
 
         convertir_vendedor(id) {
 
@@ -471,27 +632,7 @@ export default {
 
             return `${cajas}/${und}`;
         },
-        traducir(dia) {
-            const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
-            const dias = {
-                "Monday": "Lunes",
-                "Tuesday": "Martes",
-                "Wednesday": "Miércoles",
-                "Thursday": "Jueves",
-                "Friday": "Viernes",
-                "Saturday": "Sábado",
-                "Sunday": "Domingo"
-            };
-
-            if (!isNaN(dia)) {
-                // Si es número, usa el array de días (0 = Domingo, 6 = Sábado)
-                return diasSemana[dia] || "";
-            } else {
-                // Si es string en inglés, usa el objeto de traducción
-                return dias[dia] || dia; // Si no lo encuentra, devuelve el mismo valor
-            }
-        },
         exportToExcel() {
             if (this.ventas.length === 0) {
                 alert("No hay datos para exportar.");

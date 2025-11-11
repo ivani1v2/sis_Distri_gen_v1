@@ -346,11 +346,18 @@ export default {
                 nombre: data.nom_cliente
             }
         }
+        if ((!this.listaproductos || this.listaproductos.length === 0) &&
+            Array.isArray(store.state.lista_productos) &&
+            store.state.lista_productos.length > 0) {
+            // clon simple para no mutar directamente el state
+            this.listaproductos = JSON.parse(JSON.stringify(store.state.lista_productos));
+        }
     },
     beforeDestroy() {
         window.removeEventListener("keydown", this.detectarTecla);
         store.commit("emision", '')
         store.commit("cliente_selecto", '')
+        store.commit("lista_productos", []);
     },
     computed: {
         conversion() {
@@ -372,7 +379,13 @@ export default {
             } else if (this.item_selecto && Number(this.item_selecto.precio) > 0) {
                 this.precioedita = Number(this.item_selecto.precio)
             }
-        }
+        },
+        listaproductos: {
+            handler(nuevo) {
+                store.commit("lista_productos", nuevo);
+            },
+            deep: true, // importante para detectar cambios dentro del array/objetos
+        },
     },
 
     methods: {

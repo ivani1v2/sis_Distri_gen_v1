@@ -35,9 +35,11 @@
                 </thead>
                 <tbody>
                   <tr v-for="(g, i) in listaVendidos" :key="'v-' + i">
-                    <td style="font-size:75%;">{{ g.nombre }}</td>
+                    <td style="font-size:75%;">{{ g.codigo }} - {{ g.nombre }}</td>
                     <!-- 👇 si factor==1 -> solo unds; si >1 -> packs/unds -->
-                    <td style="font-size:75%;">{{ g.cantDisplay }}</td>
+                    <td style="font-size:75%;">
+                      <span class="cant-click" @click="verClientes(g)">{{ g.cantDisplay }}</span>
+                    </td>
                     <td style="font-size:75%;">S/.{{ number2(g.precioUnitProm) }}</td>
                     <td style="font-size:75%;">S/.{{ number2(g.total) }}</td>
                   </tr>
@@ -63,7 +65,9 @@
                   <tr v-for="(g, i) in listaValor" :key="'m-' + i">
                     <td style="font-size:75%;">{{ g.nombre }}</td>
                     <!-- 👇 mismo criterio -->
-                    <td style="font-size:75%;">{{ g.cantDisplay }}</td>
+                    <td style="font-size:75%;">
+                      <span class="cant-click" @click="verClientes(g)">{{ g.cantDisplay }}</span>
+                    </td>
                     <td style="font-size:75%;">S/.{{ number2(g.total) }}</td>
                   </tr>
                   <tr v-if="agrupadoPorProducto.length === 0">
@@ -76,6 +80,33 @@
         </v-tabs-items>
       </v-card>
     </v-dialog>
+    <v-dialog v-model="clientesDial" max-width="600">
+      <v-card>
+        <v-toolbar flat color="indigo" dark dense>
+          <v-toolbar-title class="mini-title">Clientes — {{ clientesDe }}</v-toolbar-title>
+          <v-spacer></v-spacer>
+          <v-btn icon @click="clientesDial = false"><v-icon>mdi-close</v-icon></v-btn>
+        </v-toolbar>
+        <v-card-text class="pt-4">
+          <v-simple-table dense>
+            <thead>
+              <tr>
+                <th>Cliente</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(c, i) in clientesLista" :key="i">
+                <td>{{ c }}</td>
+              </tr>
+              <tr v-if="!clientesLista.length">
+                <td class="grey--text text--darken-1">Sin datos</td>
+              </tr>
+            </tbody>
+          </v-simple-table>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
 
     <v-dialog v-model="grafDial" max-width="900">
       <v-card>
@@ -104,6 +135,7 @@
         </v-tabs-items>
       </v-card>
     </v-dialog>
+
   </div>
 </template>
 
@@ -148,9 +180,36 @@ export default {
     consolidadoSeleccionados: Array
   },
   data() {
-    return { dial: true, tab: 0, grafDial: false, grafTab: 0 }
+    return {
+      dial: true,
+      tab: 0,
+      grafDial: false,
+      grafTab: 0,
+      clientesDial: false, clientesDe: '', clientesLista: []
+    }
+  },
+  created() {
+    console.log('Selected IDs:', this.consolidadoSeleccionados)
   },
   computed: {
+    clientesPorProducto() {
+      // clave usada en el agrupado: `${codigo}#${nombre}`
+      const map = new Map()
+      const push = (k, val) => {
+        if (!map.has(k)) map.set(k, new Set())
+        map.get(k).add(val)
+      }
+      (this.safeConsolidado || []).forEach(r => {
+        const key = (r.codigo ? `${String(r.codigo).trim()}#` : '') + String(r.nombre || '')
+        const cli = String(r.cliente || '').trim()
+        if (cli) push(key, cli)
+      })
+      // Set -> Array
+      const out = new Map()
+      map.forEach((set, k) => out.set(k, Array.from(set)))
+      return out
+    },
+
     factorIndex() {
       const idx = Object.create(null)
       const cat = Array.isArray(store?.state?.productos) ? store.state.productos : []
@@ -192,10 +251,10 @@ export default {
         const codigo = String(r.codigo || '').trim()
         const operacion = String(r.operacion || '').trim().toUpperCase()
         if (!map.has(key)) {
-          map.set(key, { codigo, nombre: r.nombre || '', packs: 0, unds: 0, total: 0, eq: 0, factor: 1  , gratuitas: 0})
+          map.set(key, { codigo, nombre: r.nombre || '', packs: 0, unds: 0, total: 0, eq: 0, factor: 1, gratuitas: 0 })
         }
         const acc = map.get(key)
-        console.log(operacion)
+        //console.log(operacion)
         if (operacion === 'GRATUITA') acc.gratuitas += cant
         if (this.isUnidad(medida)) {
           acc.unds += cant
@@ -220,12 +279,12 @@ export default {
         }
         acc.total += tot
       })
-      console.log(  map)
+      //console.log(map)
       return Array.from(map.values())
         .map(x => ({
           ...x,
           // 👇 si factor == 1 → solo unds; si >1 → packs/unds
-              nombre: x.gratuitas > 0 ? `${x.nombre}  (${x.gratuitas} gratuitas)` : x.nombre,
+          nombre: x.gratuitas > 0 ? `${x.nombre}  (${x.gratuitas} gratuitas)` : x.nombre,
           cantDisplay: x.factor > 1 ? `${this.int(x.packs)}/${this.int(x.unds)}` : `${this.int(x.unds)}`,
           // dejamos cantPU por si lo usas en otro lado
           cantPU: `${this.int(x.packs)}/${this.int(x.unds)}`,
@@ -252,6 +311,15 @@ export default {
     },
   },
   methods: {
+    verClientes(g) {
+      // g.nombre puede venir con " (X gratuitas)"; recupera nombre base
+      const baseNombre = String(g.nombre || '').split('  (')[0]
+      const key = (g.codigo ? `${String(g.codigo).trim()}#` : '') + baseNombre
+      this.clientesDe = baseNombre
+      this.clientesLista = this.clientesPorProducto.get(key) || []
+      this.clientesDial = true
+    },
+
     number2(n) { return Number(n || 0).toFixed(2) },
     int(n) { return Number(n || 0).toLocaleString() },
     cerrar() { this.$emit("cierra", true) },
@@ -295,5 +363,10 @@ export default {
   font-size: 14px !important;
   line-height: 1.1 !important;
   font-weight: 500;
+}
+
+.cant-click {
+  text-decoration: underline;
+  cursor: pointer;
 }
 </style>

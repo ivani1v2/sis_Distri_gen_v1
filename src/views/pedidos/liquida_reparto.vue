@@ -58,6 +58,10 @@
                         <v-list-item @click="abare_guias()">
                             <v-list-item-title>GUIA REMISION/REMITENTE</v-list-item-title>
                         </v-list-item>
+
+                        <v-list-item @click="transferir_pedidos()">
+                            <v-list-item-title>Transferir Pedidos</v-list-item-title>
+                        </v-list-item>
                         <v-list-item @click="anular_masivo()">
                             <v-list-item-title>Anular masivo</v-list-item-title>
                         </v-list-item>
@@ -580,8 +584,38 @@ export default {
         }
     },
     methods: {
+        async transferir_pedidos() {
+            const seleccionados = this.desserts.filter(d => d.consolida);
+            if (seleccionados.length === 0) {
+                alert('No hay pedidos seleccionados para transferir.');
+                return;
+            }
+            const nuevo_reparto = prompt('Ingrese el número del nuevo reparto:');
+            if (!nuevo_reparto) {
+                alert('Operación cancelada. No se ingresó un número de reparto válido.');
+                return;
+            }
+            store.commit("dialogoprogress")
+            var array = [];
+            for (const pedido of seleccionados) {
+                console.log('Transferiendo pedido:', pedido);
+                const snapshot = await all_detalle_p(this.router_grupo, pedido.numeracion).once("value");
+                array.push({
+                    cabecera: { ...pedido, id_grupo: nuevo_reparto },
+                    items: snapshot.val()
+                })
+            }
+            const payload = {
+                grupo_antiguo: this.router_grupo,
+                grupo_nuevo: nuevo_reparto,
+                data: array
+            };
+
+            await this.api_rest(payload, 'tranferir_pedido');
+            store.commit("dialogoprogress")
+
+        },
         async imprimir(data) {
-            console.log(data)
             const snapshot = await all_detalle_p(this.router_grupo, data.numeracion).once("value");
             this.detalle_selecto = snapshot.val()
             var cliente = store.state.clientes.find(e => Number(e.documento) == Number(data.dni))
@@ -1410,76 +1444,76 @@ export default {
             // Aquí puedes abrir un diálogo o hacer lo que necesites con el detalle
 
         },
-      async anular_masivo() {
-    // 1. Filtramos sólo los comprobantes seleccionados (checkbox consolida)
-    const seleccionados = this.desserts.filter(d => d.consolida);
+        async anular_masivo() {
+            // 1. Filtramos sólo los comprobantes seleccionados (checkbox consolida)
+            const seleccionados = this.desserts.filter(d => d.consolida);
 
-    if (seleccionados.length === 0) {
-        this.$store.commit('dialogosnackbar', 'No hay comprobantes seleccionados.');
-        return;
-    }
-
-    // 2. Confirmación al usuario
-    const ok = confirm(
-        '¿Seguro que quieres ANULAR estos comprobantes?\n' +
-        '- Se marcarán como ANULADO en este reparto.\n' +
-        '- Volverán a estado PENDIENTE en la pantalla de Pedidos.'
-    );
-    if (!ok) return;
-
-    try {
-        // 3. Mostrar loader global
-        this.$store.commit("dialogoprogress");
-
-        // 4. Armamos todas las tareas async por cada comprobante seleccionado
-        const tareas = seleccionados.map(comp => {
-            const subtareas = [];
-
-            // 4a. Regresar el pedido original a "pendiente"
-            // asumimos que comp.id_pedido es la key del pedido en /pedidos
-            if (comp.id_pedido) {
-                subtareas.push(
-                    modifica_pedidos(
-                        comp.id_pedido + '/estado',
-                        'pendiente'
-                    )
-                );
-            } else {
-                console.warn('⚠️ Sin id_pedido para', comp);
+            if (seleccionados.length === 0) {
+                this.$store.commit('dialogosnackbar', 'No hay comprobantes seleccionados.');
+                return;
             }
 
-            // 4b. Marcar la cabecera del reparto como ANULADO
-            // esto escribe en /Cabecera_p/<grupo>/<numeracion>/estado = 'ANULADO'
-            // usamos this.router_grupo (el reparto actual) y comp.numeracion
-            if (comp.numeracion) {
-                subtareas.push(
-                    grabaCabecera_p(
-                        this.router_grupo,
-                        comp.numeracion + '/estado',
-                        'ANULADO'
-                    )
-                );
-            } else {
-                console.warn('⚠️ Sin numeracion para', comp);
+            // 2. Confirmación al usuario
+            const ok = confirm(
+                '¿Seguro que quieres ANULAR estos comprobantes?\n' +
+                '- Se marcarán como ANULADO en este reparto.\n' +
+                '- Volverán a estado PENDIENTE en la pantalla de Pedidos.'
+            );
+            if (!ok) return;
+
+            try {
+                // 3. Mostrar loader global
+                this.$store.commit("dialogoprogress");
+
+                // 4. Armamos todas las tareas async por cada comprobante seleccionado
+                const tareas = seleccionados.map(comp => {
+                    const subtareas = [];
+
+                    // 4a. Regresar el pedido original a "pendiente"
+                    // asumimos que comp.id_pedido es la key del pedido en /pedidos
+                    if (comp.id_pedido) {
+                        subtareas.push(
+                            modifica_pedidos(
+                                comp.id_pedido + '/estado',
+                                'pendiente'
+                            )
+                        );
+                    } else {
+                        console.warn('⚠️ Sin id_pedido para', comp);
+                    }
+
+                    // 4b. Marcar la cabecera del reparto como ANULADO
+                    // esto escribe en /Cabecera_p/<grupo>/<numeracion>/estado = 'ANULADO'
+                    // usamos this.router_grupo (el reparto actual) y comp.numeracion
+                    if (comp.numeracion) {
+                        subtareas.push(
+                            grabaCabecera_p(
+                                this.router_grupo,
+                                comp.numeracion + '/estado',
+                                'ANULADO'
+                            )
+                        );
+                    } else {
+                        console.warn('⚠️ Sin numeracion para', comp);
+                    }
+
+                    // Devolvemos una promesa que espera ambas subtareas
+                    return Promise.all(subtareas);
+                });
+
+                // 5. Esperar que TODAS las cabeceras+pedidos terminen
+                await Promise.all(tareas);
+
+                // 6. Feedback al usuario
+                this.$store.commit('dialogosnackbar', 'Comprobantes anulados y devueltos a pendiente.');
+            } catch (e) {
+                console.error('Error en anular_masivo:', e);
+                alert('Ocurrió un error al intentar anular masivamente.');
+            } finally {
+                // 7. Cerrar loader SIEMPRE
+                this.$store.commit("dialogoprogress");
             }
-
-            // Devolvemos una promesa que espera ambas subtareas
-            return Promise.all(subtareas);
-        });
-
-        // 5. Esperar que TODAS las cabeceras+pedidos terminen
-        await Promise.all(tareas);
-
-        // 6. Feedback al usuario
-        this.$store.commit('dialogosnackbar', 'Comprobantes anulados y devueltos a pendiente.');
-    } catch (e) {
-        console.error('Error en anular_masivo:', e);
-        alert('Ocurrió un error al intentar anular masivamente.');
-    } finally {
-        // 7. Cerrar loader SIEMPRE
-        this.$store.commit("dialogoprogress");
-    }
-}
+        }
 
 
 

@@ -40,6 +40,12 @@
           <v-col cols="6" class="mt-n6">
             <v-checkbox dense v-model="mostrar_ope_gratuitas" label="Mostrar Ope Gratuitas"></v-checkbox>
           </v-col>
+          <v-col cols="6" class="mt-n6">
+            <v-checkbox dense v-model="bigquery" label="Bigquery" />
+          </v-col>
+          <v-col cols="6" class="mt-n6">
+            <v-checkbox dense v-model="kardex_avanzado" label="Kardex Avanzado" />
+          </v-col>
           <v-col cols="6">
             <v-text-field dense v-model="cuenta_detra" label="Cuenta BN Detracciones"></v-text-field>
           </v-col>
@@ -71,7 +77,7 @@
 </template>
 
 <script>
-import { allConfigura, grabaConfigura } from "../../db";
+import { allConfigura, grabaConfigura,nuevaEmpresa } from "../../db";
 import store from "@/store/index";
 
 export default {
@@ -90,19 +96,24 @@ export default {
       decimal: 2,
       igv: "18",
       icbper: "0.30",
-
+      distancia_visita: 15,
       pordefecto: "T",
       arraydoc: ["T", "B", "F"],
-
+      bigquery: false,
+      kardex_avanzado: false,
       arrayOperacion: ["GRAVADA", "EXONERADA"],
       operacion: "GRAVADA",
+      empresa: ''
     };
   },
   created() {
+    this.empresa = this.$store.state.baseDatos;
     this.inicializar();
   },
   methods: {
     inicializar() {
+      this.bigquery = this.empresa.bigquery || false;
+      this.kardex_avanzado = this.empresa.kardex_avanzado || false;
       allConfigura()
         .once("value")
         .then((snapshot) => {
@@ -124,6 +135,8 @@ export default {
             cuenta_detra = this.cuenta_detra,
             copia_saldos_caja = this.copia_saldos_caja,
             mostrar_ope_gratuitas = this.mostrar_ope_gratuitas,
+            distancia_visita = this.distancia_visita
+
           } = config;
 
           Object.assign(this, {
@@ -140,6 +153,7 @@ export default {
             detracciones,
             cuenta_detra,
             copia_saldos_caja,
+            distancia_visita,
             mostrar_ope_gratuitas
           });
         });
@@ -161,6 +175,9 @@ export default {
       grabaConfigura("defecto", this.pordefecto);
       grabaConfigura("operacion", this.operacion);
       grabaConfigura("copia_saldos_caja", this.copia_saldos_caja);
+      grabaConfigura("distancia_visita", this.distancia_visita);
+      nuevaEmpresa(this.empresa.bd+'/bigquery', this.bigquery);
+      nuevaEmpresa(this.empresa.bd+'/kardex_avanzado', this.kardex_avanzado);
       store.commit("dialogoConfiguracion");
     },
   },

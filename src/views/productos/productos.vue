@@ -160,8 +160,7 @@
                             v-model="operacion"></v-select>
                     </v-col>
                     <v-col cols="6" sm="6" md="6">
-                        <v-text-field outlined dense :disabled="!$store.state.permisos.productos_edita_id" v-model="id"
-                            label="ID"></v-text-field>
+                        <v-text-field outlined dense disabled v-model="id" label="ID"></v-text-field>
                     </v-col>
                 </v-row>
 
@@ -700,18 +699,29 @@ export default {
             this.tipo_tabla = tipo
             this.dial_categorias = !this.dial_categorias
         },
+        validaCamposBono() {
+            const a = Number(this.apartir_de);
+            const c = Number(this.cantidad_bono);
+
+            if (!Number.isFinite(a) || a <= 0) {
+                alert('Ingresa un valor válido (> 0) en "A partir de".');
+                return false;
+            }
+            if (!Number.isFinite(c) || c <= 0) {
+                alert('Ingresa una "Cantidad bonificación" válida (> 0).');
+                return false;
+            }
+            return true;
+        },
         async guardar_bono() {
             try {
                 // Validar que se haya seleccionado un producto y se haya ingresado la cantidad y precio
-                if (!this.cantidad_bono || !this.producto_sele) {
-                    store.commit('dial_alert', "Por favor completa todos los campos para agregar el producto al combo.");
-                    return;
-                }
+                if (!this.validaCamposBono()) return;
 
                 // Buscar el producto en el estado global y añadirlo a la lista
                 const producto = store.state.productos.find(e => e.id == this.producto_sele);
                 if (!producto) {
-                    store.commit('dial_alert', "El producto seleccionado no existe.");
+                    alert("El producto seleccionado no existe.");
                     return;
                 }
 
@@ -758,48 +768,71 @@ export default {
         obtenordenproducto() {
             store.commit("dialogoprogress")
             this.sumacon = true
+
             obtenContador().once("value").then((snapshot) => {
-                if (snapshot.exists()) {
-                    this.id = snapshot.val().ordenproducto
-                    this.codbarra = ''
-                    this.categoria = '1'
-                    this.nombre = ''
-                    this.medida = 'UNIDAD'
-                    this.stock = 1
-                    this.precio = 0
-                    this.precio2 = 0
-                    this.costo = 0
-                    this.margen = 0
-                    this.tipoproducto = 'BIEN'
-                    this.operacion = 'GRAVADA'
-                    this.icbper = false
-                    this.lista_bono = []
-                    this.dialogo = true
-                    this.activo = true
-                    this.controstock = true
-                    this.tiene_bono = false
-                    this.escala_may1 = 0
-                    this.precio_may1 = 0
-                    this.escala_may2 = 0
-                    this.precio_may2 = 0
-                    this.peso = 0
-                    this.factor = 1
-                    this.item_selecto = ''
-                    this.grupoPrecioSelect = null;
-                    this.grupoBonoSelect = null;
-                    this.marca = ''
-                    if (Boolean(store.state.configuracion.operacion)) {
-                        this.operacion = store.state.configuracion.operacion
-                    }
+                if (!snapshot.exists()) {
+                    store.commit("dialogoprogress")
+                    alert('Error al obtener contador. Comuníquese con soporte.')
+                    this.sumacon = false
+                    return
                 }
+
+                const idNuevo = snapshot.val().ordenproducto
+
+                // 🔍 Validar si el ID ya existe en productos
+                const productos = store.state.productos || []
+                const existe = productos.some(p => String(p.id) === String(idNuevo))
+
+                if (existe) {
+                    // ⚠️ ID en conflicto → no abrimos el diálogo
+                    store.commit("dialogoprogress")
+                    this.sumacon = false
+                    alert('Error con ID, comunicarse con soporte')
+                    return
+                }
+
+                // ✅ Si no existe, seguimos como siempre
+                this.id = idNuevo
+                this.codbarra = ''
+                this.categoria = '1'
+                this.nombre = ''
+                this.medida = 'UNIDAD'
+                this.stock = 1
+                this.precio = 0
+                this.precio2 = 0
+                this.costo = 0
+                this.margen = 0
+                this.tipoproducto = 'BIEN'
+                this.operacion = 'GRAVADA'
+                this.icbper = false
+                this.lista_bono = []
+                this.dialogo = true
+                this.activo = true
+                this.controstock = true
+                this.tiene_bono = false
+                this.escala_may1 = 0
+                this.precio_may1 = 0
+                this.escala_may2 = 0
+                this.precio_may2 = 0
+                this.peso = 0
+                this.factor = 1
+                this.item_selecto = ''
+                this.grupoPrecioSelect = null
+                this.grupoBonoSelect = null
+                this.marca = ''
+
+                if (Boolean(store.state.configuracion.operacion)) {
+                    this.operacion = store.state.configuracion.operacion
+                }
+
                 store.commit("dialogoprogress")
             })
         },
+
         editar(data) {
             console.log(data)
             this.sumacon = false;
             this.item_selecto = data
-            // Asignar todos los valores de forma ordenada
             this.id = data.id;
             this.activo = data.activo;
             this.codbarra = data.codbarra;
@@ -919,7 +952,7 @@ export default {
                 });
             });
 
-             allCategorias('proveedor').once("value").then((snapshot) => {
+            allCategorias('proveedor').once("value").then((snapshot) => {
                 snapshot.forEach((item) => {
                     const nombre = item.val().nombre;
                     this.arrayproveedor.push(nombre);
