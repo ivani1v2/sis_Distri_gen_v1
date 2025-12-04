@@ -11,12 +11,13 @@
                     <v-card-text>
                         <v-row class="mt-n1" dense>
                             <v-col cols="6" xs="6">
-                                <cat_fijo v-if="$store.state.esmovil" ref="catFijo"
-                                    @agrega_lista="agregar_lista($event)" :muestra_tabla="false" :x_categoria="true">
+                                <cat_fijo v-if="esMovil" ref="catFijo" @agrega_lista="agregar_lista($event)"
+                                    :muestra_tabla="false" :x_categoria="true">
                                 </cat_fijo>
                             </v-col>
                             <v-col cols="6" xs="12">
-                                <v-btn small elevation="3" rounded color="success" @click="abre_catalogo()">
+                                <v-btn class="mt-1 ml-2" small elevation="3" rounded color="success"
+                                    @click="abre_catalogo()">
                                     Catalogo
                                     <v-icon color="white" class="mx-auto text--center"
                                         small>mdi-archive-arrow-down</v-icon>
@@ -58,6 +59,11 @@
                                                             class="ml-1" color="deep-orange" text-color="white" label>
                                                             −{{ moneda }} {{ redondear(item.preciodescuento) }}
                                                         </v-chip>
+                                                        <v-chip v-if="Number(item.precio_base) !== Number(item.precio)"
+                                                            x-small class="ml-1" color="deep-orange" text-color="white"
+                                                            label>
+                                                            {{ moneda }} {{ redondear(item.precio_base) }}
+                                                        </v-chip>
                                                         <v-chip v-if="item.medida" x-small class="ml-1" label>
                                                             {{ item.medida }}
                                                         </v-chip>
@@ -71,7 +77,7 @@
                                                         style="max-width: 70vw;">
                                                         <span class="font-weight-bold red--text">{{
                                                             Number(item.cantidad)
-                                                            }}×</span>
+                                                        }}×</span>
                                                         {{ item.nombre }}
                                                     </div>
                                                 </div>
@@ -140,62 +146,7 @@
             </v-col>
         </v-row>
 
-        <v-dialog v-model="dialogoProducto" max-width="390">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon large color="red" @click="dialogoProducto = false">mdi-close</v-icon>
-                    <v-spacer></v-spacer>
-                    <v-checkbox :disabled="!$store.state.permisos.edita_bono" v-model="es_bono"
-                        label="ES BONO"></v-checkbox>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
 
-                <v-row class="mx-auto mt-4 text-center" dense v-if="$store.state.permisos.caja_edita_cantidad">
-
-                    <v-col cols="4" xs="4">
-                        <v-icon @click="suma()" color="green">mdi-plus</v-icon>
-                    </v-col>
-
-                    <v-col cols="4" xs="4">
-                        <v-text-field dense @keyup.enter="grabaEdita()" type="number" outlined v-model="cantidadEdita"
-                            label="Cantidad"></v-text-field>
-                    </v-col>
-                    <v-col cols="4" xs="4">
-                        <v-icon @click="resta()" color="red">mdi-minus</v-icon>
-                    </v-col>
-
-                </v-row>
-                <v-row class="mx-auto text-center" dense>
-                    <v-col cols="12">
-                        <v-textarea readonly dense class="mt-n2" outlined v-model="nombreEdita" auto-grow filled
-                            color="deep-purple" label="Descripcion" rows="1"></v-textarea>
-                    </v-col>
-                </v-row>
-                <v-row class="mx-auto text-center mt-n3" dense>
-                    <v-col readonly @focus="$event.target.select()" cols="6"
-                        v-if="$store.state.permisos.caja_edita_precio">
-                        <v-text-field outlined dense @keyup.enter="grabaEdita()" type="number" v-model="precioedita"
-                            label="Precio"></v-text-field>
-                    </v-col>
-                    <v-col cols="6" v-if="false">
-                        <v-text-field :disabled="es_bono" @focus="$event.target.select()" outlined dense
-                            @keyup.enter="grabaEdita()" type="number" v-model="preciodescuento"
-                            label="Descuento"></v-text-field>
-                    </v-col> </v-row>
-                <v-card-actions class="mt-n6">
-
-                    <v-btn color="red darken-1" text @click="eliminaedita()">
-                        Elimina
-                    </v-btn>
-
-                    <v-spacer></v-spacer>
-                    <v-btn color="green darken-1" text @click="grabaEdita()">
-                        Graba
-                    </v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
         <v-dialog v-model="dial_catalogo" max-width="550">
             <div>
                 <v-system-bar window dark>
@@ -210,7 +161,7 @@
         </v-dialog>
 
         <v-dialog v-model="dial_guardar" max-width="640">
-            <v-card class="pa-2 rounded-xl">
+            <v-card class="pa-3 rounded-xl">
                 <v-toolbar dense flat>
                     <v-toolbar-title class="subtitle-1 font-weight-medium">
                         Guardar Pedido
@@ -224,78 +175,84 @@
 
                 <v-divider></v-divider>
 
-                <v-card-text class="">
-                    <!-- Tipo de comprobante -->
-                    <v-row dense class="">
-                        <v-col cols="12">
-                            <v-radio-group v-model="tipocomprobante" row>
-                                <v-radio label="Nota" value="T"></v-radio>
-                                <v-radio label="Boleta" value="B"></v-radio>
-                                <v-radio label="Factura" value="F"></v-radio>
-                            </v-radio-group>
-                        </v-col>
-                    </v-row>
 
-                    <v-row dense>
-                        <v-col cols="12" sm="4">
-                            <v-select readonly outlined dense v-model="documento" :items="documentos" label="Tipo Doc"
-                                hide-details prepend-inner-icon="mdi-card-account-details-outline" />
-                        </v-col>
-                        <v-col cols="12" sm="8">
-                            <v-text-field readonly outlined dense type="number" v-model="numero" label="Número"
-                                append-icon="mdi-magnify" @click:append="BuscarDocumento()"
-                                @keyup.enter="BuscarDocumento()" />
-                        </v-col>
-                    </v-row>
+                <!-- Tipo de comprobante -->
+                <v-row dense class="">
+                    <v-col cols="12">
+                        <v-radio-group v-model="tipocomprobante" row dense>
+                            <v-radio label="Nota" value="T"></v-radio>
+                            <v-radio label="Boleta" value="B"></v-radio>
+                            <v-radio label="Factura" value="F"></v-radio>
+                        </v-radio-group>
+                    </v-col>
+                </v-row>
 
-                    <v-row dense>
-                        <v-col cols="12" class="mt-n5">
-                            <v-text-field readonly outlined dense v-model="nombreCompleto" label="Nombres completos"
-                                prepend-inner-icon="mdi-account" />
-                        </v-col>
-                        <v-col cols="12" class="mt-n5">
-                            <!-- Dirección con icono de mapa al costado -->
-                            <v-layout dense align-center>
-                                <v-flex>
-                                    <v-text-field class="" outlined dense v-model="direccion"
-                                        label="Direccion"></v-text-field>
-                                </v-flex>
-                                <v-btn icon small color="info" class="ml-2 mt-n8" @click="ver_direcciones">
-                                    <v-icon>mdi-directions</v-icon>
-                                </v-btn>
-                            </v-layout>
+                <v-row dense class="mt-n3">
+                    <v-col cols="6" sm="4">
+                        <v-select readonly outlined dense v-model="documento" :items="documentos" label="Tipo Doc"
+                            hide-details prepend-inner-icon="mdi-card-account-details-outline" />
+                    </v-col>
+                    <v-col cols="6" sm="8">
+                        <v-text-field readonly outlined dense type="number" v-model="numero" label="Número"
+                            append-icon="mdi-magnify" @click:append="BuscarDocumento()"
+                            @keyup.enter="BuscarDocumento()" />
+                    </v-col>
+                </v-row>
 
-                        </v-col>
-                    </v-row>
+                <v-row dense>
+                    <v-col cols="12" class="mt-n5">
+                        <v-text-field readonly outlined dense v-model="nombreCompleto" label="Nombres completos"
+                            prepend-inner-icon="mdi-account" />
+                    </v-col>
+                    <v-col cols="12" class="mt-n5">
+                        <!-- Dirección con icono de mapa al costado -->
+                        <v-layout dense align-center>
+                            <v-flex>
+                                <v-text-field class="" outlined dense v-model="direccion"
+                                    label="Direccion"></v-text-field>
+                            </v-flex>
+                            <v-btn icon small color="info" class="ml-2 mt-n8" @click="ver_direcciones">
+                                <v-icon>mdi-directions</v-icon>
+                            </v-btn>
+                        </v-layout>
 
-                    <v-row dense>
-                        <v-col cols="12" sm="4" class="mt-n5">
-                            <v-text-field outlined dense type="tel" v-model="telfcliente" label="Teléfono"
-                                prepend-inner-icon="mdi-phone" />
-                        </v-col>
+                    </v-col>
+                </v-row>
 
-                        <v-col cols="12" sm="4" class="mt-n5">
-                            <!-- NUEVO: Forma de pago -->
-                            <v-select outlined dense v-model="formaPago" :items="['CONTADO', 'CRÉDITO']"
-                                label="Forma de pago" prepend-inner-icon="mdi-cash-multiple" />
-                        </v-col>
+                <v-row dense>
+                    <v-col cols="12" sm="6" class="mt-n5">
+                        <v-text-field outlined dense type="tel" v-model="telfcliente" label="Teléfono"
+                            prepend-inner-icon="mdi-phone" />
+                    </v-col>
 
-                        <v-col cols="12" sm="4" class="mt-n5" v-if="formaPago === 'CRÉDITO'">
-                            <!-- NUEVO: Fecha de vencimiento (hoy + 7) -->
-                            <v-text-field outlined dense type="date" v-model="fechaVencimiento" :min="hoyISO"
-                                label="Vence el" prepend-inner-icon="mdi-calendar" />
-                        </v-col>
-                    </v-row>
+                    <v-col cols="12" sm="6" class="mt-n5">
+                        <!-- NUEVO: Forma de pago -->
+                        <v-select outlined dense v-model="formaPago" :items="['CONTADO', 'CREDITO']"
+                            label="Forma de pago" prepend-inner-icon="mdi-cash-multiple" />
+                    </v-col>
 
-                    <v-row dense>
-                        <v-col cols="12" class="mt-n5">
-                            <v-text-field outlined dense v-model="observacion" label="Observación"
-                                prepend-inner-icon="mdi-note-text" />
-                        </v-col>
-                    </v-row>
-                    <v-switch v-model="imprime_orden" dense inset color="indigo" :label="`Imprime Orden Pedido`"
-                        prepend-icon="mdi-printer" class="mt-0" hide-details />
-                </v-card-text>
+                    <v-col cols="6" class="mt-n5" v-if="formaPago === 'CREDITO'">
+                        <!-- NUEVO: Fecha de vencimiento (hoy + 7) -->
+                        <v-text-field outlined dense type="date" v-model="fechaVencimiento" :min="hoyISO"
+                            label="Vence el" prepend-inner-icon="mdi-calendar" />
+                    </v-col>
+                    <v-col cols="6" class="mt-n5" v-if="formaPago === 'CREDITO'">
+                        <v-btn class="mt-2" x-small block color="indigo" dark @click="abrirCronograma">
+                            Cronograma
+                            <v-icon right small>mdi-calendar-clock</v-icon>
+                        </v-btn>
+                    </v-col>
+                </v-row>
+
+                <v-row dense>
+                    <v-col cols="12" class="mt-n5">
+                        <v-text-field outlined dense v-model="observacion" label="Observación"
+                            prepend-inner-icon="mdi-note-text" />
+                    </v-col>
+                </v-row>
+                <v-switch v-model="imprime_orden" dense inset color="indigo" :label="`Imprime Orden Pedido`"
+                    prepend-icon="mdi-printer" class="mt-0" hide-details />
+
 
                 <v-divider></v-divider>
 
@@ -344,6 +301,11 @@
             </v-card>
         </v-dialog>
         <dial_mapas v-model="dialogoMapa" :guardar_auto="true" @cierra="dialogoMapa = false" />
+        <cronograma v-if="dialogoCronograma" :totalCredito="Number(sumaTotal())" @cierra="dialogoCronograma = false"
+            @emite_cronograma="guarda_cronograma($event)" :pagoInicial="0" :moneda="moneda"
+            :planExistente="cronograma" />
+        <dial_edita_prod v-if="dialogoProducto" @cierra="dialogoProducto = false"
+            @editaProducto="editaProductoFinal($event)" :item_selecto="item_selecto" @eliminaedita="eliminaedita()" />
     </div>
 </template>
 
@@ -353,18 +315,24 @@ import store from '@/store/index'
 import cat_fijo from '@/components/catalogo_fijo'
 import dial_mapas from '../clientes/dial_mapa.vue'
 import { pdfGenera } from './formatos/orden_pedido.js'
-import { aplicaPreciosYBonos } from "../funciones/calculo_bonos";
+import { aplicaPreciosYBonos, agregarLista } from "../funciones/calculo_bonos";
+import cronograma from '../ventas/dialogos/cronograma_creditos.vue'
+import dial_edita_prod from '../ventas/edita_producto.vue'
 import axios from "axios"
+import CryptoJS from "crypto-js";
 export default {
     name: 'caja',
 
     components: {
         cat_fijo,
-        dial_mapas
+        dial_mapas,
+        cronograma,
+        dial_edita_prod
     },
 
     data() {
         return {
+            dialogoCronograma: false,
             loadingGuardar: false,
             tipocomprobante: 'T',
             documentos: ['SIN DOCUMENTO', 'DNI', 'RUC', 'Pasaporte', 'Carnet de Extranjeria'],
@@ -378,26 +346,22 @@ export default {
             dial_catalogo: false,
             moneda: 'S/',
             dialogoProducto: false,
-            date: moment(String(new Date)).format('YYYY-MM-DD'),
             listaproductos: [],
-            cantidadEdita: '',
-            nombreEdita: '',
-            precioedita: '',
             preciodescuento: '',
-            porcentaje: 0,
             item_selecto: [],
             cliente_s: [],
             formaPago: 'CONTADO',
-            fechaVencimiento: '', // ISO yyyy-mm-dd cuando sea crédito
+            fechaVencimiento: '', // ISO yyyy-mm-dd cuando sea CREDITO
             dialogoMapa: false,
             list_direcciones: [],
             dial_direcciones: false,
             direccionSeleccionadaIndex: null,
             imprime_orden: false,
-            es_bono: false,
+            cronograma: null
         }
     },
     created() {
+        this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         const data = store?.state?.cliente_selecto;
 
         if (data) {
@@ -430,25 +394,41 @@ export default {
         }
     },
     beforeDestroy() {
-        window.removeEventListener("keydown", this.detectarTecla);
         store.commit("emision", '')
         store.commit("cliente_selecto", '')
         store.commit("lista_productos", []);
     },
     computed: {
+        esMovil() {
+            return this.$vuetify && this.$vuetify.breakpoint ? this.$vuetify.breakpoint.smAndDown : false
+        },
         hoyISO() {
             return moment().format('YYYY-MM-DD');
         },
     },
     watch: {
         formaPago(nv) {
-            if (nv === 'CRÉDITO') {
+            if (nv === 'CREDITO') {
                 // Fecha actual + 7 días
                 this.fechaVencimiento = moment().add(7, 'days').format('YYYY-MM-DD');
             } else {
                 this.fechaVencimiento = '';
             }
         },
+        numero(nv) {
+            const docStr = String(nv || '').trim();
+
+            // Si tiene 11 dígitos, forzamos RUC
+            if (docStr.length === 11) {
+                this.documento = 'RUC';
+            }
+
+            // Si tiene 8 dígitos y estaba en RUC, regresamos a DNI (opcional)
+            if (docStr.length === 8 && this.documento === 'RUC') {
+                this.documento = 'DNI';
+            }
+        },
+
         listaproductos: {
             handler(nuevo) {
                 store.commit("lista_productos", nuevo);
@@ -456,10 +436,18 @@ export default {
             deep: true, // importante para detectar cambios dentro del array/objetos
         },
     },
-    mounted() {
-        window.addEventListener("keydown", this.detectarTecla);
-    },
+
     methods: {
+        abrirCronograma() {
+            // solo tiene sentido si es CREDITO
+            if (this.formaPago !== 'CREDITO') return;
+            this.dialogoCronograma = true;
+        },
+        guarda_cronograma(cronograma) {
+            this.fechaVencimiento = cronograma.fecha_ultima_cuota
+            this.cronograma = cronograma; // Guarda el cronograma recibido
+            this.dialogoCronograma = false; // Cierra el diálogo después de guardar
+        },
         ver_direcciones() {
             try {
                 // Documento del cliente (prioriza lo digitado; si no, el del prop cliente)
@@ -518,20 +506,30 @@ export default {
             this.recalculoCompleto()
             this.dial_guardar = true;
         },
-        abrirMapa() {
-            this.dialogoMapa = !this.dialogoMapa
-        },
         async confirmarGuardado() {
             // Validaciones mínimas
             if (!this.numero) {
                 store.commit("dialogosnackbar", "Ingrese el número de documento");
                 return;
             }
+            const docStr = String(this.numero || '').trim();
+
+            // Si es FACTURA, obligar RUC y 11 dígitos
+            if (this.tipocomprobante === 'F') {
+                if (this.documento !== 'RUC') {
+                    store.commit("dialogosnackbar", "Para FACTURA el tipo de documento debe ser RUC");
+                    return;
+                }
+                if (docStr.length !== 11) {
+                    store.commit("dialogosnackbar", "El RUC debe tener 11 dígitos");
+                    return;
+                }
+            }
             if (!this.nombreCompleto) {
                 store.commit("dialogosnackbar", "Ingrese el nombre del cliente");
                 return;
             }
-            if (this.formaPago === 'CRÉDITO' && !this.fechaVencimiento) {
+            if (this.formaPago === 'CREDITO' && !this.fechaVencimiento) {
                 store.commit("dialogosnackbar", "Seleccione la fecha de vencimiento");
                 return;
             }
@@ -547,15 +545,32 @@ export default {
                 const subTotal = parseFloat(this.sumaTotal() || 0);
                 const descuentos = parseFloat(this.sumaDescuentos() || 0);
                 const totalGeneral = parseFloat((subTotal - descuentos).toFixed(2));
+                let cronogramaCabecera = null;
+                if (this.formaPago === 'CREDITO') {
+                    if (this.cronograma && Array.isArray(this.cronograma.cuotas) && this.cronograma.cuotas.length > 0) {
+                        // Usa el cronograma emitido por el diálogo
+                        cronogramaCabecera = this.cronograma.cuotas;
+                    } else {
+                        // Fallback: una sola cuota con el total y la fecha de vencimiento
+                        cronogramaCabecera = [
+                            {
+                                numero: '001',
+                                vencimiento: this.fechaVencimiento,
+                                importe: totalGeneral,
+                            }
+                        ]
 
+                    }
+                }
                 // Cabecera (ya lo tienes armado)
                 const cabecera = {
                     tipo_comprobante: this.tipocomprobante,
                     moneda: this.moneda,
                     fecha_emision: moment().unix(),
                     condicion_pago: this.formaPago,
-                    fecha_vencimiento: this.formaPago === 'CRÉDITO' ? this.fechaVencimiento : null,
+                    fecha_vencimiento: this.formaPago === 'CREDITO' ? this.fechaVencimiento : null,
                     dias_credito: 0,
+                    cronograma: cronogramaCabecera,
                     doc_tipo: this.documento,
                     doc_numero: this.numero,
                     cliente_nombre: this.nombreCompleto,
@@ -572,16 +587,19 @@ export default {
                         lat: this.cliente_s.latitud,
                         lng: this.cliente_s.longitud
                     },
-                    ubicacion_pedido: store.state.ubicacion_actual
+                    ubicacion_pedido: store.state.ubicacion_actual,
+                    peso_total: this.listaproductos.reduce((acc, item) => acc + (Number(item.peso) || 0), 0),
                 };
-
+                console.log('⏺️ Cabecera lista para enviar:', cabecera);
                 const detalle = this.listaproductos;
 
                 const payload = { cabecera, detalle, control_stock: true, ruc_asociado: this.$store.state.baseDatos.ruc_asociado };
                 console.log('⏺️ Payload listo para enviar:', payload);
 
-                await this.api_rest(payload, "guardar_pedido");
+                var resp = await this.api_rest(payload, "guardar_pedido");
                 if (this.imprime_orden) {
+                    const id = resp?.data?.id || resp?.id || null;
+                    cabecera.id = id;
                     pdfGenera(cabecera, detalle, store.state.configImpresora.tamano);
                 }
                 store.commit("dialogosnackbar", "Documento guardado con éxito ✅");
@@ -609,106 +627,59 @@ export default {
         },
         async api_rest(data, metodo) {
             console.log(data)
+            var idem = this.buildIdemKeyPedido({
+                bd: store.state.baseDatos.bd,
+                cabecera: data.cabecera,
+                detalle: data.detalle || []
+            });
             var a = axios({
                 method: 'POST',
                 url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
                 //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
-                headers: {},
+                headers: {
+                    'X-Idempotency-Key': idem,    // <-- el server debe ignorar duplicados con la misma clave
+                },
                 data: {
                     "bd": store.state.baseDatos.bd,
                     "data": data,
                     "metodo": metodo
                 }
             }).then(response => {
-                console.log(response.data)
-                return response
+                console.log('response', response.data)
+                return response.data
             })
             return a
         },
+        buildIdemKeyPedido({ bd, cabecera = {}, detalle = [] }) {
+            const base = {
+                t: cabecera.tipo_comprobante || "",
+                d: cabecera.doc_numero || "",
+                tot: cabecera.total || "",
+                det: (detalle || [])
+                    .map(d => `${d.id}:${d.cantidad}:${d.precio_base || d.precio || 0}`)
+                    .sort()
+                    .join("|"),
+                ruc: cabecera.ruc_asociado || "",
+                vend: cabecera.cod_vendedor || ""
+            };
+
+            const raw = JSON.stringify(base);
+            const hash10 = CryptoJS.SHA256(raw).toString().substring(0, 10);
+
+            return `${bd}-${hash10}`;
+        },
+
         agregar_lista(value) {
-            const items = Array.isArray(value) ? value : [value];
-
-            items.forEach(val => {
-                const medidaLinea = (val.medida || '').toString().trim().toUpperCase();
-                const esGratuitaNueva = String(val.operacion || '').toUpperCase() === 'GRATUITA';
-
-                // ---------- CASO GRATUITA: acumula cantidad por (id + medida)
-                if (esGratuitaNueva) {
-                    const existenteGrat = this.listaproductos.find(item =>
-                        item.id === val.id &&
-                        String(item.medida || '').toUpperCase() === medidaLinea &&
-                        String(item.operacion || '').toUpperCase() === 'GRATUITA'
-                    );
-
-                    if (existenteGrat) {
-                        existenteGrat.cantidad = Number(existenteGrat.cantidad || 0) + Number(val.cantidad || 0);
-                        existenteGrat.totalLinea = '0.00'; // siempre 0 en gratuita
-                        return; // ya sumamos; no insertamos nuevo
-                    }
-
-                    // No existía: insertar línea gratuita
-                    this.listaproductos.push({
-                        uuid: this.create_UUID().substring(29),
-                        factor: val.factor,
-                        id: val.id,
-                        cantidad: Number(val.cantidad || 0),
-                        nombre: val.nombre,
-                        medida: medidaLinea,
-                        precio: Number(val.precio || 0),
-                        precio_base: Number(val.precio || 0),
-                        preciodescuento: 0,
-                        costo: val.costo,
-                        tipoproducto: val.tipoproducto,
-                        operacion: 'GRATUITA',
-                        peso: 0,
-                        controstock: val.controstock,
-                        totalLinea: '0.00',
-                    });
-                    return;
-                }
-
-                // ---------- CASO NO GRATUITA: PERMITIR DUPLICADOS, PERO SUMAR SI (id + medida) COINCIDEN
-                const existente = this.listaproductos.find(item =>
-                    item.id === val.id &&
-                    String(item.medida || '').toUpperCase() === medidaLinea &&
-                    String(item.operacion || '').toUpperCase() !== 'GRATUITA' // solo acumula con no-gratuita
-                );
-
-                if (existente) {
-                    // Acumular cantidad. Si el precio nuevo difiere, mantenemos el precio que ya estaba
-                    // (si prefieres reemplazar por el nuevo, cambia la asignación de precio).
-                    existente.cantidad = Number(existente.cantidad || 0) + Number(val.cantidad || 0);
-
-                    // Mantén el precio de la línea existente
-                    const precioUnit = Number(existente.precio || 0);
-                    existente.totalLinea = this.redondear(precioUnit * Number(existente.cantidad || 0));
-                    // Mantén preciodescuento tal cual (se suman aparte en sumaDescuentos)
-                    return; // no inserta nueva línea
-                }
-
-                // No había línea equivalente -> insertar una nueva
-                this.listaproductos.push({
-                    uuid: this.create_UUID().substring(29),
-                    factor: val.factor,
-                    id: val.id,
-                    cantidad: Number(val.cantidad || 0),
-                    nombre: val.nombre,
-                    medida: medidaLinea,
-                    precio: Number(val.precio || 0),
-                    precio_base: Number(val.precio || 0),
-                    preciodescuento: 0,
-                    costo: val.costo,
-                    tipoproducto: val.tipoproducto,
-                    operacion: val.operacion, // 'GRAVADA', etc.
-                    peso: 0,
-                    controstock: val.controstock,
-                    totalLinea: this.redondear(Number(val.precio || 0) * Number(val.cantidad || 0)),
-                });
+            this.listaproductos = agregarLista({
+                listaActual: this.listaproductos,
+                nuevosItems: value,
+                createUUID: this.create_UUID,
+                redondear: (n) => this.redondear(n),
             });
-
-            // Recalcula todo (precios/bonos/redondeos)
+            console.log("todo")
             this.recalculoCompleto();
         },
+
         recalculoCompleto() {
             this.listaproductos = aplicaPreciosYBonos({
                 lineas: this.listaproductos,
@@ -719,132 +690,34 @@ export default {
                 inPlace: true,
             });
         },
-        grabaEdita() {
-            // Normaliza
-            const cant = this.toNum(this.cantidadEdita, 0);
-            const precioNuevo = this.toNum(this.precioedita, -1); // -1 para detectar inválido
-            const descNuevo = this.toNum(this.preciodescuento, 0);
 
-            if (cant <= 0) {
-                alert('Ingrese cantidad válida');
-                return;
-            }
-            if (!this.esBono && this.$store.state.configuracion.precio_minimo) {
-
-                const prod = store.state.productos.find(p => String(p.id) === String(this.item_selecto.id)) || {};
-                const factor = (
-                    Number(this.item_selecto?.factor) &&
-                    this.item_selecto.medida !== 'UNIDAD' &&
-                    Number(this.item_selecto.factor) !== 1
-                ) ? Number(this.item_selecto.factor) : 1;
-
-                // bases numéricas
-                const baseMay2 = Number(prod.precio_may2) || 0;
-                const baseMay1 = Number(prod.precio_may1) || 0;
-                const basePrecio = Number(prod.precio) || 0;
-
-                // elige base mínima preferente
-                let baseMinima = basePrecio;
-                if (baseMay2 > 0) baseMinima = baseMay2;
-                else if (baseMay1 > 0) baseMinima = baseMay1;
-
-                // aplica factor y redondea si tienes helper
-                const precioMinimo = this.redondear ? this.redondear(baseMinima * factor) : (baseMinima * factor);
-                if (Number(this.precioedita) < precioMinimo) {
-                    alert(`Precio menor al mínimo (${precioMinimo})`);
-                    return;
-                }
-            }
-            const pos = this.listaproductos.findIndex(e => e.uuid === this.item_selecto.uuid);
-            if (pos === -1) return;
-
-            const linea = this.listaproductos[pos];
-
-            // Valida stock si corresponde
-            if (linea.controstock) {
-                const prod = (this.$store.state.productos || []).find(p => p.id == linea.id);
-                if (prod && this.toNum(prod.stock, 0) < cant) {
-                    alert('Producto sin Stock');
-                    return;
-                }
-            }
-
-            // Actualiza cantidad siempre
-            linea.cantidad = cant;
-
-            // ===== Caso BONO / GRATUITA =====
-            if (this.es_bono) {
-                linea.operacion = 'GRATUITA';
-                // Mantén la info, pero el total mostrado es 0
-                linea.precio = this.toNum(this.precioedita, 0);
-                linea.preciodescuento = descNuevo;
-                linea.totalLinea = this.redondear(0);
-                // opcional: marca manual
-                linea.precio_manual = true;
-                this.dialogoProducto = false;
-                return;
-            }
-
-            // ===== Caso NO BONO =====
-            // Si estaba como gratuita, vuelve a su operacion normal
-            if (String(linea.operacion || '').toUpperCase() === 'GRATUITA') {
-                linea.operacion = 'GRAVADA';
-            }
-
-            // Si el usuario editó el precio, úsalo (>= 0)
-            if (precioNuevo >= 0) {
-                linea.precio = precioNuevo;
-                linea.precio_base = precioNuevo;  // para coherencia con tu modelo
-                // opcional: marca que es precio manual por si tu calculador de bonos lo respeta
-                linea.precio_manual = true;
-            }
-
-            // Descuento por línea si lo usas (en tu UI está oculto, pero lo dejo coherente)
-            linea.preciodescuento = descNuevo;
-
-            // Recalcula total mostrado en tarjeta
-            const total = (this.toNum(linea.precio, 0) * cant);
-            linea.totalLinea = this.redondear(total);
-
-            this.dialogoProducto = false;
-
-            // Si tu función aplicaPreciosYBonos NO debe pisar el precio manual,
-            // deja esta marca y ajústala en ese helper para que respete "precio_manual".
-            this.recalculoCompleto();
+        editaProducto(val) {
+            this.item_selecto = val
+            this.dialogoProducto = true
         },
 
 
-        suma() {
-            if (this.item_selecto.controstock) {
-                var producto = store.state.productos.find(item => item.id == this.item_selecto.id)
-                if (producto.stock <= this.cantidadEdita) {
-                    alert('Producto sin Stock')
-                    return
-                }
-            }
-            this.cantidadEdita = parseInt(this.cantidadEdita) + 1
-        },
-        resta() {
-            if (this.cantidadEdita > 1) {
-                this.cantidadEdita = parseInt(this.cantidadEdita) - 1
-            }
-        },
         eliminaedita() {
             var pos = this.listaproductos.map(e => e.uuid).indexOf(this.item_selecto.uuid)
             this.listaproductos.splice(pos, 1)
             this.dialogoProducto = false
             this.recalculoCompleto()
         },
-        editaProducto(val) {
-            this.item_selecto = val
-            this.cantidadEdita = val.cantidad
-            this.nombreEdita = val.nombre
-            this.precioedita = val.precio
-            this.preciodescuento = val.preciodescuento
-            // Marcar el checkbox según la operacion actual
-            this.es_bono = String(val.operacion || '').toUpperCase() === 'GRATUITA'
+        editaProductoFinal(lineaActualizada) {
+            const idx = this.listaproductos.findIndex(
+                l => l.uuid === lineaActualizada.uuid
+            );
 
-            this.dialogoProducto = true
+            if (idx !== -1) {
+                // Actualizamos esa línea en la lista
+                this.$set(this.listaproductos, idx, lineaActualizada);
+            }
+
+            // Recalcula precios por escala + bonos
+            this.recalculoCompleto();
+
+            // Cerramos el diálogo
+            this.dialogoProducto = false;
         },
 
 
@@ -881,51 +754,6 @@ export default {
         abre_catalogo() {
             this.dial_catalogo = true
         },
-        toNum(v, def = 0) {
-            const n = Number(v);
-            return Number.isFinite(n) ? n : def;
-        },
-        tieneMay1(p) {
-            return this.toNum(p && p.precio_may1, 0) > 0 && this.toNum(p && p.escala_may1, 0) > 0;
-        },
-        tieneMay2(p) {
-            return this.toNum(p && p.precio_may2, 0) > 0 && this.toNum(p && p.escala_may2, 0) > 0;
-        },
-        sugerirTier(producto, cantidadRaw) {
-            const cantidad = this.toNum(cantidadRaw, 0);
-
-            const hayMay1 = this.tieneMay1(producto);
-            const hayMay2 = this.tieneMay2(producto);
-
-            if (!hayMay1 && !hayMay2) return 1;
-
-            if (hayMay1 && !hayMay2) {
-                const esc1 = this.toNum(producto.escala_may1, Infinity);
-                return cantidad >= esc1 ? 2 : 1;
-            }
-
-            if (hayMay1 && hayMay2) {
-                const esc1 = this.toNum(producto.escala_may1, Infinity);
-                const esc2 = this.toNum(producto.escala_may2, Infinity);
-                const lim1 = Math.min(esc1, esc2);
-                const lim2 = Math.max(esc1, esc2);
-                if (cantidad >= lim2) return 3;
-                if (cantidad >= lim1) return 2;
-                return 1;
-            }
-            // Caso raro: solo may2
-            if (!hayMay1 && hayMay2) {
-                const esc2 = this.toNum(producto.escala_may2, Infinity);
-                return cantidad >= esc2 ? 3 : 1;
-            }
-            return 1;
-        },
-        precioPorTier(producto, tier) {
-            if (tier === 3) return this.toNum(producto.precio_may2, this.toNum(producto.precio, 0));
-            if (tier === 2) return this.toNum(producto.precio_may1, this.toNum(producto.precio, 0));
-            return this.toNum(producto.precio, 0);
-        },
-
     },
 
 }

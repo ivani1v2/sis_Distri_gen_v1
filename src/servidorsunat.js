@@ -502,7 +502,7 @@ export const envioNCredito = (arrayCabecera, array) => {
   console.log(arrayCliente);
   var arrayCabecerasunat = {
     tipo_comprobante: "07",
-    moneda: "PEN",
+    moneda: obtenerCodigoMoneda(arrayCabecera.moneda),
     serie: arrayCabecera.serie,
     correlativo: arrayCabecera.correlativo,
     total_op_gravadas: arrayCabecera.total_op_gravadas,

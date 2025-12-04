@@ -5,7 +5,7 @@ import { consultaArchivo } from '../../db'
 import QR from 'qrcode-base64'
 import moment from 'moment'
 
-export const reporte_almacen = async (cabecera, peso, arraydatos) => {
+export const reporte_almacen = async (cabecera, peso, arraydatos, observacion) => {
   const array = arraydatos || []
   let linea = 10
   const fechaImpresion = moment(String(new Date)).format('DD/MM/YYYY hh:mm a')
@@ -82,6 +82,11 @@ export const reporte_almacen = async (cabecera, peso, arraydatos) => {
     doc.setFont('Helvetica', '')
     texto = doc.splitTextToSize('Fecha Impresion: ' + fechaImpresion, pdfInMM - lMargin - rMargin)
     doc.text(texto, 10, 15, 'left')
+
+    doc.setFontSize(10)
+    doc.setFont('Helvetica', '')
+    texto = doc.splitTextToSize('Observacion: ' + observacion, pdfInMM - lMargin - rMargin)
+    doc.text(texto, 10, 20, 'left')
 
     doc.setFontSize(14)
     doc.setFont('Helvetica', 'Bold')
@@ -731,7 +736,7 @@ export function reporteProductoClientePDF(datas = [], rango = {}) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
   doc.text(titulo, 105, 12, { align: "center" });
-   doc.setFontSize(9); doc.setFont("helvetica", "normal");
+  doc.setFontSize(9); doc.setFont("helvetica", "normal");
   doc.text(`Fecha Pedidos: ${fecha_ini_str}  /  ${fecha_fin_str}`, 95, 17, { align: "center" });
 
   let y = 23;

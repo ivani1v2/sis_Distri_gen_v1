@@ -21,7 +21,7 @@
 
                 </v-col>
                 <v-col cols="12" md="2">
-                    <v-menu bottom offset-y v-if="false">
+                    <v-menu bottom offset-y v-if="true">
                         <template v-slot:activator="{ on, attrs }">
                             <v-btn color="success" block small v-bind="attrs" v-on="on">
                                 <v-icon left>mdi-cog</v-icon> Opciones

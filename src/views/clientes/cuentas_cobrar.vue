@@ -1,292 +1,313 @@
 <template>
-  <div class="pa-1 mt-6">
-    <v-card>
-      <v-row class="" dense>
-        <v-col cols="6">
-          <v-select outlined v-model="cuenta_estado" :items="array_estado" dense></v-select>
-        </v-col>
-        <v-col cols="6">
-          <v-layout dense align-center>
-            <v-flex>
-              <v-autocomplete outlined dense autofocus label="Busca Cliente" auto-select-first v-model="busca_p"
-                :items="arra_empleados" append-icon="mdi-magnify"></v-autocomplete>
-            </v-flex>
-            <v-btn icon large color="info" class="mt-n6 " @click="filtra">
+  <div class="pa-4">
+    <v-card class="elevation-3 rounded-lg">
+
+      <v-card-title class="pa-4 blue-grey lighten-5">
+        <v-icon large left color="blue-grey darken-3">mdi-cash-multiple</v-icon>
+        <span class="text-h5 font-weight-bold blue-grey--text text--darken-3">Cuentas por Cobrar</span>
+        <v-spacer></v-spacer>
+
+        <v-row dense class="ml-4" style="max-width: 600px;">
+          <v-col cols="6">
+            <v-select outlined v-model="cuenta_estado" :items="array_estado" label="Estado"
+              prepend-inner-icon="mdi-list-status" dense hide-details @change="filtra"></v-select>
+          </v-col>
+
+          <!-- 🔹 Autocomplete + botón de filtro al costado -->
+          <v-col cols="6" class="d-flex align-center">
+            <v-autocomplete class="flex-grow-1" outlined dense label="Buscar Cliente" :items="arra_empleados"
+              prepend-inner-icon="mdi-account-search" v-model="busca_p" hide-details></v-autocomplete>
+
+            <v-btn small icon color="primary" class="ml-2" @click="filtra" :title="'Aplicar filtro'">
               <v-icon>mdi-filter</v-icon>
             </v-btn>
-          </v-layout>
-        </v-col>
-      </v-row>
-      <v-row class="mt-n8 pa-1 text-center">
-        <v-col cols="6">
-          <v-btn :disabled="busca_p == ''" color="success" block small @click="imprime_cuenta()">
-            Imprime Cuenta
-          </v-btn>
-        </v-col>
-        <v-col cols="6">
-          <v-btn :disabled="busca_p == ''" color="error" block small @click="liquida_total()">
-            Liquida Total
-          </v-btn>
-        </v-col>
-        <v-col cols="12">
+          </v-col>
+        </v-row>
 
-        </v-col>
-      </v-row>
-      <h4 class="mt-n6">Total S/.{{ suma_total().toFixed(2) }}</h4>
-      <v-data-table :headers="headersCxc" :items="listafiltrada" dense fixed-header height="65vh" :items-per-page="-1"
-        class="elevation-1" :sort-by.sync="sortBy" :sort-desc.sync="sortDesc">
+      </v-card-title>
 
-        <!-- cliente -->
+      <v-divider></v-divider>
+      <v-card-text class="py-4">
+        <v-row align="center">
+          <v-col cols="4">
+            <h4 class="text-h6">
+              Total Pendiente: <span class="red--text text--darken-3">S/.{{ suma_total().toFixed(2) }}</span>
+            </h4>
+          </v-col>
+
+          <v-col cols="4" class="text-center">
+            <v-btn color="info" small @click="exportarExcel">
+              <v-icon left>mdi-file-excel</v-icon>
+              Exportar
+            </v-btn>
+          </v-col>
+
+        </v-row>
+      </v-card-text>
+
+      <v-divider></v-divider>
+
+      <v-data-table :headers="headersCxc" :items="listafiltrada" :items-per-page="-1" class="elevation-0"
+        :sort-by.sync="sortBy" :sort-desc.sync="sortDesc" dense fixed-header height="65vh"
+        no-data-text="No hay cuentas por cobrar disponibles">
         <template v-slot:item.cliente="{ item }">
-          {{ item.nombre }}
+          <div class="font-weight-medium">{{ item.nombre }}</div>
+          <div class="caption grey--text">{{ item.documento }}</div>
         </template>
 
-        <!-- emision -->
         <template v-slot:item.fecha="{ item }">
-          {{ conviertefecha(item.fecha) }}
+          <v-chip small color="blue-grey lighten-5" class="font-weight-bold">{{ conviertefecha(item.fecha) }}</v-chip>
         </template>
 
-        <!-- vence -->
         <template v-slot:item.fecha_vence="{ item }">
-          {{ conviertefecha(item.fecha_vence) }}
+          <v-chip small
+            :color="analiza_fecha(item.fecha_vence) && item.estado === 'PENDIENTE' ? 'red lighten-4' : 'green lighten-4'"
+            class="font-weight-bold">
+            {{ conviertefecha(item.fecha_vence) }}
+          </v-chip>
         </template>
 
-        <!-- total -->
+        <template v-slot:item.estado="{ item }">
+          <v-chip small
+            :color="item.estado === 'LIQUIDADO' ? 'green' : (item.estado === 'PENDIENTE' ? 'orange' : 'red')" dark>
+            {{ item.estado }}
+          </v-chip>
+        </template>
+
         <template v-slot:item.monto_total="{ item }">
-          S/.{{ redondear(item.monto_total) }}
+          <span class="font-weight-bold">{{ item.moneda || 'S/' }}{{ redondear(item.monto_total) }}</span>
         </template>
 
-        <!-- pendiente -->
         <template v-slot:item.monto_pendiente="{ item }">
-          S/.{{ redondear(item.monto_pendiente) }}
+          <span class="red--text font-weight-bold">{{ item.moneda || 'S/' }}{{ redondear(item.monto_pendiente) }}</span>
         </template>
 
-        <!-- pagado -->
         <template v-slot:item.pagado="{ item }">
-          <span class="red--text">
-            S/.{{ item.pagado == undefined ? '0.00' : redondear(item.pagado) }}
-          </span>
+          <span class="green--text font-weight-bold">{{ item.moneda || 'S/' }}{{ redondear(item.monto_total -
+            item.monto_pendiente) }}</span>
         </template>
 
-        <!-- accion -->
         <template v-slot:item.accion="{ item }">
-          <v-row>
-            <v-col cols="6">
-              <v-icon color="red" @click="ejecuta_liquidacion(item)">mdi-hand-heart</v-icon>
-            </v-col>
-            <v-col cols="6">
-              <v-icon color="green" @click.prevent="ejecutaConsolida(item)">mdi-eye</v-icon>
-            </v-col>
-          </v-row>
+          <v-menu offset-y>
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn icon v-bind="attrs" v-on="on" small>
+                <v-icon>mdi-dots-vertical</v-icon>
+              </v-btn>
+            </template>
+            <v-list dense>
+              <v-list-item @click="ejecuta_liquidacion(item)" :disabled="item.estado === 'LIQUIDADO'">
+                <v-list-item-icon><v-icon color="warning">mdi-hand-heart</v-icon></v-list-item-icon>
+                <v-list-item-title>Liquidación / Abono</v-list-item-title>
+              </v-list-item>
+              <v-list-item @click.prevent="ejecutaConsolida(item)">
+                <v-list-item-icon><v-icon color="info">mdi-eye</v-icon></v-list-item-icon>
+                <v-list-item-title>Ver Detalle Productos</v-list-item-title>
+              </v-list-item>
+              <v-list-item @click.prevent="verCronogramaPDF(item)">
+                <v-list-item-icon><v-icon color="success">mdi-calendar</v-icon></v-list-item-icon>
+                <v-list-item-title>Ver Cronograma</v-list-item-title>
+              </v-list-item>
+              <v-list-item @click.prevent="verPDF(item)">
+                <v-list-item-icon><v-icon color="red">mdi-file-pdf-box</v-icon></v-list-item-icon>
+                <v-list-item-title>Ver Comprobante (PDF)</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
         </template>
       </v-data-table>
 
-
     </v-card>
 
-
     <v-dialog v-model="dialog" max-width="590">
-      <div>
-        <v-system-bar window dark>
-          <v-icon @click="dialog = false">mdi-close</v-icon>
+      <v-card class="rounded-lg">
+        <v-toolbar color="primary" dark dense>
+          <v-toolbar-title>Detalle de Comprobante: {{ item_selecto.doc_ref }}</v-toolbar-title>
           <v-spacer></v-spacer>
-          <v-icon color="red" large @click.prevent="verPDF(item_selecto)">mdi-text-box-search-outline</v-icon>
-        </v-system-bar>
-      </div>
-      <v-card>
-        <v-virtual-scroll :items="arrayConsolidar" :item-height="55" height="400">
-          <template v-slot:default="{ item }">
-            <v-list-item>
-              <v-list-item-avatar>
-                <v-icon small class="green lighten-1" dark>
-                  {{ item.cantidad }}
-                </v-icon>
-              </v-list-item-avatar>
-
-              <v-list-item-content>
-                <v-list-item-title v-text="item.nombre"></v-list-item-title>
-
-                <v-list-item-subtitle v-text="'S/.' + item.precio + ' x ' + item.medida"></v-list-item-subtitle>
-
-                <v-list-item-subtitle v-if="item.preciodescuento != 0" class="red--text"
-                  v-text="'Descuento (S/.' + item.preciodescuento + ') = S/.' + redondear(item.precioedita - item.preciodescuento)">
-                </v-list-item-subtitle>
-
-              </v-list-item-content>
-
-              <v-list-item-action>
-                <v-icon color="red lighten-1">S/{{ redondear((item.precioedita * item.cantidad) -
-                  item.preciodescuento) }}</v-icon>
-              </v-list-item-action>
-            </v-list-item>
-
-          </template>
-
-        </v-virtual-scroll>
+          <v-btn icon @click="dialog = false"><v-icon>mdi-close</v-icon></v-btn>
+        </v-toolbar>
+        <v-card-text class="pa-0">
+          <v-virtual-scroll :items="arrayConsolidar" :item-height="55" height="400">
+            <template v-slot:default="{ item }">
+              <v-list-item>
+                <v-list-item-content>
+                  <v-list-item-title class="font-weight-medium" v-text="item.nombre"></v-list-item-title>
+                  <v-list-item-subtitle class="caption"
+                    v-text="`S/.${item.precio} x ${item.medida}`"></v-list-item-subtitle>
+                  <v-list-item-subtitle v-if="item.preciodescuento != 0" class="red--text caption font-weight-bold">
+                    Descuento (S/.{{ redondear(item.preciodescuento) }})
+                  </v-list-item-subtitle>
+                </v-list-item-content>
+                <v-list-item-action>
+                  <v-chip color="blue-grey lighten-5" small>{{ item.cantidad }} Uds.</v-chip>
+                </v-list-item-action>
+                <v-list-item-action>
+                  <span class="font-weight-bold primary--text">S/.{{ redondear((item.precioedita * item.cantidad) -
+                    item.preciodescuento) }}</span>
+                </v-list-item-action>
+              </v-list-item>
+              <v-divider></v-divider>
+            </template>
+          </v-virtual-scroll>
+        </v-card-text>
       </v-card>
     </v-dialog>
 
     <v-dialog v-model="dialog_liquidacion" max-width="650">
-      <div>
-        <v-system-bar window dark>
-          <v-icon @click="dialog_liquidacion = false">mdi-close</v-icon>
+      <v-card class="rounded-lg">
+        <v-toolbar color="success" dark dense>
+          <v-btn icon @click="dialog_liquidacion = false" color="red"><v-icon>mdi-close</v-icon></v-btn>
+          <v-toolbar-title>Liquidación de Crédito</v-toolbar-title>
+          <v-icon color="red" @click.prevent="eliminar(item_selecto)">mdi-delete</v-icon>
           <v-spacer></v-spacer>
-          <v-icon color="red" large @click.prevent="eliminar(item_selecto)">mdi-delete</v-icon>
-        </v-system-bar>
-      </div>
-      <v-card class="pa-1">
-        <v-card-title primary-title class="text-center mt-n4">
-          <p>Liquidacion de Credito </p>
-          <v-spacer></v-spacer>
-          <p class="red--text">Vence: {{ conviertefecha(item_selecto.fecha_vence) }}</p>
-        </v-card-title>
-        <v-card-text class="mt-n6">
-          <h4>Comprobante : {{ item_selecto.doc_ref }}</h4>
-          <h4>Cliente : {{ item_selecto.nombre }}</h4>
-          <h4>Total : S/.{{ item_selecto.monto_total }}</h4>
-        </v-card-text>
-        <v-card height="300px" class="pa-3">
-          <v-simple-table fixed-header dense>
-            <thead>
 
-              <tr>
-                <th class="text-left">
-                  Estado
-                </th>
-                <th class="text-left">
-                  monto
-                </th>
-                <th class="text-left">
-                  Vence
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in item_selecto.datos" :key="item.key">
-                <td>{{ item.estado }}</td>
-                <td>S/.{{ item.monto }}</td>
-                <td>{{ conviertefecha(item.fecha_vence) }}</td>
-              </tr>
-            </tbody>
-          </v-simple-table>
-        </v-card>
-        <v-card-actions>
-          <v-row class="pa-2">
+
+        </v-toolbar>
+        <v-card-text class="pa-4">
+          <v-row dense class="mb-2">
             <v-col cols="6">
-              <v-btn block color="warning" @click="abre_amortiza()">LIQUIDA</v-btn>
+              <h4 class="font-weight-medium">Comprobante: <span class="blue-grey--text text--darken-2">{{
+                item_selecto.doc_ref }}</span></h4>
             </v-col>
-            <v-col cols="6">
-              <v-btn v-if="false" block color="error" @click="dialog_reprograma = true">Reprograma</v-btn>
+            <v-col cols="6" class="text-right">
+              <h4 class="font-weight-medium">Vence: <span class="red--text text--darken-1">{{
+                conviertefecha(item_selecto.fecha_vence) }}</span></h4>
             </v-col>
           </v-row>
+          <h4 class="mb-2">Cliente: <span class="blue-grey--text text--darken-2">{{ item_selecto.nombre }}</span></h4>
+          <h4 class="mb-4">Total Pendiente: <span class="red--text text--darken-2">S/.{{
+            redondear(item_selecto.monto_pendiente) }}</span></h4>
 
-        </v-card-actions>
+          <v-card outlined class="pa-2 mb-4">
+            <h5 class="text-subtitle-2 mb-1">Cronograma de pago</h5>
+
+            <!-- 🔹 Alerta cuando las cuotas no cuadran con el monto_total -->
+            <v-alert v-if="descuadreCronograma" type="warning" border="left" colored-border icon="mdi-alert-circle"
+              class="mb-3">
+              <div class="font-weight-medium">
+                El total de las cuotas
+                (<strong>{{ moneda }}{{ redondear(sumaCuotas) }}</strong>)
+                no coincide con el monto total del crédito
+                (<strong>{{ moneda }}{{ redondear(item_selecto.monto_total) }}</strong>).
+              </div>
+              <div class="mt-1">
+                Es necesario agregar una nueva cuota para completar el cronograma.
+              </div>
+
+              <template v-slot:append>
+                <v-btn small color="primary" @click="abrirNuevaCuota">
+                  <v-icon left small>mdi-plus-circle</v-icon>
+                  Agregar cuota
+                </v-btn>
+              </template>
+            </v-alert>
+            <v-simple-table fixed-header dense height="250px">
+              <template v-slot:default>
+                <thead>
+                  <tr>
+                    <th class="text-left text-caption">Estado</th>
+                    <th class="text-left text-caption">Monto</th>
+                    <th class="text-left text-caption">Fecha</th>
+                    <th class="text-left text-caption">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(item, index) in item_selecto.datos" :key="index">
+                    <td>
+                      <v-chip x-small
+                        :color="item.estado === 'ABONO' ? 'blue' : (item.estado === 'PENDIENTE' ? 'orange' : 'red')"
+                        dark>
+                        {{ item.estado }}
+                      </v-chip>
+                    </td>
+                    <td class="font-weight-bold">{{ item_selecto.moneda || 'S/' }}{{ redondear(item.monto) }}</td>
+                    <td>
+                      <v-chip small color="grey lighten-4" class="font-weight-bold">
+                        {{ conviertefecha(item.fecha_vence) }}
+                      </v-chip>
+                      <v-chip v-if="item.estado === 'PAGADO'" color="info" x-small>PAGADO
+                        {{ conviertefecha(item.fecha_pagado) }}</v-chip>
+                    </td>
+                    <td>
+                      <v-menu offset-y>
+                        <template v-slot:activator="{ on, attrs }">
+                          <v-btn icon v-bind="attrs" v-on="on">
+                            <v-icon>mdi-dots-vertical</v-icon>
+                          </v-btn>
+                        </template>
+
+                        <v-list dense>
+                          <v-list-item @click="abonarCuota(item, index)" :disabled="item.estado === 'PAGADO'">
+                            <v-list-item-icon>
+                              <v-icon color="green">mdi-cash-plus</v-icon>
+                            </v-list-item-icon>
+                            <v-list-item-title>Abonar</v-list-item-title>
+                          </v-list-item>
+                          <v-list-item @click="imprime_constancia(item, index)" v-if="item.estado == 'PAGADO'">
+                            <v-list-item-icon>
+                              <v-icon color="warning">mdi-printer</v-icon>
+                            </v-list-item-icon>
+                            <v-list-item-title>Imprime Constancia</v-list-item-title>
+                          </v-list-item>
+                          <v-list-item @click="editarCuota(item, index)" :disabled="item.estado === 'PAGADO'">
+                            <v-list-item-icon>
+                              <v-icon color="blue">mdi-pencil</v-icon>
+                            </v-list-item-icon>
+                            <v-list-item-title>Editar</v-list-item-title>
+                          </v-list-item>
+                          <v-list-item @click="eliminarCuota(item, index)">
+                            <v-list-item-icon>
+                              <v-icon color="red">mdi-delete</v-icon>
+                            </v-list-item-icon>
+                            <v-list-item-title>Eliminar</v-list-item-title>
+                          </v-list-item>
+
+                        </v-list>
+                      </v-menu>
+                    </td>
+
+                  </tr>
+                </tbody>
+              </template>
+            </v-simple-table>
+          </v-card>
+        </v-card-text>
+
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="dialog_reprograma" max-width="450">
-      <div>
-        <v-system-bar window dark>
-          <v-icon @click="dialog_reprograma = false">mdi-close</v-icon>
-          <v-spacer></v-spacer>
-          <v-icon color="green" large @click="reprograma()">mdi-content-save</v-icon>
-        </v-system-bar>
-      </div>
-      <v-card class="pa-1">
-        <v-card-title primary-title class="text-center mt-n4">
-          <p>Reprogramacion </p>
-        </v-card-title>
-        <v-card-text>
-          <v-row dense>
-            <v-col cols="6">
-              <v-text-field disabled type="date" dense v-model="date" label="Fecha modificacion"></v-text-field>
-            </v-col>
-            <v-col cols="6">
-              <v-text-field type="date" dense v-model="date_promesa" label="Promesa de pago"></v-text-field>
-            </v-col>
-          </v-row>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
-    <v-dialog v-model="liquida_to" max-width="450">
-      <div>
-        <v-system-bar window dark>
-          <v-icon @click="liquida_to = false">mdi-close</v-icon>
-          <v-spacer></v-spacer>
-          <v-icon color="green" @click="guarda_liq()" large>mdi-content-save</v-icon>
-        </v-system-bar>
-      </div>
-      <v-card class="pa-1">
-        <v-card-title primary-title class="text-center mt-n4">
-          <p>Liquidacion Total </p>
-        </v-card-title>
-        <v-card-text>
-          <v-row dense>
-            <v-col cols="6">
-              <h4>Amortizacion - <span class="red--text">S/.{{ monto_amor }}</span></h4>
-            </v-col>
-            <v-col cols="6">
-              <v-select v-model="modo_amortiza" :items="$store.state.modopagos" dense></v-select>
-            </v-col>
-          </v-row>
-        </v-card-text>
-        <v-btn color="error" block small @click="guarda_liq()">
-          Liquida Total
-        </v-btn>
-      </v-card>
-    </v-dialog>
-
-    <v-dialog v-model="dialog_amortiza" max-width="450">
-      <div>
-        <v-system-bar window dark>
-          <v-icon @click="dialog_amortiza = false">mdi-close</v-icon>
-          <v-spacer></v-spacer>
-          <v-icon color="green" @click="amortiza()" large>mdi-content-save</v-icon>
-        </v-system-bar>
-      </div>
-      <v-card class="pa-1">
-        <v-card-title primary-title class="text-center mt-n4">
-
-          <h4>Amortizacion - <span class="red--text">S/.{{ monto_amor }}</span></h4>
-
-        </v-card-title>
-        <v-card-text>
-          <v-row dense>
-            <v-col cols="6">
-              <v-select v-model="modo_amortiza" :items="$store.state.modopagos" dense></v-select>
-            </v-col>
-            <v-col cols="6">
-              <v-text-field outlined dense type="number" v-model="a_cuenta" label="A cuenta"></v-text-field>
-            </v-col>
-          </v-row>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
 
     <v-dialog v-model="dialog_detalle_cuota" max-width="350">
-      <div>
-        <v-system-bar window dark>
-          <v-icon @click="dialog_detalle_cuota = false">mdi-close</v-icon>
+      <v-card class="rounded-lg">
+        <v-toolbar color="grey darken-2" dark dense>
+          <v-toolbar-title>Detalle de Movimiento</v-toolbar-title>
           <v-spacer></v-spacer>
-        </v-system-bar>
-      </div>
-      <v-card class="pa-3">
-
-        <h4>Modificado: {{ conviertefecha(detalle.fecha_modificacion) }} </h4>
-        <h4>Responsable.: {{ detalle.vendedor }} </h4>
-        <h4 v-if="detalle.amortizado != undefined">Monto Amortiza: S/.{{ detalle.amortizado }} </h4>
-
+          <v-btn icon @click="dialog_detalle_cuota = false"><v-icon>mdi-close</v-icon></v-btn>
+        </v-toolbar>
+        <v-card-text class="pa-4">
+          <h4>Modificado: {{ conviertefecha(detalle.fecha_modificacion) || 'N/A' }} </h4>
+          <h4>Responsable: {{ detalle.vendedor || 'N/A' }} </h4>
+          <h4 v-if="detalle.amortizado != undefined">Monto Amortiza: S/.{{ redondear(detalle.amortizado) }} </h4>
+        </v-card-text>
       </v-card>
     </v-dialog>
+
     <v-dialog v-model="genera_pdf" max-width="550">
-      <div>
-        <v-system-bar window dark>
-          <v-icon @click="(genera_pdf = !genera_pdf)">mdi-close</v-icon>
+      <v-card class="rounded-lg">
+        <v-toolbar color="red darken-2" dark dense>
+          <v-toolbar-title>Vista Previa de Comprobante</v-toolbar-title>
           <v-spacer></v-spacer>
-        </v-system-bar>
-      </div>
-      <imprime v-if="genera_pdf" :data="seleccionado" @cierra="genera_pdf = $event" />
+          <v-btn icon @click="(genera_pdf = !genera_pdf)"><v-icon>mdi-close</v-icon></v-btn>
+        </v-toolbar>
+        <imprime v-if="genera_pdf" :data="seleccionado" @cierra="genera_pdf = $event" />
+      </v-card>
     </v-dialog>
+    <d_amortiza v-if="dialog_amortiza" :item_selecto="item_selecto" :item_selecto_cuota_index="item_selecto_cuota_index"
+      @actualizar-item="actualizarItem" @cerrar="dialog_amortiza = false" />
+    <d_editar v-if="dialog_editar_cuota" :item_selecto="item_selecto" :cuota_edit_index="cuota_edit_index"
+      :cuota_edit_monto="cuota_edit_monto" :cuota_edit_fecha_str="cuota_edit_fecha_str"
+      @actualizar-item="actualizarItem" @cerrar="dialog_editar_cuota = false" />
+    <d_nueva_cuota v-if="dialog_nueva_cuota" :item_selecto="item_selecto" @actualizar-item="actualizarItem"
+      @cerrar="dialog_nueva_cuota = false" />
   </div>
 </template>
 
@@ -296,14 +317,13 @@ import {
   allcuentaxcobrar,
   consultaDetalle,
   consulta_Cabecera,
-  nuevoflujo,
-  nuevaCuentaxcobrar,
   editaCuentaxCobrar,
-  grabaCabecera,
-
 } from '../../db'
+import { reporte_cronograma, reporte_liquidacion_cuota } from "./cuentas_x_cobrar/formatos_cuentas"
 import store from '@/store/index'
-
+import d_editar from './cuentas_x_cobrar/dial_editar_cuota.vue'
+import d_amortiza from './cuentas_x_cobrar/dial_amortiza.vue'
+import d_nueva_cuota from './cuentas_x_cobrar/dial_nueva_cuota.vue'
 import {
   pdfGenera_resumen
 } from '../../pdf_comprobantes'
@@ -315,13 +335,16 @@ import {
 import XLSX from 'xlsx'
 export default {
   components: {
-    imprime
+    imprime,
+    d_amortiza,
+    d_editar,
+    d_nueva_cuota,
   },
 
   data: () => ({
     headersCxc: [
-      { text: 'Cliente', value: 'cliente', sortable: true },          // cliente formateado
-      { text: 'Emision', value: 'fecha', sortable: true },            // usa timestamp para ordenar real
+      { text: 'Cliente', value: 'cliente', sortable: true },
+      { text: 'Emision', value: 'fecha', sortable: true },
       { text: 'Venci.', value: 'fecha_vence', sortable: true },
       { text: 'Estado', value: 'estado', sortable: true },
       { text: 'Total', value: 'monto_total', sortable: true, align: 'end' },
@@ -329,54 +352,50 @@ export default {
       { text: 'Pagado', value: 'pagado', sortable: true, align: 'end' },
       { text: 'Accion', value: 'accion', sortable: false, align: 'center' },
     ],
-    documento: '',
+
+    // tabla principal
     desserts: [],
+    sortBy: ['cliente'],
+    sortDesc: [false],
+
+    // diálogos
     dialog: false,
     dialog_liquidacion: false,
     dialog_detalle_cuota: false,
-    arrayConsolidar: [],
-    buscar: '',
-    date: moment(String(new Date)).format('YYYY-MM-DD'),
-    date_promesa: moment(String(new Date)).format('YYYY-MM-DD'),
-    rechazados: 0,
-    error: '',
+    dialog_amortiza: false,
+    dialog_editar_cuota: false,
+    genera_pdf: false,
+
+    // selección actual (comprobante / cuota)
     item_selecto: [],
-    modo: 'EFECTIVO',
-    ordenflujo: '',
+    item_selecto_cuota_index: null,
+    detalle: [],
+
+    // datos para editar cuota
+    cuota_edit_monto: '',
+    cuota_edit_fecha_str: '',
+    cuota_edit_index: null,
+
+    // consolidado de productos
+    arrayConsolidar: [],
+
+    // filtros
     array_estado: ['PENDIENTE', 'LIQUIDADO'],
     cuenta_estado: 'PENDIENTE',
-    dialog_reprograma: false,
-    dialog_amortiza: false,
-    dialog_liquida: false,
-    monto_amortiza: 0,
-    modo_amortiza: 'EFECTIVO',
-    date1: moment(String(new Date)).format('YYYY-MM-DD'),
-    detalle: [],
-    date_exportar: moment(String(new Date)).format('YYYY-MM-DD'),
-    date2_exportar: moment(String(new Date)).format('YYYY-MM-DD'),
-    array_exportar: [],
-    n_operacion: '',
-    seleccionado: '',
-    genera_pdf: false,
+    buscar: '',
     busca_p: '',
     arra_empleados: [],
-    liquida_to: false,
+
+    // otros
+    date1: moment(String(new Date)).format('YYYY-MM-DD'),
+    seleccionado: '',
     a_cuenta: 0,
-    sortBy: ['cliente'],   // ordena inicialmente por cliente
-    sortDesc: [false],     // false = A→Z, true = Z→A
+    dialog_nueva_cuota: false,
   }),
   created() {
-
+    this.filtra()
   },
   computed: {
-    monto_amor() {
-      if (this.modo_amortiza == 'TARJETA') {
-        var a = this.monto_amortiza * 1.05
-      } else {
-        var a = this.monto_amortiza
-      }
-      return a
-    },
     listafiltrada() {
 
       if (this.cuenta_estado == 'LIQUIDADO') {
@@ -387,7 +406,25 @@ export default {
           .toLowerCase().includes(this.buscar.toLowerCase()))
       }
       return array
-    }
+    },
+    moneda() {
+      return this.item_selecto?.moneda || 'S/'
+    },
+    sumaCuotas() {
+      if (!this.item_selecto || !Array.isArray(this.item_selecto.datos)) return 0
+      return this.item_selecto.datos.reduce(
+        (acc, it) => acc + (parseFloat(it.monto) || 0),
+        0
+      )
+    },
+
+    // 🔹 ¿El cronograma NO cuadra con el monto_total del crédito?
+    descuadreCronograma() {
+      if (!this.item_selecto) return false
+      const totalCredito = parseFloat(this.item_selecto.monto_total) || 0
+      return Math.abs(totalCredito - this.sumaCuotas) > 0.01
+    },
+
   },
   watch: {
     '$store.state.clientessearch': {
@@ -399,6 +436,83 @@ export default {
     },
   },
   methods: {
+
+    imprime_constancia(cuota, index) {
+      if (!this.item_selecto) {
+        alert('No hay un crédito seleccionado.')
+        return
+      }
+      // si la cuota tiene los métodos de pago guardados, los usamos
+      const pagos = Array.isArray(cuota.pagos) ? cuota.pagos : []
+
+      reporte_liquidacion_cuota(
+        this.item_selecto, // cuenta completa
+        cuota,             // cuota específica
+        pagos              // métodos de pago usados
+      )
+    },
+    verCronogramaPDF(item) {
+      reporte_cronograma(item)   // item es el objeto que muestras en la vista de liquidación
+    },
+    actualizarItem(nuevo) {
+      this.dialog_amortiza = false
+      this.item_selecto = nuevo
+      this.item_selecto_cuota_index = null
+      this.filtra()
+    },
+    abrirNuevaCuota() {
+      if (!this.item_selecto) {
+        alert('No hay un crédito seleccionado.')
+        return
+      }
+      this.dialog_nueva_cuota = true
+    },
+    editarCuota(item, index) {
+      this.cuota_edit_index = index
+      this.cuota_edit_monto = item.monto
+      this.cuota_edit_fecha_str = moment.unix(item.fecha_vence).format('YYYY-MM-DD')
+      this.dialog_editar_cuota = true
+    },
+
+
+    abonarCuota(item, index) {
+      this.item_selecto_cuota_index = index
+
+      // por defecto, el abono = monto de la cuota
+      this.a_cuenta = item.monto
+
+      const total = Number(this.a_cuenta || 0)
+
+      // inicializa métodos de pago: el primero lleno con el total
+      this.pagosEntrega = (this.$store?.state?.modopagos || []).map((n, idx) => ({
+        nombre: n,
+        monto: idx === 0 && total > 0 ? total.toFixed(2) : ''
+      }))
+
+      this.dialog_amortiza = true
+    },
+
+
+    eliminarCuota(item, index) {
+      console.log("Eliminar", item, index)
+      if (!this.item_selecto || !Array.isArray(this.item_selecto.datos)) return
+
+      const confirmado = confirm(`¿Eliminar esta cuota de S/.${this.redondear(item.monto)}?`)
+      if (!confirmado) return
+
+      const datos = [...this.item_selecto.datos]
+      datos.splice(index, 1)
+
+      // Actualizamos en Firebase
+      editaCuentaxCobrar(this.item_selecto.doc_ref, 'datos', datos)
+      this.item_selecto = {
+        ...this.item_selecto,
+        datos
+      }
+    },
+
+    // 🔹 GUARDAR EDICIÓN DE CUOTA (valida totales y alerta saldo)
+
     async ejecutaConsolida(value) {
       console.log(value)
       store.commit("dialogoprogress", 1)
@@ -412,32 +526,10 @@ export default {
       this.dialog = true
 
     },
-    async liquida_total() {
-      store.commit("dialogoprogress", 1)
-      if (this.desserts == '') {
-        alert('sin data')
-        return
-      }
-      this.monto_amortiza = this.suma_total()
-      this.liquida_to = true
-      store.commit("dialogoprogress", 1)
-    },
-    async guarda_liq() {
-      store.commit("dialogoprogress", 1)
-      await this.imprime_cuenta()
-      var aa = this.desserts
-      for (var i = 0; i < aa.length; i++) {
-        var data = aa[i]
-        await editaCuentaxCobrar(data.doc_ref, 'estado', 'LIQUIDADO')
-        await grabaCabecera(data.doc_ref + '/forma_pago', 'PAGADO')
-      }
-      await this.genera_flujo(this.modo_amortiza, this.monto_amor, data)
-      this.liquida_to = false
-      this.filtra()
-      store.commit("dialogoprogress", 1)
-    },
+
     async filtra() {
       var array = []
+      this.busca_p = this.busca_p || ''
       var cli = this.busca_p.split('/')[0].trim()
 
       let snap
@@ -449,7 +541,7 @@ export default {
           .equalTo(cli)
           .once("value")
       }
-
+      console.log(snap.val())
       if (snap.exists()) {
         snap.forEach(item => {
           const data = item.val()
@@ -517,72 +609,7 @@ export default {
       }
       return suma
     },
-    reprograma() {
-      store.commit("dialogoprogress")
-      var deuda = this.item_selecto
-      var array_data = deuda.datos
-      var nuevo_mov = {
-        id: array_data.length,
-        fecha: moment().unix(),
-        fecha_vence: (moment(String(this.date_promesa)) / 1000),
-        monto: this.item_selecto.monto_pendiente,
-        estado: 'REPROGRAMACION',
-        doc_ref: 0,
-        modo_pago: ''
-      }
-      array_data.push(nuevo_mov)
-      deuda.fecha_vence = (moment(String(this.date_promesa)) / 1000)
-      nuevaCuentaxcobrar(deuda.doc_ref, deuda).then(() => {
-        this.dialog_reprograma = false
-        this.dialog_liquidacion = false
-        store.commit("dialogoprogress")
-      })
-    },
-    abre_amortiza() {
-      this.monto_amortiza = this.item_selecto.monto_pendiente
-      this.a_cuenta = this.item_selecto.monto_pendiente
-      this.dialog_amortiza = true
-    },
-    async amortiza() {
-      store.commit("dialogoprogress")
-      var item = this.item_selecto
-      var deuda = this.item_selecto
-      var array_data = deuda.datos
-      var nuevo_mov = {
-        id: array_data.length,
-        fecha: moment().unix(),
-        fecha_vence: moment().unix(),
-        monto: this.a_cuenta,
-        estado: 'ABONO',
-        doc_ref: 0,
-        modo_pago: ''
-      }
-      array_data.push(nuevo_mov)
-      await editaCuentaxCobrar(item.doc_ref, 'datos', array_data)
-      await editaCuentaxCobrar(item.doc_ref, 'f_pago', moment().unix())
-      if (this.monto_amor == this.a_cuenta) {
-        Promise.all([
-          editaCuentaxCobrar(item.doc_ref, 'estado', 'LIQUIDADO'),
-          editaCuentaxCobrar(item.doc_ref, 'pagado', this.monto_amor),
-          grabaCabecera(item.doc_ref + '/forma_pago', 'PAGADO'),
-          this.genera_flujo(this.modo_amortiza, this.monto_amor, this.item_selecto)
-        ]);
-        this.dialog_liquidacion = false
-        this.dialog_amortiza = false
-        this.n_operacion = ''
-      } else {
-        var importe = this.monto_amor - this.a_cuenta
-        await editaCuentaxCobrar(item.doc_ref, 'monto_pendiente', importe)
-        await this.genera_flujo(this.modo_amortiza, this.a_cuenta, this.item_selecto)
-        this.dialog_liquidacion = false
-        this.dialog_amortiza = false
 
-      }
-      this.imprime_liquidacion(array_data)
-      this.filtra()
-      store.commit("dialogoprogress")
-
-    },
     async imprime_liquidacion(abonos) {
       var array = []
       var aa = this.desserts
@@ -598,23 +625,7 @@ export default {
 
       return true
     },
-    async genera_flujo(modo, monto, cabecera) {
-      console.log(cabecera)
-      var fecha = moment().unix()
-      var flujo = {
-        operacion: 'ingreso',
-        observacion: 'Pago Credito - ' + cabecera.nombre,
-        numeracion_doc: cabecera.doc_ref,
-        modo: modo,
-        fecha: fecha,
-        total: monto,
-        estado: 'activo',
-        responsable: store.state.permisos.correo.slice(0, -13),
-        sujeto: store.state.permisos.correo.slice(0, -13),
-      }
-      await nuevoflujo(flujo)
-      return true
-    },
+
     conviertefecha(date) {
       return moment.unix(date).format('DD/MM/YY')
     },
@@ -631,6 +642,7 @@ export default {
       this.genera_pdf = true
     },
     ejecuta_liquidacion(value) {
+      console.log(value)
       this.item_selecto = value
       this.dialog_liquidacion = true
 
@@ -648,36 +660,27 @@ export default {
       }
       return result
     },
-    exporta() {
-      this.array_exportar = []
-      this.formatea_tabla(this.listafiltrada, 0)
-    },
-    formatea_tabla(array, i) {
-      if (i < array.length) {
-        var data = array[i]
-        this.array_exportar.push({
-          vendedor: data.vendedor,
-          doc_cliente: data.documento,
-          nom_cliente: data.nombre,
-          fecha_emision: this.conviertefecha(data.fecha),
-          fecha_vence: this.conviertefecha(data.fecha_vence),
-          compro_ref: data.doc_ref,
-          total_comprob: parseFloat(data.monto_total),
-          monto_pendiente: parseFloat(data.monto_pendiente)
-        })
-        this.formatea_tabla(array, i + 1)
-      } else {
-        this.exportar_excel()
-      }
-    },
-    exportar_excel() {
-      var array = this.array_exportar
-      var data = XLSX.utils.json_to_sheet(array)
-      const workbook = XLSX.utils.book_new()
-      const filename = 'DATA'
-      XLSX.utils.book_append_sheet(workbook, data, "ventas")
-      XLSX.writeFile(workbook, `${filename}.xlsx`)
-    }
+  exportarExcel() {
+    const filas = this.listafiltrada.map(item => ({
+      Cliente: item.nombre,
+      Documento: item.documento,
+      Emision: this.conviertefecha(item.fecha),
+      Vencimiento: this.conviertefecha(item.fecha_vence),
+      Estado: item.estado,
+      Moneda: item.moneda || 'S/',
+      'Monto total': Number(item.monto_total || 0),
+      'Monto pendiente': Number(item.monto_pendiente || 0),
+      Pagado: Number((item.monto_total - item.monto_pendiente) || 0),
+    }))
+
+    const ws = XLSX.utils.json_to_sheet(filas)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'CuentasXCobrar')
+    XLSX.writeFile(wb, 'cuentas_x_cobrar.xlsx')
+  },
+
+
+
   }
 }
 </script>

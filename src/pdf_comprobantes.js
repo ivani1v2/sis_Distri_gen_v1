@@ -246,7 +246,7 @@ async function impresion58(arraydatos, qr, cabecera) {
   for (var i = 0; i < array.length; i++) {
     var obs = "";
     var tg = "";
-    var totals = ((Number(array[i].precioedita).toFixed(2)) * array[i].cantidad).toFixed(2)
+    var totals = (Number(array[i].total_antes_impuestos)+Number(array[i].total_impuestos)).toFixed(2)
     if (array[i].operacion == "GRATUITA") {
       obs = "*";
       tg = " / Bonificacion";
@@ -275,7 +275,7 @@ async function impresion58(arraydatos, qr, cabecera) {
     },
     headStyles: { lineWidth: 0, minCellHeight: 9 },
     columnStyles: {
-      0: { columnWidth: 7, halign: "center" ,  valign: "top",},
+      0: { columnWidth: 7, halign: "center", valign: "top", },
       1: { columnWidth: 24, halign: "left" },
       2: { columnWidth: 11, halign: "right" },
       3: { columnWidth: 11, halign: "right" },
@@ -283,16 +283,16 @@ async function impresion58(arraydatos, qr, cabecera) {
     theme: ["plain"],
     head: [["Ca", "Descrip.", "P.U", "P.T"]],
     body: nuevoArray,
-     didParseCell: (data) => {
-    if (data.section !== "body" || data.column.index !== 1) return; // solo Descripción
-    const txt = Array.isArray(data.cell.text) ? data.cell.text.join(" ") : String(data.cell.text || "");
-    if (/bonificacion/i.test(txt)) {
-      data.cell.styles.fontStyle = "bold";
-      data.cell.styles.textColor = [0, 0, 0]; // rojo suave
-      // opcional: fondo suave
-      // data.cell.styles.fillColor = [255, 245, 204];
-    }
-  },
+    didParseCell: (data) => {
+      if (data.section !== "body" || data.column.index !== 1) return; // solo Descripción
+      const txt = Array.isArray(data.cell.text) ? data.cell.text.join(" ") : String(data.cell.text || "");
+      if (/bonificacion/i.test(txt)) {
+        data.cell.styles.fontStyle = "bold";
+        data.cell.styles.textColor = [0, 0, 0]; // rojo suave
+        // opcional: fondo suave
+        // data.cell.styles.fillColor = [255, 245, 204];
+      }
+    },
   });
 
   let finalY = doc.previousAutoTable.finalY;
@@ -303,7 +303,7 @@ async function impresion58(arraydatos, qr, cabecera) {
   doc.setFont("Helvetica", "bold");
   doc.text(separacion, pageCenter, linea, "center");
   linea = linea + 3.5;
-    if (arraycabe.total_op_gratuitas > 0) {
+  if (arraycabe.total_op_gratuitas > 0) {
     doc.setFont("Helvetica", "");
     doc.setFontSize(8);
     var texto = doc.splitTextToSize(
@@ -708,13 +708,14 @@ async function impresion80(arraydatos, qr, cabecera) {
   doc.text(separacion, pageCenter, linea, "center");
   linea = linea + 7;
   doc.text(separacion, pageCenter, linea, "center");
-
+  var descuentos = 0;
   //-----------------productos-----------------------
   var nuevoArray = new Array(array.length);
   for (var i = 0; i < array.length; i++) {
+    descuentos += Number(array[i].preciodescuento); 
     var obs = "";
     var tg = "";
-    var totals = ((Number(array[i].precioedita).toFixed(2)) * array[i].cantidad).toFixed(2)
+    var totals = (Number(array[i].total_antes_impuestos)+Number(array[i].total_impuestos)).toFixed(2)
     if (array[i].operacion == "GRATUITA") {
       obs = "*";
       tg = " / Bonificacion";
@@ -726,7 +727,7 @@ async function impresion80(arraydatos, qr, cabecera) {
     nuevoArray[i] = new Array(4);
     nuevoArray[i][0] = array[i].cantidad;
     nuevoArray[i][1] = array[i].nombre + "\n" + "-" + array[i].medida + tg;
-    nuevoArray[i][2] = Number(array[i].precioedita).toFixed(2);
+    nuevoArray[i][2] = Number(array[i].precio).toFixed(2);
     nuevoArray[i][3] = totals + obs;
   }
   if (!store.state.configuracion.mostrar_ope_gratuitas) {
@@ -742,7 +743,7 @@ async function impresion80(arraydatos, qr, cabecera) {
     },
     headStyles: { lineWidth: 0, minCellHeight: 9 },
     columnStyles: {
-      0: { columnWidth: 8, halign: "center" , valign: "top"},
+      0: { columnWidth: 8, halign: "center", valign: "top" },
       1: { columnWidth: 35, halign: "left" },
       2: { columnWidth: 12, halign: "right" },
       3: { columnWidth: 12, halign: "right" },
@@ -750,7 +751,7 @@ async function impresion80(arraydatos, qr, cabecera) {
     theme: ["plain"],
     head: [["Cant", "Descripcion", "P.U", "P.T"]],
     body: nuevoArray,
-    
+
   });
 
   let finalY = doc.previousAutoTable.finalY;
@@ -796,7 +797,7 @@ async function impresion80(arraydatos, qr, cabecera) {
         linea,
         "right"
       );
-      linea = linea + 3.5;
+      linea = linea + 3.8;
     }
     if (arraycabe.total_op_gratuitas > 0) {
       doc.text("OP. GRATUITAS", lMargin, linea);
@@ -806,17 +807,23 @@ async function impresion80(arraydatos, qr, cabecera) {
         linea,
         "right"
       );
-      linea = linea + 3.5;
+      linea = linea + 3.8;
     }
     doc.text("IGV " + arraycabe.porcentaje_igv + "%", lMargin, linea);
     doc.text(moneda + arraycabe.igv, 68, linea, "right");
-    linea = linea + 3.5;
+    linea = linea + 3.8;
   }
-
+  if(descuentos>0){
+    doc.text("Descuentos", lMargin, linea);
+    doc.text(moneda + descuentos.toFixed(2), 68, linea, "right");
+    linea = linea + 3.8;
+  }
   doc.text("Total", lMargin, linea);
+  doc.setFontSize(10);
+  doc.setFont("Helvetica", "bold");
   doc.text(moneda + total, 68, linea, "right");
   linea = linea + 3.5;
-
+  doc.setFontSize(8);
   doc.setFont("Helvetica", "bold");
   doc.text(separacion, pageCenter, linea, "center");
   linea = linea + 3;
@@ -992,8 +999,6 @@ async function impresion80(arraydatos, qr, cabecera) {
       break;
   }
 }
-
-
 function impresionA4(array, qr, arraycabecera) {
   var arraycabe = arraycabecera;
   var linea = parseInt(store.state.configImpresora.msuperior);
@@ -1014,6 +1019,7 @@ function impresionA4(array, qr, arraycabecera) {
   var total = (
     parseFloat(arraycabe.total_op_exoneradas) +
     parseFloat(arraycabe.total_op_gravadas) +
+    parseFloat(arraycabe.total_op_inafectas || 0) +
     parseFloat(arraycabe.igv)
   ).toFixed(2);
   var totalDesc = arraycabe.descuentos;
@@ -1206,57 +1212,16 @@ function impresionA4(array, qr, arraycabecera) {
   doc.text(arraycabecera.forma_pago, 167, linea, "left");
 
   linea = 65;
-  var ope_grat = 0
+
   //-----------------productos-----------------------
-  var nuevoArray = new Array(array.length);
-  for (var i = 0; i < array.length; i++) {
-    var obs = "";
-    var tg = "";
-    var totals = ((Number(array[i].precioedita).toFixed(2)) * array[i].cantidad).toFixed(2)
-    if (array[i].operacion == "GRATUITA") {
-      obs = "*";
-      tg = " / Bono";
-      ope_grat = ope_grat + Number(totals)
-      totals = '0.00'
-      
-      if (!store.state.configuracion.mostrar_ope_gratuitas) {
-        array[i].precioedita = "0.00";
-      }
-    }
-    nuevoArray[i] = new Array(5);
-    nuevoArray[i][0] = array[i].cantidad;
-    nuevoArray[i][1] = array[i].nombre + tg;
-    nuevoArray[i][2] = array[i].medida;
-    nuevoArray[i][3] = Number(array[i].precioedita).toFixed(2);
-    nuevoArray[i][4] = totals + obs;
-  }
-  arraycabe.total_op_gratuitas = ope_grat.toFixed(2)
+  var respuesta = tabla_A4(array, linea)
+
+  arraycabe.total_op_gratuitas = respuesta.ope_grat.toFixed(2)
   if (!store.state.configuracion.mostrar_ope_gratuitas) {
     arraycabe.total_op_gratuitas = '0.00'
   }
 
-  doc.autoTable({
-    margin: { top: linea, left: 10 },
-    styles: {
-      fontSize: 8,
-      cellPadding: 1,
-      valign: "middle",
-      halign: "center",
-      lineWidth: 0.2,
-      lineColor: 1,
-    },
-    headStyles: { lineWidth: 0.2, lineColor: 1 },
-    columnStyles: {
-      0: { columnWidth: 20, halign: "center" },
-      1: { columnWidth: 110, halign: "left" },
-      2: { columnWidth: 20, halign: "center" },
-      3: { columnWidth: 20, halign: "center" },
-      4: { columnWidth: 20, halign: "center" },
-    },
-    theme: ["plain"],
-    head: [["Cantidad", "Descripcion", "Medida", "P.Unitario", "P.Total"]],
-    body: nuevoArray,
-  });
+  doc.autoTable(respuesta.table);
 
   let finalY = doc.previousAutoTable.finalY;
   linea = finalY + 5;
@@ -1316,7 +1281,20 @@ function impresionA4(array, qr, arraycabecera) {
   doc.setFont("Helvetica", "");
   doc.text(moneda + arraycabe.total_op_gravadas, 190, linea, "right");
   linea = linea + 4;
-
+  if (arraycabe.total_op_inafectas > 0) {
+    doc.setFontSize(8);
+    doc.setFont("Helvetica", "Bold");
+    doc.text("OP. INAFECTA", 135, linea, "left");
+    doc.text(" : ", 159, linea, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(
+      moneda + arraycabe.total_op_inafectas.toString(),
+      190,
+      linea,
+      "right"
+    );
+    linea = linea + 4;
+  }
   doc.setFontSize(8);
   doc.setFont("Helvetica", "Bold");
   doc.text("OP. EXONERADA", 135, linea, "left");
@@ -1951,107 +1929,6 @@ function cuotascredito(array) {
   return nuevoArray;
 }
 
-export const pdfGenera_resumen = (arraydatos) => {
-  var arraycabe = cabecera;
-  var linea = parseInt(store.state.configImpresora.msuperior);
-  var Ruc = "Ruc: " + store.state.baseDatos.ruc;
-  var Direccion =
-    store.state.baseDatos.direccion +
-    "-" +
-    store.state.baseDatos.distrito +
-    "-" +
-    store.state.baseDatos.provincia +
-    "-" +
-    store.state.baseDatos.departamento;
-  var imagen = store.state.logoempresa;
-  var separacion =
-    "-------------------------------------------------------------------------------------------------------------------";
-  var fechaImpresion = moment.unix("").format("DD/MM/YYYY hh:mm a");
-  var array = arraydatos;
-
-  //formato de pagina de PF
-  var guardadocumento = store.state.configImpresora.guardadocumento;
-  var lMargin = 3.5; //left margin in mm
-  var rMargin = 2; //right margin in mm
-  var pdfInMM = 75; // width of A4 in mm
-  var cabecera = store.state.configImpresora.cabecera;
-  var piepagina = store.state.configImpresora.piepagina;
-  var telefono = store.state.configImpresora.telefono;
-  var pageCenter = pdfInMM / 2;
-
-  const doc = new jspdf({
-    orientation: "portrait",
-    unit: "mm",
-    format: [1000, pdfInMM],
-  });
-  doc.setTextColor(10);
-  doc.text(".", 0, linea);
-  linea = linea + 3;
-
-  doc.setFont("Helvetica", "bold");
-  doc.setFontSize(9);
-  var texto = doc.splitTextToSize("CUENTA TOTAL", pdfInMM - lMargin - rMargin);
-  doc.text(texto, pageCenter, linea, "center");
-  linea = linea + 3.5;
-
-  doc.setFont("Helvetica", "bold");
-  doc.text(separacion, pageCenter, linea, "center");
-  linea = linea + 7;
-  doc.text(separacion, pageCenter, linea, "center");
-
-  //-----------------productos-----------------------
-  var total = 0;
-  var nuevoArray = new Array(array.length);
-  for (var i = 0; i < array.length; i++) {
-    total = total + parseFloat(array[i].precioedita * array[i].cantidad);
-
-    nuevoArray[i] = new Array(4);
-    nuevoArray[i][0] = array[i].cantidad;
-    nuevoArray[i][1] = array[i].nombre;
-    nuevoArray[i][2] = parseFloat(array[i].precioedita).toFixed(2);
-    nuevoArray[i][3] = parseFloat(
-      array[i].precioedita * array[i].cantidad
-    ).toFixed(2);
-  }
-
-  doc.autoTable({
-    margin: { top: linea - 9, left: 1 },
-    styles: {
-      fontSize: 7.5,
-      cellPadding: 0.1,
-      valign: "middle",
-      halign: "center",
-    },
-    headStyles: { lineWidth: 0, minCellHeight: 9 },
-    columnStyles: {
-      0: { columnWidth: 8, halign: "center" },
-      1: { columnWidth: 35, halign: "left" },
-      2: { columnWidth: 12, halign: "right" },
-      3: { columnWidth: 12, halign: "right" },
-    },
-    theme: ["plain"],
-    head: [["Cant", "Descripcion", "P.U", "P.T"]],
-    body: nuevoArray,
-  });
-
-  let finalY = doc.previousAutoTable.finalY;
-  linea = finalY + 2;
-
-  doc.setFont("Helvetica", "bold");
-  doc.text(separacion, pageCenter, linea, "center");
-  linea = linea + 3;
-
-  doc.text("Total", lMargin, linea);
-  doc.text(moneda + parseFloat(total).toFixed(2), 68, linea, "right");
-  linea = linea + 3.5;
-
-  if (store.state.esmovil) {
-    window.open(doc.output("bloburi"));
-  } else {
-    abre_dialogo_impresion(doc);
-  }
-};
-
 function abre_dialogo_impresion(data) {
   if (store.state.configImpresora.impresora_auto && isElectronEnv()) {
     axios_imp(data.output("arraybuffer"));
@@ -2149,4 +2026,115 @@ function isElectronEnv() {
     (w && w.process && w.process.type === "renderer") ||   // renderer
     (w && w.navigator && w.navigator.userAgent && w.navigator.userAgent.includes("Electron"))
   );
+}
+
+function tabla_A4(array, linea) {
+
+  // Detectar si existe algún descuento
+  const existeDescuento = array.some(it =>
+    it.descuentos &&
+    (
+      Number(it.descuentos.desc_1) > 0 ||
+      Number(it.descuentos.desc_2) > 0 ||
+      Number(it.descuentos.desc_3) > 0
+    )
+  );
+
+  let ope_grat = 0;
+  const nuevoArray = [];
+
+  for (let item of array) {
+    const descuentos = item.descuentos || {};
+
+    const precioBase = Number(item.precio || 0); // P.Unitario
+    const precioNeto = Number(item.precio || 0);                      // P.Neto
+    let totalLinea = precioNeto * item.cantidad;
+
+    // Texto descuentos combinados en una sola celda
+    const textoDescuento = existeDescuento
+      ? `${descuentos.desc_1 || 0} / ${descuentos.desc_2 || 0} / ${descuentos.desc_3 || 0}`
+      : null;
+
+    let obs = "";
+    let tg = "";
+
+    if (item.operacion === "GRATUITA") {
+      obs = "*";
+      tg = " / Bono";
+      const totBase = precioBase * item.cantidad;
+      ope_grat += totBase;
+      totalLinea = 0;
+    }
+
+    // Estructura según exista o no descuento
+    if (!existeDescuento) {
+      // SIN DESCUENTOS
+      nuevoArray.push([
+        item.cantidad,
+        item.nombre + tg,
+        item.medida,
+        precioBase.toFixed(2),
+        totalLinea.toFixed(2) + obs,
+      ]);
+    } else {
+      // CON DESCUENTOS
+      nuevoArray.push([
+        item.cantidad,
+        item.nombre + tg,
+        item.medida,
+        precioBase.toFixed(2),
+        textoDescuento,
+        precioNeto.toFixed(2),
+        totalLinea.toFixed(2) + obs
+      ]);
+    }
+  }
+
+  // CABECERA SEGÚN MODO
+  const headSinDescuento = [
+    ["Cantidad", "Descripcion", "Medida", "P.Unitario", "P.Total"]
+  ];
+
+  const headConDescuento = [
+    ["Cant", "Descripcion", "Medida", "P.Unitario", "%Desc", "P.Neto", "P.Total"]
+  ];
+
+  // COLUMNAS SIMPLES Y LIMPIAS
+  const columnStylesSinDesc = {
+    0: { columnWidth: 20 },
+    1: { columnWidth: 110, halign: "left" },
+    2: { columnWidth: 20 },
+    3: { columnWidth: 20 },
+    4: { columnWidth: 20 },
+  };
+
+  const columnStylesConDesc = {
+    0: { columnWidth: 12 },
+    1: { columnWidth: 80, halign: "left" },
+    2: { columnWidth: 18 },
+    3: { columnWidth: 20 },
+    4: { columnWidth: 20 },  // %Desc
+    5: { columnWidth: 20 },  // P.Neto
+    6: { columnWidth: 20 },  // Total
+  };
+
+  // TABLA A DEVOLVER
+  const table = {
+    margin: { top: linea, left: 10 },
+    styles: {
+      fontSize: 8,
+      cellPadding: 1,
+      valign: "middle",
+      halign: "center",
+      lineWidth: 0.2,
+      lineColor: 1,
+    },
+    headStyles: { lineWidth: 0.2, lineColor: 1 },
+    theme: ["plain"],
+    head: existeDescuento ? headConDescuento : headSinDescuento,
+    columnStyles: existeDescuento ? columnStylesConDesc : columnStylesSinDesc,
+    body: nuevoArray
+  };
+
+  return { table, ope_grat };
 }

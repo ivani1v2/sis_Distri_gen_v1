@@ -92,35 +92,43 @@ async function completa_items(arrays) {
       totalImpuesto = 0.0;
       //antesimpuesto = (precioVentaUnitario*parseFloat(data.cantidad))
     }
+     const d1 = Number(data.desc_1) || 0;
+    const d2 = Number(data.desc_2) || 0;
+    const d3 = Number(data.desc_3) || 0;
 
-    if (!data.tipoproducto) {
-      data.tipoproducto = "BIEN";
-    }
+    const tieneDescuentosPorcentaje = (d1 !== 0 || d2 !== 0 || d3 !== 0);
 
-    items.push({
+    const itemProcesado = {
       id: data.id,
       cantidad: data.cantidad,
       nombre: data.nombre,
       factor: data.factor || 1,
       medida: data.medida,
-      cod_medida: obtencodigomedida(data.medida, data.tipoproducto),
+      cod_medida: obtencodigomedida(data.medida, data.tipoproducto || "BIEN"),
       precio: data.precio,
-      precioedita: data.precio,
+      precioedita: data.precio_base || data.precio,
       preciodescuento: data.preciodescuento,
-      tipoproducto: data.tipoproducto,
+      tipoproducto: data.tipoproducto || "BIEN",
       operacion: data.operacion,
-      icbper: false,
-      cargoxconsumo: data.cargoxconsumo || false,
       valor_unitario: valor_unitario.toFixed(5),
       valor_total: valorTotal.toFixed(2),
       igv: igv.toFixed(2),
-      valor_icbper: 0.0,
-      factor_icbper: store.state.configuracion.icbper,
       total_antes_impuestos: antesimpuesto.toFixed(2),
       total_impuestos: totalImpuesto.toFixed(2),
       precioVentaUnitario: redondear(precio_item),
       uuid: crypto.randomUUID() || "",
-    });
+    };
+
+    // Solo agregamos el nodo "descuentos" si hay algún porcentaje distinto de 0
+    if (tieneDescuentosPorcentaje) {
+      itemProcesado.descuentos = {
+        desc_1: d1,
+        desc_2: d2,
+        desc_3: d3,
+      };
+    }
+
+    items.push(itemProcesado);
   }
 
   return {

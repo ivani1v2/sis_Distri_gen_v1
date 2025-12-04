@@ -25,11 +25,11 @@
 <script>
 import barrasuperior from "@/components/barrasuperior.vue";
 import {
-    allClientes,
-    allProductos,
-    allCategorias
+
+    nuevoCampoUsuario,
 } from './db'
 import store from '@/store'
+
 export default {
     name: "App",
     components: {
@@ -48,7 +48,8 @@ export default {
         };
     },
     created() {
-     
+      
+
         this.iniciarRastreoGps();
 
     },
@@ -68,7 +69,7 @@ export default {
     },
     beforeDestroy() {
         this.detenerRastreoGps();
-       
+
     },
 
     methods: {
@@ -166,10 +167,13 @@ export default {
             }
 
             const nuevaUbicacion = { lat, lng, timestamp: now };
-            console.log("Nueva ubicación:", nuevaUbicacion);
+            if (this.$store.state.permisos.gps_activo) {
+                nuevoCampoUsuario(this.$store.state.permisos.token, 'ubicacion', nuevaUbicacion);
+            }
             this.$store.commit("setUbicacionActual", nuevaUbicacion);
             this.ultimaUbicacion = nuevaUbicacion;
             this._lastFixAt = now;
+
         },
 
         _getCurrentPosition(options) {
@@ -190,6 +194,8 @@ export default {
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             return R * c;
         },
+     
+
     }
 };
 </script>

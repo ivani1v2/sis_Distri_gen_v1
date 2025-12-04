@@ -172,9 +172,9 @@
                 </div>
             </v-card-text>
         </v-card>
-        <dial_rechaza v-if="dial_rechazo" :item_selecto="clienteSeleccionado" @cerrar="dial_rechazo = false"
+        <dial_rechaza v-if="dial_rechazo" :item_selecto="clienteSeleccionado" :grupo="grupo" @cerrar="dial_rechazo = false"
             @guardado="clienteSeleccionado = null; stopBlink(); dial_rechazo = false" />
-        <acepta_pedido v-if="dial_aceptado" :item_selecto="clienteSeleccionado" @cerrar="dial_aceptado = false"
+        <acepta_pedido v-if="dial_aceptado" :item_selecto="clienteSeleccionado" :grupo="grupo" @cerrar="dial_aceptado = false"
             @guardado="clienteSeleccionado = null; stopBlink(); dial_aceptado = false" />
     </v-dialog>
 </template>
@@ -188,6 +188,7 @@ import dial_rechaza from './dialogos/rechaza_pedido.vue'
 export default {
     name: "dial_mapa",
     props: {
+        grupo: null,
         value: Boolean,            // v-model
         clientes: { type: Array, default: () => [] }, // << lista para “todos”
     },

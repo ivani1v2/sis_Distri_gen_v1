@@ -31,7 +31,7 @@
                             @change="onSeleccionProducto">
                             <template v-slot:item="{ item }">
                                 <span>{{ item.nombre }} <span style="color:#888; font-size:80%">({{ item.id
-                                }})</span></span>
+                                        }})</span></span>
                             </template>
                         </v-autocomplete>
                     </v-col>
@@ -97,15 +97,17 @@
 import {
     allProductoOtraBase,
     grabarStockOtraBase,
-    graba_transferencia
+    graba_transferencia,
+    
 } from '@/db';
+import { registrarMovimientosTransferencia } from './help_mov_tranferencia';
 import store from '@/store/index';
 import moment from 'moment'
 export default {
     data() {
         return {
             dial: false,
-            sedes: store.state.array_sedes.filter(e=>e.tipo=='sede'),
+            sedes: store.state.array_sedes.filter(e => e.tipo == 'sede'),
             sede_origen: '',
             sede_destino: '',
             productos_origen: [],
@@ -311,8 +313,9 @@ export default {
                     usuario: store.state.permisos.correo,
                     observacion: this.observacion,
                 };
-                await graba_transferencia(doc);
-
+                var resp = await graba_transferencia(doc);
+                console.log('Key transferencia:', resp.key);
+                await registrarMovimientosTransferencia({...doc, key: resp.key});
                 this.muestraMsg('Transferencia realizada correctamente', 'success');
                 this.cargarProductos();
                 this.sede_destino = '';

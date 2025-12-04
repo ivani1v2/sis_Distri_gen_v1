@@ -68,7 +68,7 @@
                 </v-card>
             </v-col>
             <v-col cols="6" class="pa-3" md="3" xs="6">
-                <v-card @click="dial_host_impresoras=true">
+                <v-card @click="dial_host_impresoras = true">
                     <v-container>
                         <v-img class="mx-auto" height="70" width="70" src="/printer.png"></v-img>
                         <h4 block class="text-center pa-1">Host Impresora</h4>
@@ -92,10 +92,10 @@
                 </v-card>
             </v-col>
             <v-col cols="6" class="pa-3" md="3" xs="6">
-                <v-card @click="$store.commit('dialogo_moneda')">
+                <v-card @click="dial_tipo_cambio = !dial_tipo_cambio">
                     <v-container>
-                        <v-img class="mx-auto" height="70" width="70" src="/bank.png"></v-img>
-                        <h4 block class="text-center pa-1">Modena Ext</h4>
+                        <v-img class="mx-auto" height="70" width="70" src="/dolar.png"></v-img>
+                        <h4 block class="text-center pa-1">Tipo Cambio</h4>
                     </v-container>
                 </v-card>
             </v-col>
@@ -115,7 +115,7 @@
                     </v-container>
                 </v-card>
             </v-col>
-                        <v-col cols="6" class="pa-3" md="3" xs="6">
+            <v-col cols="6" class="pa-3" md="3" xs="6">
                 <v-card @click="rutas('ImportaExporta')">
                     <v-container>
                         <v-img class="mx-auto" height="70" width="70" src="/xls.png"></v-img>
@@ -133,8 +133,8 @@
         <serieDocumentos />
         <mdopago />
         <cuentasbancos />
-        <impresorahost v-if="dial_host_impresoras" @cierra="dial_host_impresoras=false"/>
-        <moneda />
+        <impresorahost v-if="dial_host_impresoras" @cierra="dial_host_impresoras = false" />
+        <moneda v-if="dial_tipo_cambio" @cierra="dial_tipo_cambio = false" />
         <configcatalogo />
     </div>
 </template>
@@ -171,14 +171,15 @@ export default {
 
     data() {
         return {
-dial_host_impresoras:false,
+            dial_host_impresoras: false,
+            dial_tipo_cambio: false,
         }
     },
     methods: {
-        rutas(ruta){
-             this.$router.push({
+        rutas(ruta) {
+            this.$router.push({
                 name: ruta
-            })  
+            })
         },
         gestionUsuarios() {
             this.$router.push({

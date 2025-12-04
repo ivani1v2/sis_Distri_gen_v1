@@ -23,6 +23,12 @@
                             @dragend="onMarkerDragEnd" @click="abreInfoCliente(clienteEnMapa, true)" />
                         <GmapMarker v-if="miPosicion" :position="miPosicion" :draggable="false" :zIndex="999"
                             :icon="iconoMiPosicion" :title="'Mi posición actual'" @click="abreInfoMiPosicion" />
+                        <GmapMarker v-for="(u, idx) in usuariosUbicados" :key="u.token || idx"
+                            v-show="u.ubicacion && isValidCoord(u.ubicacion.lat, u.ubicacion.lng)" :position="{
+                                lat: Number(u.ubicacion.lat),
+                                lng: Number(u.ubicacion.lng)
+                            }" :icon="'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png'"
+                            :title="u.nombre || u.codigo || 'Vendedor'" />
                         <GmapMarker v-if="verTodos" v-for="(cli, i) in clientes" :key="cli.id || cli.documento || i"
                             v-show="isValidCoord(cli.latitud, cli.longitud)"
                             :position="{ lat: Number(cli.latitud), lng: Number(cli.longitud) }" :title="cli.nombre"
@@ -73,7 +79,7 @@
                             <div class="info-cliente">
                                 <div class="font-weight-bold">
                                     {{ (clienteSeleccionado && clienteSeleccionado.nombre) ? clienteSeleccionado.nombre
-                                    : 'Cliente' }}
+                                        : 'Cliente' }}
                                 </div>
 
                                 <div v-if="clienteSeleccionado && clienteSeleccionado.direccion"
@@ -135,6 +141,7 @@
 <script>
 import { gmapApi } from 'vue2-google-maps'
 import store from '@/store/index'
+import { allUsuarios } from '../../db'
 import { crearOActualizarCliente as nuevoCliente } from '../../db_firestore'
 export default {
     name: "dial_mapa",
@@ -153,6 +160,7 @@ export default {
             dialogoMapa: false,
             ubicacionCliente: null, // {lat, lng}
             centro: { lat: -12.0464, lng: -77.0428 }, // Default Lima
+            usuariosUbicados: [],
             fullscreen: false,
             miPosicion: null,
             iconoMiPosicion: 'https://maps.gstatic.com/mapfiles/ms2/micons/blue-dot.png',
@@ -210,6 +218,7 @@ export default {
         },
     },
     created() {
+        this.ver_ubicacion_usuarios()
         console.log(store.state.ubicacion_actual)
     },
     computed: {
@@ -232,6 +241,34 @@ export default {
         window.removeEventListener('keydown', this.handleKeydown)
     },
     methods: {
+        ver_ubicacion_usuarios() {
+            allUsuarios()
+                .orderByChild('ruc')
+                .equalTo(Number(store.state.baseDatos.ruc_asociado))
+                .on("value", snapshot => {
+                    const usuarios = []
+                    snapshot.forEach(childSnapshot => {
+                        const usuario = childSnapshot.val()
+
+                        // 👇 SOLO considerar usuarios con ubicacion válida
+                        if (
+                            usuario.ubicacion &&
+                            Number.isFinite(Number(usuario.ubicacion.lat)) &&
+                            Number.isFinite(Number(usuario.ubicacion.lng)) &&
+                            usuario.ubicacion.lat !== 0 &&
+                            usuario.ubicacion.lng !== 0
+                            // opcional: solo si tiene gps_activo
+                            // && usuario.gps_activo === true
+                        ) {
+                            usuarios.push(usuario)
+                        }
+                    })
+
+                    // Guarda la lista filtrada
+                    this.usuariosUbicados = usuarios
+                    console.log('Usuarios con ubicación:', this.usuariosUbicados)
+                })
+        },
         isValidCoord(lat, lng) {
             const a = Number(lat), b = Number(lng)
             return Number.isFinite(a) && Number.isFinite(b) && a !== 0 && b !== 0

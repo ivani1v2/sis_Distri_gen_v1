@@ -2,27 +2,33 @@
     <div class="pa-4">
         <v-card outlined class="pa-4 mb-4">
             <v-row justify="space-between" align="center">
-                <v-col cols="12" sm="6">
+                <v-col cols="6" sm="6">
                     <h2 class="text-h6">📦 Control de Movimientos</h2>
                 </v-col>
-                <v-col cols="12" sm="6" class="text-right">
-                    <v-btn color="primary" @click="mostrarDialogo = !mostrarDialogo">
+                <v-col cols="6" sm="6" class="text-right">
+                    <v-btn small color="primary" @click="mostrarDialogo = !mostrarDialogo">
                         <v-icon left>mdi-plus</v-icon>Nuevo Movimiento
                     </v-btn>
+                </v-col>
+                <v-col cols="6" sm="6" class="text-right">
                     <v-btn v-if="false" color="secondary" @click="verResumen = !verResumen">
                         <v-icon left>mdi-chart-bar</v-icon>Ver Resumen
                     </v-btn>
                 </v-col>
             </v-row>
             <v-row dense>
-                <v-col cols="12" sm="4">
+                <v-col cols="6" sm="3">
                     <v-text-field v-model="date1" type="date" dense outlined label="Desde"></v-text-field>
                 </v-col>
-                <v-col cols="12" sm="4">
+                <v-col cols="6" sm="3">
                     <v-text-field v-model="date2" type="date" dense outlined label="Hasta"></v-text-field>
                 </v-col>
-                <v-col cols="12" sm="4">
-                    <v-btn block color="success" @click="cargarMovimientos">
+                <v-col cols="6" sm="3">
+                    <v-select v-model="sede_destino" :items="sedesDestino" label="Sede Destino" item-text="nombre"
+                        item-value="base" outlined dense :rules="[v => !!v || 'Seleccione sede destino']"></v-select>
+                </v-col>
+                <v-col cols="6" sm="3">
+                    <v-btn small block color="success" @click="cargarMovimientos">
                         <v-icon left>mdi-magnify</v-icon>Buscar
                     </v-btn>
                 </v-col>
@@ -37,7 +43,8 @@
                         <v-chip v-if="item.estado === 'anulado'" color="red" text-color="white" x-small class="ml-2">
                             ANULADO
                         </v-chip>
-                         <v-chip v-if="item.estado === 'editado'" color="warning" text-color="white" x-small class="ml-2">
+                        <v-chip v-if="item.estado === 'editado'" color="warning" text-color="white" x-small
+                            class="ml-2">
                             EDITADO
                         </v-chip>
                     </span>
@@ -127,8 +134,8 @@
             </v-card>
         </v-dialog>
         <dialogo_editar_transferencia v-if="dialogoEditar" :dialog.sync="dialogoEditar" :transferencia="detalleEditar"
-            :nombreSede="nombreSede" @cerrar="dialogoEditar = false,cargarMovimientos" @guardado="cargarMovimientos" />
-        <dial_mov v-if="mostrarDialogo" @cerrar="mostrarDialogo = false,cargarMovimientos" />
+            :nombreSede="nombreSede" @cerrar="dialogoEditar = false, cargarMovimientos" @guardado="cargarMovimientos" />
+        <dial_mov v-if="mostrarDialogo" @cerrar="mostrarDialogo = false, cargarMovimientos" />
     </div>
 </template>
 
@@ -137,6 +144,7 @@ import dial_mov from '@/views/kardex/dial_transferencia'
 import { imprimirTransferenciaPDF80mm } from "@/views/kardex/formatos/form_transferencia"; // ajusta ruta según tu estructura
 import dialogo_editar_transferencia from "./dialogos/dialogo_editar_transferencia.vue"
 import { all_transferencia, allProductoOtraBase, grabarStockOtraBase, actualiza_transferencia } from '@/db'
+import { anularMovimientosTransferencia } from '@/views/kardex/help_mov_tranferencia'
 import moment from 'moment'
 import store from '@/store'
 
@@ -170,12 +178,27 @@ export default {
             },
             dialogoEditar: false,
             detalleEditar: {},
+            sede_destino: 'TODAS',      // base seleccionada
+            sedesDestino: []
         }
     },
     mounted() {
+        this.prepararSedesDestino()
         this.cargarMovimientos()
     },
     methods: {
+        prepararSedesDestino() {
+            const sedes = (store.state.array_sedes || []).filter(s => s.tipo === 'sede')
+
+            // opcional: agregar opción "Todas"
+            this.sedesDestino = [
+                { nombre: 'TODAS', base: '*' },
+                ...sedes.map(s => ({
+                    nombre: s.nombre,
+                    base: s.base
+                }))
+            ]
+        },
         verDetalle(movimiento) {
             this.detalleActual = movimiento
             this.mostrarDetalle = true
@@ -198,7 +221,12 @@ export default {
             })
             // Ordenar descendente por fecha
             datos.sort((a, b) => b.fecha_unix - a.fecha_unix)
-            this.movimientos = datos
+            let filtrados = datos
+
+            if (this.sede_destino && this.sede_destino !== '*') {
+                filtrados = datos.filter(mov => mov.sede_destino === this.sede_destino)
+            }
+            this.movimientos = filtrados
         },
         formatoFecha(timestamp) {
             return moment.unix(timestamp).format('DD/MM/YYYY')
@@ -206,7 +234,7 @@ export default {
         nombreSede(base) {
             if (!base) return '-';
             // Puedes usar store.state o this.$store si usas namespaced modules
-            const sedes = store.state.array_sedes.filter(e=>e.tipo=='sede') || [];
+            const sedes = store.state.array_sedes.filter(e => e.tipo == 'sede') || [];
             const s = sedes.find(s => s.base == base);
             return s ? s.nombre : base;
         },
@@ -249,6 +277,7 @@ export default {
                 // Actualizar estado a "anulado"
                 // Cambia "actualiza_transferencia" según tu helper, y el nombre de la key (item.key)
                 await actualiza_transferencia(item.key || item.id, { estado: 'anulado', anulado_por: store.state.permisos.correo, anulado_en: moment().unix() });
+                await anularMovimientosTransferencia(item);
                 store.commit("dialogoprogress")
                 this.muestraMsg('Transferencia anulada y stocks revertidos.', 'success');
                 // Si quieres cerrar dialog/actualizar tabla:

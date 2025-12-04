@@ -30,12 +30,6 @@
                             </v-btn>
                         </v-list-item>
                         <v-list-item>
-                            <v-btn :disabled="!$store.state.sedeActual.principal" dark small color="error" block
-                                @click="dial_categorias = !dial_categorias">
-                                <v-icon left>mdi-pencil</v-icon> Categorías
-                            </v-btn>
-                        </v-list-item>
-                        <v-list-item>
                             <v-btn :disabled="!$store.state.sedeActual.principal" dark small color="info" block
                                 @click="subirXLS">
                                 <v-icon left>mdi-microsoft-excel</v-icon> Exportar Excel
@@ -117,7 +111,7 @@
                     <v-spacer></v-spacer>
 
                     <v-spacer></v-spacer>
-                    <v-icon color="green" large @click="save()">mdi-content-save</v-icon>
+                    <v-icon color="green" large @click="save(false)">mdi-content-save</v-icon>
                     <template>
                         <v-menu bottom left offset-y>
                             <template v-slot:activator="{ on, attrs }">
@@ -321,7 +315,7 @@
                 </v-simple-table>
             </v-card>
         </v-dialog>
-        <v-dialog v-model="dial_bono_global" max-width="550px">
+        <v-dialog v-model="dial_bono_global" max-width="550px" persistent>
             <div>
                 <v-system-bar window dark>
                     <v-icon @click="dial_bono_global = !dial_bono_global">mdi-close</v-icon>
@@ -329,15 +323,19 @@
             </div>
             <v-card class="pa-3">
                 <v-row class="" dense>
-                    <v-col cols="6" sm="6" md="6">
+                    <v-col cols="12">
                         <v-autocomplete outlined dense clearable v-model="grupoPrecioSelect" :items="grupoPrecioItems"
                             item-text="text" item-value="value" label="Grupo Precio" prepend-inner-icon="mdi-magnify" />
                     </v-col>
-                    <v-col cols="6" sm="6" md="6">
+                    <v-col cols="12">
                         <v-autocomplete outlined dense clearable v-model="grupoBonoSelect" :items="grupoBonoItems"
                             item-text="text" item-value="value" label="Grupo Bono" prepend-inner-icon="mdi-magnify" />
                     </v-col>
                 </v-row>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="success" @click="dial_bono_global = false, save(true)">Guardar</v-btn>
+                </v-card-actions>
             </v-card>
         </v-dialog>
         <v-dialog v-model="dialogoElimina" max-width="460px">
@@ -860,7 +858,7 @@ export default {
             this.dialogo = true;
         },
 
-        async save() {
+        async save(cerrar) {
             if (this.stock == '') {
                 this.stock = 0
             }
@@ -870,6 +868,13 @@ export default {
             }
             if (this.precio == 0) {
                 alert("EL PRECIO NO PUEDE SER IGUAL A 0")
+                return
+            }
+            const factorNum = Number(this.factor) || 0
+            const medidaStr = (this.medida || '').toString().toUpperCase()
+
+            if (factorNum > 1 && medidaStr === 'UNIDAD') {
+                alert("Si el factor es mayor a 1, la medida no puede ser UNIDAD. Cambia la medida o el factor.")
                 return
             }
             store.commit("dialogoprogress")
@@ -906,7 +911,7 @@ export default {
             if (this.sumacon == true) {
                 this.sumacontador()
             }
-            this.dialogo = false
+            this.dialogo = cerrar
             store.commit("dialogoprogress")
         },
         async eliminar() {

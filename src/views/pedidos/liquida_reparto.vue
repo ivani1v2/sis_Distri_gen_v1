@@ -7,64 +7,88 @@
                 </h5>
             </v-col>
             <v-col cols="4">
-                <v-menu bottom offset-y>
+                <v-menu bottom offset-y transition="scale-transition">
                     <template v-slot:activator="{ on, attrs }">
-                        <v-btn color="error" block small v-bind="attrs" v-on="on">
-                            REPORTES
+                        <v-btn color="red darken-2" dark block small v-bind="attrs" v-on="on" class="rounded-lg">
+                            <v-icon left small>mdi-file-chart</v-icon>
+                            Reportes
                             <v-spacer></v-spacer>
-                            <v-icon left>
-                                mdi-arrow-down-bold
-                            </v-icon>
+                            <v-icon right small>mdi-chevron-down</v-icon>
                         </v-btn>
                     </template>
-                    <v-list dense>
+
+                    <v-list dense class="py-1">
                         <v-list-item @click="dial_descarga = true">
-                            <v-list-item-title>REPORTE ALMACEN</v-list-item-title>
+                            <v-list-item-icon><v-icon color="blue darken-2">mdi-warehouse</v-icon></v-list-item-icon>
+                            <v-list-item-title>Reporte Almacén</v-list-item-title>
                         </v-list-item>
+
                         <v-list-item @click="reporte_producto_cliente()">
-                            <v-list-item-title>REPORTE PRODUCTO/CLIENTE</v-list-item-title>
+                            <v-list-item-icon><v-icon
+                                    color="green darken-2">mdi-account-multiple</v-icon></v-list-item-icon>
+                            <v-list-item-title>Producto x Cliente</v-list-item-title>
                         </v-list-item>
+
                         <v-list-item @click="pdf_transporte()">
-                            <v-list-item-title>REPORTE TRANSPORTE</v-list-item-title>
+                            <v-list-item-icon><v-icon color="indigo darken-2">mdi-truck</v-icon></v-list-item-icon>
+                            <v-list-item-title>Reporte Transporte</v-list-item-title>
                         </v-list-item>
+
                         <v-list-item @click="reporte_cobrar()">
-                            <v-list-item-title>REPORTE X COBRAR</v-list-item-title>
+                            <v-list-item-icon><v-icon
+                                    color="orange darken-2">mdi-account-cash</v-icon></v-list-item-icon>
+                            <v-list-item-title>Por Cobrar</v-list-item-title>
                         </v-list-item>
+
                         <v-list-item @click="ver_detalle_masivo()">
-                            <v-list-item-title>VER DETALLE</v-list-item-title>
+                            <v-list-item-icon><v-icon color="purple darken-2">mdi-file-eye</v-icon></v-list-item-icon>
+                            <v-list-item-title>Ver Detalle</v-list-item-title>
                         </v-list-item>
+
+                        <v-divider></v-divider>
+
                         <v-list-item @click="dialogo_imprime = !dialogo_imprime">
-                            <v-list-item-title>IMPRIME COMPROBANTES</v-list-item-title>
+                            <v-list-item-icon><v-icon color="teal darken-2">mdi-printer</v-icon></v-list-item-icon>
+                            <v-list-item-title>Imprimir Comprobantes</v-list-item-title>
                         </v-list-item>
                     </v-list>
                 </v-menu>
-
             </v-col>
+
             <v-col cols="4">
-                <v-menu bottom offset-y>
+                <v-menu bottom offset-y transition="scale-transition">
                     <template v-slot:activator="{ on, attrs }">
-                        <v-btn color="info" block small v-bind="attrs" v-on="on">
+                        <v-btn color="blue darken-3" dark block small v-bind="attrs" v-on="on" class="rounded-lg">
+                            <v-icon left small>mdi-cogs</v-icon>
                             Acciones
                             <v-spacer></v-spacer>
-                            <v-icon left>
-                                mdi-arrow-down-bold
-                            </v-icon>
+                            <v-icon right small>mdi-chevron-down</v-icon>
                         </v-btn>
                     </template>
-                    <v-list dense>
+
+                    <v-list dense class="py-1">
+
                         <v-list-item @click="envia_sunat">
-                            <v-list-item-title>Envia Sunat</v-list-item-title>
+                            <v-list-item-icon><v-icon color="green">mdi-cloud-upload</v-icon></v-list-item-icon>
+                            <v-list-item-title>Enviar a Sunat</v-list-item-title>
                         </v-list-item>
+
                         <v-list-item @click="abare_guias()">
-                            <v-list-item-title>GUIA REMISION/REMITENTE</v-list-item-title>
+                            <v-list-item-icon><v-icon color="cyan darken-2">mdi-file-send</v-icon></v-list-item-icon>
+                            <v-list-item-title>Guía de Remisión</v-list-item-title>
                         </v-list-item>
 
                         <v-list-item @click="transferir_pedidos()">
+                            <v-list-item-icon><v-icon
+                                    color="deep-purple darken-1">mdi-swap-horizontal</v-icon></v-list-item-icon>
                             <v-list-item-title>Transferir Pedidos</v-list-item-title>
                         </v-list-item>
+
                         <v-list-item @click="anular_masivo()">
-                            <v-list-item-title>Anular masivo</v-list-item-title>
+                            <v-list-item-icon><v-icon color="red">mdi-cancel</v-icon></v-list-item-icon>
+                            <v-list-item-title>Anular Masivo</v-list-item-title>
                         </v-list-item>
+
                     </v-list>
                 </v-menu>
             </v-col>
@@ -146,8 +170,8 @@
                         </td>
                         <td style="font-size:75%;" white="15" v-if="item.estado == 'ENVIADO'" class="green--text">ENVI
                         </td>
-                        <td style="font-size:75%;" white="20">S/.{{ item.pendiente_pago }}</td>
-                        <td style="font-size:75%;" white="20">S/.{{ item.total }}</td>
+                        <td style="font-size:75%;" white="20">{{ item.moneda }}{{ item.pendiente_pago }}</td>
+                        <td style="font-size:75%;" white="20">{{ item.moneda }}{{ item.total }}</td>
                         <td width="50">
                             <v-row dense>
                                 <v-col cols="6">
@@ -239,7 +263,7 @@
                                 <td>{{ item.id + ' ' + item.nombre }}</td>
                                 <td>{{ item.medida }}</td>
                                 <td>{{ item.cantidad }}</td>
-                                <td>S/.{{ item.precio }}</td>
+                                <td>S/.{{ item.precio }} </td>
                                 <td>S/.{{ item.total }}</td>
                             </tr>
                         </tbody>
@@ -250,6 +274,9 @@
 
         <v-dialog v-model="dial_descarga" max-width="500">
             <v-card class="pa-5">
+                <h4 class="text-center">Seleccione el formato de descarga</h4>
+                <v-textarea v-model="observacion_reporte" label="Observación" outlined dense rows="2"
+                    auto-grow></v-textarea>
                 <v-row class="pa-1 mt-n2">
                     <v-col cols="6">
                         <v-btn class="mt-5" color="success" block @click="pdf_almacen()"> PDF </v-btn>
@@ -356,8 +383,11 @@
                                 <strong class="red--text" v-if="d.operacion == 'GRATUITA'">{{ d.operacion }}</strong>
                             </td>
                             <td style="font-size:75%;">{{ d.medida }}</td>
-                            <td style="font-size:75%;">S/.{{ d.precio }}</td>
-                            <td style="font-size:75%;">S/.{{ (d.precio * d.cantidad).toFixed(2) }}</td>
+                            <td style="font-size:75%;">S/.{{ d.precio }} <strong v-if="d.preciodescuento != 0"
+                                    class="red--text">
+                                    - {{ d.preciodescuento }}</strong></td>
+                            <td style="font-size:75%;">S/.{{ (Number(d.total_antes_impuestos) +
+                                Number(d.total_impuestos)).toFixed(2) }}</td>
                         </tr>
                     </tbody>
                 </v-simple-table>
@@ -400,8 +430,8 @@
             </v-card>
         </v-dialog>
         <genera_guias v-if="dialogo_guia" @cierra="dialogo_guia = false" @graba="carga_Guia()" :data_guia="data_guia" />
-        <dialogo_edita_c v-if="dialogo_edita_" @cierra="dialogo_edita_ = false" :cabecera="cabecera_selecta"
-            :detalle="detalle_selecto" />
+        <dialogo_edita_c v-if="dialogo_edita_" @cierra="dialogo_edita_ = false, recalcula_cabecera()"
+            :cabecera="cabecera_selecta" :detalle="detalle_selecto" />
         <imprime v-if="genera_pdf" :data="seleccionado" :detalle="detalle_selecto" @cierra="genera_pdf = $event" />
     </div>
 </template>
@@ -416,7 +446,8 @@ import {
     eliminar_Movimientos,
     all_serv_imp,
     grabaCabecera_p,
-    modifica_pedidos
+    modifica_pedidos,
+    nueva_cabecera_reparto
 } from '../../db'
 
 import store from '@/store/index'
@@ -512,6 +543,7 @@ export default {
             printTotal: 0,
             printDone: 0,
             printError: '',
+            observacion_reporte: '',
         }
     },
     created() {
@@ -584,6 +616,46 @@ export default {
         }
     },
     methods: {
+        recalcula_cabecera() {
+            const resumen = {
+                peso_total: 0,
+                total_contado: 0,
+                total_credito: 0,
+                total_general: 0,
+                total_pedidos: 0
+            };
+
+            // Recorremos todos los comprobantes del reparto
+            this.desserts.forEach(p => {
+                if (p.estado === 'ANULADO') return; // no suma anulados
+
+                resumen.peso_total += Number(p.peso_total || 0);
+                resumen.total_general += Number(p.total || 0);
+                resumen.total_pedidos += 1;
+
+                const pendiente = Number(p.pendiente_pago || 0);
+
+                if (pendiente === 0) {
+                    // Todo contado
+                    resumen.total_contado += Number(p.total || 0);
+                } else {
+                    // Crédito pendiente
+                    resumen.total_credito += pendiente;
+                }
+            });
+
+            // Redondeo básico
+            resumen.peso_total = Number(resumen.peso_total.toFixed(2));
+            resumen.total_contado = Number(resumen.total_contado.toFixed(2));
+            resumen.total_credito = Number(resumen.total_credito.toFixed(2));
+            resumen.total_general = Number(resumen.total_general.toFixed(2));
+
+            // Actualiza la cabecera del reparto
+            nueva_cabecera_reparto(this.router_grupo + '/total', resumen.total_general);
+            nueva_cabecera_reparto(this.router_grupo + '/total_pedidos', resumen.total_pedidos);
+            nueva_cabecera_reparto(this.router_grupo + '/resumen', resumen);
+        },
+
         async transferir_pedidos() {
             const seleccionados = this.desserts.filter(d => d.consolida);
             if (seleccionados.length === 0) {
@@ -677,7 +749,7 @@ export default {
             console.log(a);
 
             // Generar reporte de almacén
-            reporte_almacen(this.router_grupo, this.suma_peso, a);
+            reporte_almacen(this.router_grupo, this.suma_peso, a, this.observacion_reporte);
         },
         filtrarLista() {
             let array = this.desserts.filter((item) =>
@@ -819,6 +891,7 @@ export default {
             Cabecera_p(this.router_grupo)
                 .once("value").then((snapshot) => {
                     var data = snapshot.val()
+                    console.log('inci', data)
                     this.cabecera_total = {
                         id_grupo: this.router_grupo,
                         contado: data.contado,
@@ -975,7 +1048,6 @@ export default {
             for (const data of arrays) {
                 if (data.consolida) {
                     const snapshot = await all_detalle_p(this.router_grupo, data.numeracion).once("value");
-                    console.log(snapshot.val())
                     snapshot.forEach((item) => {
                         const producto = item.val();
                         const invet = store.state.productos.find((id) => String(id.id) === String(producto.id));
@@ -1266,12 +1338,13 @@ export default {
             if (confirm('Seguro de anular?')) {
                 store.commit("dialogoprogress")
                 await grabaCabecera_p(this.router_grupo, data.numeracion + '/estado', 'ANULADO')
+                this.recalcula_cabecera()
                 store.commit("dialogoprogress")
             }
         },
         async envia_sunat() {
-            const pendientes = this.listafiltrada.filter(x => x.estado === 'PENDIENTE');
-
+            //const pendientes = this.listafiltrada.filter(x => x.estado === 'PENDIENTE');
+            const pendientes = this.listafiltrada;
             if (pendientes.length === 0) {
                 // Muestra aviso y no envía
                 this.$store.commit('dialogosnackbar', 'No hay comprobantes PENDIENTES para enviar.');
@@ -1290,8 +1363,8 @@ export default {
             console.log(data)
             var a = axios({
                 method: 'POST',
-                url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
-                //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
+                //url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
+                url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
                 headers: {},
                 data: {
                     "bd": store.state.baseDatos.bd,
@@ -1407,7 +1480,7 @@ export default {
         async reporte_producto_cliente() {
             store.commit("dialogoprogress");
 
-            const arrays = this.desserts || [];
+            const arrays = this.desserts.filter(d => d.estado != "ANULADO") || [];
 
             // 🗓️ rango de fechas (antigua y reciente)
             const ts = arrays.map(x => Number(x.fecha) || 0).filter(Boolean);
@@ -1433,6 +1506,7 @@ export default {
             store.commit("dialogoprogress");
         },
         async ver_detalle(item) {
+            console.log('cabecera', item)
             this.$store.commit("dialogoprogress");
             console.log(this.router_grupo, item.numeracion)
             var snap = await all_detalle_p(this.router_grupo, item.numeracion).once("value")

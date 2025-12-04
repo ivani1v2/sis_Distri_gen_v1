@@ -63,8 +63,8 @@
                                     class="red--text"> -
                                     TG</Span></td>
                             <td>{{ item.medida }}</td>
-                            <td>S/.{{ item.precioedita }}</td>
-                            <td>S/.{{ redondear((item.precioedita * item.cantidad)) }}</td>
+                            <td>S/.{{ item.precio }} <strong v-if="item.preciodescuento!=0" class="red--text"> - {{ item.preciodescuento }}</strong></td>
+                            <td>S/.{{ redondear((Number(item.total_antes_impuestos) + Number(item.total_impuestos)  )) }}</td>
                         </tr>
                     </tbody>
                 </template>

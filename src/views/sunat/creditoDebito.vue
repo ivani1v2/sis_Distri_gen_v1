@@ -47,13 +47,9 @@
                             <td>
                                 <v-icon @click="consultar(item)" :color="item.color">mdi-circle</v-icon>
                             </td>
-                            <td>S/.{{ item.total - item.descuentos }}</td>
+                            <td>{{item.moneda}} {{ item.total }}</td>
                             <td width="100">
                                 <v-row>
-                                    <v-col cols="6">
-                                        <v-icon color="green"
-                                            @click.prevent="ejecutaConsolida(item.numeracion), dialog = true">mdi-eye</v-icon>
-                                    </v-col>
                                     <v-col cols="6">
                                         <v-icon color="red"
                                             @click.prevent="verPDF(item)">mdi-text-box-search-outline</v-icon>

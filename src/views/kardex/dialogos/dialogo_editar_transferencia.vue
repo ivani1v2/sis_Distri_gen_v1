@@ -14,31 +14,31 @@
         Destino: <strong>{{ nombreSede(transferencia.sede_destino) }}</strong>
       </v-card-subtitle>
 
-      <v-card-text>
-        <v-simple-table dense>
-          <thead>
-            <tr>
-              <th>Producto</th>
-              <th>Código</th>
-              <th style="width:140px;">Cantidad</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(p, i) in productosEdit" :key="i">
-              <td>{{ p.nombre }}</td>
-              <td>{{ p.codbarra || p.codigo || p.id }}</td>
-              <td>
-                <v-text-field v-model.number="p.cantidad" type="number" dense outlined hide-details min="0" />
-              </td>
-            </tr>
-          </tbody>
-        </v-simple-table>
 
-        <v-textarea v-model="observacion" label="Observación" dense outlined class="mt-2" />
-      </v-card-text>
-   <v-btn color="blue darken-1" text @click="reprocesarTransferencia">
-          🔄 Reprocesar Transferencia
-        </v-btn>
+      <v-simple-table dense height="55vh">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Código</th>
+            <th style="width:140px;">Cantidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(p, i) in productosEdit" :key="i">
+            <td>{{ p.nombre }}</td>
+            <td>{{ p.codbarra || p.codigo || p.id }}</td>
+            <td>
+              <v-text-field v-model.number="p.cantidad" type="number" dense outlined hide-details min="0" />
+            </td>
+          </tr>
+        </tbody>
+      </v-simple-table>
+
+      <v-textarea v-model="observacion" label="Observación" dense outlined class="mt-2" />
+
+      <v-btn color="blue darken-1" text @click="reprocesarTransferencia" v-if="false">
+        🔄 Reprocesar Transferencia
+      </v-btn>
       <v-card-actions>
         <v-spacer></v-spacer>
         <v-btn color="red" text @click="cerrar">Cancelar</v-btn>
@@ -56,7 +56,7 @@ import {
 } from "@/db";
 import moment from "moment";
 import store from "@/store";
-
+import { rehacerMovimientosTransferencia } from "../help_mov_tranferencia";
 export default {
   name: "DialogoEditarTransferencia",
   props: {
@@ -151,7 +151,7 @@ export default {
 
         // 3) Ajustes por diferencia (buscar original por ID para mayor robustez)
         for (const nuevo of productosCalc) {
-          
+
           const original = (this.transferencia.productos || []).find(
             (p) => String(p.id) === String(nuevo.id)
           );
@@ -184,7 +184,20 @@ export default {
             nuevoStockDestino
           );
         }
+    const transferenciaAnterior = { ...this.transferencia };
 
+    const transferenciaNueva = {
+      ...this.transferencia,
+      productos: productosCalc,
+      observacion: this.observacion,
+      total,
+    };
+
+    // 3) Rehacer movimientos de almacén (SALIDA + INGRESO) y kardex
+    await rehacerMovimientosTransferencia(
+      transferenciaAnterior,
+      transferenciaNueva
+    );
         // 4) Persistir transferencia con total recalculado + trazabilidad
         await actualiza_transferencia(this.transferencia.key, {
           productos: productosCalc,
@@ -254,7 +267,7 @@ export default {
         store.commit("dialogoprogress");
       }
     },
-  
+
   },
 };
 </script>

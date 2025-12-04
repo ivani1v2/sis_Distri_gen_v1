@@ -1,6 +1,6 @@
 <template>
     <nav>
-        <v-app-bar app color="black" dark elevate-on-scroll dense >
+        <v-app-bar app color="black" dark elevate-on-scroll dense>
             <div class="d-flex align-center">
 
                 <v-btn v-if="!barra" @click="drawer = !drawer" fab x-small>
@@ -216,7 +216,7 @@
                         <v-list-item-title>Pedidos</v-list-item-title>
                     </template>
                     <v-container>
-                         <v-list-item  link @click.prevent="router('lista')">
+                        <v-list-item link @click.prevent="router('lista')">
                             <v-list-item-icon>
                                 <v-icon>mdi-clipboard-list</v-icon>
                             </v-list-item-icon>
@@ -224,7 +224,7 @@
                                 <v-list-item-title>Lista Visitas</v-list-item-title>
                             </v-list-item-content>
                         </v-list-item>
-                        <v-list-item  link @click.prevent="router('lista_pedidos')">
+                        <v-list-item link @click.prevent="router('lista_pedidos')">
                             <v-list-item-icon>
                                 <v-icon>mdi-clipboard-list</v-icon>
                             </v-list-item-icon>
@@ -232,7 +232,8 @@
                                 <v-list-item-title>Lista Pedidos</v-list-item-title>
                             </v-list-item-content>
                         </v-list-item>
-                        <v-list-item v-if="$store.state.permisos.reparto" link @click.prevent="router('lista_repartos')">
+                        <v-list-item v-if="$store.state.permisos.reparto" link
+                            @click.prevent="router('lista_repartos')">
                             <v-list-item-icon>
                                 <v-icon>mdi-clipboard-list</v-icon>
                             </v-list-item-icon>
@@ -626,8 +627,11 @@ import {
     alltabla_cliente,
     all_serv_imp,
     allBono,
-    all_medidas
+    all_medidas,
+    grabaTipoCambio,
+    consulta_TipoCambio
 } from '../db'
+import moment from 'moment'
 import {
     colClientes
 } from '../db_firestore'
@@ -796,6 +800,7 @@ export default {
         },
 
         async obtenconfiguracion() {
+            this.obtenerYGuardarTipoCambio();
             all_medidas().once('value').then((snap) => {
                 const base = (store.state.medidassunat || []).map(m => ({
                     nombre: String(m.nombre || '').trim().toUpperCase(),
@@ -878,14 +883,65 @@ export default {
 
 
         },
+        async obtenerYGuardarTipoCambio() {
+            try {
+                if (!store.state.configuracion.sincroniza_tipo_cambio) {
+                    console.log("No se usará la API de tipo de cambio según configuración.");
+                    return;
+                }
+                const fecha = moment().format("YYYY-MM-DD");
+                if (!store.state.tipo_cambio) {
+                    var snap = await consulta_TipoCambio(fecha).once('value')
+                    var datas = snap.val()
 
+                    if (snap.exists()) {
+                        console.log("Tipo de cambio cargado desde Realtime DB:", datas);
+                        store.commit('tipo_cambio', datas);
+                        return;
+                    }
+                }
+                const body = {
+                    fecha: fecha
+                };
+
+                const r = await fetch("https://apiperu.dev/api/tipo_de_cambio", {
+                    method: "POST",
+                    headers: {
+                        "Accept": "application/json",
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer 80a4a1c5f2e97c2d78fcd5074cd64ff0a29007ef91880ad2c214af67a084433d"
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await r.json();
+                if (!data.success) {
+                    console.log("Error API:", data);
+                    return;
+                }
+
+                // Estructura limpia para guardar
+                const info = {
+                    fecha: data.data.fecha_busqueda,
+                    venta: data.data.venta,     // tipo venta
+                    compra: data.data.compra,   // tipo compra
+                    moneda: data.data.moneda,
+
+                };
+
+                // Guardar en Realtime DB
+                await grabaTipoCambio(fecha, info);
+
+
+            } catch (e) {
+                console.log("Error:", e);
+            }
+        },
         cargar_datos() {
-            console.log('Cargando datos iniciales...');
+
             const idxById = new Map();     // id -> posición en array
             const clientessearch = [];
             const unsub = colClientes().onSnapshot({ includeMetadataChanges: true }, (querySnapshot) => {
-                console.log('fromCache?-barra', querySnapshot.metadata.fromCache);          // true/false
-                console.log('changes:-barra', querySnapshot.docChanges().length);
 
                 querySnapshot.docChanges().forEach((ch) => {
                     const id = ch.doc.id;
@@ -1000,7 +1056,12 @@ export default {
             store.commit("dialogoprogress")
             await nuevoCampoUsuario(store.state.permisos.token, 'codigo', data.codigo)
             await nuevoCampoUsuario(store.state.permisos.token, 'bd', data.base)
+
+            this.$router.push({
+                name: 'Home'
+            })
             location.reload(true);
+
             this.dialog_tiendas = false
         }
 

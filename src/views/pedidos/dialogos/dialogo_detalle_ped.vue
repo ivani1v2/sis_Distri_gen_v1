@@ -1,10 +1,10 @@
 <template>
-    <v-dialog v-model="dial" max-width="550" persistent>
+    <v-dialog v-model="dial" max-width="600" persistent>
         <div>
             <v-system-bar window dark>
                 {{ pedidoSeleccionado.id }}
                 <v-spacer></v-spacer>
-                S/.{{pedidoSeleccionado.total}}
+                <strong>{{ pedidoSeleccionado.moneda }} </strong>  {{pedidoSeleccionado.total}}
                  <v-spacer></v-spacer>
                 <v-icon color="red" large @click="cerrar()">mdi-close</v-icon>
             </v-system-bar>
@@ -24,8 +24,8 @@
                         <th>Producto</th>
                         <th>Cant.</th>
                         <th>Medida</th>
-                        <th>Precio</th>
-                        <th>Total</th>
+                        <th>Precio {{ pedidoSeleccionado.moneda }}</th>
+                        <th>Total {{ pedidoSeleccionado.moneda }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -33,8 +33,8 @@
                             <td style="font-size:75%;">{{d.id}} - {{ d.nombre }} <strong class="red--text" v-if="d.operacion=='GRATUITA'">{{ d.operacion }}</strong></td>
                             <td style="font-size:75%;">{{ d.cantidad }}</td>
                             <td style="font-size:75%;">{{ d.medida }}</td>
-                            <td style="font-size:75%;">S/.{{ number2(d.precio) }}</td>
-                            <td style="font-size:75%;">S/.{{ number2(d.totalLinea) }}</td>
+                            <td style="font-size:75%;">{{ number2(d.precio) }}</td>
+                            <td style="font-size:75%;">{{ number2(d.totalLinea) }}</td>
                         </tr>
                 </tbody>
             </v-simple-table>

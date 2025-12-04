@@ -71,7 +71,6 @@
                     <tbody>
                         <tr v-for="item in listafiltrada" :key="item.id">
                             <td>{{ item.id }}</td>
-                            <td>{{ conviertefecha(item.fecha_ingreso) }}</td>
                             <td>{{ item.num_doc }}-{{ item.nom_proveedor }}</td>
                             <td v-if="item.operacion == 'COMPRA'">
                                 {{ item.tipodocumento }}
@@ -92,7 +91,7 @@
                             <td width="100">
                                 <v-row>
                                     <v-col cols="6">
-                                        <v-icon color="green" @click.prevent="edita_compra(item)">mdi-pencil</v-icon>
+                                        <v-icon :disabled="item.motivo=='TRANSFERENCIA ENTRE SEDES'" color="green" @click.prevent="edita_compra(item)">mdi-pencil</v-icon>
                                     </v-col>
                                     <v-col cols="6">
                                         <v-icon color="green" @click.prevent="abre_visualizacion(item)">mdi-eye</v-icon>

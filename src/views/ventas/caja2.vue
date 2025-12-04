@@ -85,6 +85,7 @@
                                         <v-card class="ma-1 pa-2 " outlined :elevation="0" ripple>
                                             <div class="d-flex align-center mt-n2 mb-n2">
                                                 <!-- Contenido -->
+
                                                 <div class="flex-grow-1 mr-2">
                                                     <div class="text-caption grey--text text--darken-1">
                                                         <!-- Precio + chips -->
@@ -95,6 +96,10 @@
                                                         <v-chip v-if="Number(item.preciodescuento) > 0" x-small
                                                             class="ml-1" color="deep-orange" text-color="white" label>
                                                             −{{ moneda }} {{ redondear(item.preciodescuento) }}
+                                                        </v-chip>
+                                                          <v-chip v-if="Number(item.precio_base) !== Number(item.precio)" x-small
+                                                            class="ml-1" color="deep-orange" text-color="white" label>
+                                                            {{ moneda }} {{ redondear(item.precio_base) }}
                                                         </v-chip>
                                                         <v-chip v-if="item.medida" x-small class="ml-1" label>
                                                             {{ item.medida }}
@@ -109,7 +114,7 @@
                                                         style="max-width: 70vw;">
                                                         <span class="font-weight-bold red--text">{{
                                                             Number(item.cantidad)
-                                                            }}×</span>
+                                                        }}×</span>
                                                         {{ item.nombre }}
                                                     </div>
                                                 </div>
@@ -154,14 +159,32 @@
                                     <h4 class="red--text">Descuentos: {{ moneda }} {{ sumaDescuentos() }}</h4>
                                 </v-list-item-subtitle>
                                 <v-list-item-subtitle>
-                                    <h2>Total: <select class="mr-n1 red--text" id="moneda" name="moneda"
-                                            v-model="moneda">
-                                            <option v-for="moneda in $store.state.moneda" :key="moneda.codigo"
-                                                :value="moneda.simbolo">
-                                                {{ moneda.simbolo }}
-                                            </option>
-                                        </select> {{ redondear(sumaTotal() - sumaDescuentos()) }}</h2>
+                                    <h2 class="d-flex align-center">
+
+                                        Total:
+
+                                        <v-menu offset-y>
+                                            <template v-slot:activator="{ on, attrs }">
+                                                <v-btn v-bind="attrs" v-on="on" small class="ml-2 mr-2 pa-0" color="red"
+                                                    text style="font-size: inherit; min-width: 0;">
+                                                    {{ moneda }}
+                                                </v-btn>
+                                            </template>
+
+                                            <v-list dense>
+                                                <v-list-item v-for="m in $store.state.moneda" :key="m.codigo"
+                                                    @click="moneda = m.simbolo">
+                                                    <v-list-item-title>{{ m.simbolo }} - {{ m.moneda
+                                                    }}</v-list-item-title>
+                                                </v-list-item>
+                                            </v-list>
+                                        </v-menu>
+
+                                        {{ redondear(sumaTotal() - sumaDescuentos()) }}
+
+                                    </h2>
                                 </v-list-item-subtitle>
+
                             </v-list-item-content>
                         </v-col>
                         <v-col cols="1">
@@ -180,64 +203,6 @@
 
 
 
-        <v-dialog v-model="dialogoProducto" max-width="390">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon large color="red" @click="dialogoProducto = false">mdi-close</v-icon>
-                    <v-spacer></v-spacer>
-                    <v-checkbox :disabled="!$store.state.permisos.edita_bono" v-model="es_bono"
-                        label="ES BONO"></v-checkbox>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-
-                <v-row class="mx-auto mt-4 text-center" dense v-if="$store.state.permisos.caja_edita_cantidad">
-
-                    <v-col cols="4" xs="4">
-                        <v-icon @click="suma()" color="green">mdi-plus</v-icon>
-                    </v-col>
-
-                    <v-col cols="4" xs="4">
-                        <v-text-field dense @keyup.enter="grabaEdita()" type="number" outlined v-model="cantidadEdita"
-                            label="Cantidad"></v-text-field>
-                    </v-col>
-                    <v-col cols="4" xs="4">
-                        <v-icon @click="resta()" color="red">mdi-minus</v-icon>
-                    </v-col>
-
-                </v-row>
-                <v-row class="mx-auto text-center" dense>
-                    <v-col cols="12">
-                        <v-textarea readonly dense class="mt-n2" outlined v-model="nombreEdita" auto-grow filled
-                            color="deep-purple" label="Descripcion" rows="1"></v-textarea>
-                    </v-col>
-                </v-row>
-                <v-row class="mx-auto text-center mt-n3" dense>
-                    <v-col readonly @focus="$event.target.select()" cols="6"
-                        v-if="$store.state.permisos.caja_edita_precio">
-                        <v-text-field outlined dense @keyup.enter="grabaEdita()" type="number" v-model="precioedita"
-                            label="Precio"></v-text-field>
-                    </v-col>
-                    <v-col cols="6" v-if="$store.state.permisos.descuentos">
-                        <v-text-field :disabled="es_bono" @focus="$event.target.select()" outlined dense
-                            @keyup.enter="grabaEdita()" type="number" v-model="preciodescuento"
-                            label="Descuento"></v-text-field>
-                    </v-col> </v-row>
-
-
-                <v-card-actions class="mt-n6">
-
-                    <v-btn color="red darken-1" text @click="eliminaedita()">
-                        Elimina
-                    </v-btn>
-
-                    <v-spacer></v-spacer>
-                    <v-btn color="green darken-1" text @click="grabaEdita()">
-                        Graba
-                    </v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
         <v-dialog v-model="dial_catalogo" max-width="550">
             <div>
                 <v-system-bar window dark>
@@ -257,6 +222,8 @@
         <agrega_producto v-if="dialogAgrega" @cierra="dialogAgrega = false"
             @agrega_lista="agregar_lista($event), dialogAgrega = false" />
         <imprime v-if="genera_pdf" :data="cabecera_cobro" @cierra="cierra_imprime()" />
+        <dial_edita_prod v-if="dialogoProducto" @cierra="dialogoProducto = false"
+            @editaProducto="editaProductoFinal($event)" :item_selecto="item_selecto" @eliminaedita="eliminaedita()" />
     </div>
 </template>
 
@@ -271,7 +238,8 @@ import cobrar from '@/views/ventas/cobro_final'
 import agrega_producto from '@/views/ventas/agrega_producto'
 import imprime from '@/components/dialogos/dialog_imprime'
 import cat_fijo from '@/components/catalogo_fijo'
-import { aplicaPreciosYBonos } from "../funciones/calculo_bonos";
+import { aplicaPreciosYBonos, agregarLista } from "../funciones/calculo_bonos";
+import dial_edita_prod from './edita_producto.vue'
 export default {
     name: 'caja',
 
@@ -280,7 +248,8 @@ export default {
         cobrar,
         agrega_producto,
         imprime,
-        cat_fijo
+        cat_fijo,
+        dial_edita_prod
     },
 
     data() {
@@ -295,13 +264,8 @@ export default {
             dialogAgrega: false,
             dialogoProducto: false,
             date: moment(String(new Date)).format('YYYY-MM-DD'),
-            codigo: '',
+            codigo: '',                // <- solo déjalo si realmente lo usas en otra parte
             listaproductos: [],
-            cantidadEdita: '',
-            preciodescuento: '',
-            precioedita: '',
-            nombreEdita: '',
-            porcentaje: 0,
             item_selecto: [],
             cabecera_final: [],
             items_final: [],
@@ -310,11 +274,11 @@ export default {
             genera_guia: false,
             array_ult_venta: [],
             cliente_s: [],
-            es_bono: false,
-            lista_precios_selecta: ['1', '2', '3']
+            lista_precios_selecta: ['1', '2', '3'],
         }
     },
     created() {
+        this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         if (store.state.cliente_selecto != '') {
             const data = store.state.cliente_selecto;
             this.lista_precios_selecta = data.listas_precios || ['1', '2', '3']
@@ -360,26 +324,17 @@ export default {
         store.commit("lista_productos", []);
     },
     computed: {
-        conversion() {
-            var total = this.precioedita * (this.porcentaje / 100)
-            return total.toFixed(2)
-        },
+
         permiteAgregar() {
             return !!this.$store.state.permisos.agrega_producto;
-        }
+        },
+
     },
     mounted() {
         window.addEventListener("keydown", this.detectarTecla);
     },
     watch: {
-        es_bono(nuevo) {
-            if (nuevo) {
-                this.precioedita = 0
-                this.preciodescuento = 0
-            } else if (this.item_selecto && Number(this.item_selecto.precio) > 0) {
-                this.precioedita = Number(this.item_selecto.precio)
-            }
-        },
+
         listaproductos: {
             handler(nuevo) {
                 store.commit("lista_productos", nuevo);
@@ -389,6 +344,28 @@ export default {
     },
 
     methods: {
+        editaProductoFinal(lineaActualizada) {
+            const idx = this.listaproductos.findIndex(
+                l => l.uuid === lineaActualizada.uuid
+            );
+
+            if (idx !== -1) {
+                // Actualizamos esa línea en la lista
+                this.$set(this.listaproductos, idx, lineaActualizada);
+            }
+
+            // Recalcula precios por escala + bonos
+            this.recalculoCompleto();
+
+            // Cerramos el diálogo
+            this.dialogoProducto = false;
+        },
+        eliminaedita() {
+            var pos = this.listaproductos.map(e => e.uuid).indexOf(this.item_selecto.uuid)
+            this.listaproductos.splice(pos, 1)
+            this.dialogoProducto = false
+            this.recalculoCompleto()
+        },
         getDirPrincipal(cliente) {
             const arr = Array.isArray(cliente?.direcciones) ? cliente.direcciones : [];
             if (!arr.length) return null;
@@ -442,7 +419,9 @@ export default {
             var fechahoy = this.verdate()
             var totalcuenta = this.sumaTotal()
             var totaldescuentos = this.sumaDescuentos()
+            console.log(this.listaproductos, this.listaproductos)
             var resp = await procesar_items(this.listaproductos)
+            console.log("resp", resp)
             var cabecera = resp[0]
             var items = resp[1]
             cabecera.operacion = this.operacion
@@ -485,208 +464,18 @@ export default {
         },
 
         agregar_lista(value) {
-            const items = Array.isArray(value) ? value : [value];
-
-            items.forEach(val => {
-                const medidaLinea = (val.medida || '').toString().trim().toUpperCase();
-                const esGratuitaNueva = String(val.operacion || '').toUpperCase() === 'GRATUITA';
-
-                // ---------- CASO GRATUITA: acumula cantidad por (id + medida)
-                if (esGratuitaNueva) {
-                    const existenteGrat = this.listaproductos.find(item =>
-                        item.id === val.id &&
-                        String(item.medida || '').toUpperCase() === medidaLinea &&
-                        String(item.operacion || '').toUpperCase() === 'GRATUITA'
-                    );
-
-                    if (existenteGrat) {
-                        existenteGrat.cantidad = Number(existenteGrat.cantidad || 0) + Number(val.cantidad || 0);
-                        existenteGrat.totalLinea = '0.00'; // siempre 0 en gratuita
-                        return; // ya sumamos; no insertamos nuevo
-                    }
-
-                    // No existía: insertar línea gratuita
-                    this.listaproductos.push({
-                        uuid: this.create_UUID().substring(29),
-                        factor: val.factor || 1,
-                        id: val.id,
-                        cantidad: Number(val.cantidad || 0),
-                        nombre: val.nombre,
-                        medida: medidaLinea,
-                        precio: Number(val.precio || 0),
-                        precio_base: Number(val.precio || 0),
-                        preciodescuento: 0,
-                        costo: val.costo,
-                        tipoproducto: val.tipoproducto,
-                        operacion: 'GRATUITA',
-                        peso: 0,
-                        controstock: val.controstock,
-                        totalLinea: '0.00',
-                    });
-                    return;
-                }
-
-                // ---------- CASO NO GRATUITA: PERMITIR DUPLICADOS, PERO SUMAR SI (id + medida) COINCIDEN
-                const existente = this.listaproductos.find(item =>
-                    item.id === val.id &&
-                    String(item.medida || '').toUpperCase() === medidaLinea &&
-                    String(item.operacion || '').toUpperCase() !== 'GRATUITA' // solo acumula con no-gratuita
-                );
-
-                if (existente) {
-                    // Acumular cantidad. Si el precio nuevo difiere, mantenemos el precio que ya estaba
-                    // (si prefieres reemplazar por el nuevo, cambia la asignación de precio).
-                    existente.cantidad = Number(existente.cantidad || 0) + Number(val.cantidad || 0);
-
-                    // Mantén el precio de la línea existente
-                    const precioUnit = Number(existente.precio || 0);
-                    existente.totalLinea = this.redondear(precioUnit * Number(existente.cantidad || 0));
-                    // Mantén preciodescuento tal cual (se suman aparte en sumaDescuentos)
-                    return; // no inserta nueva línea
-                }
-
-                // No había línea equivalente -> insertar una nueva
-                this.listaproductos.push({
-                    uuid: this.create_UUID().substring(29),
-                    factor: val.factor,
-                    id: val.id,
-                    cantidad: Number(val.cantidad || 0),
-                    nombre: val.nombre,
-                    medida: medidaLinea,
-                    precio: Number(val.precio || 0),
-                    precio_base: Number(val.precio || 0),
-                    preciodescuento: 0,
-                    costo: val.costo,
-                    tipoproducto: val.tipoproducto,
-                    operacion: val.operacion, // 'GRAVADA', etc.
-                    peso: 0,
-                    controstock: val.controstock,
-                    totalLinea: this.redondear(Number(val.precio || 0) * Number(val.cantidad || 0)),
-                });
+            this.listaproductos = agregarLista({
+                listaActual: this.listaproductos,
+                nuevosItems: value,
+                createUUID: this.create_UUID,
+                redondear: (n) => this.redondear(n),
             });
-
-            // Recalcula todo (precios/bonos/redondeos)
+            console.log("todo")
             this.recalculoCompleto();
         },
 
-
-
-        grabaEdita() {
-            const esBono = !!this.es_bono
-
-            if (this.cantidadEdita == '' || Number(this.cantidadEdita) <= 0) {
-                alert('ingrese cantidad valida')
-                return
-            }
-
-            // Validaciones de precio solo si NO es bono
-            if (!esBono) {
-                if (Number(this.precioedita) === 0) {
-                    alert("Precio no puede ser 0")
-                    return
-                }
-                if (parseFloat(this.precioedita) <= parseFloat(this.preciodescuento || 0)) {
-                    alert("Precio no puede ser menor/igual a 0")
-                    return
-                }
-            }
-            if (!esBono && this.$store.state.configuracion.precio_minimo) {
-
-                const prod = store.state.productos.find(p => String(p.id) === String(this.item_selecto.id)) || {};
-                const factor = (
-                    Number(this.item_selecto?.factor) &&
-                    this.item_selecto.medida !== 'UNIDAD' &&
-                    Number(this.item_selecto.factor) !== 1
-                ) ? Number(this.item_selecto.factor) : 1;
-
-                // bases numéricas
-                const baseMay2 = Number(prod.precio_may2) || 0;
-                const baseMay1 = Number(prod.precio_may1) || 0;
-                const basePrecio = Number(prod.precio) || 0;
-
-                // elige base mínima preferente
-                let baseMinima = basePrecio;
-                if (baseMay2 > 0) baseMinima = baseMay2;
-                else if (baseMay1 > 0) baseMinima = baseMay1;
-
-                // aplica factor y redondea si tienes helper
-                const precioMinimo = this.redondear ? this.redondear(baseMinima * factor) : (baseMinima * factor);
-                if (Number(this.precioedita) < precioMinimo) {
-                    alert(`Precio menor al mínimo (${precioMinimo})`);
-                    return;
-                }
-            }
-            // Stock
-            if (this.item_selecto.controstock) {
-                const producto = store.state.productos.find(item => item.id == this.item_selecto.id)
-                if (producto && producto.stock < Number(this.cantidadEdita)) {
-                    alert('Producto sin Stock')
-                    return
-                }
-            }
-            // Si hay porcentaje, convertir a monto de descuento (solo cuando no es bono)
-            if (!esBono && this.porcentaje) {
-                this.preciodescuento = this.conversion
-            }
-
-            const pos = this.listaproductos.findIndex(e => e.uuid === this.item_selecto.uuid)
-            if (pos === -1) return
-
-            const linea = this.listaproductos[pos]
-            linea.nombre = this.nombreEdita
-            linea.cantidad = Number(this.cantidadEdita)
-
-            if (esBono) {
-                // Bono/Gratuita
-                linea.operacion = 'GRATUITA'
-                linea.totalLinea = '0.00'
-            } else {
-                // Quitar gratuita si estaba marcada y volver a gravada (o conservar su estado previo si ya era gravada)
-                linea.operacion = (linea.operacion === 'GRATUITA') ? 'GRAVADA' : (linea.operacion || 'GRAVADA')
-                linea.precio = Number(this.precioedita)
-                linea.preciodescuento = Number(this.preciodescuento) || 0
-                // En esta pantalla sumas descuentos aparte, así que el total de la línea no descuenta
-                linea.totalLinea = this.redondear(linea.cantidad * linea.precio)
-            }
-
-            this.dialogoProducto = false
-            this.recalculoCompleto();
-        },
-
-        suma() {
-            if (this.item_selecto.controstock) {
-                var producto = store.state.productos.find(item => item.id == this.item_selecto.id)
-                if (producto.stock <= this.cantidadEdita) {
-                    alert('Producto sin Stock')
-                    return
-                }
-            }
-            this.cantidadEdita = parseInt(this.cantidadEdita) + 1
-        },
-        resta() {
-            if (this.cantidadEdita > 1) {
-                this.cantidadEdita = parseInt(this.cantidadEdita) - 1
-            }
-        },
-        eliminaedita() {
-            var pos = this.listaproductos.map(e => e.uuid).indexOf(this.item_selecto.uuid)
-            this.listaproductos.splice(pos, 1)
-            this.dialogoProducto = false
-            this.recalculoCompleto()
-        },
         editaProducto(val) {
             this.item_selecto = val
-            this.cantidadEdita = val.cantidad
-            this.nombreEdita = val.nombre
-            this.precioedita = val.precio
-            this.preciodescuento = val.preciodescuento
-
-            // Si la línea es gratuita, marcar el checkbox y forzar precio/descuento a 0
-            this.es_bono = String(val.operacion || '').toUpperCase() === 'GRATUITA'
-            if (this.es_bono) {
-                this.precioedita = 0
-                this.preciodescuento = 0
-            }
             this.dialogoProducto = true
         },
 
@@ -725,7 +514,10 @@ export default {
             this.dial_catalogo = true
         },
 
+
         copia_comprobante(data) {
+            console.log(data)
+            this.moneda = data.moneda || 'S/'
             this.arra_cliente = {
                 dir: data.dir_cliente,
                 dni: data.num_cliente,

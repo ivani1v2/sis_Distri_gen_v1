@@ -1,11 +1,7 @@
 import jspdf from "jspdf";
 import "jspdf-autotable";
 import store from "@/store/index";
-import {
-  grabaCabeceraProforma,
-  grabaDetalleProforma,
-  consultaArchivo,
-} from "@/db";
+
 import moment from "moment";
 import "jspdf-autotable";
 import imageToBase64 from "image-to-base64/browser";
@@ -55,7 +51,7 @@ function impresion58(arrays) {
   var telefono = store.state.configImpresora.telefono;
   var pageCenter = pdfInMM / 2;
   var serie = "P001-" + arrays.id;
-
+  var moneda = arrays.moneda || "S/";
   const doc = new jspdf({
     orientation: "portrait",
     unit: "mm",
@@ -180,7 +176,7 @@ function impresion58(arrays) {
     nuevoArray[i][1] =
       array[i].nombre +
       "\n" +
-      "- S/." +
+      "- moneda." +
       array[i].precioedita +
       " X " +
       array[i].medida;
@@ -233,7 +229,7 @@ function impresion58(arrays) {
 
   doc.text("OP. GRAVADA", lMargin, linea);
   doc.text(
-    "S./" + (parseFloat(operaciongravada) / 1.18).toFixed(2).toString(),
+    moneda + (parseFloat(operaciongravada) / 1.18).toFixed(2).toString(),
     50,
     linea,
     "right"
@@ -242,7 +238,7 @@ function impresion58(arrays) {
 
   doc.text("OP. EXONERADA", lMargin, linea);
   doc.text(
-    "S./" + operacionexonerada.toFixed(2).toString().toString(),
+    moneda + operacionexonerada.toFixed(2).toString().toString(),
     50,
     linea,
     "right"
@@ -251,7 +247,7 @@ function impresion58(arrays) {
 
   doc.text("IGV 18%", lMargin, linea);
   doc.text(
-    "S./" +
+    moneda +
     ((parseFloat(operaciongravada) / 1.18) * 0.18).toFixed(2).toString(),
     50,
     linea,
@@ -260,7 +256,7 @@ function impresion58(arrays) {
   linea = linea + 3.5;
 
   doc.text("Total", lMargin, linea);
-  doc.text("S./" + total, 50, linea, "right");
+  doc.text(moneda + total, 50, linea, "right");
   linea = linea + 3.5;
 
   doc.setFont("Helvetica", "bold");
@@ -304,7 +300,7 @@ function impresion80(arrays) {
   var telefono = store.state.configImpresora.telefono;
   var pageCenter = pdfInMM / 2;
   var serie = "P001-" + arrays.id;
-
+  var moneda = arrays.moneda || "S/";
   const doc = new jspdf({
     orientation: "portrait",
     unit: "mm",
@@ -427,7 +423,7 @@ function impresion80(arrays) {
     var obs = "";
     if (array[i].operacion == "GRATUITA") {
       obs = "*";
-      tg = " / TG: S/" + array[i].valor_total;
+      tg = " / TG: " + moneda + array[i].valor_total;
       array[i].precioedita = "0.00";
     }
     var descuento = parseFloat(array[i].preciodescuento);
@@ -484,7 +480,7 @@ function impresion80(arrays) {
 
   doc.text("OP. GRAVADA", lMargin, linea);
   doc.text(
-    "S./" + (parseFloat(operaciongravada) / 1.18).toFixed(2).toString(),
+    moneda + (parseFloat(operaciongravada) / 1.18).toFixed(2).toString(),
     68,
     linea,
     "right"
@@ -493,7 +489,7 @@ function impresion80(arrays) {
 
   doc.text("OP. EXONERADA", lMargin, linea);
   doc.text(
-    "S./" + operacionexonerada.toFixed(2).toString().toString(),
+    moneda + operacionexonerada.toFixed(2).toString().toString(),
     68,
     linea,
     "right"
@@ -502,7 +498,7 @@ function impresion80(arrays) {
 
   doc.text("IGV 18%", lMargin, linea);
   doc.text(
-    "S./" +
+    moneda +
     ((parseFloat(operaciongravada) / 1.18) * 0.18).toFixed(2).toString(),
     68,
     linea,
@@ -511,7 +507,7 @@ function impresion80(arrays) {
   linea = linea + 3.5;
 
   doc.text("Total", lMargin, linea);
-  doc.text("S./" + total, 68, linea, "right");
+  doc.text(moneda + total, 68, linea, "right");
   linea = linea + 3.5;
 
   doc.setFont("Helvetica", "bold");
@@ -586,7 +582,7 @@ function impresionA4(arrays) {
   var cabecera = store.state.configImpresora.cabecera;
   var telefono = store.state.configImpresora.telefono;
   var bancos = store.state.bancos;
-
+  var moneda = arrays.moneda || "S/";
   const doc = new jspdf({
     orientation: "portrait",
     unit: "mm",
@@ -830,7 +826,7 @@ function impresionA4(arrays) {
   doc.text(" : ", 159, linea, "left");
   doc.setFont("Helvetica", "");
   doc.text(
-    "S./" + (parseFloat(operaciongravada) / 1.18).toFixed(2).toString(),
+    moneda + (parseFloat(operaciongravada) / 1.18).toFixed(2).toString(),
     172,
     linea,
     "left"
@@ -843,7 +839,7 @@ function impresionA4(arrays) {
   doc.text(" : ", 159, linea, "left");
   doc.setFont("Helvetica", "");
   doc.text(
-    "S./" + operacionexonerada.toFixed(2).toString(),
+    moneda + operacionexonerada.toFixed(2).toString(),
     172,
     linea,
     "left"
@@ -856,7 +852,7 @@ function impresionA4(arrays) {
   doc.text(" : ", 159, linea, "left");
   doc.setFont("Helvetica", "");
   doc.text(
-    "S./" +
+    moneda +
     ((parseFloat(operaciongravada) / 1.18) * 0.18).toFixed(2).toString(),
     172,
     linea,
@@ -870,7 +866,7 @@ function impresionA4(arrays) {
   doc.text(" : ", 159, linea, "left");
   doc.setFont("Helvetica", "");
   doc.text(
-    "S./" +
+    moneda +
     parseFloat(total - totalDesc)
       .toFixed(2)
       .toString(),

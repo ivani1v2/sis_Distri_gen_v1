@@ -88,7 +88,7 @@
                             </v-chip>
                         </td>
                         <td style="font-size:75%;">{{ pedido.resumen.total_pedidos }}</td>
-                        <td style="font-size:75%;">S/.{{ pedido.resumen.total_general }}</td>
+                        <td style="font-size:75%;">S/.{{ Number(pedido.resumen.total_general).toFixed(2) }}</td>
 
                         <td>
                             <v-row>
@@ -98,9 +98,27 @@
                                     </v-btn>
                                 </v-col>
                                 <v-col cols="6" xs="6">
-                                       <v-btn icon small @click="repartoActual = pedido.id; dial_cobranza = !dial_cobranza">
-                                <v-icon color="success">mdi-cash-register</v-icon>
-                            </v-btn>
+                                    <v-menu>
+                                        <template v-slot:activator="{ on, attrs }">
+                                            <v-btn icon small color="success" v-bind="attrs" v-on="on">       
+                                                <v-icon>mdi-cash-register</v-icon>
+                                            </v-btn>
+                                        </template>
+                                        <v-list dense>
+                                            <v-list-item @click='repartoActual = pedido.id; dial_cobranza = !dial_cobranza'>
+                                                <v-list-item-icon>
+                                                    <v-icon color="success">mdi-cash-register</v-icon>
+                                                </v-list-item-icon>
+                                                <v-list-item-title>Liquidacion Electronica</v-list-item-title>
+                                            </v-list-item>
+                                            <v-list-item @click='formato_liq(pedido)'>
+                                                <v-list-item-icon>
+                                                    <v-icon color="error"> mdi-printer</v-icon>
+                                                </v-list-item-icon>
+                                                <v-list-item-title>Liquidacion Manual</v-list-item-title>
+                                            </v-list-item>
+                                        </v-list>
+                                    </v-menu>
                                 </v-col>
                             </v-row>
 
@@ -115,9 +133,22 @@
                     <v-icon large color="red" @click="dial_rep_consolidado = false">mdi-close</v-icon>
                     <v-spacer></v-spacer>
                     <span class="caption mr-2">Seleccionados: {{ selectedIds.length }}</span>
-                    <v-btn small color="info" :disabled="!selectedIds.length" @click="imprimirSeleccionados">
-                        <v-icon left>mdi-printer</v-icon> Imprimir reporte
-                    </v-btn>
+                    <v-menu>
+                        <template v-slot:activator="{ on, attrs }">
+                            <v-btn small color="info" v-bind="attrs" v-on="on">
+                                REPORTES
+                                <v-icon>mdi-dots-vertical</v-icon>
+                            </v-btn>
+                        </template>
+                        <v-list dense>
+                            <v-list-item @click='imprimirSeleccionados'>
+                                <v-list-item-icon>
+                                    <v-icon color="success"> mdi-printer</v-icon>
+                                </v-list-item-icon>
+                                <v-list-item-title>Producto/Cliente</v-list-item-title>
+                            </v-list-item>
+                        </v-list>
+                    </v-menu>
                 </v-system-bar>
             </div>
 
@@ -150,7 +181,29 @@
                 </v-simple-table>
             </v-card>
         </v-dialog>
+        <v-dialog v-model="dial_reporte_liq" max-width="400">
+            <v-card class="pa-5">
+                <v-row dense>
+                    <v-col cols="6">
+                        <v-card @click.prevent="doc('H')">
+                            <v-container>
+                                <v-img class="mx-auto" height="30" width="30" src="/horizontal.png"></v-img>
+                                <h5 block class="text-center pa-1">Horizontal</h5>
+                            </v-container>
+                        </v-card>
+                    </v-col>
+                    <v-col cols="6">
+                        <v-card @click.prevent="doc('V')">
+                            <v-container>
+                                <v-img class="mx-auto" height="30" width="30" src="/vertical.png"></v-img>
+                                <h5 block class="text-center pa-1">Vertical</h5>
+                            </v-container>
+                        </v-card>
+                    </v-col>
+                </v-row>
 
+            </v-card>
+        </v-dialog>
         <dial_nuevo_rep v-if="nuevo_rep" @cierra="nuevo_rep = false" />
         <dial_sube_rep v-if="dial_sube_excel" @cerrar="dial_sube_excel = false, filtrar" />
         <cobranza_reparto v-if="dial_cobranza" :pedidos="null" :grupo="repartoActual" @cerrar="dial_cobranza = false" />
@@ -165,7 +218,9 @@ import store from '@/store/index'
 import dial_nuevo_rep from './dialogos/nuevo_reparto.vue'
 import dial_sube_rep from './dialogos/excel_ruta.vue'
 import cobranza_reparto from '../reparto/dialogos/cobranza_reparto.vue'
+import { pdf_a4_t } from './formatos/formato_liq_manual'
 export default {
+    name: "lista_repartos",
     components: {
         dial_nuevo_rep,
         dial_sube_rep,
@@ -193,6 +248,7 @@ export default {
             repartosarray: [],
             // refs
             refOrden: null,
+            dial_reporte_liq: false,
         };
     },
     created() {
@@ -284,7 +340,49 @@ export default {
         toggleAll(val) {
             this.selectedIds = val ? this.repartosarray.map(r => r.id) : [];
         },
+        async formato_liq(datas) {
+            try {
+                console.log('datas', datas);
+                this.array_selecto = [];
+                store.commit("dialogoprogress", true); // Activar spinner de carga
 
+                const snapshot = await all_Cabecera_p(datas.grupo).once("value");
+
+                if (snapshot.exists()) {
+                    const array = [];
+
+                    snapshot.forEach((item) => {
+                        array.push(item.val());
+                    });
+
+                    this.array_selecto = {
+                        datas: {
+                            grupo: datas.grupo,
+                            fecha_emision: datas.fecha_emision,
+                            peso: datas.peso || 0,
+                            contado: datas.resumen.total_contado || 0,
+                            credito: datas.resumen.total_credito || 0,
+                            t_general: datas.resumen.total_general || 0,
+                            pedidos: datas.resumen.total_pedidos || 0
+                        },
+                        array: array
+                    };
+                    console.log('array_selecto', this.array_selecto);
+                    this.dial_reporte_liq = true;
+                    // Si quieres generar PDF aquí, descomenta esta línea:
+                    // pdf_a4(datas, array)
+                } else {
+                    console.warn("No se encontraron datos para el grupo:", datas.grupo);
+                }
+            } catch (error) {
+                console.error("Error al obtener cabeceras:", error);
+            } finally {
+                store.commit("dialogoprogress", false); // Detener el spinner
+            }
+        },
+        doc(form) {
+            pdf_a4_t(form, this.array_selecto.datas, this.array_selecto.array)
+        },
         async imprimirSeleccionados() {
             if (!this.selectedIds.length) return;
 
@@ -329,6 +427,7 @@ export default {
                     const cabsFiltradas = [];
                     snapCab.forEach(child => {
                         const cab = child.val();
+
                         if (pedidosSet.has(cab.id_pedido)) {
                             cabsFiltradas.push({ numeracion: child.key, cab });
                         }

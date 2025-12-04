@@ -234,7 +234,7 @@
             </v-card>
         </v-dialog>
 
-        <nuevo_cli v-if="dial_cliente" @cierra="dial_cliente = $event; filtra()"
+        <nuevo_cli v-if="dial_cliente" @cierra="dial_cliente = false; filtra()"
             @actualizar="dial_cliente = false, filtra()" :cliente_selecto="cliente_selecto" />
         <dial_tabla_zona v-if="dialtabla_zona" @cierra="dialtabla_zona = false" />
     </div>

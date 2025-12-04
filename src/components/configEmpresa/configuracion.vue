@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="$store.state.dialogoConfiguracion" max-width="480px">
+  <v-dialog v-model="$store.state.dialogoConfiguracion" max-width="550px">
     <div>
       <v-system-bar window dark>
         <v-icon @click="$store.commit('dialogoConfiguracion')">mdi-close</v-icon>
@@ -12,42 +12,67 @@
       <div>
         <v-row dense>
           <v-col cols="6">
-            <v-checkbox dense v-model="inventario" label="Control Inventario"></v-checkbox>
+            <v-checkbox dense v-model="inventario" label="Control Inventario">
+              <template v-slot:append>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-icon small color="blue" v-bind="attrs" v-on="on">mdi-help-circle</v-icon>
+                  </template>
+                  <span>Sistema bloqueará ventas cuando no haya stock disponible.</span>
+                </v-tooltip>
+              </template>
+            </v-checkbox>
           </v-col>
-
           <v-col cols="6">
-            <v-checkbox dense v-model="sunat" label="Envio Directo Sunat"></v-checkbox>
+            <v-checkbox dense v-model="flujocaja" label="Flujo caja">
+              <template v-slot:append>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-icon small color="blue" v-bind="attrs" v-on="on">mdi-help-circle</v-icon>
+                  </template>
+                  <span>Todas las ventas directas se registran en el flujo de caja.</span>
+                </v-tooltip>
+              </template>
+            </v-checkbox>
           </v-col>
-
-          <v-col dense cols="6" class="mt-n6">
-            <v-checkbox dense v-model="flujocaja" label="Flujo caja"></v-checkbox>
-          </v-col>
-
-          <v-col cols="6" class="mt-n6">
-            <v-checkbox dense v-model="detracciones" label="Detracciones"></v-checkbox>
-          </v-col>
-
-          <v-col cols="6" class="mt-n6">
+          <v-col cols="6" class="mt-n4">
             <v-checkbox dense v-model="creditofactura" label="Ventas al Credito"></v-checkbox>
           </v-col>
-
-          <v-col cols="6" class="mt-n6">
-            <v-checkbox dense v-model="mostrar_cuentas" label="mostrar cuentas "></v-checkbox>
-          </v-col>
-          <v-col cols="6" class="mt-n6">
+          <v-col cols="6" class="mt-n4">
             <v-checkbox dense v-model="copia_saldos_caja" label="Copia saldo Caja"></v-checkbox>
           </v-col>
-          <v-col cols="6" class="mt-n6">
-            <v-checkbox dense v-model="mostrar_ope_gratuitas" label="Mostrar Ope Gratuitas"></v-checkbox>
+
+          <v-col cols="12" class="mt-n4">
+            <v-divider class="my-2" color="grey"></v-divider>
           </v-col>
-          <v-col cols="6" class="mt-n6">
-            <v-checkbox dense v-model="bigquery" label="Bigquery" />
-          </v-col>
-          <v-col cols="6" class="mt-n6">
-            <v-checkbox dense v-model="kardex_avanzado" label="Kardex Avanzado" />
+
+          <v-col cols="6" class="mt-b6">
+            <v-checkbox dense v-model="detracciones" label="Detracciones">
+              <template v-slot:append>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-icon small color="blue" v-bind="attrs" v-on="on">mdi-help-circle</v-icon>
+                  </template>
+                  <span>Activa campo para ingresar operacion de venta afectas a Detraccion</span>
+                </v-tooltip>
+              </template>
+            </v-checkbox>
           </v-col>
           <v-col cols="6">
-            <v-text-field dense v-model="cuenta_detra" label="Cuenta BN Detracciones"></v-text-field>
+            <v-text-field class="mb-n6" outlined dense v-model="cuenta_detra"
+              label="Cuenta BN Detracciones"></v-text-field>
+          </v-col>
+          <v-col cols="12" class="mt-n3">
+            <v-divider class="my-2" color="grey"></v-divider>
+          </v-col>
+
+          <v-col cols="6" class="mt-n4">
+            <v-checkbox dense v-model="mostrar_cuentas" label="Mostrar cuentas"></v-checkbox>
+          </v-col>
+
+
+          <v-col cols="6" class="mt-n6">
+            <v-checkbox dense v-model="mostrar_ope_gratuitas" label="Mostrar Ope Gratuitas"></v-checkbox>
           </v-col>
 
           <v-col cols="6">
@@ -70,6 +95,40 @@
           <v-col cols="6">
             <v-select :items="arrayOperacion" label="Operacion X Defecto" dense outlined v-model="operacion"></v-select>
           </v-col>
+
+          <!-- NUEVO: Moneda por defecto -->
+          <v-col cols="6">
+            <v-select dense outlined v-model="moneda_defecto" :items="monedasOpciones" item-text="label"
+              item-value="codigo" label="Moneda por defecto"></v-select>
+          </v-col>
+          <v-col cols="6">
+            <v-checkbox dense v-model="sincroniza_tipo_cambio" label="Sinc. Tipo Cambio">
+              <template v-slot:append>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-icon small color="blue" v-bind="attrs" v-on="on">mdi-help-circle</v-icon>
+                  </template>
+                  <span>solo para empresas que manejan ventas en Soles y Dolares Sincroniza automáticamente el tipo de
+                    cambio. y de
+                    pasar de una moenda a otra la convierte en su equivalente de forma automatica. </span>
+                </v-tooltip>
+              </template>
+            </v-checkbox>
+
+          </v-col>
+            <v-col cols="6">
+            <v-checkbox dense v-model="desc_porcentaje" label="Descuento x %">
+              <template v-slot:append>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-icon small color="blue" v-bind="attrs" v-on="on">mdi-help-circle</v-icon>
+                  </template>
+                  <span>Activa las opciones de hasta 3 descuentos en porcentaje en venta y Preventa</span>
+                </v-tooltip>
+              </template>
+            </v-checkbox>
+
+          </v-col>
         </v-row>
       </div>
     </v-card>
@@ -77,15 +136,14 @@
 </template>
 
 <script>
-import { allConfigura, grabaConfigura,nuevaEmpresa } from "../../db";
+import { allConfigura, grabaConfigura, nuevaEmpresa } from "../../db";
 import store from "@/store/index";
 
 export default {
   data() {
     return {
-      // Solo variables usadas en el template
       inventario: false,
-      sunat: false,
+      sunat: true,
       flujocaja: false,
       detracciones: false,
       creditofactura: false,
@@ -99,21 +157,33 @@ export default {
       distancia_visita: 15,
       pordefecto: "T",
       arraydoc: ["T", "B", "F"],
-      bigquery: false,
-      kardex_avanzado: false,
       arrayOperacion: ["GRAVADA", "EXONERADA"],
       operacion: "GRAVADA",
-      empresa: ''
+      empresa: "",
+      sincroniza_tipo_cambio: false,
+      desc_porcentaje: false,
+      // NUEVO: moneda por defecto (simbolo)
+      moneda_defecto: "PEN",
     };
   },
   created() {
     this.empresa = this.$store.state.baseDatos;
     this.inicializar();
   },
+  computed: {
+    // Construye opciones a partir de this.$store.state.moneda
+    monedasOpciones() {
+      const arr = (this.$store.state.moneda || []);
+      return arr.map(m => ({
+        ...m,
+        label: `${m.simbolo} - ${m.moneda}`, // ej: "S/ - Sol"
+      }));
+    },
+  },
   methods: {
     inicializar() {
-      this.bigquery = this.empresa.bigquery || false;
-      this.kardex_avanzado = this.empresa.kardex_avanzado || false;
+
+
       allConfigura()
         .once("value")
         .then((snapshot) => {
@@ -135,8 +205,11 @@ export default {
             cuenta_detra = this.cuenta_detra,
             copia_saldos_caja = this.copia_saldos_caja,
             mostrar_ope_gratuitas = this.mostrar_ope_gratuitas,
-            distancia_visita = this.distancia_visita
-
+            distancia_visita = this.distancia_visita,
+            sincroniza_tipo_cambio = this.sincroniza_tipo_cambio,
+            desc_porcentaje = this.desc_porcentaje,
+            // NUEVO: si no existe en la BD, usa el valor actual
+            moneda_defecto = this.moneda_defecto,
           } = config;
 
           Object.assign(this, {
@@ -154,7 +227,10 @@ export default {
             cuenta_detra,
             copia_saldos_caja,
             distancia_visita,
-            mostrar_ope_gratuitas
+            mostrar_ope_gratuitas,
+            moneda_defecto,
+            sincroniza_tipo_cambio,
+            desc_porcentaje,
           });
         });
     },
@@ -171,13 +247,14 @@ export default {
       grabaConfigura("decimal", this.decimal);
       grabaConfigura("igv", this.igv);
       grabaConfigura("icbper", this.icbper);
-
       grabaConfigura("defecto", this.pordefecto);
       grabaConfigura("operacion", this.operacion);
       grabaConfigura("copia_saldos_caja", this.copia_saldos_caja);
       grabaConfigura("distancia_visita", this.distancia_visita);
-      nuevaEmpresa(this.empresa.bd+'/bigquery', this.bigquery);
-      nuevaEmpresa(this.empresa.bd+'/kardex_avanzado', this.kardex_avanzado);
+      grabaConfigura("sincroniza_tipo_cambio", this.sincroniza_tipo_cambio);
+      grabaConfigura("desc_porcentaje", this.desc_porcentaje);
+      // NUEVO: guarda la moneda por defecto
+      grabaConfigura("moneda_defecto", this.moneda_defecto);
       store.commit("dialogoConfiguracion");
     },
   },

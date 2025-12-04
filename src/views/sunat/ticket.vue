@@ -53,7 +53,7 @@
                         <tr v-for="item in listafiltrada" :key="item.id">
                             <td style="font-size:75%;">{{ item.numeracion }}</td>
                             <td style="font-size:75%;" v-if="!$store.state.esmovil">{{ item.dni + ' - ' + item.cliente
-                            }}
+                                }}
                             </td>
                             <td>{{ conviertefecha(item.fecha) }}</td>
                             <td>
@@ -352,47 +352,49 @@ export default {
             this.seleccionado = item
             this.dialogocomprobante = true
         },
-    async anulaticket() {
-    if (confirm('seguro que anular?')) {
-        store.commit("dialogoprogress", 1);
+        async anulaticket() {
+            if (confirm('seguro que anular?')) {
+                store.commit("dialogoprogress", 1);
 
-        // 1. marcar cabecera anulada
-        await grabaEstadoComprobante(
-            this.seleccionado.numeracion,
-            'ANULADO',
-            'ANULADO',
-            'ANULADO',
-            ''
-        );
+                // 1. marcar cabecera anulada
+                await grabaEstadoComprobante(
+                    this.seleccionado.numeracion,
+                    'ANULADO',
+                    'ANULADO',
+                    'ANULADO',
+                    ''
+                );
 
-        // 2. si aún no devolvimos stock antes, devolver stock ahora
-        let detallesVenta = [];
-        if (!this.seleccionado.regesa_stock) {
-            await grabaCabecera(this.seleccionado.numeracion + '/regesa_stock', true);
+                // 2. si aún no devolvimos stock antes, devolver stock ahora
+                let detallesVenta = [];
+                if (!this.seleccionado.regesa_stock) {
+                    if (confirm('Desea regresar stock de este comprobante?')) {
+                        await grabaCabecera(this.seleccionado.numeracion + '/regesa_stock', true);
 
-            const snap = await consultaDetalle(this.seleccionado.numeracion).once("value");
-            if (snap.exists()) {
-                detallesVenta = Object.values(snap.val());
+                        const snap = await consultaDetalle(this.seleccionado.numeracion).once("value");
+                        if (snap.exists()) {
+                            detallesVenta = Object.values(snap.val());
+                        }
+
+                        await modifica_stock_array('SUMA', detallesVenta);
+                    }
+                } else {
+                    // igual necesitamos los detalles para limpiar kardex
+                    const snap = await consultaDetalle(this.seleccionado.numeracion).once("value");
+                    if (snap.exists()) {
+                        detallesVenta = Object.values(snap.val());
+                    }
+                }
+
+                // 3. limpiar kardex de esa venta
+                await this.eliminar_mov(this.seleccionado, detallesVenta);
+
+                // 4. cerrar diálogo, refrescar pantalla
+                this.dialogocomprobante = false;
+                this.busca();
+                store.commit("dialogoprogress", 1);
             }
-
-            await modifica_stock_array('SUMA', detallesVenta);
-        } else {
-            // igual necesitamos los detalles para limpiar kardex
-            const snap = await consultaDetalle(this.seleccionado.numeracion).once("value");
-            if (snap.exists()) {
-                detallesVenta = Object.values(snap.val());
-            }
-        }
-
-        // 3. limpiar kardex de esa venta
-        await this.eliminar_mov(this.seleccionado, detallesVenta);
-
-        // 4. cerrar diálogo, refrescar pantalla
-        this.dialogocomprobante = false;
-        this.busca();
-        store.commit("dialogoprogress", 1);
-    }
-},
+        },
 
         async eliminar_mov(cabecera, detalles) {
             try {

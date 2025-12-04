@@ -224,7 +224,7 @@
 import { all_detalle_p, grabaCabecera_p, nuevo_detalle_entrega } from "../../../db";
 
 export default {
-    props: { item_selecto: { type: Object, required: true } },
+    props: {grupo:null, item_selecto: { type: Object, required: true } },
     data() {
         return {
             dial: false,
@@ -243,6 +243,7 @@ export default {
         };
     },
     async created() {
+        this.item_selecto.id_grupo = this.item_selecto.id_grupo || this.grupo;
         await this.busca_detalle();
         // base de métodos de pago desde el store
         const lista = (this.$store?.state?.modopagos || []).map(n => ({ nombre: n, monto: "" }));
@@ -395,6 +396,7 @@ export default {
                 rechazos: rechazos,
                 rechazos_count: rechazos.length,
                 pagos_entrega: pagos_filtrados,
+                observaciones: this.observaciones || "",
                 total_pedido: Number(this.item_selecto.total || 0),
                 total_rechazado: Number(this.totalRechazosMonto.toFixed(2)),
                 total_cobrado: Number(this.totalACobrar.toFixed(2)),

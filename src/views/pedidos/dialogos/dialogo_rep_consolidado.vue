@@ -28,23 +28,48 @@
                 <thead>
                   <tr>
                     <th>Producto</th>
-                    <th>Cant.</th>
+                    <th>Paq.</th>
+                    <th>Und.</th>
+                    <th>Bono</th>
                     <th>Precio</th>
                     <th>Total S/.</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="(g, i) in listaVendidos" :key="'v-' + i">
+                    <!-- Producto -->
                     <td style="font-size:75%;">{{ g.codigo }} - {{ g.nombre }}</td>
-                    <!-- 👇 si factor==1 -> solo unds; si >1 -> packs/unds -->
+
+                    <!-- Paquetes -->
                     <td style="font-size:75%;">
-                      <span class="cant-click" @click="verClientes(g)">{{ g.cantDisplay }}</span>
+                      <span class="cant-click" @click="verClientes(g)">
+                        {{ int(g.packs) }}
+                      </span>
                     </td>
+
+                    <!-- Unidades (click para ver clientes) -->
+                    <td style="font-size:75%;">
+                      <span class="cant-click" @click="verClientes(g)">
+                        {{ int(g.unds) }}
+                      </span>
+                    </td>
+
+                    <!-- Bonos / gratuitas -->
+                    <td style="font-size:75%;">
+                      {{ g.gratuitas ? int(g.gratuitas) : '' }}
+                    </td>
+
+                    <!-- Precio unitario promedio -->
                     <td style="font-size:75%;">S/.{{ number2(g.precioUnitProm) }}</td>
+
+                    <!-- Total -->
                     <td style="font-size:75%;">S/.{{ number2(g.total) }}</td>
                   </tr>
+
                   <tr v-if="agrupadoPorProducto.length === 0">
-                    <td colspan="4" class="text-center grey--text py-6">No hay ítems para mostrar.</td>
+                    <td colspan="6" class="text-center grey--text py-6">
+                      No hay ítems para mostrar.
+                    </td>
                   </tr>
                 </tbody>
               </v-simple-table>
@@ -57,21 +82,44 @@
                 <thead>
                   <tr>
                     <th>Producto</th>
-                    <th>Cant.</th>
+                    <th>Paq.</th>
+                    <th>Und.</th>
+                    <th>Bono</th>
                     <th>Monto</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="(g, i) in listaValor" :key="'m-' + i">
+                    <!-- Producto -->
                     <td style="font-size:75%;">{{ g.nombre }}</td>
-                    <!-- 👇 mismo criterio -->
+
+                    <!-- Paquetes -->
                     <td style="font-size:75%;">
-                      <span class="cant-click" @click="verClientes(g)">{{ g.cantDisplay }}</span>
+                      <span class="cant-click" @click="verClientes(g)">
+                        {{ int(g.packs) }}
+                      </span>
                     </td>
+
+                    <!-- Unidades (click para ver clientes) -->
+                    <td style="font-size:75%;">
+                      <span class="cant-click" @click="verClientes(g)">
+                        {{ int(g.unds) }}
+                      </span>
+                    </td>
+
+                    <!-- Bonos / gratuitas -->
+                    <td style="font-size:75%;">
+                      {{ g.gratuitas ? int(g.gratuitas) : '' }}
+                    </td>
+
+                    <!-- Monto total -->
                     <td style="font-size:75%;">S/.{{ number2(g.total) }}</td>
                   </tr>
+
                   <tr v-if="agrupadoPorProducto.length === 0">
-                    <td colspan="3" class="text-center grey--text py-6">No hay ítems para mostrar.</td>
+                    <td colspan="5" class="text-center grey--text py-6">
+                      No hay ítems para mostrar.
+                    </td>
                   </tr>
                 </tbody>
               </v-simple-table>
@@ -284,7 +332,7 @@ export default {
         .map(x => ({
           ...x,
           // 👇 si factor == 1 → solo unds; si >1 → packs/unds
-          nombre: x.gratuitas > 0 ? `${x.nombre}  (${x.gratuitas} gratuitas)` : x.nombre,
+          nombre: x.nombre,
           cantDisplay: x.factor > 1 ? `${this.int(x.packs)}/${this.int(x.unds)}` : `${this.int(x.unds)}`,
           // dejamos cantPU por si lo usas en otro lado
           cantPU: `${this.int(x.packs)}/${this.int(x.unds)}`,

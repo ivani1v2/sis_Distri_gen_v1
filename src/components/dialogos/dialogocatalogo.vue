@@ -10,10 +10,10 @@
             </v-system-bar>
         </div>
         <v-card class="pa-1">
-            <v-autocomplete v-if="false" class=" mb-n4"
-                v-model="producto_sele" autofocus :items="$store.state.productos" item-text="nombre" item-value="id"
-                label="Buscar Productos" clearable menu-props="auto" outlined dense ref="buscarField"
-                :filter="filtroPorPalabras" append-icon="mdi-magnify" @change="prod_selecto">
+            <v-autocomplete v-if="false" class=" mb-n4" v-model="producto_sele" autofocus
+                :items="$store.state.productos" item-text="nombre" item-value="id" label="Buscar Productos" clearable
+                menu-props="auto" outlined dense ref="buscarField" :filter="filtroPorPalabras" append-icon="mdi-magnify"
+                @change="prod_selecto">
                 <template v-slot:item="{ item }">
                     <v-list-item-content>
                         <v-list-item-title>
@@ -22,8 +22,7 @@
                         </v-list-item-title>
                     </v-list-item-content>
                 </template></v-autocomplete>
-            <v-simple-table v-if="false" fixed-header
-                max-width="600px" class="pa-1">
+            <v-simple-table v-if="false" fixed-header max-width="600px" class="pa-1">
                 <template v-slot:default>
                     <thead>
                     </thead>
@@ -206,13 +205,6 @@ export default {
             var cant = parseFloat(this.cantidad)
             this.producto_selecto.cantidad = cant
 
-
-            if (this.producto_selecto.controstock) {
-                if (parseFloat(this.producto_selecto.stock) < parseFloat(this.cantidad)) {
-                    alert('Producto sin Stock')
-                    return
-                }
-            }
             this.dialo_cantidad = false
             const productoClonad = {
                 ...this.producto_selecto,

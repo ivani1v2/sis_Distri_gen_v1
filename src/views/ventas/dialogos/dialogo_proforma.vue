@@ -29,22 +29,22 @@
                     <thead>
 
                         <tr>
-                            <th class="text-left" width="20">
-                                Id
-                            </th>
                             <th class="text-left">
                                 Cliente
                             </th>
                             <th class="text-left">
                                 Fecha
                             </th>
+                            <th class="text-left">
+                                Total
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="item in lista_comprobantes" :key="item.numeracion" @click="copia_comprobante(item)">
-                            <td>{{ item.id }}</td>
                             <td>{{ item.nom_cliente }}</td>
                             <td> {{ conviertefecha(item.fecha_emision) }} </td>
+                            <td><span style="white-space: nowrap;">{{ item.moneda }} {{ item.total }}</span></td>
                         </tr>
                     </tbody>
                 </template>
@@ -83,8 +83,8 @@ export default {
 
     },
     methods: {
-                conviertefecha(date) {
-            return moment.unix(date).format('DD/MM/YYYY hh:mm A')
+        conviertefecha(date) {
+            return moment.unix(date).format('DD/MM/YYYY')
         },
         abrir_proformas(tipo) {
             this.lista_comprobantes = []
@@ -106,8 +106,8 @@ export default {
                     })
             }
         },
-        copia_comprobante(data){
-            this.$emit('copia_proforma',data)
+        copia_comprobante(data) {
+            this.$emit('copia_proforma', data)
         },
         cierra() {
             this.$emit('cierra', false)

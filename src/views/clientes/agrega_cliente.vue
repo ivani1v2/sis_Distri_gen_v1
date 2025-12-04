@@ -692,7 +692,7 @@ export default {
                     await sumaContador('ordenclientes', String(parseInt(this.clienteForm.documento) + 1).padStart(4, '0'))
                 }
 
-                this.$emit('actualizar')
+                this.$emit('actualizar', this.clienteForm)
                 store.commit('dialogoprogress')
             } catch (err) {
                 console.error(err)
@@ -733,7 +733,6 @@ export default {
                 c.referencia || c.departamento || c.provincia || c.distrito || c.ubigeo;
 
             if (tieneAntiguos && !c.direcciones) {
-                console.log('asdasd')
                 // Normaliza nombres
                 const _norm = (s) =>
                     String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
@@ -810,7 +809,7 @@ export default {
                 : '';
         },
         cierra() {
-            this.$emit('cierra', false)
+            this.$emit('cierra', this.clienteForm)
         },
         async elimina_cliente() {
 

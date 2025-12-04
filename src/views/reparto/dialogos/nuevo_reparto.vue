@@ -86,7 +86,7 @@
                         <td>
                             <v-chip x-small :color="chipColor(pedido.estado)" dark />
                         </td>
-                        <td style="font-size:75%;">S/.{{ number2(pedido.total) }}</td>
+                        <td style="font-size:75%;"><Strong>{{ pedido.moneda }}</Strong> {{ number2(pedido.total) }}</td>
                         <td style="font-size:70%; min-width:90px;">
                             <v-chip-group v-model="pedido.tipo_comprobante" mandatory column
                                 active-class="primary white--text" @change="cambiar_comprobante(pedido)">
@@ -634,6 +634,7 @@ export default {
         },
 
         async verDetalle(pedido) {
+            console.log('pedido', pedido)
             this.pedidoSeleccionado = pedido;
             store.commit("dialogoprogress");
             const snap = await detalle_pedido(pedido.id).once("value")

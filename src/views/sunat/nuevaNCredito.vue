@@ -60,7 +60,7 @@ import {
 } from '../../db'
 import moment from 'moment'
 import store from '@/store/index'
-import notas from '@/components/dialogos/dialogo_Nota'
+import notas from './dialogos/dialogo_Nota'
 export default {
 
     components: {

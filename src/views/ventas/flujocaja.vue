@@ -6,10 +6,12 @@
                     indeterminate></v-progress-circular>
             </v-card>
         </v-dialog>
-        <v-row dense class="mt-n5">
 
+
+        <v-row dense class="mt-n5">
             <v-col cols="12" md="6" xs="12">
                 <h3> T.GENERAL: S/.{{ sumatotal() }} </h3>
+                <h4> Venta: S/.{{ sumaVentas() }} </h4>
                 <h5>APERTURA: {{ fecha_inicio }}</h5>
             </v-col>
             <v-col cols="12" md="2" xs="12">
@@ -21,18 +23,23 @@
                 </v-btn>
             </v-col>
             <v-col cols="12" md="4" xs="12">
-                <v-menu bottom offset-y>
+                <v-menu v-model="menuOpc" bottom offset-y :close-on-content-click="false">
                     <template v-slot:activator="{ on, attrs }">
                         <v-btn color="success" block small v-bind="attrs" v-on="on">
                             Opciones
                             <v-spacer></v-spacer>
-                            <v-icon left>
-                                mdi-arrow-down-bold
-                            </v-icon>
+                            <v-icon left>mdi-arrow-down-bold</v-icon>
                         </v-btn>
                     </template>
+
                     <v-list dense>
-                        <v-list-item>
+                        <!-- Filtro de movimientos -->
+                        <v-list-item @click.stop>
+                            <v-select outlined dense v-model="filtroMov" :items="arrayFiltroMov" item-text="text"
+                                item-value="value" label="Filtrar movimientos" hide-details />
+                        </v-list-item>
+
+                        <v-list-item class="">
                             <v-btn dark small color="info" block @click="evento(5)">
                                 Inicio Caja
                             </v-btn>
@@ -53,7 +60,7 @@
                             </v-btn>
                         </v-list-item>
                         <v-list-item>
-                            <v-btn dark small color="info" block @click="prod_vendidos()">
+                            <v-btn dark small color="info" block @click="dialog_reporte = !dialog_reporte">
                                 Productos Vendidos
                             </v-btn>
                         </v-list-item>
@@ -65,6 +72,7 @@
                     </v-list>
                 </v-menu>
             </v-col>
+
         </v-row>
         <v-row gutters class="mt-n3" style="font-size:80%;">
             <v-col cols="12" md="3" sm="6" xs="12" v-for="item in suma_reportes()" :key="item.nombre">
@@ -93,6 +101,7 @@
 
             </v-col>
         </v-row>
+
         <v-simple-table class="elevation-1" fixed-header height="60vh" dense>
             <template v-slot:default>
                 <thead>
@@ -133,12 +142,12 @@
                         </td>
                         <td style="font-size:80%;" v-if="item.operacion == 'egreso'" class="red--text">- S/.{{
                             redondear(item.total)
-                            }}
+                        }}
                         </td>
                         <td style="font-size:80%;" v-if="true">{{ item.observacion }}</td>
                         <td style="font-size:80%;" v-if="item.estado == 'activo'">{{ item.estado }}</td>
                         <td style="font-size:80%;" v-if="item.estado != 'activo'" class="red--text">{{ item.estado
-                            }}
+                        }}
                         </td>
                         <td width="100">
                             <v-row>
@@ -423,53 +432,8 @@
             </v-card>
 
         </v-dialog>
-        <v-dialog v-model="dialog_reporte" max-width="850px">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dialog_reporte = !dialog_reporte">mdi-close</v-icon>
-                    <v-spacer></v-spacer>
-                    <v-btn color="success" x-small @click="exporta_Reporte()">exportar</v-btn>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <v-row dense>
-                    <v-col cols="12">
-                    </v-col>
-                </v-row>
-                <v-simple-table dark fixed-header max-width="68vh" dense>
-                    <template v-slot:default>
+        <dial_rep_vend v-if="dialog_reporte" :data="desserts" @cierra="dialog_reporte = false" />
 
-                        <thead>
-                            <tr>
-                                <th class="text-left">
-                                    Descripcion
-                                </th>
-                                <th class="text-left">
-                                    Stock inicial
-                                </th>
-                                <th class="text-left">
-                                    Cantidad.
-                                </th>
-                                <th class="text-left">
-                                    Total
-                                </th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-
-                            <tr v-for="item in arrayConsolidar" :key="item.id">
-                                <td>{{ item.codigo }}-{{ item.nombre }}</td>
-                                <td>{{ item.stock_actual }}</td>
-                                <td>{{ item.cantidad }}</td>
-                                <td>S/.{{ item.total.toFixed(2) }}</td>
-                            </tr>
-                        </tbody>
-                    </template>
-                </v-simple-table>
-            </v-card>
-
-        </v-dialog>
     </div>
 </template>
 
@@ -493,13 +457,23 @@ import {
     pdfcierrecaja,
     pdf_total_caja
 } from '../../pdf'
-
+import dial_rep_vend from './reportes/rep_productos_vendidos.vue'
 import store from '@/store/index'
 
 export default {
-
+    name: 'flujocaja',
+    components: {
+        dial_rep_vend
+    },
     data() {
         return {
+            filtroMov: 'todos',
+            arrayFiltroMov: [
+                { text: "Todos", value: "todos" },
+                { text: "Ingresos", value: "ingreso" },
+                { text: "Egresos", value: "egreso" },
+                { text: "Venta", value: "venta" }
+            ],
             arrayConsolidar: [],
             arra_cods: [],
             dialog: false,
@@ -546,96 +520,31 @@ export default {
     },
     computed: {
         listafiltrada() {
-            return this.desserts
+            if (this.filtroMov === 'todos') return this.desserts;
+
+            // 👇 Nuevo filtro: solo movimientos de ingreso cuya observación contenga "VENTA"
+            if (this.filtroMov === 'venta') {
+                return this.desserts.filter(f =>
+                    f.operacion === 'ingreso' &&
+                    f.estado !== 'anulado' &&
+                    f.observacion &&
+                    f.observacion.toUpperCase().includes('VENTA')
+                );
+            }
+
+            // Ingresos / Egresos como ya lo tenías
+            return this.desserts.filter(f =>
+                f.operacion === this.filtroMov
+            );
         },
     },
     methods: {
         abrir_caja() {
             this.$router.push('/caja2'); // Redirige a la ruta flujocaja
         },
-        exporta_Reporte() {
-            var data = XLSX.utils.json_to_sheet(this.arrayConsolidar)
-            const workbook = XLSX.utils.book_new()
-            const filename = 'DATA'
-            XLSX.utils.book_append_sheet(workbook, data, "flujo caja")
-            XLSX.writeFile(workbook, `${filename}.xlsx`)
-
-        },
-        async prod_vendidos() {
-            store.commit("dialogoprogress", 1); // Iniciar diálogo de progreso
-
-            try {
-                let stockActual = {}; // Objeto para almacenar el stock disponible de cada producto
-
-                // 🟢 Intentar obtener el stock actual desde `histo_stock`
-                try {
-                    let snap = await all_histo_stock().orderByChild("activo").equalTo(true).once('value');
-                    if (snap.exists()) {
-                        snap.forEach(item => {
-                            let data = item.val();
-                            if (data.lista) {
-                                data.lista.forEach(prod => {
-                                    stockActual[prod.id] = prod.stock; // Mapear el stock usando el ID del producto
-                                });
-                            }
-                        });
-                        console.log("✅ Stock actual cargado:", stockActual);
-                    } else {
-                        console.log("⚠ No se encontró `histo_stock`, mostrando productos vendidos sin stock actual.");
-                    }
-                } catch (error) {
-                    console.warn("⚠ Error al obtener `histo_stock`:", error);
-                }
-
-                this.arrayConsolidar = {}; // Objeto para consolidar productos vendidos
-
-                let productosVendidos = this.desserts.filter(data =>
-                    data.operacion === "ingreso" &&
-                    data.estado === "activo" &&
-                    data.observacion.toLowerCase().includes("venta")
-                );
-
-                for (let data of productosVendidos) {
-                    try {
-                        let snapshot = await consultaDetalle(data.numeracion_doc).once("value");
-
-                        snapshot.forEach(item => {
-                            let producto = item.val();
-                            let clave = producto.id || producto.nombre; // Usa código si existe, si no, usa nombre
-
-                            if (!this.arrayConsolidar[clave]) {
-                                let stockDisponible = stockActual[producto.id] || 0; // Si no existe en stock, asignar 0
-                                this.arrayConsolidar[clave] = {
-                                    nombre: producto.nombre,
-                                    codigo: producto.id || null,
-                                    cantidad: producto.cantidad,
-                                    precio: producto.precio,
-                                    total: producto.cantidad * producto.precio,
-                                    stock_actual: stockDisponible
-                                };
-                            } else {
-                                this.arrayConsolidar[clave].cantidad += producto.cantidad;
-                                this.arrayConsolidar[clave].total += producto.cantidad * producto.precio;
-                            }
-                        });
-                    } catch (error) {
-                        console.error(`⚠ Error al consultar detalle para ${data.numeracion_doc}:`, error);
-                    }
-                }
-
-                // Convertir el objeto consolidado en un array final
-                this.arrayConsolidar = Object.values(this.arrayConsolidar).sort((a, b) => b.cantidad - a.cantidad);
 
 
-                console.log("📦 Productos Consolidados con Stock Correcto:", this.arrayConsolidar);
-            } catch (error) {
-                console.error("❌ Error en la función `prod_vendidos`:", error);
-            } finally {
-                store.commit("dialogoprogress", 0); // Finalizar diálogo de progreso
-                this.dialog_reporte = true; // Mostrar el reporte
-            }
-        }
-        ,
+
 
         abre_editar(item) {
 
@@ -655,12 +564,29 @@ export default {
         },
         sumatotal() {
             var suma = 0
-            for (var i = 0; i < this.desserts.length; i++) {
-                if (this.desserts[i].operacion == "ingreso" && this.desserts[i].estado != 'anulado') {
-                    suma = suma + parseFloat(this.desserts[i].total)
+            var array = this.listafiltrada
+            for (var i = 0; i < array.length; i++) {
+                if (array[i].operacion == "ingreso" && array[i].estado != 'anulado') {
+                    suma = suma + parseFloat(array[i].total)
                 }
             }
             return suma.toFixed(2)
+        },
+        sumaVentas() {
+            let suma = 0;
+            for (let i = 0; i < this.desserts.length; i++) {
+                const item = this.desserts[i];
+
+                if (
+                    item.operacion === "ingreso" &&
+                    item.estado !== "anulado" &&
+                    item.observacion &&
+                    item.observacion.toUpperCase().includes("VENTA")
+                ) {
+                    suma += parseFloat(item.total);
+                }
+            }
+            return suma.toFixed(2);
         },
         suma_reportes() {
             var lista = []
@@ -668,8 +594,8 @@ export default {
             for (var i = 0; i < modopagos.length; i++) {
                 lista.push({
                     nombre: this.extrae_texto(modopagos[i], 4),
-                    ingreso: this.sumatoria(this.desserts, modopagos[i], 'ingreso'),
-                    egreso: this.sumatoria(this.desserts, modopagos[i], 'egreso'),
+                    ingreso: this.sumatoria(this.listafiltrada, modopagos[i], 'ingreso'),
+                    egreso: this.sumatoria(this.listafiltrada, modopagos[i], 'egreso'),
                 })
             }
             return lista
@@ -731,13 +657,6 @@ export default {
             });
             this.desserts = array.reverse()
             //store.commit("dialogoprogress", 1)
-        },
-
-        obtener_ultimo() {
-            if (this.desserts[this.desserts.length - 1] != undefined) {
-                var array = moment.unix(this.desserts[this.desserts.length - 1].fecha).format('DD/MM/YYYY')
-                return array
-            }
         },
 
         irCaja() {

@@ -144,7 +144,7 @@ export default {
 
         async emitAgregar() {
             if (!this.selectedCli) return
-
+            this.$store.commit("dialogoprogress");
             // Payload base que siempre se emite
             const cli = { ...this.selectedCli }
 
@@ -167,6 +167,7 @@ export default {
                     cli.direccion = dirObj.direccion
                 }
             }
+            this.$store.commit("dialogoprogress");
             // Emitir siempre el seleccionado (con sede/dia si aplicó)
             this.$emit('agregar', cli)
         },

@@ -152,68 +152,114 @@ export function analizaGrupos({
     const res = _clonarSiNecesario(base, inPlace);
 
     // 2) Sumar cantidades por grupo_bono (solo NO gratuitas)
-    const totalPorGrupo = {};
-    for (const linea of res) {
-        if (_isGratuita(linea)) continue;
+  const totalPorGrupo = {};
+for (const linea of res) {
+    if (_isGratuita(linea)) continue;
 
-        const prod = productos.find((p) => String(p.id) === String(linea.id));
-        if (!prod) continue;
+    const prod = productos.find((p) => String(p.id) === String(linea.id));
+    if (!prod) continue;
 
-        const grupo = prod.grupo_bono || null;
-        if (!grupo) continue;
+    const grupo = prod.grupo_bono || null;
+    if (!grupo) continue;
 
-        totalPorGrupo[grupo] = (totalPorGrupo[grupo] || 0) + Number(linea.cantidad || 0);
+    const factorLinea = Number(linea.factor || 1);
+    const medidaLinea = String(linea.medida || '').trim().toUpperCase();
+
+    // 👉 cantidad usada para BONO: siempre en unidades
+    let unidadesLinea = Number(linea.cantidad || 0);
+
+    // Si es CAJA (u otra medida distinta de UNIDAD) y factor>1,
+    // convertimos cajas → unidades
+    if (factorLinea > 1 && medidaLinea !== 'UNIDAD') {
+        unidadesLinea = unidadesLinea * factorLinea;
     }
 
+    totalPorGrupo[grupo] = (totalPorGrupo[grupo] || 0) + unidadesLinea;
+}
+
+    // 3) Por cada grupo con reglas, generar líneas GRATUITA
     // 3) Por cada grupo con reglas, generar líneas GRATUITA
     for (const [grupoId, cantidadGrupo] of Object.entries(totalPorGrupo)) {
         const cfg = bonos[grupoId];
+        console.log("Analizando bono grupo:", grupoId, "cfg:", cfg);
         if (!cfg || cfg.tipo !== "bono" || !cfg.activo) continue;
 
         const reglas = _getReglasBono(cfg);
 
+        // >>> NUEVO: elegir SOLO la mejor regla (la de mayor 'apartir_de' que aplique)
+        let reglaElegida = null;
         for (const regla of reglas) {
             const apartir = Number(regla.apartir_de || 0);
-            const cantBono = Number(regla.cantidad_bono || 0);
-            const cantMax =
-                regla.cantidad_max != null ? Number(regla.cantidad_max) : null;
-            const idBono = regla.codigo;
-
-            if (!apartir || !cantBono || !idBono) continue;
-
-            const veces = Math.floor(cantidadGrupo / apartir);
-            if (veces <= 0) continue;
-
-            let qtyFree = veces * cantBono;
-            if (cantMax != null && Number.isFinite(cantMax)) qtyFree = Math.min(qtyFree, cantMax);
-            if (qtyFree <= 0) continue;
-
-            const prodBono = productos.find((p) => String(p.id) === String(idBono));
-            if (!prodBono) continue;
-
-            res.push({
-                uuid: createUUID().slice(-7),
-                id: prodBono.id,
-                nombre: prodBono.nombre,
-                medida: String(prodBono.medida || "").trim().toUpperCase() || "UNIDAD",
-                factor: Number(prodBono.factor || 1),
-                cantidad: Number(qtyFree), // SIEMPRE en unidades
-                precio: 0,
-                precio_base: 0,
-                preciodescuento: 0,
-                costo: Number(prodBono.costo || 0),
-                tipoproducto: prodBono.tipoproducto,
-                operacion: "GRATUITA",
-                peso: 0,
-                controstock: !!prodBono.controstock,
-                totalLinea: redondear(0),
-                // flags
-                bono_auto: true,
-                bono_origen: grupoId,
-                bono_regla: regla.id || null,
-            });
+            if (!apartir) continue;
+            if (cantidadGrupo >= apartir) {
+                // nos quedamos con la de mayor 'apartir_de' alcanzada
+                if (!reglaElegida || apartir > Number(reglaElegida.apartir_de || 0)) {
+                    reglaElegida = regla;
+                }
+            }
         }
+        if (!reglaElegida) continue;
+
+        const apartir = Number(reglaElegida.apartir_de || 0);
+        const cantBono = Number(reglaElegida.cantidad_bono || 0);
+        const cantMax =
+            reglaElegida.cantidad_max != null ? Number(reglaElegida.cantidad_max) : null;
+        const idBono = reglaElegida.codigo;
+
+        if (!apartir || !cantBono || !idBono) continue;
+
+        const veces = Math.floor(cantidadGrupo / apartir);
+        if (veces <= 0) continue;
+
+        let qtyFree = veces * cantBono;
+        if (cantMax != null && Number.isFinite(cantMax)) qtyFree = Math.min(qtyFree, cantMax);
+        if (qtyFree <= 0) continue;
+
+        const prodBono = productos.find((p) => String(p.id) === String(idBono));
+        if (!prodBono) continue;
+        const precioUnitarioBono = Number(
+            prodBono.precio != null
+                ? prodBono.precio
+                : (prodBono.precio_base || 0)
+        );
+        const medidaLinea = String(prodBono.medida || "").trim().toUpperCase() || "UNIDAD";
+        const factorProd = Number(prodBono.factor || 1);
+
+        // 🔹 Peso base del producto (por presentación)
+        const basePeso = Number(prodBono.peso || 0);
+
+        // 🔹 Cálculo de peso de la línea (mismo criterio que en agregarLista)
+        let pesoLinea = 0;
+        if (factorProd > 1 && medidaLinea !== "UNIDAD") {
+            // Ej: CAJA x 12 und → peso * factor * cantidad_de_cajas
+            pesoLinea = basePeso * factorProd * Number(qtyFree);
+        } else {
+            // UNIDAD o factor 1 → peso * unidades
+            pesoLinea = basePeso * Number(qtyFree);
+        }
+        res.push({
+            uuid: createUUID().slice(-7),
+            id: prodBono.id,
+            nombre: prodBono.nombre,
+            medida: "UNIDAD",
+            factor: Number(prodBono.factor || 1),
+            cantidad: Number(qtyFree), // SIEMPRE en unidades
+            precio: precioUnitarioBono,
+            precio_base: precioUnitarioBono,
+            preciodescuento: 0,
+            costo: Number(prodBono.costo || 0),
+            tipoproducto: prodBono.tipoproducto,
+            operacion: "GRATUITA",
+            peso: pesoLinea,
+            controstock: !!prodBono.controstock,
+            totalLinea: redondear(0),
+            // flags
+            bono_auto: true,
+            bono_origen: grupoId,
+            bono_regla: reglaElegida.id || null,
+        });
     }
+
 
     return res;
 }
@@ -239,4 +285,128 @@ export function aplicaPreciosYBonos({
         inPlace: true, // ya trabajamos sobre conPrecios
     });
     return conBonos;
+}
+/**
+ * Agrega una o varias líneas a la lista de productos,
+ * acumulando cantidades/peso por (id + medida) y respetando
+ * la lógica de "GRATUITA" y totalLinea.
+ *
+ * @param {Object} params
+ * @param {Array}  params.listaActual      - Array actual de líneas (listaproductos)
+ * @param {Array|Object} params.nuevosItems - Ítem o array de ítems a agregar
+ * @param {Function} params.createUUID     - Función para generar UUID (ej: this.create_UUID)
+ * @param {Function} params.redondear      - Función para redondear números (ej: this.redondear)
+ *
+ * @returns {Array} Nueva lista de productos actualizada
+ */
+
+export function agregarLista({
+    listaActual,
+    nuevosItems,
+    createUUID,
+    redondear,
+}) {
+    const lista = Array.isArray(listaActual) ? [...listaActual] : [];
+    const items = Array.isArray(nuevosItems) ? nuevosItems : [nuevosItems];
+
+    items.forEach(val => {
+        const medidaLinea = (val.medida || '').toString().trim().toUpperCase();
+        const esGratuitaNueva = String(val.operacion || '').toUpperCase() === 'GRATUITA';
+        const cantidad = Number(val.cantidad || 0);
+        const basePeso = Number(val.peso || 0);
+        const factor = Number(val.factor || 1);
+
+        // 👉 Cálculo del peso total de la línea
+        let pesoLinea = 0;
+        if (factor > 1 && medidaLinea !== 'UNIDAD') {
+            // Ej: CAJA x 12 UNDS → peso * factor * cantidad
+            pesoLinea = basePeso * factor * cantidad;
+        } else {
+            // UNIDAD o factor 1 → peso * cantidad
+            pesoLinea = basePeso * cantidad;
+        }
+
+        // ---------- CASO GRATUITA: acumula cantidad por (id + medida)
+        if (esGratuitaNueva) {
+            const existenteGrat = lista.find(item =>
+                item.id === val.id &&
+                String(item.medida || '').toUpperCase() === medidaLinea &&
+                String(item.operacion || '').toUpperCase() === 'GRATUITA'
+            );
+
+            if (existenteGrat) {
+                existenteGrat.cantidad =
+                    Number(existenteGrat.cantidad || 0) + cantidad;
+                existenteGrat.peso =
+                    Number(existenteGrat.peso || 0) + pesoLinea;
+                existenteGrat.totalLinea = '0.00'; // siempre 0 en gratuita
+                return; // ya sumamos; no insertamos nuevo
+            }
+
+            // No existía: insertar línea gratuita
+            lista.push({
+                uuid: createUUID().substring(29),
+                factor: val.factor,
+                id: val.id,
+                cantidad,
+                nombre: val.nombre,
+                medida: medidaLinea,
+                precio: Number(val.precio || 0),
+                precio_base: Number(val.precio || 0),
+                preciodescuento: 0,
+                costo: val.costo,
+                tipoproducto: val.tipoproducto,
+                operacion: 'GRATUITA',
+                peso: pesoLinea,
+                controstock: val.controstock,
+                totalLinea: '0.00',
+            });
+            return;
+        }
+
+        // ---------- CASO NO GRATUITA: PERMITIR DUPLICADOS, PERO SUMAR SI (id + medida) COINCIDEN
+        const existente = lista.find(item =>
+            item.id === val.id &&
+            String(item.medida || '').toUpperCase() === medidaLinea &&
+            String(item.operacion || '').toUpperCase() !== 'GRATUITA'
+        );
+
+        if (existente) {
+            // Acumular cantidad y peso
+            const nuevaCantidad = Number(existente.cantidad || 0) + cantidad;
+            existente.cantidad = nuevaCantidad;
+            existente.peso = Number(existente.peso || 0) + pesoLinea;
+
+            // Mantén el precio de la línea existente
+            const precioUnit = Number(existente.precio || 0);
+            existente.totalLinea = redondear(
+                precioUnit * nuevaCantidad
+            );
+            // Mantén preciodescuento tal cual (se suman aparte en sumaDescuentos)
+            return; // no inserta nueva línea
+        }
+
+        // No había línea equivalente -> insertar una nueva
+        const precioNum = Number(val.precio || 0);
+
+        lista.push({
+            uuid: createUUID().substring(29),
+            factor: val.factor,
+            id: val.id,
+            cantidad,
+            nombre: val.nombre,
+            medida: medidaLinea,
+            precio: precioNum,
+            precio_base: precioNum,
+            preciodescuento: 0,
+            costo: val.costo,
+            tipoproducto: val.tipoproducto,
+            operacion: val.operacion, // 'GRAVADA', etc.
+            peso: pesoLinea,
+            controstock: val.controstock,
+            totalLinea: redondear(precioNum * cantidad),
+        });
+    });
+
+    return lista;
 }

@@ -18,7 +18,7 @@ import {  grabaCabecera_p } from "../../../db";
 export default {
     name: 'rechaza_pedido',
     props: {
-
+        grupo: null,
         item_selecto: null,
     },
     data() {
@@ -37,8 +37,8 @@ export default {
             }
             this.$store.commit("dialogoprogress");
             await Promise.all([
-                grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/estado_entrega`, 'rechazado'),
-                grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/observacion_entrega`, this.motivo_rechazo)
+                grabaCabecera_p(this.item_selecto.id_grupo||this.grupo, `${this.item_selecto.id}/estado_entrega`, 'rechazado'),
+                grabaCabecera_p(this.item_selecto.id_grupo||this.grupo, `${this.item_selecto.id}/observacion_entrega`, this.motivo_rechazo)
             ]);
 
             this.$store.commit("dialogoprogress");

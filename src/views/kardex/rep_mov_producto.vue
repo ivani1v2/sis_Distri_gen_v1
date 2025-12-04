@@ -475,7 +475,7 @@ export default {
                 }
 
                 // refrescar la última sync mostrada en pantalla
-                await this.cargaLastSync()
+              //  await this.cargaLastSync()
 
                 store.commit("dialogoprogress", 1)
             } catch (e) {

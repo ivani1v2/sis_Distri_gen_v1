@@ -30,21 +30,27 @@
                         </template>
                         <v-list dense>
                             <v-list-item @click="filtrar()">
-                                <v-list-item-title> <v-icon left>mdi-magnify</v-icon> Filtrar</v-list-item-title>
+                                <v-list-item-title> <v-icon color="info" left>mdi-magnify</v-icon>
+                                    Filtrar</v-list-item-title>
                             </v-list-item>
                             <v-list-item @click="verConsolidado">
                                 <v-list-item-title>
-                                    <v-icon left>mdi-clipboard-text</v-icon> Rep. consolidado
+                                    <v-icon left color="warning">mdi-clipboard-text</v-icon> Rep. consolidado
                                 </v-list-item-title>
                             </v-list-item>
                             <v-list-item @click="rep_avance">
                                 <v-list-item-title>
-                                    <v-icon left>mdi-clipboard-text</v-icon> Rep. Avance Ventas
+                                    <v-icon left color="info">mdi-chart-timeline-variant</v-icon> Rep. Avance Ventas
                                 </v-list-item-title>
                             </v-list-item>
                             <v-list-item @click="dial_anular = !dial_anular">
                                 <v-list-item-title>
-                                    <v-icon left>mdi-clipboard-text</v-icon> Anular Pedido
+                                    <v-icon color="error" left>mdi-delete-alert</v-icon> Anular Pedido
+                                </v-list-item-title>
+                            </v-list-item>
+                            <v-list-item @click="exportar_excel">
+                                <v-list-item-title>
+                                    <v-icon left color="success">mdi-file-excel</v-icon> exportar Excel
                                 </v-list-item-title>
                             </v-list-item>
                         </v-list>
@@ -52,13 +58,13 @@
                 </v-col>
                 <v-col cols="4" class="mt-n4">
                     <div class="body-2">
-                        <strong class="red--text"># Pedidos:</strong> {{ resumen.totalPedidos }}
+                        <strong class="red--text"># Ped:</strong> {{ resumen.totalPedidos }}
                     </div>
                 </v-col>
 
                 <v-col cols="4" class="mt-n4">
                     <div class="body-2">
-                        <strong class="red--text">Total:</strong> S/. {{ number2(resumen.totalSoles) }}
+                        <strong class="red--text">Total:</strong> S/{{ number2(resumen.totalSoles) }}
                     </div>
                 </v-col>
             </v-row>
@@ -66,12 +72,13 @@
 
         </v-card>
 
-        <v-card>
+        <v-card v-if="$vuetify.breakpoint.mdAndUp">
             <v-simple-table dense fixed-header height="65vh">
                 <thead>
                     <tr>
                         <th>Vend.</th>
                         <th>Cliente</th>
+                         <th>Obs</th>
                         <th>Fecha</th>
                         <th>Estado</th>
                         <th>Total</th>
@@ -80,14 +87,16 @@
                 </thead>
                 <tbody>
                     <tr v-for="pedido in pedidosFiltrados" :key="pedido.id">
-                        <td style="font-size:75%;">{{ pedido.cod_vendedor }}</td>
+                        <td style="font-size:75%;">{{ pedido.id }}</td>
                         <td style="font-size:75%;">{{ pedido.doc_numero }} - {{ pedido.cliente_nombre }}</td>
+                        <td style="font-size:75%;">{{ pedido.observacion }}</td>
                         <td style="font-size:75%;">{{ pedido.fecha }}</td>
                         <td>
                             <v-chip x-small :color="chipColor(pedido.estado)" dark>
+                                {{ (pedido.estado || '').toString().toUpperCase() }}
                             </v-chip>
                         </td>
-                        <td style="font-size:75%;">S/.{{ number2(pedido.total) }}</td>
+                        <td style="font-size:75%;"><Strong>{{ pedido.moneda }}</Strong>{{ number2(pedido.total) }}</td>
 
                         <td>
                             <v-row dense>
@@ -134,6 +143,99 @@
                 </tbody>
             </v-simple-table>
         </v-card>
+        <!-- LISTA MÓVIL (CARDS) -->
+        <div v-else class="mb-12">
+            <v-slide-y-transition group>
+                <v-card v-for="pedido in pedidosMostrados" :key="pedido.id" class="mb-1 mx-1 elevation-2">
+                    <!-- Cabecera del card -->
+                    <v-card-title class="py-1 px-2">
+                        <div class="d-flex flex-column">
+                            <span class="font-weight-bold cliente-nombre" style="font-size: 0.85rem;">
+                                {{ pedido.cliente_nombre || 'Cliente sin nombre' }}
+                            </span>
+                            <span class="caption grey--text text--darken-1">
+                                Doc: {{ pedido.doc_numero }}
+                            </span>
+                        </div>
+
+                        <v-spacer></v-spacer>
+
+                        <div class="text-right">
+                            <v-chip x-small :color="chipColor(pedido.estado)" dark class="mb-1">
+                                {{ ((pedido.estado || 'pendiente')).toString().toUpperCase() }}
+                            </v-chip>
+                            <div class="caption grey--text text--darken-2">
+                                {{ formatFecha(pedido.fecha_emision) }}
+                            </div>
+                        </div>
+                    </v-card-title>
+
+                    <!-- Cuerpo del card (solo total e info corta) -->
+                    <v-card-text class="pt-0 pb-1 px-2">
+                        <v-row dense>
+                            <v-col cols="7">
+                                <div class="caption grey--text text--darken-1">
+                                    Pedido : {{ pedido.id }}
+                                </div>
+                                <div v-if="pedido.observacion" class="caption grey--text text--darken-1 mt-1 obs-text">
+                                    Obs: {{ pedido.observacion }}
+                                </div>
+                            </v-col>
+
+                            <v-col cols="5" class="text-right">
+                                <div class="caption grey--text text--darken-4 font-weight-bold">
+                                    Total : {{ pedido.moneda || 'S/.' }} {{ number2(pedido.total) }}
+                                </div>
+                            </v-col>
+                        </v-row>
+                    </v-card-text>
+
+                    <!-- Acciones del card -->
+                    <v-divider class="mt-0"></v-divider>
+                    <v-card-actions class="py-1 px-1">
+                        <v-btn icon small color="primary" @click.stop="verDetalle(pedido)">
+                            <v-icon small>mdi-eye</v-icon>
+                        </v-btn>
+
+                        <v-btn icon small color="secondary" @click.stop="pedidoSeleccionado = pedido; imprimir(pedido)">
+                            <v-icon small>mdi-printer</v-icon>
+                        </v-btn>
+
+                        <v-spacer></v-spacer>
+
+                        <v-btn v-if="pedido.estado != 'anulado'" icon small color="primary"
+                            @click.stop="editar(pedido)">
+                            <v-icon small>mdi-pencil</v-icon>
+                        </v-btn>
+
+                        <v-btn v-if="pedido.estado != 'anulado'" icon small color="error" @click.stop="anular(pedido)">
+                            <v-icon small>mdi-delete</v-icon>
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-slide-y-transition>
+
+            <!-- Sentinel para scroll infinito -->
+            <div ref="sentinel" v-if="pedidosMostrados.length && pedidosMostrados.length < pedidosFiltrados.length"
+                class="py-3 text-center grey--text">
+                <v-progress-circular v-if="loadingMore" indeterminate size="20" />
+            </div>
+
+            <!-- Fallback "Ver más" por si el observer no dispara -->
+            <div v-if="isMobile && pedidosMostrados.length < pedidosFiltrados.length" class="text-center pb-4">
+                <v-btn small outlined :disabled="loadingMore" @click="verMas">
+                    Ver más
+                </v-btn>
+            </div>
+
+            <!-- Mensaje si no hay pedidos -->
+            <div v-if="!pedidosFiltrados || !pedidosFiltrados.length" class="text-center mt-6 grey--text">
+                <v-icon large class="mb-2">mdi-clipboard-text-off</v-icon>
+                <div class="subtitle-2">
+                    No hay pedidos en el rango seleccionado.
+                </div>
+            </div>
+        </div>
 
         <v-dialog v-model="dialogo_imprime" max-width="490px">
             <div>
@@ -188,7 +290,7 @@
 import moment from "moment";
 import { all_pedidos, detalle_pedido } from "../../db";
 import { crearOActualizarCliente as nuevoCliente, borrarCliente as eliminaCliente } from '../../db_firestore'
-
+import * as XLSX from "xlsx";
 import edita_ped from './dialogos/edita_pedido.vue'
 import dial_detalle_ped from './dialogos/dialogo_detalle_ped.vue'
 import dial_consolidado from "./dialogos/dialogo_rep_consolidado.vue"
@@ -233,6 +335,10 @@ export default {
             dial_avance: false,
             busca: '',
             dialogo_imprime: false,
+            page: 1,
+            pageSize: 40,       // primeros 50, luego irá sumando 50
+            loadingMore: false,
+            observer: null,
         };
     },
     created() {
@@ -244,6 +350,10 @@ export default {
     },
     beforeDestroy() {
         this._detach();
+        if (this.observer) {
+            this.observer.disconnect();
+            this.observer = null;
+        }
     },
     computed: {
         // Agrega "TODOS" al inicio de la lista de sedes/vendedores
@@ -302,15 +412,66 @@ export default {
                 : [];
             const tieneTodos = base.some(it => (it.codigo || '').toString().toUpperCase() === 'TODOS');
             return tieneTodos ? base : [{ nombre: 'TODOS', codigo: 'TODOS' }, ...base];
-        }
+        },
+        isMobile() {
+            return this.$vuetify && this.$vuetify.breakpoint.smAndDown;
+        },
+
+        // Lo que realmente se renderiza en móvil
+        pedidosMostrados() {
+            const end = this.page * this.pageSize;
+            return this.pedidosFiltrados.slice(0, end);
+        },
     },
     watch: {
         vendedor() { this.applyVendorFilter(); },
         date1() { this.filtrar(); },
-        date2() { this.filtrar(); }
+        date2() { this.filtrar(); },
+        pedidosFiltrados() {
+            this.page = 1;
+        },
+    },
+    mounted() {
+        if (this.isMobile) {
+            this.$nextTick(() => {
+                this.observer = new IntersectionObserver(
+                    entries => {
+                        const [entry] = entries;
+                        if (
+                            entry.isIntersecting &&
+                            !this.cargando &&
+                            !this.loadingMore &&
+                            this.pedidosMostrados.length < this.pedidosFiltrados.length
+                        ) {
+                            this.loadingMore = true;
+                            requestAnimationFrame(() => {
+                                this.page += 1;
+                                this.loadingMore = false;
+                            });
+                        }
+                    },
+                    {
+                        root: null,
+                        threshold: 0.1,
+                        rootMargin: '100px',
+                    }
+                );
+                if (this.$refs.sentinel) {
+                    this.observer.observe(this.$refs.sentinel);
+                }
+            });
+        }
     },
 
     methods: {
+        verMas() {
+            if (this.loadingMore) return;
+            this.loadingMore = true;
+            requestAnimationFrame(() => {
+                this.page += 1;
+                this.loadingMore = false;
+            });
+        },
         async actualizarUbicacionesDesdePedidos() {
             const arr = this.pedidosFiltrados || [];
             if (!arr.length) {
@@ -601,7 +762,119 @@ export default {
             store.commit("dialogoprogress")
             // pdfGenera(pedido, items, tama);
             pdfGenera(pedido, items, store.state.configImpresora.tamano);
+        },
+        exportar_excel: async function () {
+            try {
+                const pedidos = this.pedidosFiltrados || [];
+                if (!pedidos.length) {
+                    this.$toast?.info?.("No hay pedidos para exportar.") || alert("No hay pedidos para exportar.");
+                    return;
+                }
+
+                store.commit && store.commit("dialogoprogress");
+
+                const filas = [];
+                let n = 1; // N° correlativo de fila
+
+                // Recorre cada pedido y trae su detalle
+                for (const ped of pedidos) {
+                    const snap = await detalle_pedido(ped.id).once("value");
+                    const val = snap.val() || [];
+                    const items = Array.isArray(val) ? val : Object.values(val);
+                    moment.locale("es");
+                    // Día a partir de fecha_emision
+                    const diaStr = moment.unix(ped.fecha_emision).format("dddd"); // ej. "lunes"
+
+
+                    // Una fila por cada ítem del pedido
+                    items.forEach((d) => {
+                        const precio = Number(d.precio || d.p_unit || 0);
+                        const totalLinea = Number(d.totalLinea || d.total || 0);
+
+                        filas.push({
+                            "N°": n++,
+                            "#pedido": ped.numeracion || ped.id || "",
+                            "Cliente": ped.cliente_nombre || "",
+                            "Dirección": ped.cliente_direccion || ped.direccion || ped.ubicacion_pedido?.direccion || "",
+                            "Teléfono": ped.telefono || ped.celular || ped.cliente_telefono || "",
+                            "Vendedor": ped.cod_vendedor || "",
+                            "dia": diaStr,
+                            "F. Pedi": this.formatFecha(ped.fecha_emision, "DD/MM/YYYY"),
+                            "Código": d.codigo || d.id || "",
+                            "Cant.": Number(d.cantidad || 0),
+                            "Medida": d.medida || d.presentacion || "",
+                            "Descripción": d.nombre || d.descripcion || "",
+                            "PV x Present": precio,
+                            "Total": totalLinea,
+                        });
+                    });
+                }
+
+                // Orden de columnas
+                const headers = [
+                    "N°",
+                    "#pedido",
+                    "Cliente",
+                    "Dirección",
+                    "Teléfono",
+                    "Vendedor",
+                    "dia",
+                    "F. Pedi",
+                    "Código",
+                    "Cant.",
+                    "Medida",
+                    "Descripción",
+                    "PV x Present",
+                    "Total",
+                ];
+
+                const ws = XLSX.utils.json_to_sheet(filas, { header: headers });
+
+                // Ajuste de ancho de columnas según tu nuevo orden
+                ws["!cols"] = headers.map(() => ({ wch: 18 }));
+                ws["!cols"][0] = { wch: 5 };   // N°
+                ws["!cols"][1] = { wch: 12 };  // #pedido
+                ws["!cols"][2] = { wch: 26 };  // Cliente
+                ws["!cols"][3] = { wch: 35 };  // Dirección
+                ws["!cols"][4] = { wch: 14 };  // Teléfono
+                ws["!cols"][5] = { wch: 16 };  // Vendedor
+                ws["!cols"][6] = { wch: 10 };  // dia
+                ws["!cols"][7] = { wch: 12 };  // F. Pedi
+                ws["!cols"][8] = { wch: 12 };  // Código
+                ws["!cols"][9] = { wch: 8 };   // Cant.
+                ws["!cols"][10] = { wch: 10 };  // Medida
+                ws["!cols"][11] = { wch: 40 };  // Descripción
+                ws["!cols"][12] = { wch: 15 };  // PV x Present
+                ws["!cols"][13] = { wch: 15 };  // Total
+
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Lista de Pedidos");
+
+                const nombreArchivo = `lista_pedidos_${this.date1}_${this.date2}.xlsx`;
+                XLSX.writeFile(wb, nombreArchivo);
+
+                this.$toast?.success?.("Excel generado correctamente.") || console.log("Excel generado");
+            } catch (e) {
+                console.error("Error al exportar Excel:", e);
+                this.$toast?.error?.("No se pudo exportar a Excel") || alert("No se pudo exportar a Excel");
+            } finally {
+                store.commit && store.commit("dialogoprogress");
+            }
         }
+
+
     },
 };
 </script>
+<style>
+.cliente-nombre {
+    max-width: 58vw;
+    /* Ajusta si quieres más o menos ancho */
+    white-space: nowrap;
+    /* No permite salto de línea */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* Muestra ... */
+    display: block;
+}
+</style>

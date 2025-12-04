@@ -47,7 +47,7 @@ export const pdfGeneraFinal = (arraydatos, qr, cabecera) => {
   var rMargin = store.state.configImpresora.mderecho; //right margin in mm
   var pdfInMM = 72;  // width of A4 in mm
   var pageCenter = pdfInMM / 2;
-
+  var moneda = arraycabe.moneda || 'S/';
   var tiponota = "TIPO DE NOTA: " + arraycabe.motivo
   var modificaDOc = "MODIFICA: " + arraycabe.serie_comp_ref + '-' + arraycabe.correlativo_comp_ref
 
@@ -181,20 +181,20 @@ export const pdfGeneraFinal = (arraydatos, qr, cabecera) => {
 
 
   doc.text("OP. GRAVADA", lMargin, linea)
-  doc.text("S./" + arraycabe.total_op_gravadas, 68, linea, 'right')
+  doc.text(moneda + arraycabe.total_op_gravadas, 68, linea, 'right')
   linea = linea + 3.5
   if (arraycabe.total_op_exoneradas > 0) {
     doc.text("OP. EXONERADA", lMargin, linea)
-    doc.text("S./" + (arraycabe.total_op_exoneradas).toString(), 68, linea, 'right')
+    doc.text(moneda + (arraycabe.total_op_exoneradas).toString(), 68, linea, 'right')
     linea = linea + 3.5
   }
   doc.text("IGV " + arraycabe.porcentaje_igv + '%', lMargin, linea)
-  doc.text("S./" + arraycabe.igv, 68, linea, 'right')
+  doc.text(moneda + arraycabe.igv, 68, linea, 'right')
   linea = linea + 3.5
 
 
   doc.text("Total", lMargin, linea)
-  doc.text("S./" + total, 68, linea, 'right')
+  doc.text(moneda + total, 68, linea, 'right')
   linea = linea + 3
 
   doc.setFont('Helvetica', 'bold');
@@ -203,12 +203,12 @@ export const pdfGeneraFinal = (arraydatos, qr, cabecera) => {
 
   doc.setFont('Helvetica', '');
   doc.setFontSize(8)
-  var texto = doc.splitTextToSize("Son: " + NumerosALetras(parseFloat(total).toFixed(store.state.configuracion.decimal)), (pdfInMM - lMargin - rMargin));
+  var texto = doc.splitTextToSize("Son: " + NumerosALetras(parseFloat(total).toFixed(store.state.configuracion.decimal), moneda), (pdfInMM - lMargin - rMargin));
   doc.text(texto, pageCenter, linea, 'center');
   linea = linea + (3.5 * texto.length)
 
   var texto = doc.splitTextToSize("Representación Impresa de la NOTA DE CREDITO ELECTRONICA" +
-    " Consultar su validez en http://domo-distribuidora.web.app/buscardocumentos", (pdfInMM - lMargin - rMargin));
+    " Consultar su validez en http://domo.pe/buscardocumentos", (pdfInMM - lMargin - rMargin));
   doc.text(texto, pageCenter, linea, 'center');
   linea = linea + (3 * texto.length)
 
@@ -251,7 +251,7 @@ function impresionA4(arraydatos, qr, arraycabecera) {
   var pdfInMM = 210;  // width of A4 in mm
   var cabecera = store.state.configImpresora.cabecera;
   var telefono = store.state.configImpresora.telefono;
-
+  var moneda = arraycabe.moneda || 'S/';
   const doc = new jspdf({
     orientation: "portrait",
     unit: "mm",
@@ -445,7 +445,7 @@ function impresionA4(arraydatos, qr, arraycabecera) {
 
   doc.setFont('Helvetica', '');
   doc.setFontSize(8)
-  var texto = doc.splitTextToSize("Son: " + NumerosALetras(parseFloat(total).toFixed(store.state.configuracion.decimal)), 100);
+  var texto = doc.splitTextToSize("Son: " + NumerosALetras(parseFloat(total).toFixed(store.state.configuracion.decimal), moneda), 100);
   doc.text(texto, 10, lineaqr, 'left');
   lineaqr = lineaqr + 3
 
@@ -460,7 +460,7 @@ function impresionA4(arraydatos, qr, arraycabecera) {
   doc.text("OP. GRAVADA", 135, linea, 'left');
   doc.text(" : ", 159, linea, 'left');
   doc.setFont('Helvetica', '');
-  doc.text("S./" + arraycabe.total_op_gravadas, 172, linea, 'left');
+  doc.text(moneda + arraycabe.total_op_gravadas, 172, linea, 'left');
   linea = linea + 4
 
   doc.setFontSize(8)
@@ -468,7 +468,7 @@ function impresionA4(arraydatos, qr, arraycabecera) {
   doc.text("OP. EXONERADA", 135, linea, 'left');
   doc.text(" : ", 159, linea, 'left');
   doc.setFont('Helvetica', '');
-  doc.text("S./" + (arraycabe.total_op_exoneradas).toString(), 172, linea, 'left');
+  doc.text(moneda + (arraycabe.total_op_exoneradas).toString(), 172, linea, 'left');
   linea = linea + 4
 
   doc.setFontSize(8)
@@ -476,7 +476,7 @@ function impresionA4(arraydatos, qr, arraycabecera) {
   doc.text("IGV " + arraycabe.porcentaje_igv + '%', 135, linea, 'left');
   doc.text(" : ", 159, linea, 'left');
   doc.setFont('Helvetica', '');
-  doc.text("S./" + arraycabe.igv, 172, linea, 'left');
+  doc.text(moneda + arraycabe.igv, 172, linea, 'left');
   linea = linea + 4
 
   doc.setFontSize(8)
@@ -484,7 +484,7 @@ function impresionA4(arraydatos, qr, arraycabecera) {
   doc.text("Total", 135, linea, 'left');
   doc.text(" : ", 159, linea, 'left');
   doc.setFont('Helvetica', '');
-  doc.text("S./" + total, 172, linea, 'left');
+  doc.text(moneda + total, 172, linea, 'left');
   linea = linea + 4
 
   doc.addImage(qr, 'png', 10, lineaqr, 20, 20);
@@ -493,7 +493,7 @@ function impresionA4(arraydatos, qr, arraycabecera) {
   doc.setFont('Helvetica', '');
   doc.setFontSize(7)
   var texto = doc.splitTextToSize("Representación Impresa de la NOTA DE CREDITO ELECTRONICA" +
-    " Consultar su validez en http://domo-distribuidora.web.app/buscardocumentos", 90);
+    " Consultar su validez en http://domo.pe/buscardocumentos", 90);
   doc.text(texto, 35, lineaqr, 'left');
 
   linea = linea + 15

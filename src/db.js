@@ -87,7 +87,27 @@ export const grabaConfigura = (configura, value) => {
     });
   return c;
 };
-
+export const grabaTipoCambio = (id, dato) => { 
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("tipo_cambio")
+    .child(id)
+    .set(dato);
+};
+export const consulta_TipoCambio = (id) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("tipo_cambio")
+    .child(id);
+};
+export const all_TipoCambio = () => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("tipo_cambio") 
+};
 export const grabaConfiguraImpresora = (id, array) => {
   return db
     .database()
@@ -1246,7 +1266,6 @@ export const nuevo_ticket_guia = (comprobante, ticket) => {
     bd: store.state.baseDatos.bd,
     fecha: moment().unix(),
   };
-  console.log(array);
   return db.database().ref("pendientes").child("guias").push(array);
 };
 //------------------
@@ -1258,13 +1277,15 @@ export const nuevoMovimiento = (id, array) => {
     .child("movimientos")
     .child(id)
     .set(array)
-    .then(() => {
-      return true;
-    })
-    .catch(function (error) {
-      return error;
-    });
-  return c;
+};
+export const nuevoMovimiento_otrabd = (bd,id, array) => {
+  return db
+    .database()
+    .ref(bd)
+    .child("almacen")
+    .child("movimientos")
+    .child(id)
+    .set(array)
 };
 export const edita_Movimiento = (id, campo, data) => {
   return db
@@ -1294,6 +1315,15 @@ export const elmina_mov_kardex = (id) => {
   return db
     .database()
     .ref(store.state.baseDatos.bd)
+    .child("almacen")
+    .child("movimientos")
+    .child(id)
+    .remove();
+};
+export const elmina_mov_kardex_otrabd = (bd,id) => {
+  return db
+    .database()
+    .ref(bd)
     .child("almacen")
     .child("movimientos")
     .child(id)
@@ -1681,6 +1711,15 @@ export const busca_bono = (id) => {
     .child("kardex")
     .child("Bono")
     .child(id);
+};
+export const nuevoBono_otraBD  = (bd,id, array) => {
+  return db
+    .database()
+    .ref(bd)
+    .child("kardex")
+    .child("Bono")
+    .child(id)
+    .set(array)
 };
 export const nuevoBono = (id, array) => {
   return db

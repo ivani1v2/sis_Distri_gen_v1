@@ -2,14 +2,15 @@
     <div class="mb-6 mt-10 pa-4">
 
         <v-row class="mb-n7 mt-n7 text-center" no-gutters>
-            <v-col cols="4">
+            <v-col cols="6">
                 <h2>PROFORMAS</h2>
             </v-col>
-            <v-col cols="4">
-                <v-icon @click="data_proforma = '', dial_proforma = true" color="green"
-                    large>mdi-plus-circle-outline</v-icon>
+            <v-col cols="6">
+                <v-btn class="mt-1" small color="success" @click="data_proforma = '', dial_proforma = true">
+                    <v-icon small color="">mdi-plus-circle-outline</v-icon>
+                    nuevo
+                </v-btn>
             </v-col>
-
         </v-row>
 
         <v-row class="text-center pa-2 mb-n7">
@@ -51,7 +52,7 @@
                             <td style="font-family:verdana;font-size:75%;">{{ conviertefecha(item.fecha_emision) }}</td>
                             <td style="font-family:verdana;font-size:75%;">{{ item.num_cliente }} - {{ item.nom_cliente
                                 }}</td>
-                            <td style="font-family:verdana;font-size:75%;">S/ {{ item.total }}</td>
+                            <td style="font-family:verdana;font-size:75%;">{{item.moneda || 'S/'}} {{ item.total }}</td>
                             <td>
                                 <v-menu>
                                     <template v-slot:activator="{ on, attrs }">

@@ -96,18 +96,22 @@ export default new Vuex.Store({
         codigo: "PEN",
         moneda: "Sol",
         simbolo: "S/",
+        pais: "Perú",
       },
       {
         codigo: "USD",
-        moneda: "Dólar EEUU",
+        moneda: "Dólar Estadounidense",
         simbolo: "$",
+        pais: "Estados Unidos",
       },
       {
         codigo: "EUR",
         moneda: "Euro",
         simbolo: "€",
-      },
+        pais: "Unión Europea",
+      }
     ],
+
     modopagos: [],
     iconos_pagos: [
       {
@@ -470,9 +474,13 @@ export default new Vuex.Store({
     zonas: [],
     bonos: [],
     clientessearch: [],
-    lista_productos:[]
+    lista_productos: [],
+    tipo_cambio: null,
   },
   mutations: {
+    tipo_cambio(state, n) {
+      state.tipo_cambio = n;
+    },
     lista_productos(state, n) {
       state.lista_productos = n;
     },

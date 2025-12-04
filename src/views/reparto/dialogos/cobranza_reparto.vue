@@ -1,7 +1,7 @@
 <template>
     <v-dialog v-model="dial" max-width="650" persistent>
         <v-card elevation="2" class="pa-2 mb-3">
-           <v-row no-gutters align="center" class="mb-2">
+            <v-row no-gutters align="center" class="mb-2">
                 <v-col>
                     <div class="text-h6 font-weight-bold">
                         Liquidacion Reparto {{ grupo }}
@@ -13,7 +13,7 @@
                     </v-btn>
                 </v-col>
             </v-row>
-            
+
 
             <!-- Totales generales -->
             <v-row dense>
@@ -53,8 +53,11 @@
                     </v-chip>
                 </v-col>
             </v-row>
-            <v-btn class="mt-6" color="red darken-1" dark block @click="dialog = true" small>
+            <v-btn class="mt-6" color="error" dark block @click="dialog = true" small>
                 Ver detalle rechazados ({{ totalItemsRechazados }})
+            </v-btn>
+            <v-btn class="mt-2" color="primary" dark block small @click="generarPdf">
+                Descargar PDF liquidación
             </v-btn>
         </v-card>
 
@@ -81,8 +84,8 @@
     </v-dialog>
 </template>
 <script>
-import { all_detalle_entrega } from "../../../db";
-
+import { all_detalle_entrega, all_Cabecera_p } from "../../../db";
+import {pdfGenera} from "../../reparto/formatos/formato_liquida";
 export default {
     name: "cobranza_reparto",
     props: {
@@ -133,12 +136,25 @@ export default {
     },
     methods: {
         obtenerDetallesEntrega(grupo) {
+            // Cabecera (si luego quieres usarla, la puedes guardar en data)
+            all_Cabecera_p(grupo).once("value", snap => {
+                console.log("Cabecera grupo:", snap.val());
+                this.cabeceraGrupo = snap.val() || {};
+            });
+
             all_detalle_entrega(grupo).once("value", snap => {
                 this.dataEntrega = snap.val() || {};
+
                 this.rechazos = Object.values(this.dataEntrega)
                     .flatMap(p => p.rechazos || []);
             });
+        },
+
+        generarPdf() {
+            console.log(this.cabeceraGrupo, this.dataEntrega);
+            pdfGenera(this.cabeceraGrupo, this.dataEntrega, this.grupo);
         }
     }
+
 };
 </script>

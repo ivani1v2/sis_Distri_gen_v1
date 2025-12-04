@@ -20,7 +20,7 @@
                         <v-list-item>
 
                             <v-btn :disabled="sede_actual != base_principal" dark small color="orange" block
-                                @click="sincroniar(), sincroniza_categoria()">
+                                @click="sincroniar(), sincroniza_categoria(); sincroniza_bonos()">
                                 <v-icon left>mdi-refresh</v-icon> Sincronizar Productos
                             </v-btn>
                         </v-list-item>
@@ -101,7 +101,9 @@ import {
     allCategorias,
     allProductoOtraBase,
     nuevoProductoOtraBase,
-    nuevaCategoria_otraBD
+    nuevaCategoria_otraBD,
+    allBono,
+    nuevoBono_otraBD
 } from '@/db';
 import store from '@/store/index'
 export default {
@@ -184,63 +186,73 @@ export default {
                 // 1) Leer categorías de la sede principal
                 const snap = await allCategorias().once('value');
                 if (!snap.exists()) {
-                    this.$toast.info('No existen categorías en la sede principal para sincronizar.');
+                    this._toast('info', 'No existen categorías en la sede principal para sincronizar.');
                     return;
                 }
 
-                // 2) Normalizar: key => id, value.nombre => nombre (trim)
+                // 2) Normalizar categorías
                 const categorias = [];
                 const nombresVistos = new Set();
                 snap.forEach(child => {
                     const val = child.val() || {};
                     const nombre = (val.nombre || '').trim();
-                    if (!nombre) return; // ignora vacíos
+                    if (!nombre) return;
 
-                    // evita duplicados por nombre (opcional)
                     const firma = nombre.toUpperCase();
                     if (nombresVistos.has(firma)) return;
                     nombresVistos.add(firma);
 
                     categorias.push({
-                        id: child.key,       // <- la key es el id
-                        nombre,              // <- solo usamos nombre
-                        editado: val.editado || Math.floor(Date.now() / 1000) // opcional
+                        id: child.key,
+                        nombre,
+                        editado: val.editado || Math.floor(Date.now() / 1000)
                     });
                 });
 
                 if (!categorias.length) {
-                    this.$toast.info('No hay categorías válidas para sincronizar.');
+                    this._toast('info', 'No hay categorías válidas para sincronizar.');
                     return;
                 }
 
-                // 3) Sedes destino (todas menos la sede actual)
-                const sedes = store.state.array_sedes.filter(s => s.base !== this.sede_actual && s.tipo == 'sede');
+                // 3) Sedes destino (todas menos la actual, y con base definida)
+                const sedes = store.state.array_sedes.filter(
+                    s => s.tipo === 'sede' && s.base && s.base !== this.sede_actual
+                );
                 if (!sedes.length) {
-                    this.$toast.info('No hay otras sedes a las cuales sincronizar categorías.');
+                    this._toast('info', 'No hay otras sedes a las cuales sincronizar categorías.');
                     return;
                 }
 
-                // 4) Sincronizar por sede (upsert)
                 this.resumenSedes = [];
                 let totalGlobal = 0;
 
+                // 4) Upsert por sede
                 for (const sede of sedes) {
-                    // upsert concurrente por sede
                     await Promise.all(
                         categorias.map(cat =>
-                            nuevaCategoria_otraBD(sede.base, cat.id, { id: cat.id, nombre: cat.nombre, editado: cat.editado })
+                            nuevaCategoria_otraBD(sede.base, cat.id, {
+                                id: cat.id,
+                                nombre: cat.nombre,
+                                editado: cat.editado
+                            })
                         )
                     );
                     totalGlobal += categorias.length;
-                    this.resumenSedes.push(`${categorias.length} categoría(s) sincronizada(s) en sede ${sede.nombre || sede.base}`);
+                    this.resumenSedes.push(
+                        `${categorias.length} categoría(s) sincronizada(s) en sede ${sede.nombre || sede.base}`
+                    );
                 }
 
-                // 5) Mensaje final
-                this.$toast.success(`Sincronización de categorías finalizada: ${totalGlobal} categoría(s) en total.`, { timeout: 8000 });
+                this._toast(
+                    'success',
+                    `Sincronización de categorías finalizada: ${totalGlobal} categoría(s) en total.`
+                );
             } catch (err) {
-                this.$toast.error('Error al sincronizar categorías: ' + (err?.message || err));
+                this._toast('error', 'Error al sincronizar categorías: ' + (err?.message || err));
             }
         },
+
+
 
         async sincroniar() {
             try {
@@ -295,11 +307,27 @@ export default {
                         const editSrc = Number(src.editado || 0);
                         const editDst = Number(dst.editado || 0);
                         if (editSrc > editDst) {
-                            const merged = { ...dst, ...src }; // traemos campos nuevos
-                            merged.stock = dst.stock;          // preserva stock
-                            if (Object.prototype.hasOwnProperty.call(dst, 'stock2')) merged.stock2 = dst.stock2;
-                            else delete merged.stock2;
-                            merged.editado = editSrc || ahora; // asegura incremento
+                            // --- CAMBIO AQUÍ ---
+
+                            // 1. Usamos 'src' como base. Esto elimina cualquier campo "fantasma" 
+                            // que exista en la sede pero que ya fue borrado en la principal.
+                            const merged = { ...src };
+
+                            // 2. Restauramos el STOCK de la sede (para no perder su inventario)
+                            merged.stock = dst.stock;
+
+                            // 3. Restauramos stock2 si existe en la sede
+                            if (Object.prototype.hasOwnProperty.call(dst, 'stock2')) {
+                                merged.stock2 = dst.stock2;
+                            } else {
+                                // Si la sede no tenía stock2, nos aseguramos de borrarlo 
+                                // por si 'src' traía alguno por defecto.
+                                delete merged.stock2;
+                            }
+
+                            // 4. Actualizamos la fecha
+                            merged.editado = editSrc || ahora;
+
                             acciones.push({ id, data: merged });
                         }
                     }
@@ -333,6 +361,54 @@ export default {
                 this.$toast?.error && this.$toast.error('Error al sincronizar productos: ' + (error?.message || error));
             }
         },
+        async sincroniza_bonos() {
+            try {
+                // 1) leer TODOS los bonos globales desde la sede principal
+                const snap = await allBono().once('value');
+                const bonos = snap.val() || {};
+
+                const claves = Object.keys(bonos);
+                if (!claves.length) {
+                    this.$toast?.info && this.$toast.info('No hay bonos globales para sincronizar.');
+                    return;
+                }
+
+                // 2) sedes destino (todas menos la sede actual)
+                const sedes = store.state.array_sedes.filter(
+                    s => s.base !== this.sede_actual && s.tipo === 'sede'
+                );
+                if (!sedes.length) {
+                    this.$toast?.info && this.$toast.info('No hay otras sedes a las cuales sincronizar bonos.');
+                    return;
+                }
+
+                let totalGlobal = 0;
+
+                // 3) copiar SIEMPRE tal cual (sobrescribir)
+                for (const sede of sedes) {
+                    const acciones = claves.map(id => {
+                        const data = bonos[id];
+                        return nuevoBono_otraBD(sede.base, id, data);
+                    });
+
+                    await Promise.all(acciones); // sobrescribe todo en esa sede
+
+                    totalGlobal += acciones.length;
+                    this.resumenSedes.push(
+                        `${acciones.length} bono(s) sincronizado(s) en sede ${sede.nombre || sede.base}`
+                    );
+                }
+
+                this.$toast?.success &&
+                    this.$toast.success(
+                        `Sincronización de bonos globales OK: ${totalGlobal} bono(s) copiado(s).`,
+                        { timeout: 8000 }
+                    );
+            } catch (err) {
+                this.$toast?.error &&
+                    this.$toast.error('Error al sincronizar bonos: ' + (err?.message || err));
+            }
+        },
 
         // Helper: graba por lotes con concurrencia limitada
         async grabaLote(sedeBase, acciones, batchSize = 40) {
@@ -350,6 +426,16 @@ export default {
             }
         },
 
+        _toast(tipo, msg) {
+            if (this.$toast && this.$toast[tipo]) {
+                this.$toast[tipo](msg);
+            } else if (this.$store?.commit) {
+                // fallback a snackbar global
+                this.$store.commit("dialogosnackbar", msg);
+            } else {
+                console.log(tipo.toUpperCase(), msg);
+            }
+        },
 
         progresoGlobal() {
             // Retorna porcentaje global de todas las sedes

@@ -208,9 +208,9 @@
         <dial_mapas v-model="dialogoMapa"
             :clienteEnMapa="{ nombre: item_selecto.cliente, latitud: item_selecto.latitud, longitud: item_selecto.longitud, documento: item_selecto.dni }"
             :ver-todos="false" :guardar_auto="false" @cierra="dialogoMapa = false" />
-        <mapa_reparto v-model="dialogoMapa_reparto" :clientes="pedidosFiltrados" />
+        <mapa_reparto v-model="dialogoMapa_reparto" :clientes="pedidosFiltrados" :grupo="repartoActual" />
         <dial_rechaza v-if="dial_rechazo" :item_selecto="item_selecto" @cerrar="dial_rechazo = false"
-            @guardado=" dial_rechazo = false" />
+            @guardado=" dial_rechazo = false" :grupo="repartoActual" />
         <busca_reparto v-if="dial_repartos" @seleccionado="ver_reparto($event), dial_repartos = false"
             @cerrar="dial_repartos = false" />
         <div v-if="isMobile && !dialogoMapa_reparto && pedidosFiltrados.length > 0" class="fab-mobile">
@@ -221,7 +221,7 @@
             </v-btn>
         </div>
         <acepta_pedido v-if="dial_aceptado" :item_selecto="item_selecto" @cerrar="dial_aceptado = false"
-            @guardado=" dial_aceptado = false" />
+            @guardado=" dial_aceptado = false" :grupo="repartoActual" />
         <cobranza_reparto v-if="dial_cobranza" :pedidos="pedidosFiltrados" :grupo="repartoActual" @cerrar="dial_cobranza = false" />
     </div>
 </template>
@@ -341,14 +341,15 @@ export default {
             // definimos el callback y lo guardamos para poder hacer off luego
             const listener = async (snap) => {
                 const cabecera = snap.val() || {};
-
+                  console.log('cabn',cabecera)
                 // armamos array de pedidos
+        
                 const pedidos = Object.keys(cabecera).map(key => {
                     const p = cabecera[key] || {};
                     p.id = key;
                     p.estado_entrega = p.estado_entrega || "pendiente";
                     return p;
-                });
+                })  .filter(p => p.estado !== "ANULADO"); ;
 
                 // seteamos en data
                 this.lista_pedidos = pedidos;
@@ -407,12 +408,12 @@ export default {
             this.lista_pedidos = this.lista_pedidos.map(p => {
                 const key = String(p.dni || p.documento || '').trim();
                 const c = byDoc[key];
-                console.log("Enriqueciendo pedido", p.ubicacion, "con cliente:", c);
+
                 return {
                     ...p,
                     telefono: c?.telefono ?? p.telefono ?? '',
-                    latitud: p.ubicacion.lat,
-                    longitud: p.ubicacion.lng,
+                    latitud: c?.latitud ?? p.ubicacion.lat, // usar la ubicación del pedido si existe
+                    longitud: c?.longitud ?? p.ubicacion.lng,
                 };
             });
         },

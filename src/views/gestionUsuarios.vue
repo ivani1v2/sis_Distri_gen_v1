@@ -1,54 +1,131 @@
 <template>
-    <div mb-5 class="pa-6">
-        <v-btn v-if="false" color="success mb-1" small block @click.prevent="modificarpermisos">Crear permisos</v-btn>
-        <v-btn color="success mb-1" small block @click.prevent="dialog = !dialog">Crear usuario</v-btn>
-        <v-simple-table class="elevation-1 mt-2" fixed-header height="65vh" dense>
-            <template v-slot:default>
-                <thead>
+    <div class="pa-6 mb-5">
+        <!-- CABECERA / CONTENEDOR PRINCIPAL -->
+        <v-card class="elevation-2">
+            <v-toolbar flat dense>
+                <v-toolbar-title class="subtitle-1 font-weight-bold">
+                    Gestión de usuarios
+                </v-toolbar-title>
 
-                    <tr>
-                        <th class="text-left">
-                            NOMBRE
-                        </th>
-                        <th class="text-left">
-                            Codigo
-                        </th>
-                        <th class="text-left">
-                            BaseDatos
-                        </th>
-                        <th class="text-left">
-                            Correo
-                        </th>
-                        <th class="text-left">
-                            Accion
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="item in desserts" :key="item.token">
-                        <td>{{ item.nombre }}</td>
-                        <td>{{ item.codigo }}</td>
-                        <td>{{ item.bd }}</td>
-                        <td>{{ item.correo }}</td>
-                        <td>
-                            <v-row class="text-center">
-                                <v-col cols="6">
-                                    <v-icon @click="bloquear(item, false)" color="red"
-                                        v-if="item.bloqueo">mdi-wifi-off</v-icon>
-                                    <v-icon @click="bloquear(item, true)" color="green"
-                                        v-if="!item.bloqueo">mdi-wifi-check</v-icon>
-                                </v-col>
-                                <v-col cols="6">
-                                    <v-icon class="ml-4" @click="item_selecto = item, dial_sett = true"
-                                        color="red">mdi-cog-refresh</v-icon>
-                                </v-col>
-                            </v-row>
+                <v-spacer></v-spacer>
 
-                        </td>
-                    </tr>
-                </tbody>
-            </template>
-        </v-simple-table>
+                <!-- Contador de usuarios -->
+                <v-chip small label class="mr-3" v-if="desserts && desserts.length">
+                    <v-icon left small>mdi-account-group</v-icon>
+                    {{ desserts.length }} usuarios
+                </v-chip>
+
+                <!-- Botón oculto (mantengo funcionalidad original) -->
+                <v-btn v-if="false" color="success" small class="mr-2" @click.prevent="modificarpermisos">
+                    <v-icon left small>mdi-shield-key</v-icon>
+                    Crear permisos
+                </v-btn>
+
+                <!-- Crear usuario -->
+                <v-btn color="success" small depressed @click.prevent="dialog = true">
+                    <v-icon left small>mdi-account-plus</v-icon>
+                    Crear usuario
+                </v-btn>
+            </v-toolbar>
+
+            <v-divider></v-divider>
+
+            <!-- TABLA DE USUARIOS -->
+            <v-simple-table class="usuarios-table" fixed-header height="65vh" dense>
+                <template v-slot:default>
+                    <thead>
+                        <tr>
+                            <th class="text-left">Nombre</th>
+                            <th class="text-left">Código</th>
+                            <th class="text-left">Base de datos</th>
+                            <th class="text-left">Correo</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="item in desserts" :key="item.token">
+                            <td class="user-cell">
+                                <div class="font-weight-medium text-truncate">
+                                    {{ item.nombre || 'Sin nombre' }}
+                                </div>
+                            </td>
+                            <td class="user-cell">
+                                <div class="text-truncate">
+                                    {{ item.codigo || '-' }}
+                                </div>
+                            </td>
+                            <td class="user-cell">
+                                <div class="text-truncate">
+                                    {{ item.bd || '-' }}
+                                </div>
+                            </td>
+                            <td class="user-cell">
+                                <div class="text-truncate">
+                                    {{ item.correo || '-' }}
+                                </div>
+                            </td>
+                            <td class="text-center acciones-cell">
+                                <v-row dense align="center" justify="center" no-gutters class="acciones-row">
+                                    <!-- Bloquear / Activar -->
+                                    <v-col cols="4" class="text-center">
+                                        <v-tooltip bottom>
+                                            <template v-slot:activator="{ on, attrs }">
+                                                <v-btn icon v-bind="attrs" v-on="on"
+                                                    @click="bloquear(item, !item.bloqueo)" :disabled="item.es_admin">
+                                                    <v-icon :color="item.bloqueo ? 'red' : 'green'">
+                                                        {{ item.bloqueo ? 'mdi-wifi-off' : 'mdi-wifi-check' }}
+                                                    </v-icon>
+                                                </v-btn>
+                                            </template>
+                                            <span v-if="item.es_admin">
+                                                Administrador (no se puede bloquear)
+                                            </span>
+                                            <span v-else>
+                                                {{ item.bloqueo ? 'Activar usuario' : 'Bloquear usuario' }}
+                                            </span>
+                                        </v-tooltip>
+                                    </v-col>
+
+                                    <!-- Configuración -->
+                                    <v-col cols="4" class="text-center">
+                                        <v-tooltip bottom>
+                                            <template v-slot:activator="{ on, attrs }">
+                                                <v-btn icon v-bind="attrs" v-on="on"
+                                                    @click="item_selecto = item; dial_sett = true">
+                                                    <v-icon color="primary">mdi-cog-refresh</v-icon>
+                                                </v-btn>
+                                            </template>
+                                            <span>Editar datos y permisos</span>
+                                        </v-tooltip>
+                                    </v-col>
+                                     <v-col cols="4" class="text-center">
+                                        <v-tooltip bottom>
+                                            <template v-slot:activator="{ on, attrs }">
+                                                <v-btn
+                                                    icon
+                                                    v-bind="attrs"
+                                                    v-on="on"
+                                                    @click="toggleGps(item, !item.gps_activo)">
+                                                    <v-icon :color="item.gps_activo ? 'blue' : 'grey'">
+                                                        {{ item.gps_activo ? 'mdi-map-marker-radius' : 'mdi-map-marker-off' }}
+                                                    </v-icon>
+                                                </v-btn>
+                                            </template>
+                                            <span>
+                                                {{ item.gps_activo ? 'Desactivar geolocalización' : 'Activar geolocalización' }}
+                                            </span>
+                                        </v-tooltip>
+                                    </v-col>
+                                    
+                                </v-row>
+                            </td>
+                        </tr>
+                    </tbody>
+                </template>
+            </v-simple-table>
+        </v-card>
+
+        <!-- DIALOGO EDITAR USUARIO -->
         <v-dialog v-model="dial_sett" max-width="520px" persistent>
             <v-card class="mx-auto">
                 <v-toolbar flat dense>
@@ -59,12 +136,13 @@
                     <div class="d-flex flex-column">
                         <span class="subtitle-2 font-weight-medium">Editar usuario</span>
                         <span class="caption grey--text">
-                            {{ (item_selecto && item_selecto.correo) ? item_selecto.correo : 'sin-correo' }}
+                            {{ (item_selecto && item_selecto.correo) ? item_selecto.correo : 'sin correo' }}
                         </span>
                     </div>
 
                     <v-spacer></v-spacer>
 
+                    <!-- Estado -->
                     <v-chip x-small label class="mr-2"
                         :color="(item_selecto && item_selecto.bloqueo) ? 'red lighten-4' : 'green lighten-4'">
                         <v-icon left small :color="(item_selecto && item_selecto.bloqueo) ? 'red' : 'green'">
@@ -73,7 +151,9 @@
                         {{ (item_selecto && item_selecto.bloqueo) ? 'Bloqueado' : 'Activo' }}
                     </v-chip>
 
-                    <v-btn icon @click="dial_sett = false"><v-icon>mdi-close</v-icon></v-btn>
+                    <v-btn icon @click="dial_sett = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
                 </v-toolbar>
 
                 <v-divider></v-divider>
@@ -83,16 +163,17 @@
                         <v-row dense>
                             <v-col cols="12">
                                 <v-text-field outlined dense v-model="item_selecto.nombre" label="Nombre"
-                                    :rules="[v => !!v || 'Requerido']" required />
+                                    :rules="[v => !!v || 'Requerido']" required hide-details="auto" />
                             </v-col>
 
                             <v-col cols="12" sm="6">
-                                <v-text-field outlined dense v-model="item_selecto.codigo" label="Código"
-                                    :rules="[v => !!v || 'Requerido']" required />
+                                <v-text-field outlined dense v-model="item_selecto.codigo" label="Código interno"
+                                    :rules="[v => !!v || 'Requerido']" required hide-details="auto" />
                             </v-col>
 
                             <v-col cols="12" sm="6">
-                                <v-text-field outlined dense v-model="item_selecto.bd" label="Base de datos" disabled />
+                                <v-text-field outlined dense v-model="item_selecto.bd" label="Base de datos" disabled
+                                    hide-details="auto" />
                             </v-col>
                         </v-row>
                     </v-form>
@@ -101,47 +182,56 @@
                 <v-card-actions class="px-4 pb-4">
                     <v-btn text @click="dial_sett = false">Cancelar</v-btn>
                     <v-spacer></v-spacer>
-                    <v-btn color="info" class="mr-2" @click="cargaPermisos()">
-                        <v-icon left small>mdi-shield-key</v-icon> Gestionar Permisos
+                    <v-btn small color="info" class="mr-2" @click="cargaPermisos()">
+                        <v-icon left small>mdi-shield-key</v-icon>
+                        permisos
                     </v-btn>
-                    <v-btn color="success" @click="guardar_permisos()">
-                        <v-icon left small>mdi-content-save</v-icon> Guardar
+                    <v-btn small color="success" @click="guardar_permisos()">
+                        <v-icon left small>mdi-content-save</v-icon>
+                        Guardar
                     </v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
 
-
-
+        <!-- DIALOGO CREAR USUARIO -->
         <v-dialog v-model="dialog" max-width="460px">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dialog = !dialog">mdi-close</v-icon>
+            <v-card class="mx-auto">
+                <v-toolbar flat dense color="primary" dark>
+                    <v-toolbar-title class="subtitle-2">Nuevo usuario</v-toolbar-title>
                     <v-spacer></v-spacer>
-                </v-system-bar>
-            </div>
-            <v-card class="mx-auto" color="white">
-                <v-card-text>
+                    <v-btn icon @click="dialog = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-toolbar>
+
+                <v-divider></v-divider>
+
+                <v-card-text class="pt-4">
                     <v-form ref="form" v-model="valid" lazy-validation>
-                        <v-text-field v-model="nombre" label="NOMBRE" required></v-text-field>
-                        <v-text-field v-model="email" label="E-mail" required suffix="@domotica.com"></v-text-field>
+                        <v-text-field v-model="nombre" label="Nombre" outlined dense required hide-details="auto" />
+
+                        <v-text-field v-model="email" label="Usuario (sin @domotica.com)" outlined dense required
+                            suffix="@domotica.com" hide-details="auto" />
 
                         <v-text-field v-model="password" :append-icon="show1 ? 'mdi-eye' : 'mdi-eye-off'"
-                            :rules="[rules.required, rules.min]" :type="show1 ? 'text' : 'password'" name="input-10-1"
-                            label="Contraseña" hint="Min 8 caracteres" counter
-                            @click:append="show1 = !show1"></v-text-field>
+                            :rules="[rules.required, rules.min]" :type="show1 ? 'text' : 'password'"
+                            name="input-password" label="Contraseña" hint="Mínimo 8 caracteres" counter outlined dense
+                            hide-details="auto" autocomplete="new-password" @click:append="show1 = !show1" />
                     </v-form>
-
                 </v-card-text>
+
                 <v-card-actions>
-                    <v-btn color="success" block @click.prevent="crearUsuario()">Creausuario</v-btn>
+                    <v-btn color="success" block large @click.prevent="crearUsuario()">
+                        <v-icon left small>mdi-content-save</v-icon>
+                        Crear usuario
+                    </v-btn>
                 </v-card-actions>
             </v-card>
-
         </v-dialog>
-
     </div>
 </template>
+
 
 <script>
 import {
@@ -259,6 +349,36 @@ export default {
 
             this.desserts = array;
         },
+         async toggleGps(user, value) {
+            if (!user || !user.token) {
+                this.$store?.commit?.('dialogosnackbar', 'Usuario inválido');
+                return;
+            }
+
+            const prev = user.gps_activo;
+
+            if (typeof user.gps_activo === 'undefined') {
+                this.$set(user, 'gps_activo', value);
+            } else {
+                user.gps_activo = value;
+            }
+
+            try {
+                store.commit("dialogoprogress");
+                await nuevoCampoUsuario(user.token, 'gps_activo', value);
+
+                this.$store?.commit?.(
+                    'dialogosnackbar',
+                    value ? 'Geolocalización activada para este usuario' : 'Geolocalización desactivada para este usuario'
+                );
+            } catch (e) {
+                console.error(e);
+                user.gps_activo = prev;
+                this.$store?.commit?.('dialogosnackbar', 'No se pudo actualizar la geolocalización');
+            } finally {
+                store.commit("dialogoprogress");
+            }
+        },
         async guardar_permisos() {
             if (!this.$refs.formSett) return;
             const ok = await this.$refs.formSett.validate();
@@ -355,3 +475,32 @@ export default {
 
 }
 </script>
+<style scoped>
+.usuarios-table thead th {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+}
+
+.usuarios-table tbody tr:hover {
+    background-color: #f5f5f5;
+}
+
+.user-cell {
+    max-width: 220px;
+}
+
+.user-cell .text-truncate {
+    max-width: 220px;
+}
+
+.acciones-cell {
+    width: 150px;
+}
+
+.acciones-row {
+    min-width: 120px;
+}
+</style>

@@ -109,7 +109,9 @@
                 <v-row dense>
                     <v-col cols="8">
                         <p style="font-size:80%;"> Doc. N° : {{ seleccionado.numeracion }}</p>
-                        <p style="font-size:80%;" class="mt-n4 "> Pago : {{ seleccionado.modopago }}</p>
+                        <p v-if="pagoConMonto" style="font-size:80%;" class="mt-n4">
+                            Pago : {{ pagoConMonto.nombre }} {{ pagoConMonto.monto }}
+                        </p>
                         <p style="font-size:80%;" class="mt-n4 mb-1"> Modo : {{ seleccionado.forma_pago }}</p>
                     </v-col>
                     <v-col cols="4">
@@ -140,8 +142,10 @@
                             <tr v-for="item in arrayConsolidar" :key="item.id" class="">
                                 <td>{{ item.nombre }} - S/.{{ item.precioedita }} x {{ item.medida }}</td>
                                 <td>{{ item.cantidad }}</td>
-                                <td v-if="item.operacion == 'GRATUITA'" class="red--text">S/.0.00</td>
-                                <td v-else>S/.{{ redondear(item.precioedita * item.cantidad) }}</td>
+                                <td v-if="item.operacion == 'GRATUITA'" class="red--text">{{ seleccionado.moneda }}0.00
+                                </td>
+                                <td v-else>{{ seleccionado.moneda }} {{ redondear(item.precioedita * item.cantidad) }}
+                                </td>
                             </tr>
                         </tbody>
                     </template>
@@ -260,7 +264,7 @@ import {
     descargaCDR,
     consultasunat
 } from '../../servidorsunat'
-import notas from '@/components/dialogos/dialogo_Nota'
+import notas from './dialogos/dialogo_Nota'
 import {
     modifica_stock_array
 } from '../../control_stock'
@@ -302,12 +306,20 @@ export default {
             this.desserts.reverse()
             return this.desserts.filter((item) => (item.numeracion)
                 .toLowerCase().includes(this.num_doc.toLowerCase()))
-        }
+        },
+        pagoConMonto() {
+            const sel = this.seleccionado || {}
+            const pagos = sel.modopago
+            if (!Array.isArray(pagos)) return null
+            return pagos.find(p => p && p.monto && Number(p.monto) > 0) || null
+
+        },
     },
     created() {
         this.busca()
     },
     methods: {
+
         async masivo_xml() {
             if (this.listafiltrada == '') {
                 alert('Debe tener documentos listados primero')
@@ -510,9 +522,11 @@ export default {
             var array = this.seleccionado
             var lista_pro = []
             if (!this.seleccionado.regesa_stock) {
-                await grabaCabecera(this.seleccionado.numeracion + '/regesa_stock', true)
-                var snap = await consultaDetalle(this.seleccionado.numeracion).once("value")
-                await modifica_stock_array('SUMA', snap.val())
+                if (confirm('Desea regresar stock de este comprobante?')) {
+                    await grabaCabecera(this.seleccionado.numeracion + '/regesa_stock', true)
+                    var snap = await consultaDetalle(this.seleccionado.numeracion).once("value")
+                    await modifica_stock_array('SUMA', snap.val())
+                }
             }
             store.commit("dialogoprogress", 1)
             grabaDatoC(array.numeracion, "automata", "")

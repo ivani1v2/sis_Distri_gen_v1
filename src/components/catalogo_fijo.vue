@@ -414,7 +414,6 @@ export default {
             const ahora = new Date().getTime();
             const diferencia = ahora - this.tiempoUltimaTecla;
             this.tiempoUltimaTecla = ahora;
-            console.log(diferencia)
             if (diferencia < 50) {
                 // Se asume que es lector de código de barra
                 this.esCodigoDeBarras = true;

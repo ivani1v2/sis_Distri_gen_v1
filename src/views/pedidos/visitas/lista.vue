@@ -51,19 +51,32 @@
                             :loading="cargando">
                             <v-icon>mdi-filter</v-icon>
                         </v-btn>
-                        <v-btn icon small color="success" class="mt-n6 " @click="busca_clientes = !busca_clientes"
-                            :loading="cargando">
-                            <v-icon>mdi-account-details</v-icon>
-                        </v-btn>
                     </v-layout>
 
                 </v-col>
 
                 <v-col cols="6" sm="6" md="3" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6 ' : 'mt-n2'">
-                    <v-btn class="" block color="success" x-small :loading="cargando"
-                        @click="cliente_selecto = null, dial_cliente = !dial_cliente">
-                        Agregar cliente
-                    </v-btn>
+                    <v-menu bottom offset-y>
+                        <template v-slot:activator="{ on, attrs }">
+                            <v-btn color="success" block x-small v-bind="attrs" v-on="on">
+                                Clientes
+                                <v-spacer></v-spacer>
+                                <v-icon left>mdi-arrow-down-bold</v-icon>
+                            </v-btn>
+                        </template>
+                        <v-list dense>
+                            <v-list-item @click="cliente_selecto = null, dial_cliente = !dial_cliente">
+                                <v-list-item-title>
+                                    <v-icon left color="info">mdi-plus</v-icon> Crear Cliente
+                                </v-list-item-title>
+                            </v-list-item>
+                            <v-list-item @click="busca_clientes = !busca_clientes">
+                                <v-list-item-title>
+                                    <v-icon left color="success">mdi-clipboard-list</v-icon> Ver Lista Clientes
+                                </v-list-item-title>
+                            </v-list-item>
+                        </v-list>
+                    </v-menu>
                 </v-col>
                 <v-col cols="6" sm="6" md="3" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6 ' : 'mt-n2'">
                     <v-btn class="" block color="warning" x-small :loading="cargando" @click="abre_mapa_total">
@@ -143,10 +156,8 @@
                             <v-btn x-small text color="red" @click="abre_mapa(item)">
                                 <v-icon left small>mdi-google-maps</v-icon> Ubicación
                             </v-btn>
-
-                            <v-btn x-small text color="warning" v-if="item.estado == 'atendido'"
-                                @click="verDetalle(item)">
-                                <v-icon left small>mdi-table-eye</v-icon> pedido
+                            <v-btn x-small text color="info" @click=" cliente_selecto = item, dial_histo_ = true">
+                                <v-icon left small>mdi-table-eye</v-icon> Historial
                             </v-btn>
                         </div>
                     </template>
@@ -202,27 +213,40 @@
                         <v-divider />
 
                         <v-card-actions class="py-1">
-                            <v-btn small text color="info" @click="vender(item)"
+                            <v-btn x-small text color="info" @click="vender(item)"
                                 v-if="$store.state.permisos.venta_directa">
                                 <v-icon left small>mdi-cash-register</v-icon> Vender
                             </v-btn>
 
-                            <v-btn small text color="success" @click="pre_venta(item)"
+                            <v-btn x-small text color="success" @click="pre_venta(item)"
                                 v-if="$store.state.permisos.pre_venta">
                                 <v-icon left small>mdi-cart</v-icon> Pre-venta
                             </v-btn>
 
-                            <v-btn small text color="orange" @click="marcar_visita(item)"
-                                v-if="item.estado === 'pendiente'">
-                                <v-icon left small>mdi-eye</v-icon> Visita
-                            </v-btn>
 
                             <v-spacer></v-spacer>
 
-                            <v-btn small text color="warning" @click="verDetalle(item)"
-                                v-if="item.estado === 'atendido'">
-                                <v-icon left small>mdi-table-eye</v-icon> pedido
-                            </v-btn>
+                            <v-menu bottom offset-y>
+                                <template v-slot:activator="{ on, attrs }">
+                                    <v-btn color="error" text x-small v-bind="attrs" v-on="on">
+                                        Acciones
+                                        <v-spacer></v-spacer>
+                                        <v-icon left>mdi-arrow-down-bold</v-icon>
+                                    </v-btn>
+                                </template>
+                                <v-list dense>
+                                    <v-list-item @click="marcar_visita(item)">
+                                        <v-list-item-title>
+                                            <v-icon left color="orange">mdi-eye</v-icon> Marcar visita
+                                        </v-list-item-title>
+                                    </v-list-item>
+                                    <v-list-item @click=" cliente_selecto = item, dial_histo_ = true">
+                                        <v-list-item-title>
+                                            <v-icon left color="success">mdi-clipboard-list</v-icon> Historial Compras
+                                        </v-list-item-title>
+                                    </v-list-item>
+                                </v-list>
+                            </v-menu>
                         </v-card-actions>
                     </v-card>
                     <div ref="sentinel" class="py-4 text-center grey--text">
@@ -236,9 +260,38 @@
                 </template>
             </div>
         </v-card>
+        <v-dialog v-model="dial_agrega_GPS" max-width="420px">
+            <v-card class="pa-4">
+                <v-card-title class="justify-center">
+                    <v-icon color="orange" size="48">mdi-map-marker-alert</v-icon>
+                </v-card-title>
+                <v-card-text class="text-center">
 
-        <nuevo_cli v-if="dial_cliente" @cierra="dial_cliente = $event"
-            @actualizar="dial_cliente = false, _refreshClientesYFiltrado()" :vendedor="sede_actual"
+                    <div class="text-h6 font-weight-bold mb-2">
+                        Ubicación GPS no encontrada
+                    </div>
+
+                    <div class="text-body-2 grey--text">
+                        Este cliente aún no cuenta con coordenadas registradas.
+                        ¿Deseas agregar su ubicación ahora en el mapa?
+                    </div>
+                </v-card-text>
+                <v-card-actions class="d-flex justify-space-between mt-4">
+
+                    <v-btn outlined color="grey" class="flex-grow-1 mr-2" @click="dial_agrega_GPS = false">
+                        Cancelar
+                    </v-btn>
+
+                    <v-btn color="green" class="flex-grow-1" @click="dialogoMapa = true; dial_agrega_GPS = false">
+                        Agregar GPS
+                    </v-btn>
+
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <nuevo_cli v-if="dial_cliente" @cierra="dial_ubica_gps($event)"
+            @actualizar=" _refreshClientesYFiltrado(), dial_ubica_gps($event)" :vendedor="sede_actual"
             :cliente_selecto="cliente_selecto" />
         <dial_mapas v-model="dialogoMapa" :cliente-en-mapa="clienteSeleccionado"
             :clientes="verTodosMapa ? listafiltrada : []" :ver-todos="verTodosMapa" :guardar_auto="!verTodosMapa"
@@ -247,6 +300,7 @@
             :pedidoSeleccionado="pedidoSeleccionado" />
         <busca_clis v-if="busca_clientes" @cerrar="busca_clientes = false"
             @agregar="busca_clientes = false, _refreshClientesYFiltrado()" :dia="dia" :sede='sede_actual'></busca_clis>
+        <dial_histo_cliente v-if="dial_histo_" @cerrar="dial_histo_ = false" :cliente="cliente_selecto" />
     </div>
 </template>
 
@@ -261,10 +315,11 @@ import dial_mapas from '../../clientes/dial_mapa.vue'
 import dial_detalle_ped from '../dialogos/dialogo_detalle_ped.vue'
 import { loadFiltros, saveFiltros } from '../../../guarda_navegador';
 import { colClientes, colRuta_x_dia } from '../../../db_firestore'
+import dial_histo_cliente from '../../clientes/dialogos/historial_compras.vue'
 moment.locale('es')
 export default {
     name: 'ListaClientesVisitas',
-    components: { nuevo_cli, dial_mapas, dial_detalle_ped, busca_clis },
+    components: { nuevo_cli, dial_mapas, dial_detalle_ped, busca_clis, dial_histo_cliente },
     data: () => ({
         headers: [
             { text: 'Cliente', value: 'nombre' },
@@ -273,6 +328,7 @@ export default {
             { text: 'Estado', value: 'estado', sortable: false },
             { text: 'Acción', value: 'accion', sortable: false },
         ],
+        dial_agrega_GPS: false,
         cargando: false,
         menuFecha: false,
         error: null,
@@ -280,7 +336,7 @@ export default {
         dialogoMapa: false,
         clienteSeleccionado: null,
         verTodosMapa: false,
-
+        dial_histo_: false,
         date: moment().format('YYYY-MM-DD'),
         filtrarPorDia: true,
         dial_cliente: false,
@@ -371,7 +427,7 @@ export default {
         }
 
         const f = loadFiltros();
-        console.log('sede', f.sede)
+        //console.log('sede', f.sede)
         this.sede_actual = f.sede || this.$store.state.sedeActual.codigo;
         this.estado = f.estado ?? 'todos';
         this.date = f.date || moment().format('YYYY-MM-DD');
@@ -431,6 +487,14 @@ export default {
         if (this.observer) this.observer.disconnect();
     },
     methods: {
+        dial_ubica_gps(data) {
+            console.log(data)
+            if ((data.latitud == null || data.longitud == null) && data.id !== '') {
+                this.clienteSeleccionado = data
+                this.dial_agrega_GPS = true
+            }
+            this.dial_cliente = false
+        },
         verMas() {
             if (this.loadingMore) return;
             this.loadingMore = true;
@@ -463,7 +527,7 @@ export default {
                 const snap = await q.get({ source: 'cache' });
 
                 this.array_clientes = snap.docs.map(d => {
-                    console.log(d.data())
+                    //console.log(d.data())
                     const c = { id: d.id, ...d.data() };
                     const dir = this.getDireccion(c);               // usa tu helper actual
                     return {
@@ -475,7 +539,7 @@ export default {
                 this.filtra();        // mantiene tu lógica actual
             } catch (e) {
                 // Si no hay datos en caché, Firestore lanza error
-                console.error('Cache get clientes:', e);
+                //console.error('Cache get clientes:', e);
                 this.array_clientes = [];
             } finally {
                 this.cargando = false;
@@ -614,7 +678,7 @@ export default {
             const rank = { 'venta': 3, 'pre-venta': 2, 'visita': 1 };
 
             try {
-                console.log(this.sede_actual)
+                //console.log(this.sede_actual)
                 // 1️⃣ Armar query optimizada (usa índices ya creados)
                 let q = colRuta_x_dia()
                     //.where('sede', '==', String(this.sede_actual))
@@ -627,7 +691,7 @@ export default {
 
                 // 2️⃣ Obtener datos directamente
                 const snap = await q.get();
-                console.log('filtra(): visitas encontradas', snap.size);
+                //   console.log('filtra(): visitas encontradas', snap.size);
 
                 // 3️⃣ Mapear cliente_id -> estado prioritario
 
@@ -711,52 +775,58 @@ export default {
 
             const RADIO_PERMITIDO_M = this.$store.state.configuracion.distancia_visita || 15; // metros
             console.log('marcar_visita para cliente:', RADIO_PERMITIDO_M);
+
             try {
-                const ua = store.state.ubicacion_actual;
-                if (!ua || ua.lat == null || ua.lng == null) {
-                    store.commit('dialogosnackbar', 'No hay ubicación actual (GPS).');
+                // 1) ¿El cliente tiene coordenadas?
+                const tieneCoordsCliente = cliente.latitud != null && cliente.longitud != null;
+
+                // 2) Solo si el cliente tiene coordenadas, validamos ubicación + radio
+                if (tieneCoordsCliente) {
+                    const ua = store.state.ubicacion_actual;
+                    if (!ua || ua.lat == null || ua.lng == null) {
+                        store.commit('dialogosnackbar', 'No hay ubicación actual (GPS).');
+                        return;
+                    }
+
+                    const latUser = Number(ua.lat);
+                    const lngUser = Number(ua.lng);
+                    const latCli = Number(cliente.latitud);
+                    const lngCli = Number(cliente.longitud);
+
+                    if ([latUser, lngUser, latCli, lngCli].some(v => Number.isNaN(v))) {
+                        store.commit('dialogosnackbar', 'Coordenadas inválidas.');
+                        return;
+                    }
+
+                    const dist = this.distanciaMetros(latUser, lngUser, latCli, lngCli);
+
+                    if (dist > RADIO_PERMITIDO_M) {
+                        store.commit('dialogosnackbar', 'No está en el punto de visita (distancia > 15 m).');
+                        return;
+                    }
+                }
+                // Si NO tiene coordenadas, simplemente no se valida distancia ni GPS
+                // y se permite marcar la visita.
+
+                if (!confirm('¿Está seguro de marcar visita?')) {
                     return;
                 }
 
-                if (cliente.latitud == null || cliente.longitud == null) {
-                    store.commit('dialogosnackbar', 'El cliente no tiene coordenadas guardadas.');
-                    return;
-                }
-
-                const latUser = Number(ua.lat);
-                const lngUser = Number(ua.lng);
-                const latCli = Number(cliente.latitud);
-                const lngCli = Number(cliente.longitud);
-
-                if ([latUser, lngUser, latCli, lngCli].some(v => Number.isNaN(v))) {
-                    store.commit('dialogosnackbar', 'Coordenadas inválidas.');
-                    return;
-                }
-
-                const dist = this.distanciaMetros(latUser, lngUser, latCli, lngCli);
-
-                if (dist > RADIO_PERMITIDO_M) {
-                    store.commit('dialogosnackbar', 'No está en el punto de visita (distancia > 15 m).');
-                    return;
-                }
-                if (!confirm('esta seguro de marcar visita?')) {
-                    return
-                }
-                const fecha = moment().unix()
+                const fecha = moment().unix();
                 const visita = {
-                    fecha,                                   // timestamp ms
+                    fecha,                                   // timestamp
                     sede: this.sede_actual || '',
                     cliente_id: cliente.id || '',
                     zona: cliente.zona || '',
                     estado: 'VISITA'
                 };
 
-                // Guarda en /general/{ruc}/visita_clientes/{id_cliente}/<auto-id>
                 const clienteId = String(cliente.id || cliente.documento || '').trim();
                 if (!clienteId) {
                     store.commit('dialogosnackbar', 'Cliente sin ID/DOC válido.');
                     return;
                 }
+
                 await colRuta_x_dia().add(visita);
                 store.commit('dialogosnackbar', 'Visita marcada correctamente.');
                 this.filtra();
@@ -766,6 +836,7 @@ export default {
                 store.commit('dialogosnackbar', 'Error al marcar la visita.');
             }
         },
+
         distanciaMetros(lat1, lon1, lat2, lon2) {
             const R = 6371e3; // metros
             const toRad = d => d * Math.PI / 180;
