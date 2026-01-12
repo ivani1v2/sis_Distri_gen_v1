@@ -164,6 +164,12 @@
                                                 </v-list-item-icon>
                                                 <v-list-item-title>Imprimir</v-list-item-title>
                                             </v-list-item>
+                                            <v-list-item @click='descargar(pedido)'>
+                                                <v-list-item-icon>
+                                                    <v-icon color="info"> mdi-download</v-icon>
+                                                </v-list-item-icon>
+                                                <v-list-item-title>Descargar</v-list-item-title>
+                                            </v-list-item>
                                             <v-list-item @click='editar(pedido)' v-if="pedido.estado != 'anulado'">
                                                 <v-list-item-icon>
                                                     <v-icon color="success"> mdi-pencil</v-icon>
@@ -848,6 +854,23 @@ export default {
             // pdfGenera(pedido, items, tama);
 
             pdfGenera(pedido, items, store.state.configImpresora.tamano);
+        },
+        async descargar(pedido) {
+            store.commit("dialogoprogress")
+            try {
+                var snap = await detalle_pedido(pedido.id).once('value')
+                const val = snap.val() || [];
+                const items = Array.isArray(val) ? val : Object.values(val);
+                const doc = await colClientes().doc(String(pedido.doc_numero)).get()
+                pedido.referencia = this.getReferenciaPrincipal(doc.data())
+                
+                pdfGenera(pedido, items, store.state.configImpresora.tamano || '80', 'descarga');
+            } catch (e) {
+                console.error('Error al descargar:', e)
+                this.$toast?.error?.("No se pudo descargar el PDF") || alert("Error al descargar");
+            } finally {
+                store.commit("dialogoprogress")
+            }
         },
         getReferenciaPrincipal(cliente) {
             if (!cliente || !Array.isArray(cliente.direcciones) || cliente.direcciones.length === 0) return '';

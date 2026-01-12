@@ -126,57 +126,14 @@
                 </v-simple-table>
             </v-card>
         </v-card>
-        <v-dialog v-model="dialogoProducto" max-width="390">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon large color="red" @click="dialogoProducto = false">mdi-close</v-icon>
-                    <v-spacer></v-spacer>
-                    <v-checkbox :disabled="!$store.state.permisos.es_admin" v-model="es_bono"
-                        label="ES BONO"></v-checkbox>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-
-                <v-row class="mx-auto mt-4 text-center" dense v-if="$store.state.permisos.caja_edita_cantidad">
-
-                    <v-col cols="4" xs="4">
-                        <v-icon @click="suma()" color="green">mdi-plus</v-icon>
-                    </v-col>
-
-                    <v-col cols="4" xs="4">
-                        <v-text-field dense @keyup.enter="grabaEdita()" type="number" outlined v-model="cantidadEdita"
-                            label="Cantidad"></v-text-field>
-                    </v-col>
-                    <v-col cols="4" xs="4">
-                        <v-icon @click="resta()" color="red">mdi-minus</v-icon>
-                    </v-col>
-
-                </v-row>
-                <v-row class="mx-auto text-center" dense>
-                    <v-col cols="12">
-                        <v-textarea readonly dense class="mt-n2" outlined v-model="nombreEdita" auto-grow filled
-                            color="deep-purple" label="Descripcion" rows="1"></v-textarea>
-                    </v-col>
-                </v-row>
-                <v-row class="mx-auto text-center" dense>
-                    <v-col cols="12">
-                        <v-text-field :disabled="!$store.state.permisos.es_admin" dense class="mt-n2" outlined
-                            v-model="precioedita" type="number" step="0.10" label="Precio" />
-                    </v-col>
-                </v-row>
-                <v-card-actions class="mt-n6">
-
-                    <v-btn color="red darken-1" text @click="eliminaedita()">
-                        Elimina
-                    </v-btn>
-
-                    <v-spacer></v-spacer>
-                    <v-btn color="green darken-1" text @click="grabaEdita()">
-                        Graba
-                    </v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
+        <!-- Componente edita_producto -->
+        <edita_producto 
+            v-if="dialogoProducto" 
+            :item_selecto="item_selecto"
+            @editaProducto="onEditaProducto($event)"
+            @eliminaedita="eliminaedita()"
+            @cierra="dialogoProducto = false" 
+        />
         <v-dialog v-model="dial_catalogo" max-width="550">
             <div>
                 <v-system-bar window dark>
@@ -242,7 +199,7 @@
                             <v-text-field dense outlined hide-details label="Dirección" v-model="cabClienteDireccion" />
                         </v-col>
 
-                        <!-- (mantén tus campos existentes debajo si deseas: vendedor / fecha emisión) -->
+                        <!-- Código de vendedor -->
                         <v-col cols="12">
                             <v-text-field dense outlined label="Código vendedor" v-model="cabVendCode" hide-details />
                         </v-col>
@@ -252,7 +209,6 @@
                         </v-col>
                     </v-row>
                 </v-card-text>
-
 
                 <v-card-actions>
                     <v-spacer></v-spacer>
@@ -266,6 +222,7 @@
 
 <script>
 import cat_fijo from '@/components/catalogo_fijo'
+import edita_producto from '@/views/ventas/edita_producto'
 import axios from "axios"
 import store from '@/store/index'
 import { colClientes } from '../../../db_firestore'
@@ -273,7 +230,8 @@ import { colClientes } from '../../../db_firestore'
 export default {
     name: 'EditorDetallePedido',
     components: {
-        cat_fijo
+        cat_fijo,
+        edita_producto
     },
     props: {
         /* Control del diálogo desde el padre con v-model */
@@ -288,10 +246,9 @@ export default {
     data() {
         return {
             internalOpen: this.value,
-            lineas: [], // copia editable del detalle
+            lineas: [], 
             dial_catalogo: false,
             moneda: 'S/',
-            // Catálogos para los selects
             condicionesItems: [
                 { text: 'Contado', value: 'CONTADO' },
                 { text: 'Crédito', value: 'CREDITO' }
@@ -302,25 +259,17 @@ export default {
                 { text: 'Factura', value: 'F' },
             ],
             dialogoProducto: false,
-            cantidadEdita: '',
-            nombreEdita: '',
-            item_selecto: [],
-            precioedita: '',
-            preciodescuento: '',
+            item_selecto: {},
             dialCab: false,
             cabVendCode: '',
             cabFechaLocal: '',
-            es_bono: false,
-            precioBackup: null,
             cabDocTipo: 'SIN DOCUMENTO',
             cabDocNumero: '',
             cabClienteNombre: '',
             cabClienteDireccion: '',
 
-            // NUEVO: buscador de clientes
             clienteSele: null,
 
-            // catálogo tipos de documento
             docTiposItems: [
                 { text: 'Sin documento', value: 'SIN DOCUMENTO' },
                 { text: 'DNI', value: 'DNI' },
@@ -336,26 +285,13 @@ export default {
             if (v) this._cargarDesdeProps()
         },
         internalOpen(v) {
-            this.$emit('input', v) // para v-model
+            this.$emit('input', v)
         },
         detalle: {
             handler() {
-                // cuando cambie el detalle desde afuera, recarga
                 if (this.internalOpen) this._cargarDesdeProps()
             },
             deep: true
-        },
-        es_bono(v) {
-            if (!this.dialogoProducto) return
-            if (v) {
-                // pasa a BONO: guarda precio actual y muestra 0
-                this.precioBackup = Number(this.precioedita || this.item_selecto?.precio || 0)
-                this.precioedita = 0
-            } else {
-                // vuelve a normal: recupera el precio previo o el de la línea
-                this.precioedita = Number(this.precioBackup ?? this.item_selecto?.precio ?? 0)
-                this.precioBackup = null
-            }
         }
     },
     computed: {
@@ -365,7 +301,6 @@ export default {
         totalDetalle() {
             return (this.lineas || []).reduce((acc, it) => acc + Number(it.totalLinea || 0), 0)
         },
-        // NUEVO
         clientesItems() {
             const arr = (this.$store.state.clientessearch || []).filter(c => c && c.activo !== false);
             return arr.map(c => ({
@@ -380,95 +315,36 @@ export default {
     },
     methods: {
         editaProducto(val) {
-            this.item_selecto = val
-            this.cantidadEdita = val.cantidad
-            this.nombreEdita = val.nombre
-            this.preciodescuento = val.preciodescuento
-
-            // ✔ refleja si la línea es bono (GRATUITA)
-            this.es_bono = String(val.operacion || '').toUpperCase() === 'GRATUITA'
-
-            // guarda/resume precio mostrado
-            if (this.es_bono) {
-                this.precioBackup = Number(val.precio || 0)
-                this.precioedita = 0
-            } else {
-                this.precioBackup = null
-                this.precioedita = val.precio
+            this.item_selecto = {
+                ...val,
+                precio_base: Number(val.precio_base || val.precio || 0),
+                desc_1: Number(val.desc_1 || 0),
+                desc_2: Number(val.desc_2 || 0),
+                desc_3: Number(val.desc_3 || 0)
             }
-
             this.dialogoProducto = true
         },
 
-        grabaEdita() {
-            const cant = this.toNum(this.cantidadEdita, 0);
-            if (cant <= 0) {
-                alert('Ingrese cantidad válida');
-                return;
-            }
-
-            const pos = this.lineas.map(e => e.uuid).indexOf(this.item_selecto.uuid);
+        onEditaProducto(lineaActualizada) {
+            const pos = this.lineas.map(e => e.uuid).indexOf(lineaActualizada.uuid);
             if (pos === -1) return;
 
             const linea = this.lineas[pos];
+            linea.cantidad = Number(lineaActualizada.cantidad || 0);
+            linea.precio = Number(lineaActualizada.precio || 0);
+            linea.precio_base = Number(lineaActualizada.precio_base || linea.precio_base || linea.precio || 0);
+            linea.preciodescuento = Number(lineaActualizada.preciodescuento || 0);
+            linea.desc_1 = Number(lineaActualizada.desc_1 || 0);
+            linea.desc_2 = Number(lineaActualizada.desc_2 || 0);
+            linea.desc_3 = Number(lineaActualizada.desc_3 || 0);
+            linea.operacion = lineaActualizada.operacion || linea.operacion;
+            linea.nombre = lineaActualizada.nombre || linea.nombre;
+            linea.totalLinea = Number(lineaActualizada.totalLinea || 0);
 
-            // 🔵 Si ES BONO: operación gratuita, precio 0, sin descuentos
-            if (this.es_bono) {
-                linea.operacion = 'GRATUITA';
-                linea.cantidad = cant;
-                linea.precio = 0;
-                linea.preciodescuento = 0;
-                this.recalcularLinea(linea); // totalLinea = 0
-                this.dialogoProducto = false;
-                return;
-            }
-
-            // 🔵 Si NO ES BONO: operación normal y precio segun input o tiers
-            if (String(linea.operacion || '').toUpperCase() === 'GRATUITA') {
-                // limpia la marca previa si existía
-                linea.operacion = '';
-            }
-
-            // Intento usar el precio escrito por el usuario
-            const precioEdit = this.toNum(this.precioedita, NaN);
-            let nuevoPrecio;
-
-            if (Number.isFinite(precioEdit)) {
-                nuevoPrecio = precioEdit; // precio manual
-            } else {
-                // fallback a tu lógica de tiers
-                const producto = store.state.productos.find(p => p.id === linea.id) || {};
-                const esCaja = String(linea.medida || '').toUpperCase() !== 'UNIDAD';
-                const factor = this.toNum(linea.factor || producto.factor, 1);
-                const unidadesParaTier = esCaja ? cant * factor : cant;
-                const tier = this.sugerirTier(producto, unidadesParaTier);
-                const precioUnidad = this.precioPorTier(producto, tier);
-                nuevoPrecio = esCaja ? (precioUnidad * factor) : precioUnidad;
-            }
-
-            linea.cantidad = cant;
-            linea.precio = this.fix2(nuevoPrecio);
             this.recalcularLinea(linea);
-
             this.dialogoProducto = false;
         },
 
-
-        suma() {
-            if (this.item_selecto.controstock) {
-                var producto = store.state.productos.find(item => item.id == this.item_selecto.id)
-                if (producto.stock <= this.cantidadEdita) {
-                    alert('Producto sin Stock')
-                    return
-                }
-            }
-            this.cantidadEdita = parseInt(this.cantidadEdita) + 1
-        },
-        resta() {
-            if (this.cantidadEdita > 1) {
-                this.cantidadEdita = parseInt(this.cantidadEdita) - 1
-            }
-        },
         eliminaedita() {
             var pos = this.lineas.map(e => e.uuid).indexOf(this.item_selecto.uuid)
             this.lineas.splice(pos, 1)
@@ -484,7 +360,11 @@ export default {
                 medida: (it.medida || '').toString().toUpperCase(),
                 cantidad: Number(it.cantidad || 0),
                 precio: Number(it.precio || 0),
+                precio_base: Number(it.precio_base || it.precio || 0),
                 preciodescuento: Number(it.preciodescuento || 0),
+                desc_1: Number(it.desc_1 || 0),
+                desc_2: Number(it.desc_2 || 0),
+                desc_3: Number(it.desc_3 || 0),
                 operacion: it.operacion,
                 factor: it.factor,
                 costo: it.costo,
@@ -649,12 +529,12 @@ export default {
 
                 await this.api_rest(payload, "guardar_pedido");
                 store.commit("dialogoprogress")
-                store.commit("dialogosnackbar", "Documento guardado con éxito ✅");
+                store.commit("dialogosnackbar", "Documento guardado con éxito");
 
                 this.cerrar();
             } catch (e) {
                 console.error(e);
-                store.commit("dialogosnackbar", "Error guardando el documento ❌");
+                store.commit("dialogosnackbar", "Error guardando el documento");
             }
         },
         redondear(valor) {

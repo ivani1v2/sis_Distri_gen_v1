@@ -284,7 +284,12 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
 
   // ---------- Salida (mismo flujo que tu 80mm) ----------
   if (modo_genera === "descarga") {
-    const nombre = (numeroOP ? `OP-${numeroOP}` : `OP-${moment().format("YYYYMMDD-HHmm")}`) + ".pdf";
+    const clienteNombre = (cabecera?.cliente_nombre || 'cliente')
+      .split(/\s+/)              // separa por espacios
+      .slice(0, 2)               // toma solo las 2 primeras palabras
+      .join('_')                 // une con guion bajo
+      .replace(/[^a-zA-Z0-9_]/g, ''); // limpia caracteres especiales
+    const nombre = `${numeroOP || moment().format("YYYYMMDD-HHmm")}_${clienteNombre}.pdf`;
     doc.save(nombre);
   } else {
     if (store.state.esmovil) {
@@ -534,9 +539,13 @@ async function impresion80_ordenPedido(cabecera, items = []) {
   linea += Number(cfg.minferiorgeneral || 0);
   doc.text(".", 0, linea);
 
-  // --- Salida ---
   if (modo_genera === "descarga") {
-    const nombre = (numeroOP ? `OP-${numeroOP}` : `OP-${moment().format("YYYYMMDD-HHmm")}`) + ".pdf";
+    const clienteNombre = (cabecera?.cliente_nombre || 'cliente')
+      .split(/\s+/)              // separa por espacios
+      .slice(0, 2)               // toma solo las 2 primeras palabras
+      .join('_')                 // une con guion bajo
+      .replace(/[^a-zA-Z0-9_]/g, ''); // limpia caracteres especiales
+    const nombre = `${numeroOP || moment().format("YYYYMMDD-HHmm")}_${clienteNombre}.pdf`;
     doc.save(nombre);
   } else {
     // abrir compartido en móvil o diálogo impresión en escritorio
@@ -802,7 +811,12 @@ async function impresion58_ordenPedido(cabecera, items = []) {
 
   // Salida (igual que 80mm)
   if (modo_genera === "descarga") {
-    const nombre = (numeroOP ? `OP-${numeroOP}` : `OP-${moment().format("YYYYMMDD-HHmm")}`) + ".pdf";
+    const clienteNombre = (cabecera?.cliente_nombre || 'cliente')
+      .split(/\s+/)              // separa por espacios
+      .slice(0, 2)               // toma solo las 2 primeras palabras
+      .join('_')                 // une con guion bajo
+      .replace(/[^a-zA-Z0-9_]/g, ''); // limpia caracteres especiales
+    const nombre = `${numeroOP || moment().format("YYYYMMDD-HHmm")}_${clienteNombre}.pdf`;
     doc.save(nombre);
   } else {
     if (store.state.esmovil) {
