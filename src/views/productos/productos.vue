@@ -125,7 +125,7 @@
                                     <v-list-item-title>Bono Global</v-list-item-title>
                                 </v-list-item>
                             </v-list>
-                            
+
                             <v-list dense>
                                 <v-list-item @click="print_codbarra()">
                                     <v-list-item-icon><v-icon color="warning">mdi-barcode</v-icon></v-list-item-icon>
@@ -133,7 +133,7 @@
                                 </v-list-item>
                             </v-list>
                             <v-list dense>
-                                <v-list-item @click="dial_adicional=!dial_adicional">
+                                <v-list-item @click="dial_adicional = !dial_adicional">
                                     <v-list-item-icon><v-icon color="success">mdi-plus</v-icon></v-list-item-icon>
                                     <v-list-item-title>Campos Adicionales</v-list-item-title>
                                 </v-list-item>
@@ -161,7 +161,8 @@
                             v-model="operacion"></v-select>
                     </v-col>
                     <v-col cols="6" sm="6" md="6">
-                        <v-text-field outlined dense :disabled="!$store.state.permisos.productos_edita_id" v-model="id" label="ID"></v-text-field>
+                        <v-text-field outlined dense :disabled="!$store.state.permisos.productos_edita_id" v-model="id"
+                            label="ID"></v-text-field>
                     </v-col>
                 </v-row>
 
@@ -472,18 +473,18 @@
             </v-card>
 
         </v-dialog>
-         <v-dialog v-model="dial_adicional" max-width="490" persistent>
+        <v-dialog v-model="dial_adicional" max-width="490" persistent>
             <div>
                 <v-system-bar window dark>
                     <v-icon @click="dial_adicional = false">mdi-close</v-icon>
                     <v-spacer></v-spacer>
-                 <v-icon color="green" large @click="save(false)">mdi-content-save</v-icon>
+                    <v-icon color="green" large @click="save(true), dial_adicional = false">mdi-content-save</v-icon>
                 </v-system-bar>
             </div>
             <v-card class="pa-2">
-                 <v-row class="" dense>
-           
-
+                <v-row class="mt-1" dense>
+                    <v-text-field outlined dense v-model="obs1"
+                        label="Observacion 1"></v-text-field>
                 </v-row>
 
             </v-card>
@@ -615,6 +616,7 @@ export default {
         grupoBonoItems: [],
         grupoPrecioSelect: null,
         grupoBonoSelect: null,
+        obs1:''
     }),
 
     async beforeCreate() {
@@ -844,6 +846,7 @@ export default {
                 this.grupoPrecioSelect = null
                 this.grupoBonoSelect = null
                 this.marca = ''
+                this.obs1 = ''
 
                 if (Boolean(store.state.configuracion.operacion)) {
                     this.operacion = store.state.configuracion.operacion
@@ -882,6 +885,8 @@ export default {
             this.marca = data.marca || ''
             this.grupoPrecioSelect = data.grupo_precio || null;
             this.grupoBonoSelect = data.grupo_bono || null;
+            this.obs1 = data.obs1 || ''
+
             this.dialogo = true;
         },
 
@@ -933,13 +938,14 @@ export default {
                 marca: this.marca,
                 grupo_precio: this.grupoPrecioSelect,
                 grupo_bono: this.grupoBonoSelect,
-
+                obs1:this.obs1
             }
             await nuevoProducto(this.id, array)
             if (this.sumacon == true) {
                 this.sumacontador()
             }
             this.dialogo = cerrar
+            
             store.commit("dialogoprogress")
         },
         async eliminar() {

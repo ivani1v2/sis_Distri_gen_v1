@@ -9,14 +9,54 @@
                 <v-col cols="6" md="3" sm="6">
                     <v-text-field outlined dense type="date" label="Fin" v-model="date2" @change="filtrar()" />
                 </v-col>
-                <v-col cols="4" md="2" sm="6" :class="$vuetify.breakpoint.smAndDown ? 'mt-n4' : ''">
-                    <v-select style="font-size:80%;" :disabled="!$store.state.permisos.es_admin" v-model="vendedor"
-                        :items="vendedoresItems" item-text="nombre" item-value="codigo" label="Vendedor" outlined
-                        dense />
+                <!-- ======= VENDEDOR ======= -->
+
+                <!-- Desktop / Tablet: se muestra normal -->
+                <v-col cols="12" md="5" class="d-flex align-center px-md-4 mb-4 mb-md-0 mt-n6">
+                    <v-text-field v-model="busca" prepend-inner-icon="mdi-magnify" label="Buscar pedido o cliente..."
+                        outlined dense hide-details class="flex-grow-1 mr-2" />
+
+                    <v-select v-if="!$vuetify.breakpoint.xsOnly" v-model="vendedoresSeleccionados"
+                        :items="vendedoresItems" :disabled="!$store.state.permisos.es_admin" item-text="nombre"
+                        item-value="codigo" label="Vendedor" multiple outlined dense hide-details
+                        style="max-width: 200px" small-chips @change="onVendedorChange" />
+
+                    <v-btn v-else icon color="primary" class="grey lighten-4" @click="dialFiltroMovil = true">
+                        <v-icon>mdi-filter</v-icon>
+                    </v-btn>
                 </v-col>
-                <v-col cols="8" md="4" sm="6" :class="$vuetify.breakpoint.smAndDown ? 'mt-n4' : ''">
-                    <v-text-field style="font-size:80%;" outlined dense label="Buscar" v-model="busca" />
-                </v-col>
+
+                <!-- Dialog / BottomSheet SOLO MOVIL -->
+                <v-bottom-sheet v-model="dialFiltroMovil" inset>
+                    <v-card class="pa-3">
+                        <div class="d-flex align-center">
+                            <div class="text-subtitle-1 font-weight-bold">Filtrar vendedor</div>
+                            <v-spacer />
+                            <v-btn icon @click="dialFiltroMovil = false">
+                                <v-icon>mdi-close</v-icon>
+                            </v-btn>
+                        </div>
+
+                        <v-select class="mt-3" :disabled="!$store.state.permisos.es_admin"
+                            v-model="vendedoresSeleccionados" :items="vendedoresItems" item-text="nombre"
+                            item-value="codigo" label="Vendedor" multiple chips small-chips deletable-chips clearable
+                            :menu-props="{ maxHeight: '400' }" outlined dense />
+
+                        <v-row dense class="mt-2">
+                            <v-col cols="6">
+                                <v-btn block outlined color="grey" @click="vendedoresSeleccionados = []">
+                                    Limpiar
+                                </v-btn>
+                            </v-col>
+                            <v-col cols="6">
+                                <v-btn block color="primary" @click="aplicarFiltroMovil">
+                                    Aplicar
+                                </v-btn>
+                            </v-col>
+                        </v-row>
+                    </v-card>
+                </v-bottom-sheet>
+
                 <v-col cols="4" class="mt-n4">
                     <v-menu bottom offset-y>
                         <template v-slot:activator="{ on, attrs }">
@@ -287,7 +327,8 @@
             :consolidado-seleccionados="consolidadoSeleccionados" @cierra="dialogConsolidado = false"
             :pedidos="pedidosFiltrados" />
         <anular_p v-if="dial_anular" @cerrar="dial_anular = false" />
-        <dial_imprime_ped_masivo v-if="dial_imprime_masivo" @cerrar="dial_imprime_masivo = false" :pedidosFiltrados="pedidosFiltrados"/>
+        <dial_imprime_ped_masivo v-if="dial_imprime_masivo" @cerrar="dial_imprime_masivo = false"
+            :pedidosFiltrados="pedidosFiltrados" />
 
     </div>
 </template>
@@ -323,7 +364,7 @@ export default {
             dial_anular: false,
             result: [],
             showEditorDetalle: false,
-            vendedor: 'TODOS',
+            vendedoresSeleccionados: ['TODOS'],
             allPedidosRaw: [],
             dialogDetalle: false,
             pedidoSeleccionado: {},
@@ -349,12 +390,15 @@ export default {
             pageSize: 40,       // primeros 50, luego irá sumando 50
             loadingMore: false,
             observer: null,
+            dialFiltroMovil: false,
         };
     },
     created() {
         this.filtrar(); // carga inicial (hoy)
         if (!store.state.permisos.es_admin) {
-            this.vendedor = store.state.sedeActual.codigo
+            this.vendedoresSeleccionados = [store.state.sedeActual.codigo];
+        } else {
+            this.vendedoresSeleccionados = ['TODOS']
         }
 
     },
@@ -421,7 +465,10 @@ export default {
                 ? this.$store.state.array_sedes
                 : [];
             const tieneTodos = base.some(it => (it.codigo || '').toString().toUpperCase() === 'TODOS');
-            return tieneTodos ? base : [{ nombre: 'TODOS', codigo: 'TODOS' }, ...base];
+
+            const items = tieneTodos ? base : [{ nombre: 'TODOS', codigo: 'TODOS' }, ...base];
+
+            return items;
         },
         isMobile() {
             return this.$vuetify && this.$vuetify.breakpoint.smAndDown;
@@ -434,7 +481,7 @@ export default {
         },
     },
     watch: {
-        vendedor() { this.applyVendorFilter(); },
+        vendedoresSeleccionados() { this.applyVendorFilter(); },
         date1() { this.filtrar(); },
         date2() { this.filtrar(); },
         pedidosFiltrados() {
@@ -474,7 +521,14 @@ export default {
     },
 
     methods: {
-        dial_imprime_(){
+        aplicarFiltroMovil() {
+            this.dialFiltroMovil = false;
+            // si tu lógica de cambio ya filtra, puedes llamar solo onVendedorChange
+            this.onVendedorChange?.(this.vendedoresSeleccionados);
+            // o si prefieres:
+            this.filtrar?.();
+        },
+        dial_imprime_() {
             this.dial_imprime_masivo = true
         },
         verMas() {
@@ -737,21 +791,36 @@ export default {
 
         },
         applyVendorFilter() {
-            const v = (this.vendedor || 'TODOS').toString().toUpperCase().trim();
+            const seleccionados = this.vendedoresSeleccionados || [];
 
-            if (v === 'TODOS') {
-                // Todos los pedidos del rango
+            if (seleccionados.length === 0) {
+                this.pedidosArray = [];
+                return;
+            }
+
+            if (seleccionados.includes('TODOS')) {
                 this.pedidosArray = this.sortPedidos(this.allPedidosRaw);
                 return;
             }
 
-            // Filtra por cod_vendedor (ajusta el campo si es necesario)
+            const codigosNormalizados = seleccionados.map(c => String(c).toUpperCase().trim());
+
             this.pedidosArray = this.sortPedidos(
-                this.allPedidosRaw.filter(p =>
-                    (p.cod_vendedor != null ? String(p.cod_vendedor) : '')
-                        .toUpperCase().trim() === v
-                )
+                this.allPedidosRaw.filter(p => {
+                    const codVendedor = (p.cod_vendedor != null ? String(p.cod_vendedor) : '').toUpperCase().trim();
+                    return codigosNormalizados.includes(codVendedor);
+                })
             );
+        },
+        onVendedorChange(val) {
+            if (val && val.length > 1 && val.includes('TODOS')) {
+                const lastSelected = val[val.length - 1];
+                if (lastSelected === 'TODOS') {
+                    this.vendedoresSeleccionados = ['TODOS'];
+                } else {
+                    this.vendedoresSeleccionados = val.filter(v => v !== 'TODOS');
+                }
+            }
         },
         formatFecha(unix, formato = 'DD/MM HH:mm') {
             return moment.unix(unix).format(formato);

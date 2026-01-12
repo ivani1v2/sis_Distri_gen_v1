@@ -18,7 +18,7 @@
                             class="grey--text text--darken-1">
                             ({{ item.id }})
                         </small>
-                        — <strong class="red--text">S/. {{ Number(item.precio || 0).toFixed(2) }}</strong>
+                        — <strong class="red--text">              {{ moneda }} {{ Number(item.precio || 0).toFixed(2) }}</strong>
                     </v-list-item-title>
                     <v-list-item-subtitle class="mt-n1 mb-n2">
                         <span class="text-caption"
@@ -27,7 +27,7 @@
                         </span>
                     </v-list-item-subtitle>
                 </v-list-item-content>
-            </template>
+          </template>
 
         </v-autocomplete>
         <v-card class="elevation-6" v-show="muestra_tabla" v-if="x_categoria">
@@ -285,7 +285,8 @@ export default {
             cantUnd: 0,
             snackAgregar: false,
             snackMsg: 'Producto agregado',
-            es_bono: false
+            es_bono: false,
+            moneda: 'S/ '
         }
     },
     computed: {
@@ -330,6 +331,7 @@ export default {
         },
     },
     mounted() {
+            this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         window.addEventListener("keydown", this.detectarTecla);
     },
     beforeDestroy() {
