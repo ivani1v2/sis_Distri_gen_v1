@@ -159,6 +159,9 @@
                             <v-btn x-small text color="info" @click=" cliente_selecto = item, dial_histo_ = true">
                                 <v-icon left small>mdi-table-eye</v-icon> Historial
                             </v-btn>
+                            <v-btn x-small text color="red darken-2" @click="verDeudas(item)">
+                                <v-icon left small>mdi-cash-clock</v-icon> Deudas
+                            </v-btn>
                         </div>
                     </template>
 
@@ -245,6 +248,11 @@
                                             <v-icon left color="success">mdi-clipboard-list</v-icon> Historial Compras
                                         </v-list-item-title>
                                     </v-list-item>
+                                    <v-list-item @click="verDeudas(item)">
+                                        <v-list-item-title>
+                                            <v-icon left color="red">mdi-cash-clock</v-icon> Ver Deudas
+                                        </v-list-item-title>
+                                    </v-list-item>
                                 </v-list>
                             </v-menu>
                         </v-card-actions>
@@ -301,6 +309,10 @@
         <busca_clis v-if="busca_clientes" @cerrar="busca_clientes = false"
             @agregar="busca_clientes = false, _refreshClientesYFiltrado()" :dia="dia" :sede='sede_actual'></busca_clis>
         <dial_histo_cliente v-if="dial_histo_" @cerrar="dial_histo_ = false" :cliente="cliente_selecto" />
+
+        <!-- Diálogo de deudas pendientes -->
+        <dial_deudas_cliente v-model="dialog_deudas" :cliente="cliente_deuda" :accion-pendiente="accion_pendiente"
+            @cerrar="cerrarDialogDeudas" @continuar="onContinuarDeudas" />
     </div>
 </template>
 
@@ -316,10 +328,11 @@ import dial_detalle_ped from '../dialogos/dialogo_detalle_ped.vue'
 import { loadFiltros, saveFiltros } from '../../../guarda_navegador';
 import { colClientes, colRuta_x_dia } from '../../../db_firestore'
 import dial_histo_cliente from '../../clientes/dialogos/historial_compras.vue'
+import dial_deudas_cliente from '../../clientes/dialogos/dial_deudas_cliente.vue'
 moment.locale('es')
 export default {
     name: 'ListaClientesVisitas',
-    components: { nuevo_cli, dial_mapas, dial_detalle_ped, busca_clis, dial_histo_cliente },
+    components: { nuevo_cli, dial_mapas, dial_detalle_ped, busca_clis, dial_histo_cliente, dial_deudas_cliente },
     data: () => ({
         headers: [
             { text: 'Cliente', value: 'nombre' },
@@ -358,6 +371,10 @@ export default {
         pageSize: 30,   // muestra 50 en móvil, luego cargará +50
         loadingMore: false,
         observer: null,
+        // Variables para diálogo de cuentas por cobrar
+        dialog_deudas: false,
+        cliente_deuda: null,
+        accion_pendiente: null, // 'vender' o 'pre_venta'
     }),
     computed: {
         displayed() {
@@ -748,27 +765,51 @@ export default {
             this.clienteSeleccionado = cliente || null
             this.dialogoMapa = true
         },
-
-        // Deja la decisión al componente padre (navegar o abrir flujo de venta)
         vender(data) {
             console.log(data)
-            if (confirm('seguro de tomar pedido?')) {
-                var fecha = moment(this.date).format('DDMMYYYY')
-                data.fecha = fecha
-                store.commit("cliente_selecto", data)
-                this.$router.push({
-                    name: 'caja2'
-                })
-            }
+            this.cliente_deuda = data
+            this.accion_pendiente = 'vender'
+            this.dialog_deudas = true
         },
-        pre_venta(data) {
-            if (confirm('seguro de tomar pedido?')) {
-                var fecha = moment(this.date).format('DDMMYYYY')
-                data.fecha = fecha
-                store.commit("cliente_selecto", data)
-                this.$router.push({
-                    name: 'nuevo_pedido'
-                })
+        ejecutarVenta(data) {
+            var fecha = moment(this.date).format('DDMMYYYY')
+            data.fecha = fecha
+            store.commit("cliente_selecto", data)
+            this.$router.push({
+                name: 'caja2'
+            })
+        },
+        async pre_venta(data) {
+            this.cliente_deuda = data
+            this.accion_pendiente = 'pre_venta'
+            this.dialog_deudas = true
+        },
+        ejecutarPreVenta(data) {
+            var fecha = moment(this.date).format('DDMMYYYY')
+            data.fecha = fecha
+            store.commit("cliente_selecto", data)
+            this.$router.push({
+                name: 'nuevo_pedido'
+            })
+        },
+        verDeudas(cliente) {
+            this.cliente_deuda = cliente
+            this.accion_pendiente = null
+            this.dialog_deudas = true
+        },
+        cerrarDialogDeudas() {
+            this.dialog_deudas = false
+            this.accion_pendiente = null
+            this.cliente_deuda = null
+        },
+        onContinuarDeudas(payload) {
+            const { accion, cliente } = payload
+            this.cerrarDialogDeudas()
+
+            if (accion === 'vender') {
+                this.ejecutarVenta(cliente)
+            } else if (accion === 'pre_venta') {
+                this.ejecutarPreVenta(cliente)
             }
         },
         async marcar_visita(cliente) {
