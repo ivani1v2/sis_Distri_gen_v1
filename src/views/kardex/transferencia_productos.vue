@@ -7,7 +7,7 @@
                 </v-col>
                 <v-col cols="6" sm="6" class="text-right">
                     <v-btn small color="primary" @click="mostrarDialogo = !mostrarDialogo">
-                        <v-icon left>mdi-plus</v-icon>Nuevo Movimiento
+                        <v-icon left>mdi-plus</v-icon>Nuevo
                     </v-btn>
                 </v-col>
                 <v-col cols="6" sm="6" class="text-right">
@@ -16,7 +16,7 @@
                     </v-btn>
                 </v-col>
             </v-row>
-            <v-row dense>
+            <v-row dense class="mb-n6">
                 <v-col cols="6" sm="3">
                     <v-text-field v-model="date1" type="date" dense outlined label="Desde"></v-text-field>
                 </v-col>
@@ -36,7 +36,7 @@
         </v-card>
 
         <v-card outlined>
-            <v-data-table :headers="headers" :items="movimientos" dense class="elevation-1">
+            <v-data-table :headers="headers" :items="movimientos" dense class="elevation-1" mobile-breakpoint="1">
                 <template v-slot:item.fecha="{ item }">
                     <span>
                         {{ formatoFecha(item.fecha_unix) }}

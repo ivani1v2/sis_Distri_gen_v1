@@ -24,7 +24,7 @@
                     <h5>Fecha: : <span class="red--text">{{ conviertefecha(info_cabecera.fecha) }}</span></h5>
                 </v-col>
                 <v-col cols="6">
-                     <h5>Vend : <span class="red--text">{{ info_cabecera.vendedor }}</span></h5>
+                    <h5>Vend : <span class="red--text">{{ info_cabecera.vendedor }}</span></h5>
                     <h5>Modo : <span class="red--text">{{ info_cabecera.forma_pago }}</span>
                         <v-icon color="green" small @click="edita_modo()">mdi-pencil</v-icon>
                     </h5>
@@ -63,8 +63,10 @@
                                     class="red--text"> -
                                     TG</Span></td>
                             <td>{{ item.medida }}</td>
-                            <td>S/.{{ item.precio }} <strong v-if="item.preciodescuento!=0" class="red--text"> - {{ item.preciodescuento }}</strong></td>
-                            <td>S/.{{ redondear((Number(item.total_antes_impuestos) + Number(item.total_impuestos)  )) }}</td>
+                            <td>S/.{{ item.precio }} <strong v-if="item.preciodescuento != 0" class="red--text"> - {{
+                                item.preciodescuento }}</strong></td>
+                            <td>S/.{{ redondear((Number(item.total_antes_impuestos) + Number(item.total_impuestos))) }}
+                            </td>
                         </tr>
                     </tbody>
                 </template>
@@ -187,7 +189,7 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
-        <cobrar />
+
         <v-dialog v-model="dial_catalogo" max-width="550">
             <div>
                 <v-system-bar window dark>
@@ -219,13 +221,13 @@ import {
 } from '../../../funciones_generales'
 import moment from 'moment'
 import store from '@/store/index'
-import cobrar from '@/components/dialogos/dialogo_cobrar'
+
 import axios from "axios"
 import cat_fijo from '@/components/catalogo_fijo'
 export default {
     name: 'caja',
     components: {
-        cobrar,
+
         cat_fijo
     },
     props: {
@@ -392,18 +394,59 @@ export default {
                 }
                 this.info_cabecera.vencimientoDoc = vd
 
-                // Si pendiente está en 0, pon el total calculado luego de guardar (o mantenlo si ya lo traes)
+                // pendiente
                 if (!Number(this.info_cabecera.pendiente_pago)) {
                     this.info_cabecera.pendiente_pago = Number(this.info_cabecera.total) || 0
+                }
+
+                // ✅ NUEVO: si no hay cuotas, crea la estructura estándar
+                const cuotas = this.info_cabecera?.cuotas
+                if (!Array.isArray(cuotas) || cuotas.length === 0) {
+                    this.info_cabecera.cuotas = this.buildCuotasCreditoDefault()
+                } else {
+                    // opcional: asegurar vendedor/estado/fecha_modificacion si vinieron incompletas
+                    this.info_cabecera.cuotas = cuotas.map((c, idx) => ({
+                        numero: c.numero || String(idx + 1).padStart(3, '0'),
+                        importe: (Number(c.importe) || 0).toFixed(2),
+                        vencimiento: c.vencimiento || this.date_vence,
+                        estado: c.estado || 'pendiente',
+                        fecha_modificacion: c.fecha_modificacion || moment().unix(),
+                        vendedor: c.vendedor || (this.info_cabecera.cod_vendedor || this.info_cabecera.vendedor || store.state.sedeActual.codigo),
+                    }))
                 }
             } else {
                 // CONTADO: vencimiento = fecha del doc (o ahora si no hay)
                 const f = Number(this.info_cabecera?.fecha)
                 this.info_cabecera.vencimientoDoc = Number.isFinite(f) ? f : moment().unix()
                 this.info_cabecera.pendiente_pago = 0
+
+                // ✅ NUEVO: limpia cuotas como tu otro componente
+                this.info_cabecera.cuotas = ''
             }
+
             this.dial_edita_modo = false
         },
+
+        buildCuotasCreditoDefault() {
+            const total = Number(this.info_cabecera?.total) || 0
+            const pendiente = Number(this.info_cabecera?.pendiente_pago) || total
+
+            // vendedor: respeta lo que ya tenga la cabecera; si no, usa sedeActual
+            const vendedor =
+                this.info_cabecera?.cod_vendedor ||
+                this.info_cabecera?.vendedor ||
+                store.state.sedeActual.codigo
+
+            return [{
+                numero: '001',
+                importe: pendiente.toFixed(2),
+                vencimiento: this.date_vence,          // YYYY-MM-DD (igual que tu estructura)
+                estado: 'pendiente',
+                fecha_modificacion: moment().unix(),
+                vendedor
+            }]
+        },
+
         agregar_lista(value) {
             // value puede ser objeto o array de objetos
             const items = Array.isArray(value) ? value : [value];

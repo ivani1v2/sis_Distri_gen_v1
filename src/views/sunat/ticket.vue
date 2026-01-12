@@ -3,6 +3,7 @@
         <v-card>
             <v-btn v-if="false" color="success" block @click.prevent="elimina()" small>Consolida</v-btn>
             <v-btn v-if="false" color="success" block @click.prevent="router('consolidaSunat')" small>Consolida</v-btn>
+                    <v-btn color="success" v-if="false" @click='modificafechas()'>text</v-btn>
             <v-row dense>
                 <v-col cols="6" sm="4">
                     <v-text-field class="mx-1" outlined dense type="date" v-model="date" label="Inicio"></v-text-field>
@@ -484,6 +485,22 @@ export default {
         },
         redondear(valor) {
             return parseFloat(valor).toFixed(store.state.configuracion.decimal)
+        },
+         async modificafechas() {
+            for (var i = 0; i < this.desserts.length; i++) {
+                console.log(this.desserts[i].numeracion)
+                grabaDatoC(this.desserts[i].numeracion, "estado", 'aprobado')
+            //    await grabaDatoC(this.desserts[i].numeracion, "fecha", 1766190081)
+              //  grabaDatoC(this.desserts[i].numeracion, "vencimientoDoc", 1766190081)
+                // if (this.desserts[i].estado == 'RECHAZADO') {
+                //console.log("rechazado")
+                // if (this.desserts[i].tipocomprobante == 'F') {
+                // grabaDatoC(this.desserts[i].numeracion, "serie", 'FD02')
+                // grabaDatoC(this.desserts[i].numeracion, "automata", '')
+                // grabaDatoC(this.desserts[i].numeracion, "vencimientoDoc", 1726695077)
+                //  }
+                //   }
+            }
         },
 
 

@@ -120,7 +120,7 @@ export default {
         dial(v) { this.$emit('input', v); },
     },
     created() {
-        console.log('data', this.data);
+        console.log(this.data)
         if (this.value === false) this.dial = true; // abre por defecto si no se controla externamente
     },
     computed: {

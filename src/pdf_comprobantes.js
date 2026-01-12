@@ -87,7 +87,7 @@ async function impresion58(arraydatos, qr, cabecera) {
     unit: "mm",
     format: [1000, pdfInMM],
   });
-  doc.setTextColor(10);
+  doc.setTextColor(0, 0, 0);
   doc.text(".", 0, linea);
   linea = linea + 3;
   //console.log(imagen)
@@ -246,24 +246,26 @@ async function impresion58(arraydatos, qr, cabecera) {
   for (var i = 0; i < array.length; i++) {
     var obs = "";
     var tg = "";
-    var totals = (Number(array[i].total_antes_impuestos)+Number(array[i].total_impuestos)).toFixed(2)
+    var totals = (
+      Number(array[i].total_antes_impuestos) + Number(array[i].total_impuestos)
+    ).toFixed(2);
     if (array[i].operacion == "GRATUITA") {
       obs = "*";
       tg = " / Bonificacion";
-      totals = '0.00'
+      totals = "0.00";
       if (!store.state.configuracion.mostrar_ope_gratuitas) {
-        array[i].precioedita = "0.00";
+        array[i].precio = "0.00";
       }
     }
     nuevoArray[i] = new Array(4);
     nuevoArray[i][0] = array[i].cantidad;
     //nuevoArray[i][1] = array[i].nombre + "\n" + "-" + array[i].medida + tg;
     nuevoArray[i][1] = array[i].nombre + tg;
-    nuevoArray[i][2] = Number(array[i].precioedita).toFixed(2);
+    nuevoArray[i][2] = Number(array[i].precio).toFixed(2);
     nuevoArray[i][3] = totals + obs;
   }
   if (!store.state.configuracion.mostrar_ope_gratuitas) {
-    arraycabe.total_op_gratuitas = '0.00'
+    arraycabe.total_op_gratuitas = "0.00";
   }
   doc.autoTable({
     margin: { top: linea - 9, left: 1 },
@@ -272,10 +274,11 @@ async function impresion58(arraydatos, qr, cabecera) {
       cellPadding: 0.5,
       valign: "middle",
       halign: "center",
+      textColor: [0, 0, 0],
     },
     headStyles: { lineWidth: 0, minCellHeight: 9 },
     columnStyles: {
-      0: { columnWidth: 7, halign: "center", valign: "top", },
+      0: { columnWidth: 7, halign: "center", valign: "top" },
       1: { columnWidth: 24, halign: "left" },
       2: { columnWidth: 11, halign: "right" },
       3: { columnWidth: 11, halign: "right" },
@@ -285,7 +288,9 @@ async function impresion58(arraydatos, qr, cabecera) {
     body: nuevoArray,
     didParseCell: (data) => {
       if (data.section !== "body" || data.column.index !== 1) return; // solo Descripción
-      const txt = Array.isArray(data.cell.text) ? data.cell.text.join(" ") : String(data.cell.text || "");
+      const txt = Array.isArray(data.cell.text)
+        ? data.cell.text.join(" ")
+        : String(data.cell.text || "");
       if (/bonificacion/i.test(txt)) {
         data.cell.styles.fontStyle = "bold";
         data.cell.styles.textColor = [0, 0, 0]; // rojo suave
@@ -298,7 +303,6 @@ async function impresion58(arraydatos, qr, cabecera) {
   let finalY = doc.previousAutoTable.finalY;
   linea = finalY + 2;
 
-
   //-------------------------------------------------------
   doc.setFont("Helvetica", "bold");
   doc.text(separacion, pageCenter, linea, "center");
@@ -306,10 +310,7 @@ async function impresion58(arraydatos, qr, cabecera) {
   if (arraycabe.total_op_gratuitas > 0) {
     doc.setFont("Helvetica", "");
     doc.setFontSize(8);
-    var texto = doc.splitTextToSize(
-      "* Transferencia Gratuita",
-      100
-    );
+    var texto = doc.splitTextToSize("* Transferencia Gratuita", 100);
     doc.text(texto, 10, linea, "left");
     linea = linea + 3;
     doc.setFont("Helvetica", "bold");
@@ -367,7 +368,7 @@ async function impresion58(arraydatos, qr, cabecera) {
         linea,
         "right"
       );
-      linea = linea + 4
+      linea = linea + 4;
     }
     doc.text("IGV " + arraycabe.porcentaje_igv + "%", lMargin, linea);
     doc.text(moneda + arraycabe.igv, 50, linea, "right");
@@ -427,8 +428,8 @@ async function impresion58(arraydatos, qr, cabecera) {
     doc.setFontSize(9);
     var texto = doc.splitTextToSize(
       "Representación Impresa de la " +
-      documento +
-      " Consultar su validez en https://factura-peru.web.app/buscardocumentos",
+        documento +
+        " Consultar su validez en https://factura-peru.web.app/buscardocumentos",
       pdfInMM - lMargin - rMargin
     );
     doc.text(texto, pageCenter, linea, "center");
@@ -457,6 +458,7 @@ async function impresion58(arraydatos, qr, cabecera) {
         halign: "center",
         lineWidth: 0.2,
         lineColor: 1,
+        textColor: [0, 0, 0],
       },
       headStyles: { lineWidth: 0.2, lineColor: 1 },
       columnStyles: {
@@ -576,8 +578,11 @@ async function impresion80(arraydatos, qr, cabecera) {
     orientation: "portrait",
     unit: "mm",
     format: [1000, pdfInMM],
+    compress: true, // <--- IMPORTANTE: Evita pérdida de calidad
+    precision: 2, // <--- Precisión de dibujo
   });
-  doc.setTextColor(10);
+
+  doc.setTextColor(0, 0, 0);
   doc.text(".", 0, linea);
   linea = linea + 3;
   //console.log(imagen)
@@ -704,6 +709,14 @@ async function impresion80(arraydatos, qr, cabecera) {
     doc.text(texto, lMargin, linea, "left");
     linea = linea + 3.5 * texto.length;
   }
+  if (arraycabe.id_pedido) {
+    var texto = doc.splitTextToSize(
+      "# Pedido: " + arraycabe.id_pedido,
+      pdfInMM - lMargin - rMargin
+    );
+    doc.text(texto, lMargin, linea, "left");
+    linea = linea + 3.5 * texto.length;
+  }
   doc.setFont("Helvetica", "bold");
   doc.text(separacion, pageCenter, linea, "center");
   linea = linea + 7;
@@ -712,16 +725,18 @@ async function impresion80(arraydatos, qr, cabecera) {
   //-----------------productos-----------------------
   var nuevoArray = new Array(array.length);
   for (var i = 0; i < array.length; i++) {
-    descuentos += Number(array[i].preciodescuento); 
+    descuentos += Number(array[i].preciodescuento);
     var obs = "";
     var tg = "";
-    var totals = (Number(array[i].total_antes_impuestos)+Number(array[i].total_impuestos)).toFixed(2)
+    var totals = (
+      Number(array[i].total_antes_impuestos) + Number(array[i].total_impuestos)
+    ).toFixed(2);
     if (array[i].operacion == "GRATUITA") {
       obs = "*";
       tg = " / Bonificacion";
-      totals = '0.00'
+      totals = "0.00";
       if (!store.state.configuracion.mostrar_ope_gratuitas) {
-        array[i].precioedita = "0.00";
+        array[i].precio = "0.00";
       }
     }
     nuevoArray[i] = new Array(4);
@@ -731,7 +746,7 @@ async function impresion80(arraydatos, qr, cabecera) {
     nuevoArray[i][3] = totals + obs;
   }
   if (!store.state.configuracion.mostrar_ope_gratuitas) {
-    arraycabe.total_op_gratuitas = '0.00'
+    arraycabe.total_op_gratuitas = "0.00";
   }
   doc.autoTable({
     margin: { top: linea - 9, left: 1 },
@@ -740,6 +755,7 @@ async function impresion80(arraydatos, qr, cabecera) {
       cellPadding: 0.1,
       valign: "middle",
       halign: "center",
+      textColor: [0, 0, 0],
     },
     headStyles: { lineWidth: 0, minCellHeight: 9 },
     columnStyles: {
@@ -751,7 +767,6 @@ async function impresion80(arraydatos, qr, cabecera) {
     theme: ["plain"],
     head: [["Cant", "Descripcion", "P.U", "P.T"]],
     body: nuevoArray,
-
   });
 
   let finalY = doc.previousAutoTable.finalY;
@@ -771,7 +786,7 @@ async function impresion80(arraydatos, qr, cabecera) {
   console.log(arraycabe.total_op_gratuitas);
   if (arraycabe.total_op_gratuitas > 0) {
     doc.setFont("Helvetica", "");
-    doc.setFontSize(8.);
+    doc.setFontSize(8);
     var texto = doc.splitTextToSize(
       "* Transferencia Gratuita y/o Servicio Prestado Gratuitamente",
       100
@@ -813,7 +828,7 @@ async function impresion80(arraydatos, qr, cabecera) {
     doc.text(moneda + arraycabe.igv, 68, linea, "right");
     linea = linea + 3.8;
   }
-  if(descuentos>0){
+  if (descuentos > 0) {
     doc.text("Descuentos", lMargin, linea);
     doc.text(moneda + descuentos.toFixed(2), 68, linea, "right");
     linea = linea + 3.8;
@@ -821,7 +836,8 @@ async function impresion80(arraydatos, qr, cabecera) {
   doc.text("Total", lMargin, linea);
   doc.setFontSize(10);
   doc.setFont("Helvetica", "bold");
-  doc.text(moneda + total, 68, linea, "right");
+
+  doc.text(moneda + formatMoney(total), 68, linea, "right");
   linea = linea + 3.5;
   doc.setFontSize(8);
   doc.setFont("Helvetica", "bold");
@@ -857,12 +873,12 @@ async function impresion80(arraydatos, qr, cabecera) {
     doc.setFont("Helvetica", "");
     var texto = doc.splitTextToSize(
       "DETRACCION: " +
-      arraycabe.detraccion.porcentaje +
-      "%  : " +
-      moneda +
-      arraycabe.detraccion.monto +
-      "\nCTA. BANCO DE LA NACION: " +
-      arraycabe.detraccion.cuenta,
+        arraycabe.detraccion.porcentaje +
+        "%  : " +
+        moneda +
+        arraycabe.detraccion.monto +
+        "\nCTA. BANCO DE LA NACION: " +
+        arraycabe.detraccion.cuenta,
       80
     );
     doc.text(texto, pageCenter, linea, "center");
@@ -874,10 +890,9 @@ async function impresion80(arraydatos, qr, cabecera) {
   var texto = doc.splitTextToSize('Vendedor : ' + arraycabe.vendedor, (pdfInMM - lMargin - rMargin));
   doc.text(texto, pageCenter, linea, 'center');
   linea = linea + (3.5 * texto.length)*/
-  const vendedor = arraycabe.cod_vendedor ?? arraycabe.vendedor
+  const vendedor = arraycabe.cod_vendedor ?? arraycabe.vendedor;
   if (vendedor) {
-
-    linea = linea + (1 * texto.length)
+    linea = linea + 1 * texto.length;
     doc.setFont("Helvetica", "");
     var texto = doc.splitTextToSize(
       "Vendedor: " + vendedor,
@@ -901,8 +916,8 @@ async function impresion80(arraydatos, qr, cabecera) {
     doc.setFontSize(8);
     var texto = doc.splitTextToSize(
       "Representación Impresa de la " +
-      documento +
-      " Consultar su validez en https://factura-peru.web.app/buscardocumentos",
+        documento +
+        " Consultar su validez en https://factura-peru.web.app/buscardocumentos",
       pdfInMM - lMargin - rMargin
     );
     doc.text(texto, pageCenter, linea, "center");
@@ -931,6 +946,7 @@ async function impresion80(arraydatos, qr, cabecera) {
         halign: "center",
         lineWidth: 0.2,
         lineColor: 1,
+        textColor: [0, 0, 0],
       },
       headStyles: { lineWidth: 0.2, lineColor: 1 },
       columnStyles: {
@@ -1176,8 +1192,6 @@ function impresionA4(array, qr, arraycabecera) {
   doc.text(texto, 36, linea, "left");
   linea = linea + 4 * texto.length;
 
-
-
   linea = 45;
 
   doc.setFont("Helvetica", "Bold");
@@ -1195,7 +1209,7 @@ function impresionA4(array, qr, arraycabecera) {
     doc.text(fecha_vencimiento, 167, linea, "left");
     linea = linea + 4;
   }
-  console.log('telef' + arraycabe.telefono)
+  console.log("telef" + arraycabe.telefono);
   if (arraycabe.telefono != "" && arraycabe.telefono != undefined) {
     doc.setFont("Helvetica", "Bold");
     doc.text("TELEFONO", 130, linea, "left");
@@ -1214,11 +1228,11 @@ function impresionA4(array, qr, arraycabecera) {
   linea = 65;
 
   //-----------------productos-----------------------
-  var respuesta = tabla_A4(array, linea)
+  var respuesta = tabla_A4(array, linea);
 
-  arraycabe.total_op_gratuitas = respuesta.ope_grat.toFixed(2)
+  arraycabe.total_op_gratuitas = respuesta.ope_grat.toFixed(2);
   if (!store.state.configuracion.mostrar_ope_gratuitas) {
-    arraycabe.total_op_gratuitas = '0.00'
+    arraycabe.total_op_gratuitas = "0.00";
   }
 
   doc.autoTable(respuesta.table);
@@ -1337,7 +1351,7 @@ function impresionA4(array, qr, arraycabecera) {
   doc.text(moneda + total.toString(), 190, linea, "right");
   linea = linea + 4;
 
-  if (arraycabe.forma_pago == "Credito") {
+  if ((arraycabe.forma_pago).toLowerCase() == "credito") {
     doc.autoTable({
       margin: { top: 10, left: 10 },
       styles: {
@@ -1371,12 +1385,12 @@ function impresionA4(array, qr, arraycabecera) {
     doc.setFont("Helvetica", "bold");
     var texto = doc.splitTextToSize(
       "DETRACCION: " +
-      arraycabe.detraccion.porcentaje +
-      "%  : " +
-      moneda +
-      arraycabe.detraccion.monto +
-      "\nCTA. BANCO DE LA NACION: " +
-      arraycabe.detraccion.cuenta,
+        arraycabe.detraccion.porcentaje +
+        "%  : " +
+        moneda +
+        arraycabe.detraccion.monto +
+        "\nCTA. BANCO DE LA NACION: " +
+        arraycabe.detraccion.cuenta,
       80
     );
     doc.text(texto, 35, lineaqr2, "left");
@@ -1392,14 +1406,14 @@ function impresionA4(array, qr, arraycabecera) {
       doc.setFontSize(9);
       var texto = doc.splitTextToSize(
         "Representación Impresa de la " +
-        documento +
-        " Consultar su validez en https://factura-peru.web.app/buscardocumentos",
+          documento +
+          " Consultar su validez en https://factura-peru.web.app/buscardocumentos",
         90
       );
       doc.text(texto, 35, lineaqr, "left");
     }
   }
-  if (arraycabecera.forma_pago != "Credito") {
+  if (arraycabecera.forma_pago.toLowerCase() != "credito") {
     linea = linea + 3.5;
     var array_pago = arraycabe.modopago;
     linea = linea - 18;
@@ -1486,17 +1500,22 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
   const arraycabe = arraycabecera;
   let linea = 10;
 
-  const nombreEmpresa = store.state.baseDatos.name || '';
-  const imagen = store.state.logoempresa || '';
-  const Direccion = [
-    store.state.baseDatos.direccion,
-    store.state.baseDatos.distrito,
-    store.state.baseDatos.provincia,
-    store.state.baseDatos.departamento,
-  ].filter(Boolean).join(' - ') || '-';
+  const nombreEmpresa = store.state.baseDatos.name || "";
+  const imagen = store.state.logoempresa || "";
+  const Direccion =
+    [
+      store.state.baseDatos.direccion,
+      store.state.baseDatos.distrito,
+      store.state.baseDatos.provincia,
+      store.state.baseDatos.departamento,
+    ]
+      .filter(Boolean)
+      .join(" - ") || "-";
 
-  const fechaImpresion = moment.unix(arraycabe.fecha).format('DD/MM/YYYY');
-  const fecha_vencimiento = moment.unix(arraycabe.vencimientoDoc || arraycabe.fecha).format('DD/MM/YYYY');
+  const fechaImpresion = moment.unix(arraycabe.fecha).format("DD/MM/YYYY");
+  const fecha_vencimiento = moment
+    .unix(arraycabe.vencimientoDoc || arraycabe.fecha)
+    .format("DD/MM/YYYY");
 
   const total = (
     (parseFloat(arraycabe.total_op_exoneradas || 0) || 0) +
@@ -1507,36 +1526,41 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
   const totalDesc = arraycabe.descuentos || 0;
 
   // === A5 HORIZONTAL ===
-  const pdfW = 210;               // ancho A5 apaisado
-  const pdfH = 148;               // alto A5 apaisado
+  const pdfW = 210; // ancho A5 apaisado
+  const pdfH = 148; // alto A5 apaisado
   const margin = 5;
   const usable = pdfW - 2 * margin;
 
-  const cabecera = store.state.configImpresora.cabecera || '';
-  const telefono = store.state.configImpresora.telefono || '';
+  const cabecera = store.state.configImpresora.cabecera || "";
+  const telefono = store.state.configImpresora.telefono || "";
   const bancos = store.state.bancos || [];
-  if (arraycabe.total_op_gratuitas === undefined) arraycabe.total_op_gratuitas = 0;
+  if (arraycabe.total_op_gratuitas === undefined)
+    arraycabe.total_op_gratuitas = 0;
 
-  let documento = 'TICKET DE VENTA';
+  let documento = "TICKET DE VENTA";
   switch (arraycabe.tipocomprobante) {
-    case 'T':
-      documento = store.state.seriesdocumentos.notaventa ? 'NOTA DE VENTA' : 'TICKET DE VENTA';
+    case "T":
+      documento = store.state.seriesdocumentos.notaventa
+        ? "NOTA DE VENTA"
+        : "TICKET DE VENTA";
       break;
-    case 'B':
-      documento = 'BOLETA DE VENTA ELECTRONICA';
+    case "B":
+      documento = "BOLETA DE VENTA ELECTRONICA";
       break;
-    case 'F':
-      documento = 'FACTURA ELECTRONICA';
+    case "F":
+      documento = "FACTURA ELECTRONICA";
       break;
   }
 
   // landscape
-  const doc = new jspdf({ orientation: 'landscape', unit: 'mm', format: 'a5' });
-  doc.text('.', -1, linea); linea += 3;
+  const doc = new jspdf({ orientation: "landscape", unit: "mm", format: "a5" });
+  doc.text(".", -1, linea);
+  linea += 3;
 
   // --- Encabezado: texto empresa a la izquierda / recuadro a la derecha ---
-  const boxW = 70, boxH = 21;
-  const boxX = pdfW - margin - boxW;    // derecha
+  const boxW = 70,
+    boxH = 21;
+  const boxX = pdfW - margin - boxW; // derecha
   const boxY = margin;
 
   // Texto empresa (columna izquierda con wrap)
@@ -1544,28 +1568,31 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
   const leftW = Math.max(120, boxX - leftX - 6);
   if (imagen != "") {
     doc.addImage("data:image/png;base64," + imagen, "png", 10, 5, 26, 26);
-    leftX = 40
+    leftX = 40;
   }
-  doc.setFont('Helvetica', 'Bold'); doc.setFontSize(11);
+  doc.setFont("Helvetica", "Bold");
+  doc.setFontSize(11);
   let texto = doc.splitTextToSize(nombreEmpresa, leftW);
-  doc.text(texto, leftX, linea, 'left');
+  doc.text(texto, leftX, linea, "left");
   linea += 4 * texto.length;
 
   if (cabecera) {
-    doc.setFont('Helvetica', ''); doc.setFontSize(8.5);
+    doc.setFont("Helvetica", "");
+    doc.setFontSize(8.5);
     texto = doc.splitTextToSize(cabecera, leftW);
-    doc.text(texto, leftX, linea, 'left');
+    doc.text(texto, leftX, linea, "left");
     linea += 3.5 * texto.length;
   }
 
-  doc.setFont('Helvetica', ''); doc.setFontSize(8.5);
+  doc.setFont("Helvetica", "");
+  doc.setFontSize(8.5);
   texto = doc.splitTextToSize(Direccion, Math.min(100, leftW));
-  doc.text(texto, leftX, linea, 'left');
+  doc.text(texto, leftX, linea, "left");
   linea += 4.2 * texto.length;
 
   if (telefono) {
-    texto = doc.splitTextToSize('TELEFONO: ' + telefono, leftW);
-    doc.text(texto, leftX, linea, 'left');
+    texto = doc.splitTextToSize("TELEFONO: " + telefono, leftW);
+    doc.text(texto, leftX, linea, "left");
     linea += 3.5 * texto.length;
   }
 
@@ -1574,17 +1601,23 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
   doc.rect(boxX, boxY, boxW, boxH);
 
   doc.setFontSize(10);
-  doc.setFont('Helvetica', 'Bold');
-  texto = doc.splitTextToSize('Ruc: ' + (store.state.baseDatos.ruc || ''), boxW - 6);
-  doc.text(texto, boxX + boxW / 2, boxY + 7, 'center');
+  doc.setFont("Helvetica", "Bold");
+  texto = doc.splitTextToSize(
+    "Ruc: " + (store.state.baseDatos.ruc || ""),
+    boxW - 6
+  );
+  doc.text(texto, boxX + boxW / 2, boxY + 7, "center");
 
   doc.setFontSize(8.5);
   texto = doc.splitTextToSize(documento, boxW - 6);
-  doc.text(texto, boxX + boxW / 2, boxY + 12, 'center');
+  doc.text(texto, boxX + boxW / 2, boxY + 12, "center");
 
   doc.setFontSize(10);
-  texto = doc.splitTextToSize((arraycabe.serie || '') + '-' + (arraycabe.correlativoDocEmitido || ''), boxW - 6);
-  doc.text(texto, boxX + boxW / 2, boxY + 18, 'center');
+  texto = doc.splitTextToSize(
+    (arraycabe.serie || "") + "-" + (arraycabe.correlativoDocEmitido || ""),
+    boxW - 6
+  );
+  doc.text(texto, boxX + boxW / 2, boxY + 18, "center");
 
   const yHeaderBottom = Math.max(linea, boxY + boxH);
 
@@ -1595,48 +1628,60 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
   linea = yHeaderBottom + 3;
 
   // Izquierda
-  doc.setFont('Helvetica', 'Bold');
-  doc.text('SEÑORES', margin + 5, linea, 'left'); doc.text(' : ', margin + 22, linea, 'left');
-  doc.setFont('Helvetica', '');
-  texto = doc.splitTextToSize(arraycabe.cliente || '', 120);
-  doc.text(texto, margin + 26, linea, 'left');
+  doc.setFont("Helvetica", "Bold");
+  doc.text("SEÑORES", margin + 5, linea, "left");
+  doc.text(" : ", margin + 22, linea, "left");
+  doc.setFont("Helvetica", "");
+  texto = doc.splitTextToSize(arraycabe.cliente || "", 120);
+  doc.text(texto, margin + 26, linea, "left");
   linea += 4 * texto.length;
 
-  doc.setFont('Helvetica', 'Bold');
-  doc.text((arraycabe.tipoDocumento || '').substring(0, 10), margin + 5, linea, 'left'); doc.text(' : ', margin + 22, linea, 'left');
-  doc.setFont('Helvetica', ''); doc.text(arraycabe.dni || '', margin + 26, linea, 'left');
+  doc.setFont("Helvetica", "Bold");
+  doc.text(
+    (arraycabe.tipoDocumento || "").substring(0, 10),
+    margin + 5,
+    linea,
+    "left"
+  );
+  doc.text(" : ", margin + 22, linea, "left");
+  doc.setFont("Helvetica", "");
+  doc.text(arraycabe.dni || "", margin + 26, linea, "left");
   linea += 4;
 
-  doc.setFont('Helvetica', 'Bold');
-  doc.text('DIRECCION', margin + 5, linea, 'left'); doc.text(' : ', margin + 22, linea, 'left');
-  doc.setFont('Helvetica', '');
-  texto = doc.splitTextToSize(arraycabe.direccion || '-', 120);
-  doc.text(texto, margin + 26, linea, 'left');
+  doc.setFont("Helvetica", "Bold");
+  doc.text("DIRECCION", margin + 5, linea, "left");
+  doc.text(" : ", margin + 22, linea, "left");
+  doc.setFont("Helvetica", "");
+  texto = doc.splitTextToSize(arraycabe.direccion || "-", 120);
+  doc.text(texto, margin + 26, linea, "left");
   linea += 4 * texto.length;
 
   if (arraycabe.referencia) {
-    doc.setFont('Helvetica', 'Bold');
-    doc.text('REFERENCIA', margin + 5, linea, 'left'); doc.text(' : ', margin + 22, linea, 'left');
-    doc.setFont('Helvetica', '');
-    texto = doc.splitTextToSize(arraycabe.referencia || '-', 120);
-    doc.text(texto, margin + 26, linea, 'left');
+    doc.setFont("Helvetica", "Bold");
+    doc.text("REFERENCIA", margin + 5, linea, "left");
+    doc.text(" : ", margin + 22, linea, "left");
+    doc.setFont("Helvetica", "");
+    texto = doc.splitTextToSize(arraycabe.referencia || "-", 120);
+    doc.text(texto, margin + 26, linea, "left");
     linea += 4 * texto.length;
   }
 
   if (arraycabe.observacion && arraycabe.observacion.length < 100) {
-    doc.setFont('Helvetica', 'Bold');
-    doc.text('OBS', margin + 5, linea, 'left'); doc.text(' : ', margin + 22, linea, 'left');
-    doc.setFont('Helvetica', '');
+    doc.setFont("Helvetica", "Bold");
+    doc.text("OBS", margin + 5, linea, "left");
+    doc.text(" : ", margin + 22, linea, "left");
+    doc.setFont("Helvetica", "");
     texto = doc.splitTextToSize(arraycabe.observacion, usable - 30);
-    doc.text(texto, margin + 26, linea, 'left');
+    doc.text(texto, margin + 26, linea, "left");
     linea += 3.5 * texto.length;
   }
   if (arraycabe.placa_cliente) {
-    doc.setFont('Helvetica', 'Bold');
-    doc.text('PLACA', margin + 5, linea, 'left'); doc.text(' : ', margin + 22, linea, 'left');
-    doc.setFont('Helvetica', '');
+    doc.setFont("Helvetica", "Bold");
+    doc.text("PLACA", margin + 5, linea, "left");
+    doc.text(" : ", margin + 22, linea, "left");
+    doc.setFont("Helvetica", "");
     texto = doc.splitTextToSize(arraycabe.placa_cliente, 120);
-    doc.text(texto, margin + 26, linea, 'left');
+    doc.text(texto, margin + 26, linea, "left");
     linea += 4 * texto.length;
   }
 
@@ -1646,49 +1691,66 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
   const colonX2 = labelX2 + 32;
   const valueX2 = colonX2 + 3;
 
-  doc.setFont('Helvetica', 'Bold');
-  doc.text('FECHA EMISION', labelX2, lineaDer, 'left');
-  doc.text(' : ', colonX2, lineaDer, 'left');
-  doc.setFont('Helvetica', ''); doc.text(fechaImpresion, valueX2, lineaDer, 'left');
+  doc.setFont("Helvetica", "Bold");
+  doc.text("FECHA EMISION", labelX2, lineaDer, "left");
+  doc.text(" : ", colonX2, lineaDer, "left");
+  doc.setFont("Helvetica", "");
+  doc.text(fechaImpresion, valueX2, lineaDer, "left");
   lineaDer += 4;
 
-  if ((arraycabe.vencimientoDoc || '').toString().length === 10) {
-    doc.setFont('Helvetica', 'Bold');
-    doc.text('FECHA VENCIMIENTO', labelX2, lineaDer, 'left');
-    doc.text(' : ', colonX2, lineaDer, 'left');
-    doc.setFont('Helvetica', ''); doc.text(fecha_vencimiento, valueX2, lineaDer, 'left');
+  if ((arraycabe.vencimientoDoc || "").toString().length === 10) {
+    doc.setFont("Helvetica", "Bold");
+    doc.text("FECHA VENCIMIENTO", labelX2, lineaDer, "left");
+    doc.text(" : ", colonX2, lineaDer, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(fecha_vencimiento, valueX2, lineaDer, "left");
     lineaDer += 4;
   }
   if (arraycabe.telefono) {
-    doc.setFont('Helvetica', 'Bold');
-    doc.text('TELEFONO', labelX2, lineaDer, 'left');
-    doc.text(' : ', colonX2, lineaDer, 'left');
-    doc.setFont('Helvetica', ''); doc.text(arraycabe.telefono, valueX2, lineaDer, 'left');
+    doc.setFont("Helvetica", "Bold");
+    doc.text("TELEFONO", labelX2, lineaDer, "left");
+    doc.text(" : ", colonX2, lineaDer, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(arraycabe.telefono, valueX2, lineaDer, "left");
     lineaDer += 4;
   }
 
-  doc.setFont('Helvetica', 'Bold');
-  doc.text('CONDICIONES', labelX2, lineaDer, 'left');
-  doc.text(' : ', colonX2, lineaDer, 'left');
-  doc.setFont('Helvetica', ''); doc.text(arraycabecera.forma_pago || '', valueX2, lineaDer, 'left');
+  doc.setFont("Helvetica", "Bold");
+  doc.text("CONDICIONES", labelX2, lineaDer, "left");
+  doc.text(" : ", colonX2, lineaDer, "left");
+  doc.setFont("Helvetica", "");
+  doc.text(arraycabecera.forma_pago || "", valueX2, lineaDer, "left");
 
   // --- Tabla de productos ---
   linea = yHeaderBottom + 18;
 
   const nuevoArray = new Array(array.length);
   for (let i = 0; i < array.length; i++) {
-    let obs = '', tg = '';
-    if (array[i].operacion === 'GRATUITA') {
-      obs = '*';
-      tg = ' / TG: ' + moneda + (array[i].valor_total || 0);
-      array[i].precioedita = '0.00';
+    let obs = "",
+      tg = "";
+    if (array[i].operacion === "GRATUITA") {
+      obs = "*";
+      tg = " / TG: " + moneda + (array[i].valor_total || 0);
+      array[i].precioedita = "0.00";
     }
     nuevoArray[i] = new Array(5);
     nuevoArray[i][0] = array[i].cantidad || 0;
-    nuevoArray[i][1] = (array[i].nombre || '') + tg;
-    nuevoArray[i][2] = array[i].medida || '';
-    nuevoArray[i][3] = array[i].precioedita || array[i].precio || array[i].precioVentaUnitario || '0.00';
-    nuevoArray[i][4] = (parseFloat(array[i].precioedita || array[i].precio || array[i].precioVentaUnitario || 0) * (array[i].cantidad || 0)).toFixed(2) + obs;
+    nuevoArray[i][1] = (array[i].nombre || "") + tg;
+    nuevoArray[i][2] = array[i].medida || "";
+    nuevoArray[i][3] =
+      array[i].precioedita ||
+      array[i].precio ||
+      array[i].precioVentaUnitario ||
+      "0.00";
+    nuevoArray[i][4] =
+      (
+        parseFloat(
+          array[i].precioedita ||
+            array[i].precio ||
+            array[i].precioVentaUnitario ||
+            0
+        ) * (array[i].cantidad || 0)
+      ).toFixed(2) + obs;
   }
 
   // Con más ancho disponible en horizontal
@@ -1698,17 +1760,29 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
   doc.autoTable({
     startY: linea,
     margin: { top: 10, left: margin, right: margin },
-    styles: { fontSize: 8, cellPadding: 0.6, valign: 'middle', halign: 'center', lineWidth: 0.2, lineColor: 1 },
-    headStyles: { lineWidth: 0.2, lineColor: 1, fontStyle: 'bold', fillColor: [184, 184, 184] },
-    columnStyles: {
-      0: { columnWidth: colW.c0, halign: 'center' },
-      1: { columnWidth: descW, halign: 'left' },
-      2: { columnWidth: colW.c2, halign: 'center' },
-      3: { columnWidth: colW.c3, halign: 'right' },
-      4: { columnWidth: colW.c4, halign: 'right' },
+    styles: {
+      fontSize: 8,
+      cellPadding: 0.6,
+      valign: "middle",
+      halign: "center",
+      lineWidth: 0.2,
+      lineColor: 1,
     },
-    theme: 'plain',
-    head: [['Cantidad', 'Descripcion', 'Medida', 'P.Unitario', 'P.Total']],
+    headStyles: {
+      lineWidth: 0.2,
+      lineColor: 1,
+      fontStyle: "bold",
+      fillColor: [184, 184, 184],
+    },
+    columnStyles: {
+      0: { columnWidth: colW.c0, halign: "center" },
+      1: { columnWidth: descW, halign: "left" },
+      2: { columnWidth: colW.c2, halign: "center" },
+      3: { columnWidth: colW.c3, halign: "right" },
+      4: { columnWidth: colW.c4, halign: "right" },
+    },
+    theme: "plain",
+    head: [["Cantidad", "Descripcion", "Medida", "P.Unitario", "P.Total"]],
     body: nuevoArray,
   });
 
@@ -1717,61 +1791,134 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
   let lineaqr = linea;
 
   if ((arraycabe.total_op_gratuitas || 0) > 0) {
-    doc.setFont('Helvetica', ''); doc.setFontSize(8);
-    texto = doc.splitTextToSize('* Transferencia Gratuita y/o Servicio Prestado Gratuitamente', 140);
-    doc.text(texto, margin, lineaqr, 'left');
+    doc.setFont("Helvetica", "");
+    doc.setFontSize(8);
+    texto = doc.splitTextToSize(
+      "* Transferencia Gratuita y/o Servicio Prestado Gratuitamente",
+      140
+    );
+    doc.text(texto, margin, lineaqr, "left");
     lineaqr += 3;
   }
 
-  doc.setFont('Helvetica', ''); doc.setFontSize(8);
-  texto = doc.splitTextToSize('Son: ' + NumerosALetras(parseFloat(total).toFixed(2), moneda), 140);
-  doc.text(texto, margin, lineaqr, 'left');
+  doc.setFont("Helvetica", "");
+  doc.setFontSize(8);
+  texto = doc.splitTextToSize(
+    "Son: " + NumerosALetras(parseFloat(total).toFixed(2), moneda),
+    140
+  );
+  doc.text(texto, margin, lineaqr, "left");
   lineaqr += 3;
 
   if (arraycabe.observacion && arraycabe.observacion.length >= 100) {
     linea += 4;
-    doc.setFont('Helvetica', 'Bold'); doc.text('OBS', margin + 5, linea, 'left'); doc.text(' : ', margin + 22, linea, 'left');
-    doc.setFont('Helvetica', ''); texto = doc.splitTextToSize(arraycabe.observacion, usable - 33);
-    doc.text(texto, margin + 26, linea, 'left');
+    doc.setFont("Helvetica", "Bold");
+    doc.text("OBS", margin + 5, linea, "left");
+    doc.text(" : ", margin + 22, linea, "left");
+    doc.setFont("Helvetica", "");
+    texto = doc.splitTextToSize(arraycabe.observacion, usable - 33);
+    doc.text(texto, margin + 26, linea, "left");
   }
 
   // Salto si se viene el pie
-  const remainingVSpace = doc.internal.pageSize.height - doc.lastAutoTable.finalY;
-  if (remainingVSpace <= 35) { doc.addPage(); linea = 10; lineaqr = 10; }
+  const remainingVSpace =
+    doc.internal.pageSize.height - doc.lastAutoTable.finalY;
+  if (remainingVSpace <= 35) {
+    doc.addPage();
+    linea = 10;
+    lineaqr = 10;
+  }
 
   // --- Totales (recuadro a la derecha) ---
-  doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3);
-  const totBoxW = 70, totBoxH = 23, totBoxX = pdfW - margin - totBoxW;
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.3);
+  const totBoxW = 70,
+    totBoxH = 23,
+    totBoxX = pdfW - margin - totBoxW;
   doc.rect(totBoxX, linea, totBoxW, totBoxH);
 
   let yTot = linea + 4;
   doc.setFontSize(8.5);
 
   if (parseFloat(totalDesc) !== 0) {
-    doc.setFont('Helvetica', 'Bold'); doc.text('DESCUENTOS', totBoxX + 5, yTot, 'left'); doc.text(' : ', totBoxX + 33, yTot, 'left');
-    doc.setFont('Helvetica', ''); doc.text(moneda + (arraycabe.descuentos || 0), totBoxX + totBoxW - 2, yTot, 'right'); yTot += 4;
+    doc.setFont("Helvetica", "Bold");
+    doc.text("DESCUENTOS", totBoxX + 5, yTot, "left");
+    doc.text(" : ", totBoxX + 33, yTot, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(
+      moneda + (arraycabe.descuentos || 0),
+      totBoxX + totBoxW - 2,
+      yTot,
+      "right"
+    );
+    yTot += 4;
   }
 
-  if (arraycabe.operacion === '0200') {
-    doc.setFont('Helvetica', 'Bold'); doc.text('EXPORTACION', totBoxX + 5, yTot, 'left'); doc.text(' : ', totBoxX + 33, yTot, 'left');
-    doc.setFont('Helvetica', ''); doc.text(moneda + (arraycabe.total_op_gravadas || 0), totBoxX + totBoxW - 2, yTot, 'right'); yTot += 4;
+  if (arraycabe.operacion === "0200") {
+    doc.setFont("Helvetica", "Bold");
+    doc.text("EXPORTACION", totBoxX + 5, yTot, "left");
+    doc.text(" : ", totBoxX + 33, yTot, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(
+      moneda + (arraycabe.total_op_gravadas || 0),
+      totBoxX + totBoxW - 2,
+      yTot,
+      "right"
+    );
+    yTot += 4;
   } else {
-    doc.setFont('Helvetica', 'Bold'); doc.text('OP. GRAVADA', totBoxX + 5, yTot, 'left'); doc.text(' : ', totBoxX + 33, yTot, 'left');
-    doc.setFont('Helvetica', ''); doc.text(moneda + (arraycabe.total_op_gravadas || 0), totBoxX + totBoxW - 2, yTot, 'right'); yTot += 4;
+    doc.setFont("Helvetica", "Bold");
+    doc.text("OP. GRAVADA", totBoxX + 5, yTot, "left");
+    doc.text(" : ", totBoxX + 33, yTot, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(
+      moneda + (arraycabe.total_op_gravadas || 0),
+      totBoxX + totBoxW - 2,
+      yTot,
+      "right"
+    );
+    yTot += 4;
   }
 
-  doc.setFont('Helvetica', 'Bold'); doc.text('OP. EXONERADA', totBoxX + 5, yTot, 'left'); doc.text(' : ', totBoxX + 33, yTot, 'left');
-  doc.setFont('Helvetica', ''); doc.text(moneda + String(arraycabe.total_op_exoneradas || 0), totBoxX + totBoxW - 2, yTot, 'right'); yTot += 4;
+  doc.setFont("Helvetica", "Bold");
+  doc.text("OP. EXONERADA", totBoxX + 5, yTot, "left");
+  doc.text(" : ", totBoxX + 33, yTot, "left");
+  doc.setFont("Helvetica", "");
+  doc.text(
+    moneda + String(arraycabe.total_op_exoneradas || 0),
+    totBoxX + totBoxW - 2,
+    yTot,
+    "right"
+  );
+  yTot += 4;
 
-  doc.setFont('Helvetica', 'Bold'); doc.text('OP. GRATUITAS', totBoxX + 5, yTot, 'left'); doc.text(' : ', totBoxX + 33, yTot, 'left');
-  doc.setFont('Helvetica', ''); doc.text(moneda + String(arraycabe.total_op_gratuitas || 0), totBoxX + totBoxW - 2, yTot, 'right'); yTot += 4;
+  doc.setFont("Helvetica", "Bold");
+  doc.text("OP. GRATUITAS", totBoxX + 5, yTot, "left");
+  doc.text(" : ", totBoxX + 33, yTot, "left");
+  doc.setFont("Helvetica", "");
+  doc.text(
+    moneda + String(arraycabe.total_op_gratuitas || 0),
+    totBoxX + totBoxW - 2,
+    yTot,
+    "right"
+  );
+  yTot += 4;
 
-  doc.setFont('Helvetica', 'Bold'); doc.text('IGV ' + (arraycabe.porcentaje_igv || 0) + '%', totBoxX + 5, yTot, 'left'); doc.text(' : ', totBoxX + 33, yTot, 'left');
-  doc.setFont('Helvetica', ''); doc.text(moneda + (arraycabe.igv || 0), totBoxX + totBoxW - 2, yTot, 'right'); yTot += 4;
+  doc.setFont("Helvetica", "Bold");
+  doc.text(
+    "IGV " + (arraycabe.porcentaje_igv || 0) + "%",
+    totBoxX + 5,
+    yTot,
+    "left"
+  );
+  doc.text(" : ", totBoxX + 33, yTot, "left");
+  doc.setFont("Helvetica", "");
+  doc.text(moneda + (arraycabe.igv || 0), totBoxX + totBoxW - 2, yTot, "right");
+  yTot += 4;
 
   // --- Franja de TOTAL (debajo del recuadro) ---
-  const totalStripGap = 2;              // separación respecto al recuadro
-  const totalStripH = 8;              // alto de la franja
+  const totalStripGap = 2; // separación respecto al recuadro
+  const totalStripH = 8; // alto de la franja
   const totalStripY = linea + totBoxH + totalStripGap;
 
   doc.setDrawColor(0, 0, 0);
@@ -1779,11 +1926,11 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
   doc.rect(totBoxX, totalStripY, totBoxW, totalStripH);
 
   // Texto TOTAL
-  doc.setFont('Helvetica', 'Bold');
-  doc.setFontSize(11);                  // un poco más grande para destacar
-  const yTotalText = totalStripY + 5;   // posiciona el texto dentro de la franja
-  doc.text('TOTAL: ', totBoxX + 5, yTotalText, 'left');
-  doc.text(moneda + String(total), totBoxX + totBoxW - 2, yTotalText, 'right');
+  doc.setFont("Helvetica", "Bold");
+  doc.setFontSize(11); // un poco más grande para destacar
+  const yTotalText = totalStripY + 5; // posiciona el texto dentro de la franja
+  doc.text("TOTAL: ", totBoxX + 5, yTotalText, "left");
+  doc.text(moneda + String(total), totBoxX + totBoxW - 2, yTotalText, "right");
   // --- Crédito (cuotas) ---
   if (false) {
     // borde inferior del recuadro de totales + pequeño espacio
@@ -1792,15 +1939,22 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
       startY: yCuotas,
       margin: { left: totBoxX, right: margin },
       tableWidth: totBoxW, // MISMO ANCHO QUE EL BOX DE TOTALES
-      styles: { fontSize: 8, cellPadding: 0.8, valign: 'middle', halign: 'center', lineWidth: 0.2, lineColor: 1 },
-      headStyles: { lineWidth: 0.2, lineColor: 1, fontStyle: 'bold' },
-      columnStyles: {
-        0: { columnWidth: 20, halign: 'center', fontStyle: 'bold' }, // CUOTA
-        1: { columnWidth: 22, halign: 'center' },                    // IMPORTE
-        2: { columnWidth: totBoxW - (20 + 22), halign: 'center' },   // VENCE
+      styles: {
+        fontSize: 8,
+        cellPadding: 0.8,
+        valign: "middle",
+        halign: "center",
+        lineWidth: 0.2,
+        lineColor: 1,
       },
-      theme: 'plain',
-      head: [['CUOTA', 'IMPORTE', 'VENCE']],
+      headStyles: { lineWidth: 0.2, lineColor: 1, fontStyle: "bold" },
+      columnStyles: {
+        0: { columnWidth: 20, halign: "center", fontStyle: "bold" }, // CUOTA
+        1: { columnWidth: 22, halign: "center" }, // IMPORTE
+        2: { columnWidth: totBoxW - (20 + 22), halign: "center" }, // VENCE
+      },
+      theme: "plain",
+      head: [["CUOTA", "IMPORTE", "VENCE"]],
       body: cuotascredito(arraycabe.cuotas || []),
     });
     lineaqr = doc.previousAutoTable.finalY + 3;
@@ -1808,41 +1962,60 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
 
   // --- Detracción ---
   if (arraycabe.detraccion && Object.keys(arraycabe.detraccion).length) {
-    const lineaqr2 = (lineaqr || (yTot + 10)) + 7;
-    doc.setFontSize(7); doc.setFont('Helvetica', 'bold');
+    const lineaqr2 = (lineaqr || yTot + 10) + 7;
+    doc.setFontSize(7);
+    doc.setFont("Helvetica", "bold");
     texto = doc.splitTextToSize(
-      'DETRACCION: ' + arraycabe.detraccion.porcentaje + '%  : ' + moneda + arraycabe.detraccion.monto +
-      '\nCTA. BANCO DE LA NACION: ' + arraycabe.detraccion.cuenta,
+      "DETRACCION: " +
+        arraycabe.detraccion.porcentaje +
+        "%  : " +
+        moneda +
+        arraycabe.detraccion.monto +
+        "\nCTA. BANCO DE LA NACION: " +
+        arraycabe.detraccion.cuenta,
       110
     );
-    doc.text(texto, margin + 25, lineaqr2, 'left');
+    doc.text(texto, margin + 25, lineaqr2, "left");
   }
 
   // --- QR + leyenda SUNAT ---
-  if (qr && (arraycabe.tipocomprobante === 'F' || arraycabe.tipocomprobante === 'B')) {
-    doc.addImage(qr, 'PNG', margin, lineaqr, 18, 18);
+  if (
+    qr &&
+    (arraycabe.tipocomprobante === "F" || arraycabe.tipocomprobante === "B")
+  ) {
+    doc.addImage(qr, "PNG", margin, lineaqr, 18, 18);
   }
-  if (arraycabe.tipocomprobante !== 'T') {
-    const leyenda = 'Representación Impresa de la ' + documento +
-      ' Consultar su validez en https://factura-peru.web.app/buscardocumentos';
-    doc.setFont('Helvetica', ''); doc.setFontSize(7);
+  if (arraycabe.tipocomprobante !== "T") {
+    const leyenda =
+      "Representación Impresa de la " +
+      documento +
+      " Consultar su validez en https://factura-peru.web.app/buscardocumentos";
+    doc.setFont("Helvetica", "");
+    doc.setFontSize(7);
     texto = doc.splitTextToSize(leyenda, 80);
-    doc.text(texto, margin + 23, lineaqr + 2, 'left');
+    doc.text(texto, margin + 23, lineaqr + 2, "left");
   }
 
   // --- Modo de pago (cuando NO es crédito) ---
   if (false) {
     const array_pago = arraycabe.modopago || [];
     const yPago = yTot + 3;
-    doc.setFont('Helvetica', 'Bold'); doc.setFontSize(8);
-    doc.text('MODO DE PAGO : ', margin + 23, yPago);
+    doc.setFont("Helvetica", "Bold");
+    doc.setFontSize(8);
+    doc.text("MODO DE PAGO : ", margin + 23, yPago);
     let yLine = yPago + 3;
     for (let i = 0; i < array_pago.length; i++) {
       const data = array_pago[i];
       if (Boolean(data?.monto)) {
-        doc.setFont('Helvetica', ''); doc.setFontSize(7);
-        doc.text(data.nombre || '', margin + 23, yLine);
-        doc.text(moneda + String(parseFloat(data.monto).toFixed(2)), margin + 58, yLine, 'right');
+        doc.setFont("Helvetica", "");
+        doc.setFontSize(7);
+        doc.text(data.nombre || "", margin + 23, yLine);
+        doc.text(
+          moneda + String(parseFloat(data.monto).toFixed(2)),
+          margin + 58,
+          yLine,
+          "right"
+        );
         yLine += 3;
       }
     }
@@ -1852,27 +2025,37 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
   if (store.state.configImpresora.piepagina) {
     doc.setFontSize(9.5);
     lineaqr += 10;
-    doc.setFont('Helvetica', 'bold');
-    doc.text(store.state.configImpresora.piepagina, pdfW / 2, lineaqr, 'center');
+    doc.setFont("Helvetica", "bold");
+    doc.text(
+      store.state.configImpresora.piepagina,
+      pdfW / 2,
+      lineaqr,
+      "center"
+    );
   }
 
   linea += 12;
-  doc.text('.', 0, linea);
+  doc.text(".", 0, linea);
 
   // --- Salida
   switch (modo_genera) {
-    case 'abre':
+    case "abre":
       if (store.state.esmovil) {
-        window.open(doc.output('bloburi'));
+        window.open(doc.output("bloburi"));
       } else {
         abre_dialogo_impresion(doc);
       }
       break;
-    case 'host':
+    case "host":
       // integra si usas envia_host para A5
       break;
-    case 'descarga':
-      doc.save((arraycabe.serie || '') + '-' + (arraycabe.correlativoDocEmitido || '') + '.pdf');
+    case "descarga":
+      doc.save(
+        (arraycabe.serie || "") +
+          "-" +
+          (arraycabe.correlativoDocEmitido || "") +
+          ".pdf"
+      );
       break;
   }
 }
@@ -1882,23 +2065,23 @@ export const generaQR = (cabecera) => {
   var fecha = moment.unix(cabecera.fecha).format("DD/MM/YYYY");
   var imgData = QR.drawImg(
     ruc +
-    "|" +
-    cabecera.cod_comprobante +
-    "|" +
-    cabecera.serie +
-    "|" +
-    cabecera.correlativoDocEmitido +
-    "|" +
-    cabecera.igv +
-    "|" +
-    cabecera.total +
-    "|" +
-    fecha +
-    "|" +
-    cabecera.cod_tipoDocumento +
-    "|" +
-    cabecera.dni +
-    "|",
+      "|" +
+      cabecera.cod_comprobante +
+      "|" +
+      cabecera.serie +
+      "|" +
+      cabecera.correlativoDocEmitido +
+      "|" +
+      cabecera.igv +
+      "|" +
+      cabecera.total +
+      "|" +
+      fecha +
+      "|" +
+      cabecera.cod_tipoDocumento +
+      "|" +
+      cabecera.dni +
+      "|",
     {
       typeNumber: 4,
       errorCorrectLevel: "M",
@@ -1934,7 +2117,7 @@ function abre_dialogo_impresion(data) {
     axios_imp(data.output("arraybuffer"));
     return;
   }
-  var blob = (data.output("bloburi"))
+  var blob = data.output("bloburi");
   var Ancho = screen.width;
   var Alto = screen.height;
   var A = (Ancho * 50) / 100;
@@ -2022,22 +2205,23 @@ function isElectronEnv() {
   const w = typeof window !== "undefined" ? window : undefined;
   const p = typeof process !== "undefined" ? process : undefined;
   return Boolean(
-    (p && p.versions && p.versions.electron) ||            // main / preload
-    (w && w.process && w.process.type === "renderer") ||   // renderer
-    (w && w.navigator && w.navigator.userAgent && w.navigator.userAgent.includes("Electron"))
+    (p && p.versions && p.versions.electron) || // main / preload
+      (w && w.process && w.process.type === "renderer") || // renderer
+      (w &&
+        w.navigator &&
+        w.navigator.userAgent &&
+        w.navigator.userAgent.includes("Electron"))
   );
 }
 
 function tabla_A4(array, linea) {
-
   // Detectar si existe algún descuento
-  const existeDescuento = array.some(it =>
-    it.descuentos &&
-    (
-      Number(it.descuentos.desc_1) > 0 ||
-      Number(it.descuentos.desc_2) > 0 ||
-      Number(it.descuentos.desc_3) > 0
-    )
+  const existeDescuento = array.some(
+    (it) =>
+      it.descuentos &&
+      (Number(it.descuentos.desc_1) > 0 ||
+        Number(it.descuentos.desc_2) > 0 ||
+        Number(it.descuentos.desc_3) > 0)
   );
 
   let ope_grat = 0;
@@ -2047,12 +2231,14 @@ function tabla_A4(array, linea) {
     const descuentos = item.descuentos || {};
 
     const precioBase = Number(item.precio || 0); // P.Unitario
-    const precioNeto = Number(item.precio || 0);                      // P.Neto
+    const precioNeto = Number(item.precio || 0); // P.Neto
     let totalLinea = precioNeto * item.cantidad;
 
     // Texto descuentos combinados en una sola celda
     const textoDescuento = existeDescuento
-      ? `${descuentos.desc_1 || 0} / ${descuentos.desc_2 || 0} / ${descuentos.desc_3 || 0}`
+      ? `${descuentos.desc_1 || 0} / ${descuentos.desc_2 || 0} / ${
+          descuentos.desc_3 || 0
+        }`
       : null;
 
     let obs = "";
@@ -2085,18 +2271,26 @@ function tabla_A4(array, linea) {
         precioBase.toFixed(2),
         textoDescuento,
         precioNeto.toFixed(2),
-        totalLinea.toFixed(2) + obs
+        totalLinea.toFixed(2) + obs,
       ]);
     }
   }
 
   // CABECERA SEGÚN MODO
   const headSinDescuento = [
-    ["Cantidad", "Descripcion", "Medida", "P.Unitario", "P.Total"]
+    ["Cantidad", "Descripcion", "Medida", "P.Unitario", "P.Total"],
   ];
 
   const headConDescuento = [
-    ["Cant", "Descripcion", "Medida", "P.Unitario", "%Desc", "P.Neto", "P.Total"]
+    [
+      "Cant",
+      "Descripcion",
+      "Medida",
+      "P.Unitario",
+      "%Desc",
+      "P.Neto",
+      "P.Total",
+    ],
   ];
 
   // COLUMNAS SIMPLES Y LIMPIAS
@@ -2113,9 +2307,9 @@ function tabla_A4(array, linea) {
     1: { columnWidth: 80, halign: "left" },
     2: { columnWidth: 18 },
     3: { columnWidth: 20 },
-    4: { columnWidth: 20 },  // %Desc
-    5: { columnWidth: 20 },  // P.Neto
-    6: { columnWidth: 20 },  // Total
+    4: { columnWidth: 20 }, // %Desc
+    5: { columnWidth: 20 }, // P.Neto
+    6: { columnWidth: 20 }, // Total
   };
 
   // TABLA A DEVOLVER
@@ -2133,8 +2327,18 @@ function tabla_A4(array, linea) {
     theme: ["plain"],
     head: existeDescuento ? headConDescuento : headSinDescuento,
     columnStyles: existeDescuento ? columnStylesConDesc : columnStylesSinDesc,
-    body: nuevoArray
+    body: nuevoArray,
   };
 
   return { table, ope_grat };
+}
+
+function formatMoney(num) {
+  const n = Number(num || 0);
+
+  // Formato tipo S/ 1,070.65
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }

@@ -5,7 +5,7 @@ import { consultaArchivo } from '../../db'
 import QR from 'qrcode-base64'
 import moment from 'moment'
 
-export const reporte_almacen = async (cabecera, peso, arraydatos, observacion) => {
+export const reporte_almacen = async (cabecera, peso, arraydatos, observacion, formato = "F1") => {
   const array = arraydatos || []
   let linea = 10
   const fechaImpresion = moment(String(new Date)).format('DD/MM/YYYY hh:mm a')
@@ -24,8 +24,7 @@ export const reporte_almacen = async (cabecera, peso, arraydatos, observacion) =
 
   linea += 13
 
-  // Construcción de filas y cálculo de totales
-  const nuevoArray = new Array(array.length)
+  const nuevoArray = []
   let totalCajas = 0
   let totalUnd = 0
 
@@ -41,29 +40,77 @@ export const reporte_almacen = async (cabecera, peso, arraydatos, observacion) =
     totalCajas += cajas
     totalUnd += und
 
-    nuevoArray[i] = new Array(6)
-    nuevoArray[i][0] = array[i].id
-    nuevoArray[i][1] = array[i].nombre
-    nuevoArray[i][2] = array[i].medida
-    nuevoArray[i][3] = cajas
-    nuevoArray[i][4] = und
-    nuevoArray[i][5] = array[i].peso
+    const peso = array[i].peso
+
+    if (formato === 'F1') {
+      // F1: CODIGO - DESCRIPCION - MEDIDA - CAJAS - UND - PESO
+      nuevoArray.push([
+        array[i].id,
+        array[i].nombre,
+        array[i].medida,
+        cajas,
+        und,
+        peso,
+      ])
+    } else {
+      // F2: CAJAS/UND - MEDIDA - DESCRIPCION - PESO
+      let cajasUndStr = ''
+
+      if (und === 0) {
+        // Solo cajas
+        cajasUndStr = String(cajas)
+      } else if (cajas === 0) {
+        // Solo unidades
+        cajasUndStr = `0/${und}`
+      } else {
+        // Cajas y unidades
+        cajasUndStr = `${cajas}/${und}`
+      }
+
+      nuevoArray.push([
+        cajasUndStr,         // Columna combinada Cajas / Und
+        array[i].medida,     // Medida
+        array[i].nombre,     // Descripción
+        peso,                // Peso
+      ])
+    }
   }
 
-  // Tabla
+  const esF1 = formato === 'F1'
+
   doc.autoTable({
-    margin: { top: linea, left: 10 },
-    styles: { fontSize: 8, cellPadding: 1, valign: 'middle', halign: 'center', lineWidth: 0.2, lineColor: 1 },
-    headStyles: { lineWidth: 0.2, lineColor: 1, fillColor: [1, 0, 0] },
-    columnStyles: {
-      0: { columnWidth: 15, halign: 'center', fontStyle: 'bold' },
-      1: { columnWidth: 110, halign: 'left' },
-      2: { columnWidth: 20, halign: 'center' },
-      3: { columnWidth: 12, halign: 'center' },
-      4: { columnWidth: 12, halign: 'center' },
-      5: { columnWidth: 20, halign: 'center' },
+    margin: { top: linea, left: 5 },
+    styles: {
+      fontSize: 8,
+      cellPadding: 1,
+      valign: 'middle',
+      halign: 'center',
+      lineWidth: 0.2,
+      lineColor: 1
     },
-    head: [['Codigo', 'Descripcion', 'Medida', 'cajas', 'und', 'Peso(KG)']],
+    headStyles: {
+      lineWidth: 0.2,
+      lineColor: 1,
+      fillColor: [1, 0, 0]
+    },
+    columnStyles: esF1
+      ? {
+          0: { columnWidth: 15, halign: 'center', fontStyle: 'bold' }, // CODIGO
+          1: { columnWidth: 115, halign: 'left' },                     // DESCRIPCION
+          2: { columnWidth: 20, halign: 'center' },                    // MEDIDA
+          3: { columnWidth: 12, halign: 'center' },                    // CAJAS
+          4: { columnWidth: 12, halign: 'center' },                    // UND
+          5: { columnWidth: 20, halign: 'center' },                    // PESO
+        }
+      : {
+          0: { columnWidth: 15, halign: 'center' },                    // CAJAS/UND
+          1: { columnWidth: 25, halign: 'center' },                    // MEDIDA
+          2: { columnWidth: 130, halign: 'left' },                     // DESCRIPCION
+          3: { columnWidth: 25, halign: 'center' },                    // PESO
+        },
+    head: esF1
+      ? [['Codigo', 'Descripcion', 'Medida', 'Cajas', 'Und', 'Peso(KG)']]
+      : [['Caj/Und', 'Medida', 'Descripcion', 'Peso(KG)']],
     body: nuevoArray,
   })
 
@@ -98,23 +145,22 @@ export const reporte_almacen = async (cabecera, peso, arraydatos, observacion) =
     doc.text(170, 290, 'PAG :' + pageCurrent + '/' + pageCount)
   }
 
-  // === Totales al final del reporte (debajo de la tabla, última página) ===
+  // Totales al final
   const finalY = doc.previousAutoTable.finalY || 0
   const yTotales = finalY + 6
 
   doc.setPage(pageCount)
   doc.setFont('Helvetica', 'bold')
   doc.setFontSize(11)
-  // Etiqueta alineada a la izquierda
   doc.text('TOTALES:', 10, yTotales)
   doc.setFont('Helvetica', '')
   doc.setFontSize(10)
-  // Valores a la derecha (ajusta X si deseas otro alineado)
   doc.text(`Cajas: ${totalCajas}`, 35, yTotales)
   doc.text(`Und: ${totalUnd}`, 65, yTotales)
 
   window.open(doc.output('bloburl'))
 }
+
 export const reporte_transporte = (data) => {
   var linea = parseInt(10)
   var nombreEmpresa = store.state.baseDatos.name

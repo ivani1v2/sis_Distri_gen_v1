@@ -86,7 +86,7 @@ export default {
             const end = d2.endOf("day").unix();
 
             var snap = await all_cabecera_reparto()
-                .orderByChild("fecha_emision")
+                .orderByChild("fecha_traslado")
                 .startAt(start)
                 .endAt(end)
                 .once("value");
@@ -94,7 +94,7 @@ export default {
             this.repartosarray = Object.keys(data).map((key) => {
 
                 data[key].id = key;
-                data[key].fecha = this.formatFecha(data[key].fecha_emision, 'DD/MM');
+                data[key].fecha = this.formatFecha(data[key].fecha_traslado, 'DD/MM');
                 return data[key];
             });
 

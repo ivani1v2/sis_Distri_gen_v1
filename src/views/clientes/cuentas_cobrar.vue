@@ -1,54 +1,51 @@
 <template>
   <div class="pa-4">
     <v-card class="elevation-3 rounded-lg">
+<v-card-title class="pa-4 blue-grey lighten-5 d-block">
+        
+        <div class="d-flex align-center mb-3">
+          <v-icon :large="$vuetify.breakpoint.mdAndUp" left color="blue-grey darken-3">mdi-cash-multiple</v-icon>
+          <span :class="{'text-h5': $vuetify.breakpoint.mdAndUp, 'text-h6': $vuetify.breakpoint.smAndDown}" 
+                class="font-weight-bold blue-grey--text text--darken-3">Cx Cobrar</span>
+          <v-spacer></v-spacer>
+          
+          <v-btn color="info" small @click="exportarExcel" class="ml-2 font-weight-medium">
+            <v-icon left small>mdi-file-excel</v-icon>
+            <span>Exportar</span>
+        
+          </v-btn>
+        </div>
 
-      <v-card-title class="pa-4 blue-grey lighten-5">
-        <v-icon large left color="blue-grey darken-3">mdi-cash-multiple</v-icon>
-        <span class="text-h5 font-weight-bold blue-grey--text text--darken-3">Cuentas por Cobrar</span>
-        <v-spacer></v-spacer>
-
-        <v-row dense class="ml-4" style="max-width: 600px;">
-          <v-col cols="6">
+        <v-row dense>
+          <v-col cols="12" sm="6">
             <v-select outlined v-model="cuenta_estado" :items="array_estado" label="Estado"
               prepend-inner-icon="mdi-list-status" dense hide-details @change="filtra"></v-select>
           </v-col>
 
-          <!-- 🔹 Autocomplete + botón de filtro al costado -->
-          <v-col cols="6" class="d-flex align-center">
+          <v-col cols="12" sm="6" class="d-flex align-center">
             <v-autocomplete class="flex-grow-1" outlined dense label="Buscar Cliente" :items="arra_empleados"
-              prepend-inner-icon="mdi-account-search" v-model="busca_p" hide-details></v-autocomplete>
+              prepend-inner-icon="mdi-account-search" v-model="busca_p" hide-details clearable></v-autocomplete>
 
-            <v-btn small icon color="primary" class="ml-2" @click="filtra" :title="'Aplicar filtro'">
+            <v-btn small icon color="primary" class="ml-2 elevation-2" @click="filtra" title="Aplicar filtro">
               <v-icon>mdi-filter</v-icon>
             </v-btn>
           </v-col>
         </v-row>
-
       </v-card-title>
 
       <v-divider></v-divider>
       <v-card-text class="py-4">
         <v-row align="center">
-          <v-col cols="4">
-            <h4 class="text-h6">
-              Total Pendiente: <span class="red--text text--darken-3">S/.{{ suma_total().toFixed(2) }}</span>
-            </h4>
-          </v-col>
-
-          <v-col cols="4" class="text-center">
-            <v-btn color="info" small @click="exportarExcel">
-              <v-icon left>mdi-file-excel</v-icon>
-              Exportar
-            </v-btn>
-          </v-col>
-
+          <h4 class="text-h6">
+            Total Pendiente: <span class="red--text text--darken-3">S/.{{ suma_total().toFixed(2) }}</span>
+          </h4>
         </v-row>
       </v-card-text>
 
       <v-divider></v-divider>
 
       <v-data-table :headers="headersCxc" :items="listafiltrada" :items-per-page="-1" class="elevation-0"
-        :sort-by.sync="sortBy" :sort-desc.sync="sortDesc" dense fixed-header height="65vh"
+        :sort-by.sync="sortBy" :sort-desc.sync="sortDesc" dense fixed-header height="65vh" mobile-breakpoint="1"
         no-data-text="No hay cuentas por cobrar disponibles">
         <template v-slot:item.cliente="{ item }">
           <div class="font-weight-medium">{{ item.nombre }}</div>
@@ -660,24 +657,24 @@ export default {
       }
       return result
     },
-  exportarExcel() {
-    const filas = this.listafiltrada.map(item => ({
-      Cliente: item.nombre,
-      Documento: item.documento,
-      Emision: this.conviertefecha(item.fecha),
-      Vencimiento: this.conviertefecha(item.fecha_vence),
-      Estado: item.estado,
-      Moneda: item.moneda || 'S/',
-      'Monto total': Number(item.monto_total || 0),
-      'Monto pendiente': Number(item.monto_pendiente || 0),
-      Pagado: Number((item.monto_total - item.monto_pendiente) || 0),
-    }))
+    exportarExcel() {
+      const filas = this.listafiltrada.map(item => ({
+        Cliente: item.nombre,
+        Documento: item.documento,
+        Emision: this.conviertefecha(item.fecha),
+        Vencimiento: this.conviertefecha(item.fecha_vence),
+        Estado: item.estado,
+        Moneda: item.moneda || 'S/',
+        'Monto total': Number(item.monto_total || 0),
+        'Monto pendiente': Number(item.monto_pendiente || 0),
+        Pagado: Number((item.monto_total - item.monto_pendiente) || 0),
+      }))
 
-    const ws = XLSX.utils.json_to_sheet(filas)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'CuentasXCobrar')
-    XLSX.writeFile(wb, 'cuentas_x_cobrar.xlsx')
-  },
+      const ws = XLSX.utils.json_to_sheet(filas)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'CuentasXCobrar')
+      XLSX.writeFile(wb, 'cuentas_x_cobrar.xlsx')
+    },
 
 
 

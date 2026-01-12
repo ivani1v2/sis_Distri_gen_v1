@@ -25,9 +25,11 @@
             </v-card>
 
             <!-- Agregar -->
-            <v-btn block color="primary" class="mt-3" :disabled="!selectedCli || guardando" @click="emitAgregar">
+            <v-btn block color="primary" class="mt-3" :disabled="!selectedCli || guardando || cargando"
+                @click="emitAgregar">
                 {{ guardando ? 'Guardando...' : 'Agregar' }}
             </v-btn>
+
         </v-card>
     </v-dialog>
 </template>
@@ -112,35 +114,37 @@ export default {
                 .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
                 .trim()
         },
-
         async onSelect(id) {
             this.selectedCli = null
             if (!id) return
 
             try {
-                // 👇 pausa el watch de busca_p mientras resolvemos selección
                 this._pauseFilter = true
+                this.cargando = true   // ⬅️ BLOQUEA UI (autocomplete y botón)
 
-                // 1) Selección instantánea desde memoria (offline y sin bloquear)
+                // 1) Selección instantánea desde memoria
                 const liviano = this.todos.find(c => c.id === id)
                 if (liviano) this.selectedCli = { id: liviano.id, ...liviano }
 
-                // 2) Intento rápido de leer completo desde caché local
+                // 2) Intento de leer completo desde Firestore
                 try {
-                    const docCache = await colClientes().doc(String(id)).get({ source: 'cache' })
+                    const docCache = await colClientes().doc(String(id)).get()
                     if (docCache.exists) {
                         this.selectedCli = { id: docCache.id, ...docCache.data() }
+                        console.log('selecto', this.selectedCli)
                     }
-                } catch { }
-
+                } catch (e) {
+                    console.error('Error leyendo Firestore:', e)
+                }
 
             } catch (e) {
                 console.error('❌ onSelect error:', e)
             } finally {
-                // reanuda el watch
                 this._pauseFilter = false
+                this.cargando = false   // ⬅️ DESBLOQUEA UI
             }
         },
+
 
         async emitAgregar() {
             if (!this.selectedCli) return
@@ -151,16 +155,23 @@ export default {
             // Solo si recibiste ambos props, actualiza en Firestore
             if (this.sede && this.dia) {
                 cli.sede = this.sede
-                cli.dia = this.normalizaDia(this.dia)
+
+                const nuevoDiaArr = this.normalizaDia(this.dia)
+                const actualArr = Array.isArray(cli.dia) ? cli.dia : this.normalizaDia(cli.dia)
+
+                cli.dia = Array.from(new Set([
+                    ...actualArr.map(x => String(x).toLowerCase().trim()),
+                    ...nuevoDiaArr.map(x => String(x).toLowerCase().trim()),
+                ])).filter(Boolean)
 
                 try {
                     await crearOActualizarCliente(cli.id, cli)
                 } catch (e) {
                     console.error('No se pudo actualizar el cliente en Firestore:', e)
-                    // Opcional: avisar sin romper el flujo
                     this.$emit('warn', 'No se pudo actualizar el cliente, se continuará sin guardar.')
                 }
             }
+
             if (Array.isArray(cli.direcciones) && cli.direcciones.length > 0) {
                 const dirObj = cli.direcciones.find(d => d?.direccion && d.direccion.trim() !== '')
                 if (dirObj) {

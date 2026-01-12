@@ -122,7 +122,7 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
   doc.setTextColor(0);
 
   const correlativo = String(cabecera?.id);
-  doc.text(correlativo, xRight + colW_right / 2, yBox+5, { align: "center" });
+  doc.text(correlativo, xRight + colW_right / 2, yBox + 5, { align: "center" });
   doc.setTextColor(0);
 
   doc.setFont("Helvetica", "bold");
@@ -197,7 +197,7 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
 
   y = linea + 15;
   // ---------- TABLA DE ÍTEMS ----------
-  console.log("items",items);
+  console.log("items", items);
   var respuesta = tabla_A4(items, y)
 
   doc.autoTable(respuesta.table);
@@ -350,11 +350,13 @@ async function impresion80_ordenPedido(cabecera, items = []) {
     orientation: "portrait",
     unit: "mm",
     format: [1000, pdfInMM], // altura larga, ancho 80mm (75 útiles aprox)
+        compress: true, // <--- IMPORTANTE: Evita pérdida de calidad
+  precision: 2    // <--- Precisión de dibujo
   });
 
   const separacion = "-------------------------------------------------------------------------------------------------------------------";
 
-  doc.setTextColor(10);
+    doc.setTextColor(0, 0, 0);
   doc.text(".", 0, linea); linea += 3;
 
   // Logo opcional
@@ -391,20 +393,20 @@ async function impresion80_ordenPedido(cabecera, items = []) {
   doc.text(texto, pageCenter, linea, "center"); linea += 4;
 
   // Número de OP (si tienes uno)
-  const numeroOP = cabecera?.id  ||"";
+  const numeroOP = cabecera?.id || "";
   if (numeroOP) {
-    doc.setFont("Helvetica", ""); 
+    doc.setFont("Helvetica", "");
     texto = doc.splitTextToSize("N°: " + String(numeroOP), pdfInMM - lMargin - rMargin);
     doc.text(texto, pageCenter, linea, "center"); linea += 4;
   }
 
   // Fecha emisión
-  doc.setFont("Helvetica", ""); doc.setFontSize(7.5);
+  doc.setFont("Helvetica", ""); doc.setFontSize(8);
   texto = doc.splitTextToSize("Emisión: " + fechaEmi, pdfInMM - lMargin - rMargin);
   doc.text(texto, pageCenter, linea, "center"); linea += 5;
 
   // --- Datos del cliente ---
-  doc.setFont("Helvetica", ""); doc.setFontSize(7.2);
+  doc.setFont("Helvetica", ""); doc.setFontSize(8);
   texto = doc.splitTextToSize("Cliente   : " + (cabecera?.cliente_nombre || ""), pdfInMM - lMargin - rMargin);
   doc.text(texto, lMargin, linea, "left"); linea += 3.5 * texto.length;
 
@@ -415,6 +417,11 @@ async function impresion80_ordenPedido(cabecera, items = []) {
     texto = doc.splitTextToSize("Dirección: " + cabecera.cliente_direccion, pdfInMM - lMargin - rMargin);
     doc.text(texto, lMargin, linea, "left"); linea += 3.5 * texto.length;
   }
+   if (cabecera?.cliente_referencia) {
+    texto = doc.splitTextToSize("Refe: " + cabecera.cliente_referencia, pdfInMM - lMargin - rMargin);
+    doc.text(texto, lMargin, linea, "left"); linea += 3.5 * texto.length;
+  }
+
 
   if (cabecera?.cliente_telefono) {
     texto = doc.splitTextToSize("Telf: " + cabecera.cliente_telefono, pdfInMM - lMargin - rMargin);
@@ -433,17 +440,36 @@ async function impresion80_ordenPedido(cabecera, items = []) {
   doc.text(separacion, pageCenter, linea, "center");
 
   // --- Tabla de ítems ---
+  // --- Tabla de ítems ---
   const body = (items || []).map(it => {
     const cant = Number(it.cantidad || 0);
-    const pu = Number((it.precio ?? 0));
+
+    // Precio original
+    let pu = Number(it.precio ?? 0);
+
+    // Si NO se deben mostrar precios en operaciones GRATUITAS
+    if (!store.state.configuracion.mostrar_ope_gratuitas &&
+      String(it.operacion || "").toUpperCase() === "GRATUITA") {
+      pu = 0;
+    }
+
     const pt = Number(it.totalLinea ?? (pu * cant));
-    const descLinea = `${it.nombre || ""}\n- ${String(it.medida || "").toUpperCase()}`;
-    return [cant, descLinea, pu.toFixed(2), pt.toFixed(2)];
+
+    const descLinea =
+      `${it.nombre || ""}\n- ${String(it.medida || "").toUpperCase()}`;
+
+    return [
+      cant,
+      descLinea,
+      pu.toFixed(2),
+      pt.toFixed(2)
+    ];
   });
+
 
   doc.autoTable({
     margin: { top: linea - 9, left: 1, right: 1 },
-    styles: { fontSize: 7.5, cellPadding: 0.1, valign: "middle", halign: "center" },
+    styles: { fontSize: 8, cellPadding: 0.1, valign: "middle", halign: "center",  textColor: [0, 0, 0], },
     headStyles: { lineWidth: 0, minCellHeight: 9, fontStyle: "bold" },
     columnStyles: {
       0: { columnWidth: 8, halign: "center", valign: "top" }, // Cant
@@ -464,14 +490,14 @@ async function impresion80_ordenPedido(cabecera, items = []) {
   doc.text(separacion, pageCenter, linea, "center"); linea += 3;
 
   doc.setFont("Helvetica", ""); doc.setFontSize(8);
-  doc.text("SUBTOTAL", lMargin, linea); doc.text(moneda + subtotal.toFixed(2), 68, linea, "right"); linea += 3.5;
+  doc.text("SUBTOTAL", lMargin, linea); doc.text(moneda + formatMoney(total), 68, linea, "right"); linea += 3.5;
 
   if (descuentos) {
-    doc.text("DESCUENTOS", lMargin, linea); doc.text(moneda + descuentos.toFixed(2), 68, linea, "right"); linea += 3.5;
+    doc.text("DESCUENTOS", lMargin, linea); doc.text(moneda + formatMoney(descuentos), 68, linea, "right"); linea += 3.5;
   }
 
   doc.setFont("Helvetica", "Bold");
-  doc.text("TOTAL", lMargin, linea); doc.text(moneda + total.toFixed(2), 68, linea, "right"); linea += 4;
+  doc.text("TOTAL", lMargin, linea); doc.text(moneda + formatMoney(total), 68, linea, "right"); linea += 4;
 
   // --- Observación / Vendedor ---
   doc.setFont("Helvetica", "bold"); doc.text(separacion, pageCenter, linea, "center"); linea += 3;
@@ -582,12 +608,14 @@ async function impresion58_ordenPedido(cabecera, items = []) {
   const doc = new jspdf({
     orientation: "portrait",
     unit: "mm",
-    format: [1000, pdfInMM], // alto grande (continuo), ancho 58 mm
+    format: [1000, pdfInMM], 
+        compress: true, // <--- IMPORTANTE: Evita pérdida de calidad
+  precision: 2    // <--- Precisión de dibujo// alto grande (continuo), ancho 58 mm
   });
 
   const separacion = "------------------------------------------------------------";
 
-  doc.setTextColor(10);
+  doc.setTextColor(0, 0, 0);
   doc.text(".", 0, linea); linea += 2.5;
 
   // Logo (opcional): un poco más pequeño que en 80mm
@@ -625,7 +653,7 @@ async function impresion58_ordenPedido(cabecera, items = []) {
   doc.text(texto, pageCenter, linea, "center"); linea += 3.8;
 
   // Número de OP
-  
+
   const numeroOP = cabecera?.id || "";
   if (numeroOP) {
     doc.setFont("Helvetica", ""); doc.setFontSize(9);
@@ -641,26 +669,30 @@ async function impresion58_ordenPedido(cabecera, items = []) {
   // Datos del cliente
   doc.setFont("Helvetica", ""); doc.setFontSize(9.0);
   texto = doc.splitTextToSize("Cliente   : " + (cabecera?.cliente_nombre || ""), pdfInMM - lMargin - rMargin);
-  doc.text(texto, lMargin, linea, "left"); linea += 3.4 * texto.length;
+  doc.text(texto, lMargin, linea, "left"); linea += 3.6 * texto.length;
 
   const docLinea = [cabecera?.doc_tipo, cabecera?.doc_numero].filter(Boolean).join(" ");
   if (docLinea) {
     texto = doc.splitTextToSize("Documento: " + docLinea, pdfInMM - lMargin - rMargin);
-    doc.text(texto, lMargin, linea, "left"); linea += 3.4 * texto.length;
+    doc.text(texto, lMargin, linea, "left"); linea += 3.6 * texto.length;
   }
 
   if (cabecera?.cliente_direccion) {
     texto = doc.splitTextToSize("Dirección: " + cabecera.cliente_direccion, pdfInMM - lMargin - rMargin);
-    doc.text(texto, lMargin, linea, "left"); linea += 3.4 * texto.length;
+    doc.text(texto, lMargin, linea, "left"); linea += 3.6 * texto.length;
+  }
+    if (cabecera?.referencia) {
+    texto = doc.splitTextToSize("Ref: " + cabecera.referencia, pdfInMM - lMargin - rMargin);
+    doc.text(texto, lMargin, linea, "left"); linea += 3.6 * texto.length;
   }
 
   if (cabecera?.cliente_telefono) {
     texto = doc.splitTextToSize("Telf: " + cabecera.cliente_telefono, pdfInMM - lMargin - rMargin);
-    doc.text(texto, lMargin, linea, "left"); linea += 3.2 * texto.length;
+    doc.text(texto, lMargin, linea, "left"); linea += 3.6 * texto.length;
   }
 
   // Condición / Vencimiento
-  const condTxt = "Condición: " + condicion + (fechaVence ? ("  |  Vence: " + fechaVence) : "");
+  const condTxt = "Condición: " + condicion ;
   texto = doc.splitTextToSize(condTxt, pdfInMM - lMargin - rMargin);
   doc.text(texto, lMargin, linea, "left"); linea += 4;
 
@@ -672,22 +704,22 @@ async function impresion58_ordenPedido(cabecera, items = []) {
   // Tabla de ítems (columnas compactas para 58mm)
 
   (items || []).sort((a, b) => {
-  const nombreA = (a.nombre || '').toUpperCase();
-  const nombreB = (b.nombre || '').toUpperCase();
+    const nombreA = (a.nombre || '').toUpperCase();
+    const nombreB = (b.nombre || '').toUpperCase();
 
-  // 1️⃣ Ordena por nombre de producto
-  if (nombreA < nombreB) return -1;
-  if (nombreA > nombreB) return 1;
+    // 1️⃣ Ordena por nombre de producto
+    if (nombreA < nombreB) return -1;
+    if (nombreA > nombreB) return 1;
 
-  // 2️⃣ Si tienen el mismo producto, GRABADA primero, GRATUITA después
-  const opA = (a.operacion || '').toUpperCase();
-  const opB = (b.operacion || '').toUpperCase();
+    // 2️⃣ Si tienen el mismo producto, GRABADA primero, GRATUITA después
+    const opA = (a.operacion || '').toUpperCase();
+    const opB = (b.operacion || '').toUpperCase();
 
-  if (opA === opB) return 0;
-  if (opA === 'GRATUITA') return 1;  // va al final
-  if (opB === 'GRATUITA') return -1;
-  return 0;
-});
+    if (opA === opB) return 0;
+    if (opA === 'GRATUITA') return 1;  // va al final
+    if (opB === 'GRATUITA') return -1;
+    return 0;
+  });
   const body = (items || []).map(it => {
     const cant = Number(it.cantidad || 0);
     const pu = Number((it.precio ?? 0));
@@ -703,7 +735,7 @@ async function impresion58_ordenPedido(cabecera, items = []) {
 
   doc.autoTable({
     margin: { top: linea - 7, left: 1, right: 1 },
-    styles: { fontSize: 9, cellPadding: 0.3, valign: "middle", halign: "center" },
+    styles: { fontSize: 9, cellPadding: 0.3, valign: "middle", halign: "center",  textColor: [0, 0, 0], },
     headStyles: { lineWidth: 0, minCellHeight: 8, fontStyle: "bold" },
     columnStyles: {
       0: { columnWidth: 7, halign: "center", valign: "top", }, // Cant
@@ -939,4 +971,15 @@ function tabla_A4(array, linea) {
   };
 
   return { table, ope_grat };
+}
+
+
+function formatMoney(num) {
+  const n = Number(num || 0);
+
+  // Formato tipo S/ 1,070.65
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }

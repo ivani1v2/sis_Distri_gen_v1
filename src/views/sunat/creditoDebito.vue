@@ -215,7 +215,7 @@ export default {
 
             consultaDetalleNCD(item.numeracion).once("value").then((snapshot) => {
                 if (snapshot.exists()) {
-                    //    console.log(snapshot.val())
+                        console.log(snapshot.val())
                     pdfGenera(snapshot.val(), item, store.state.configImpresora.tamano)
                 }
             })

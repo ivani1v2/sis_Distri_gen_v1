@@ -43,6 +43,11 @@
                                     <v-icon left color="info">mdi-chart-timeline-variant</v-icon> Rep. Avance Ventas
                                 </v-list-item-title>
                             </v-list-item>
+                            <v-list-item @click="dial_imprime_()">
+                                <v-list-item-title>
+                                    <v-icon left color="info">mdi-printer</v-icon> Impresion Masiva
+                                </v-list-item-title>
+                            </v-list-item>
                             <v-list-item @click="dial_anular = !dial_anular">
                                 <v-list-item-title>
                                     <v-icon color="error" left>mdi-delete-alert</v-icon> Anular Pedido
@@ -78,7 +83,7 @@
                     <tr>
                         <th>Vend.</th>
                         <th>Cliente</th>
-                         <th>Obs</th>
+                        <th>Obs</th>
                         <th>Fecha</th>
                         <th>Estado</th>
                         <th>Total</th>
@@ -282,6 +287,7 @@
             :consolidado-seleccionados="consolidadoSeleccionados" @cierra="dialogConsolidado = false"
             :pedidos="pedidosFiltrados" />
         <anular_p v-if="dial_anular" @cerrar="dial_anular = false" />
+        <dial_imprime_ped_masivo v-if="dial_imprime_masivo" @cerrar="dial_imprime_masivo = false" :pedidosFiltrados="pedidosFiltrados"/>
 
     </div>
 </template>
@@ -293,23 +299,27 @@ import { crearOActualizarCliente as nuevoCliente, borrarCliente as eliminaClient
 import * as XLSX from "xlsx";
 import edita_ped from './dialogos/edita_pedido.vue'
 import dial_detalle_ped from './dialogos/dialogo_detalle_ped.vue'
+import dial_imprime_ped_masivo from './dialogos/dial_imprime_ped_masivo.vue'
 import dial_consolidado from "./dialogos/dialogo_rep_consolidado.vue"
 import dial_rep_avance from "./reportes/reporte_avance.vue"
 import store from '@/store/index'
 import { pdfGenera } from './formatos/orden_pedido.js'
 import anular_p from './anular_pedido.vue'
 import axios from "axios";
+import { colClientes } from '../../db_firestore'
 export default {
     components: {
         dial_rep_avance,
         edita_ped,
         dial_detalle_ped,
         dial_consolidado,
+        dial_imprime_ped_masivo,
         anular_p
     },
     data() {
         return {
             // estado
+            dial_imprime_masivo: false,
             dial_anular: false,
             result: [],
             showEditorDetalle: false,
@@ -464,6 +474,9 @@ export default {
     },
 
     methods: {
+        dial_imprime_(){
+            this.dial_imprime_masivo = true
+        },
         verMas() {
             if (this.loadingMore) return;
             this.loadingMore = true;
@@ -754,14 +767,23 @@ export default {
         },
         async imprimir(tama) {
             var pedido = this.pedidoSeleccionado
+            console.log('seleccionado', this.pedidoSeleccionado)
             store.commit("dialogoprogress")
-            console.log("Imprimir", pedido)
+
             var snap = await detalle_pedido(pedido.id).once('value')
             const val = snap.val() || [];
             const items = Array.isArray(val) ? val : Object.values(val);
+            const doc = await colClientes().doc(String(pedido.doc_numero)).get()
             store.commit("dialogoprogress")
+            pedido.referencia = this.getReferenciaPrincipal(doc.data())
             // pdfGenera(pedido, items, tama);
+
             pdfGenera(pedido, items, store.state.configImpresora.tamano);
+        },
+        getReferenciaPrincipal(cliente) {
+            if (!cliente || !Array.isArray(cliente.direcciones) || cliente.direcciones.length === 0) return '';
+            const dir = cliente.direcciones.find(d => d && d.principal) || cliente.direcciones[0];
+            return (dir && dir.referencia) ? String(dir.referencia).trim() : '';
         },
         exportar_excel: async function () {
             try {

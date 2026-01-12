@@ -1,102 +1,174 @@
 <template>
-    <div class="pa-3">
-        <v-card>
-            <h4 class="text-center">Compras por Cliente</h4>
+    <div class="pa-4">
+        <v-card class="elevation-3 rounded-lg">
 
-            <v-row class="pa-2">
-                <v-col cols="10">
-                    <v-autocomplete
-                        outlined
-                        dense
-                        autofocus
-                        label="Busca Cliente"
-                        auto-select-first
-                        v-model="busca_p"
-                        :items="arra_clientes"
-                        append-icon="mdi-magnify"
-                        @click:append="filtra()"
-                        @keyup.enter="filtra()"
-                    ></v-autocomplete>
-                </v-col>
-                <v-col cols="2" class="text-center">
-                    <v-btn elevation="2" rounded color="red" small @click="busca()">
-                        <v-icon color="white" class="mx-auto text--center" small>mdi-magnify</v-icon>
-                    </v-btn>
-                </v-col>
-            </v-row>
+            <v-card-title class="pa-4 blue-grey lighten-5">
+                <v-icon large left color="blue-grey darken-3">mdi-cart-check</v-icon>
+                <span class="text-h5 font-weight-bold blue-grey--text text--darken-3">Compras por Cliente</span>
+                <v-spacer></v-spacer>
 
-            <v-row class="mt-n4 px-4">
-                <v-col cols="12" md="6">
-                    <h4 class="text-center text-md-left mb-2 mb-md-0">
-                        Total General: S/. {{ sumaventas() }}
-                    </h4>
-                </v-col>
-                <v-col cols="12" md="6" class="text-center text-md-right">
-                    <!-- 👇 NUEVO BOTÓN -->
-                    <v-btn
-                        small
-                        color="primary"
-                        rounded
-                        @click="verConsolidadoProductos"
-                        :disabled="!desserts.length"
-                    >
-                        <v-icon left small>mdi-view-list</v-icon>
-                        Ver productos
-                    </v-btn>
-                </v-col>
-            </v-row>
+                <v-row dense class="ml-4" style="max-width: 500px;">
+                    <v-col cols="12">
+                        <v-autocomplete outlined dense autofocus label="Buscar Cliente (DNI / Razón Social)"
+                            auto-select-first v-model="busca_p" :items="arra_clientes"
+                            prepend-inner-icon="mdi-account-search" append-icon="mdi-magnify" @click:append="busca"
+                            @keyup.enter="busca" hide-details></v-autocomplete>
+                    </v-col>
+                </v-row>
+            </v-card-title>
 
-            <v-simple-table fixed-header height="70vh" dense>
+            <v-divider></v-divider>
+
+            <v-card-text class="py-3">
+                <v-row dense class="align-center">
+
+                    <!-- RESUMEN: CARDS -->
+                    <v-col cols="12" md="8">
+                        <v-row dense>
+                            <!-- TOTAL GENERAL -->
+                            <v-col cols="6" sm="6" md="3">
+                                <v-card outlined class="pa-3 rounded-lg">
+                                    <div class="d-flex align-center">
+                                        <v-avatar size="34" class="mr-2" color="primary">
+                                            <v-icon dark small>mdi-cash-multiple</v-icon>
+                                        </v-avatar>
+                                        <div>
+                                            <div class="caption grey--text">Total general</div>
+                                            <div class="subtitle-2 font-weight-bold primary--text">
+                                                S/. {{ resumenVentas.totalGeneral }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </v-card>
+                            </v-col>
+
+                            <!-- APROBADOS -->
+                            <v-col cols="6" sm="6" md="3">
+                                <v-card outlined class="pa-3 rounded-lg">
+                                    <div class="d-flex align-center">
+                                        <v-avatar size="34" class="mr-2" color="green">
+                                            <v-icon dark small>mdi-check-circle</v-icon>
+                                        </v-avatar>
+                                        <div>
+                                            <div class="caption grey--text">Aprobados</div>
+                                            <div class="subtitle-2 font-weight-bold green--text text--darken-2">
+                                                S/. {{ resumenVentas.totalAprobado }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </v-card>
+                            </v-col>
+
+                            <!-- PENDIENTES -->
+                            <v-col cols="6" sm="6" md="3">
+                                <v-card outlined class="pa-3 rounded-lg">
+                                    <div class="d-flex align-center">
+                                        <v-avatar size="34" class="mr-2" color="orange">
+                                            <v-icon dark small>mdi-clock-outline</v-icon>
+                                        </v-avatar>
+                                        <div>
+                                            <div class="caption grey--text">Pendientes</div>
+                                            <div class="subtitle-2 font-weight-bold orange--text text--darken-2">
+                                                S/. {{ resumenVentas.totalPendiente }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </v-card>
+                            </v-col>
+
+                            <!-- ANULADOS -->
+                            <v-col cols="6" sm="6" md="3">
+                                <v-card outlined class="pa-3 rounded-lg">
+                                    <div class="d-flex align-center">
+                                        <v-avatar size="34" class="mr-2" color="red">
+                                            <v-icon dark small>mdi-close-circle</v-icon>
+                                        </v-avatar>
+                                        <div>
+                                            <div class="caption grey--text">Anulados</div>
+                                            <div class="subtitle-2 font-weight-bold red--text text--darken-2">
+                                                S/. {{ resumenVentas.totalAnulado }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+
+                        <!-- TEXTO DE CLIENTE FILTRADO -->
+                        <div v-if="num_cliente" class="caption grey--text mt-1">
+                            Cliente filtrado: <b>{{ num_cliente }}</b> · {{ resumenVentas.cantidad }} comprobante(s)
+                        </div>
+                    </v-col>
+
+                    <!-- BOTON CONSOLIDADO -->
+                    <v-col cols="12" md="4" class="text-center text-md-right">
+                        <v-btn small color="info" rounded @click="verConsolidadoProductos" :disabled="!desserts.length"
+                            class="mx-1">
+                            <v-icon left small>mdi-package-variant-closed</v-icon>
+                            Consolidado de Productos
+                        </v-btn>
+                    </v-col>
+
+                </v-row>
+            </v-card-text>
+
+
+            <v-divider></v-divider>
+
+            <v-simple-table fixed-header height="70vh" dense class="elevation-0">
                 <template v-slot:default>
-                    <thead>
+                    <thead class="grey darken-3 white--text">
                         <tr>
-                            <th class="text-left">Correlativo</th>
-                            <th class="text-left">Cliente</th>
-                            <th class="text-left">Fecha</th>
-                            <th class="text-left">Estado</th>
-                            <th class="text-left">Total</th>
-                            <th class="text-left">Acción</th>
+                            <th class="text-left white--text">Correlativo</th>
+                            <th class="text-left white--text">Cliente</th>
+                            <th class="text-left white--text">Fecha</th>
+                            <th class="text-center white--text">Estado</th>
+                            <th class="text-right white--text">Total</th>
+                            <th class="text-center white--text">Acción</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="item in listafiltrada" :key="item.id">
-                            <td style="font-size:75%;" width="100">{{ item.numeracion }}</td>
-                            <td style="font-size:75%;">{{ item.dni + ' - ' + item.cliente }}</td>
-                            <td style="font-size:75%;" width="200">{{ conviertefecha(item.fecha) }}</td>
-                            <td style="font-size:75%;" width="20">
-                                <v-icon :color="item.color">mdi-circle</v-icon>
+                        <tr v-if="!listafiltrada.length">
+                            <td colspan="6" class="text-center grey--text text-caption">
+                                Sin resultados para el cliente seleccionado.
                             </td>
-                            <td style="font-size:75%;" width="20">
+                        </tr>
+                        <tr v-for="item in listafiltrada" :key="item.numeracion">
+                            <td class="caption font-weight-medium">{{ item.numeracion }}</td>
+                            <td class="caption">{{ item.dni }} / {{ item.cliente }}</td>
+                            <td class="caption">{{ conviertefecha(item.fecha) }}</td>
+                            <td class="text-center">
+                                <v-chip x-small :color="asigna_color_doc_chip(item)" dark>
+                                    {{ item.estado }}
+                                </v-chip>
+                            </td>
+                            <td class="text-right font-weight-bold">
                                 {{ item.moneda }}{{ redondear(item.total - item.descuentos) }}
                             </td>
-                            <td width="200">
-                                <v-icon
-                                    class="mx-1"
-                                    color="green"
-                                    @click.prevent="ejecutaConsolida(item.numeracion)"
-                                >
-                                    mdi-eye
-                                </v-icon>
-                                <v-btn
-                                    class="mx-1"
-                                    color="error"
-                                    x-small
-                                    rounded
-                                    outlined
-                                    @click="verPDF(item, '80')"
-                                >
-                                    80
-                                </v-btn>
-                                <v-btn
-                                    class="mx-1"
-                                    color="error"
-                                    x-small
-                                    rounded
-                                    outlined
-                                    @click="verPDF(item, 'A4')"
-                                >
-                                    A4
-                                </v-btn>
+                            <td class="text-center" width="200">
+                                <v-menu offset-y>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <v-btn icon v-bind="attrs" v-on="on" small>
+                                            <v-icon>mdi-dots-vertical</v-icon>
+                                        </v-btn>
+                                    </template>
+                                    <v-list dense>
+                                        <v-list-item @click.prevent="ejecutaConsolida(item.numeracion)">
+                                            <v-list-item-icon><v-icon color="info">mdi-eye</v-icon></v-list-item-icon>
+                                            <v-list-item-title>Ver Detalle</v-list-item-title>
+                                        </v-list-item>
+                                        <v-list-item @click="verPDF(item, '80')">
+                                            <v-list-item-icon><v-icon
+                                                    color="red">mdi-printer-pos-outline</v-icon></v-list-item-icon>
+                                            <v-list-item-title>Imprimir (Ticket 80mm)</v-list-item-title>
+                                        </v-list-item>
+                                        <v-list-item @click="verPDF(item, 'A4')">
+                                            <v-list-item-icon><v-icon
+                                                    color="red darken-2">mdi-file-pdf-box</v-icon></v-list-item-icon>
+                                            <v-list-item-title>Imprimir (A4)</v-list-item-title>
+                                        </v-list-item>
+                                    </v-list>
+                                </v-menu>
                             </td>
                         </tr>
                     </tbody>
@@ -104,84 +176,90 @@
             </v-simple-table>
         </v-card>
 
-        <!-- DETALLE DE UN SOLO COMPROBANTE (LO QUE YA TENÍAS) -->
         <v-dialog v-model="dialog" max-width="850px">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dialog = !dialog">mdi-close</v-icon>
+            <v-card class="rounded-lg">
+                <v-toolbar color="primary" dense dark>
+                    <v-toolbar-title>Detalle del Comprobante</v-toolbar-title>
                     <v-spacer></v-spacer>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <v-simple-table dark fixed-header max-width="70vh" dense>
-                    <template v-slot:default>
-                        <thead>
-                            <tr>
-                                <th class="text-left">Descripción</th>
-                                <th class="text-left">Medida</th>
-                                <th class="text-left">Cantidad</th>
-                                <th class="text-left">Precio</th>
-                                <th class="text-left">Descuento</th>
-                                <th class="text-left">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="item in arrayConsolidar" :key="item.id">
-                                <td>{{ item.id + ' ' + item.nombre }}</td>
-                                <td>{{ item.medida }}</td>
-                                <td>{{ item.cantidad }}</td>
-                                <td>S/.{{ item.precioedita }}</td>
-                                <td class="red--text">S/.{{ item.preciodescuento }}</td>
-                                <td>S/.{{ redondear(item.precioedita * item.cantidad) }}</td>
-                            </tr>
-                        </tbody>
-                    </template>
-                </v-simple-table>
+                    <v-btn icon @click="dialog = false"><v-icon>mdi-close</v-icon></v-btn>
+                </v-toolbar>
+                <v-card-text class="pa-4">
+                    <v-simple-table fixed-header height="60vh" dense>
+                        <template v-slot:default>
+                            <thead class="blue-grey lighten-5">
+                                <tr>
+                                    <th class="text-left font-weight-bold">Descripción</th>
+                                    <th class="text-left font-weight-bold">Medida</th>
+                                    <th class="text-center font-weight-bold">Cantidad</th>
+                                    <th class="text-right font-weight-bold">Precio Unit.</th>
+                                    <th class="text-right font-weight-bold">Dscto.</th>
+                                    <th class="text-right font-weight-bold">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(item, index) in arrayConsolidar" :key="index">
+                                    <td class="caption">{{ item.id }} - {{ item.nombre }}</td>
+                                    <td class="caption">{{ item.medida }}</td>
+                                    <td class="text-center caption">{{ item.cantidad }}</td>
+                                    <td class="text-right caption">S/.{{ redondear(item.precioedita) }}</td>
+                                    <td class="text-right caption red--text">S/.{{ redondear(item.preciodescuento) }}
+                                    </td>
+                                    <td class="text-right caption font-weight-bold">S/.{{ redondear(item.precioedita *
+                                        item.cantidad - item.preciodescuento) }}</td>
+                                </tr>
+                            </tbody>
+                        </template>
+                    </v-simple-table>
+                </v-card-text>
             </v-card>
         </v-dialog>
 
-        <!-- 👇 NUEVO: CONSOLIDADO DE PRODUCTOS -->
         <v-dialog v-model="dialogConsolidadoProductos" max-width="900px">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dialogConsolidadoProductos = false">mdi-close</v-icon>
+            <v-card class="rounded-lg">
+                <v-toolbar color="info" dense dark>
+                    <v-toolbar-title>Consolidado de Productos Vendidos (Filtro Cliente)</v-toolbar-title>
                     <v-spacer></v-spacer>
-                    <span>Consolidado de productos</span>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <v-simple-table fixed-header height="70vh" dense>
-                    <template v-slot:default>
-                        <thead>
-                            <tr>
-                                <th class="text-left">ID</th>
-                                <th class="text-left">Descripción</th>
-                                <th class="text-left">Medida</th>
-                                <th class="text-right">Cantidad total</th>
-                                <th class="text-right">Desc. total (S/.)</th>
-                                <th class="text-right">Total (S/.)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(p, idx) in consolidadoProductos" :key="p.id || idx">
-                                <td style="font-size:75%;">{{ p.id || '-' }}</td>
-                                <td style="font-size:75%;">{{ p.nombre || '-' }}</td>
-                                <td style="font-size:75%;">{{ p.medida || '-' }}</td>
-                                <td style="font-size:75%;" class="text-right">
-                                    {{ p.cantidadTotal }}
-                                </td>
-                                <td style="font-size:75%;" class="text-right">
-                                    {{ redondear(p.totalDescuento) }}
-                                </td>
-                                <td style="font-size:75%;" class="text-right">
-                                    {{ redondear(p.total) }}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </template>
-                </v-simple-table>
+                    <v-btn icon @click="dialogConsolidadoProductos = false"><v-icon>mdi-close</v-icon></v-btn>
+                </v-toolbar>
+                <v-card-text class="pa-4">
+                    <v-simple-table fixed-header height="70vh" dense class="elevation-0">
+                        <template v-slot:default>
+                            <thead class="blue-grey lighten-5">
+                                <tr>
+                                    <th class="text-left font-weight-bold">ID</th>
+                                    <th class="text-left font-weight-bold">Descripción</th>
+                                    <th class="text-left font-weight-bold">Medida</th>
+                                    <th class="text-right font-weight-bold">Cantidad total</th>
+                                    <th class="text-right font-weight-bold">Desc. total (S/.)</th>
+                                    <th class="text-right font-weight-bold">Total Neto (S/.)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(p, idx) in consolidadoProductos" :key="p.id || idx">
+                                    <td class="caption">{{ p.id || '-' }}</td>
+                                    <td class="caption">{{ p.nombre || '-' }}</td>
+                                    <td class="caption">{{ p.medida || '-' }}</td>
+                                    <td class="text-right caption font-weight-bold">{{ redondear(p.cantidadTotal) }}
+                                    </td>
+                                    <td class="text-right caption red--text">{{ redondear(p.totalDescuento) }}</td>
+                                    <td class="text-right caption font-weight-bold primary--text">
+                                        {{ redondear(p.total - p.totalDescuento) }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </template>
+                    </v-simple-table>
+                </v-card-text>
             </v-card>
         </v-dialog>
+
+        <v-dialog persistent v-model="$store.state.dialogoprogress" max-width="200">
+            <v-card class="pa-12">
+                <v-progress-circular :rotate="90" :size="100" :width="15" color="primary"
+                    indeterminate></v-progress-circular>
+            </v-card>
+        </v-dialog>
+
     </div>
 </template>
 
@@ -204,8 +282,8 @@ export default {
         dialog: false,
         arrayConsolidar: [],
         buscar: '',
-        date: moment(String(new Date)).format('YYYY-MM-DD'),
-        date2: moment(String(new Date)).format('YYYY-MM-DD'),
+        date: moment().format('YYYY-MM-DD'),
+        date2: moment().format('YYYY-MM-DD'),
         rechazados: 0,
         error: '',
         seleccionado: '',
@@ -214,23 +292,54 @@ export default {
         arra_clientes: [],
         busca_p: '',
         num_cliente: '',
-        // 👇 NUEVO
         dialogConsolidadoProductos: false,
         consolidadoProductos: []
     }),
     created() {
-        // ...
+        // Inicializa aquí si es necesario
     },
     computed: {
         listafiltrada() {
-            this.desserts.reverse()
             return this.desserts.filter((item) =>
-                (item.numeracion || '')
+                (item.numeracion || "")
                     .toLowerCase()
-                    .includes((this.num_doc || '').toLowerCase())
-            )
-        }
+                    .includes((this.num_doc || "").toLowerCase())
+            );
+        },
+
+        resumenVentas() {
+            const dec = Number(store.state?.configuracion?.decimal ?? 2);
+
+            let totalGeneral = 0;
+            let totalAprobado = 0;
+            let totalPendiente = 0;
+            let totalAnulado = 0;
+
+            const list = Array.isArray(this.desserts) ? this.desserts : [];
+
+            for (const d of list) {
+                const estado = String(d.estado || "").toUpperCase();
+                const total = Number(d.total || 0) - Number(d.descuentos || 0);
+
+                totalGeneral += total;
+
+                if (estado === "APROBADO" || estado === "ACEPTADO") totalAprobado += total;
+                else if (estado === "PENDIENTE") totalPendiente += total;
+                else if (estado === "ANULADO") totalAnulado += total;
+            }
+
+            const f = (n) => Number(n || 0).toFixed(dec);
+
+            return {
+                cantidad: list.length,
+                totalGeneral: f(totalGeneral),
+                totalAprobado: f(totalAprobado),
+                totalPendiente: f(totalPendiente),
+                totalAnulado: f(totalAnulado),
+            };
+        },
     },
+
     watch: {
         '$store.state.clientessearch': {
             immediate: true,
@@ -247,17 +356,17 @@ export default {
         sumaventas() {
             let venta = 0
             for (let i = 0; i < this.desserts.length; i++) {
-                if (this.desserts[i].estado == 'aprobado') {
+                if (this.desserts[i].estado === 'aprobado' || this.desserts[i].estado === 'ACEPTADO') {
                     venta =
                         venta +
-                        parseFloat(this.desserts[i].total) -
-                        parseFloat(this.desserts[i].descuentos)
+                        parseFloat(this.desserts[i].total || 0) -
+                        parseFloat(this.desserts[i].descuentos || 0)
                 }
             }
             return this.redondear(venta)
         },
         ejecutaConsolida(value) {
-            store.commit('dialogoprogress')
+            store.commit('dialogoprogress', true) // Usar true/false o un número, como en el script anterior
             this.arrayConsolidar = []
             consultaDetalle(value)
                 .once('value')
@@ -266,14 +375,18 @@ export default {
                         this.arrayConsolidar.push(item.val())
                     })
                     this.dialog = true
-                    store.commit('dialogoprogress')
+                    store.commit('dialogoprogress', false)
+                })
+                .catch(() => {
+                    store.commit('dialogoprogress', false)
+                    store.commit('dialogosnackbar', 'Error al obtener detalle')
                 })
         },
         redondear(valor) {
-            return parseFloat(valor || 0).toFixed(store.state.configuracion.decimal)
+            return parseFloat(valor || 0).toFixed(store.state.configuracion.decimal || 2)
         },
         verPDF(item, medida) {
-            store.commit('dialogoprogress')
+            store.commit('dialogoprogress', true)
             let arraydatos = []
             consultaDetalle(item.numeracion)
                 .once('value')
@@ -281,19 +394,31 @@ export default {
                     arraydatos = snapshot.val()
                     if (snapshot.exists()) {
                         pdfGenera(arraydatos, item, medida, 'abre')
+                    } else {
+                        store.commit('dialogosnackbar', 'Detalle de comprobante no encontrado.')
                     }
-                    store.commit('dialogoprogress')
+                    store.commit('dialogoprogress', false)
+                })
+                .catch(() => {
+                    store.commit('dialogoprogress', false)
+                    store.commit('dialogosnackbar', 'Error al generar PDF')
                 })
         },
         async busca() {
             let array = []
             this.desserts = []
+            // Extraer solo el DNI/RUC
             this.num_cliente = (this.busca_p || '').split('/')[0].trim()
 
-            if (this.num_cliente != '') {
-                store.commit('dialogoprogress')
+            if (!this.num_cliente) {
+                store.commit('dialogosnackbar', 'Seleccione o ingrese un cliente.')
+                return
+            }
+
+            store.commit('dialogoprogress', true)
+            try {
                 const snapshot = await allCabecera()
-                    .limitToLast(100)
+                    .limitToLast(200) // Se recomienda limitar para rendimiento
                     .orderByChild('dni')
                     .equalTo(this.num_cliente)
                     .once('value')
@@ -301,48 +426,38 @@ export default {
                 if (snapshot.exists()) {
                     snapshot.forEach((item) => {
                         const data = item.val()
-                        data.color = this.asigna_color_doc(data)
+                        data.color = this.asigna_color_doc(data) // El color original
                         array.push(data)
                     })
-                    this.desserts = array
-                    store.commit('dialogoprogress')
+                    // Ordenar por fecha descendente (más recientes primero)
+                    this.desserts = array.sort((a, b) => b.fecha - a.fecha)
+                    store.commit('dialogoprogress', false)
                 } else {
-                    store.commit('dialogosnackbar', 'SIN INFORMACIÓN')
+                    store.commit('dialogoprogress', false)
+                    store.commit('dialogosnackbar', 'SIN INFORMACIÓN para este cliente.')
                 }
-            }
-        },
-        cambia_doc() {
-            if (this.tipo_doc == 'B') {
-                this.tipo_doc = 'F'
-            } else {
-                if (this.tipo_doc == 'F') {
-                    this.tipo_doc = 'T'
-                } else {
-                    this.tipo_doc = 'B'
-                }
+            } catch (error) {
+                console.error("Error al buscar compras:", error);
+                store.commit('dialogoprogress', false)
+                store.commit('dialogosnackbar', 'Error en la consulta. Revise su conexión.')
             }
         },
         asigna_color_doc(datas) {
-            let data = datas
-            let color = ''
-            if (
-                data.estado != 'aprobado' ||
-                data.estado != 'ACEPTADO' ||
-                data.estado != 'PENDIENTE' ||
-                data.estado != 'pendiente'
-            ) {
-                color = '#FF0000'
-            }
-            if (data.estado == 'aprobado' || data.estado == 'ACEPTADO') {
-                color = '#46FF00'
-            }
-            if (data.estado == 'PENDIENTE' || data.estado == 'pendiente') {
-                color = '#FFB200'
-            }
-            return color
+            let estado = (datas.estado || '').toUpperCase()
+            if (estado === 'ANULADO') return '#FF0000' // Rojo
+            if (estado === 'APROBADO' || estado === 'ACEPTADO') return '#46FF00' // Verde
+            if (estado === 'PENDIENTE') return '#FFB200' // Naranja/Amarillo
+            return '#808080' // Gris por defecto
+        },
+        // 👇 Nueva función para color de chip (más limpio que el color hex directo)
+        asigna_color_doc_chip(datas) {
+            let estado = (datas.estado || '').toUpperCase()
+            if (estado === 'ANULADO') return 'red'
+            if (estado === 'APROBADO' || estado === 'ACEPTADO') return 'green'
+            if (estado === 'PENDIENTE') return 'orange'
+            return 'grey'
         },
 
-        // 👇 NUEVO: consolida todos los productos de TODOS los comprobantes listados
         async verConsolidadoProductos() {
             if (!this.desserts.length) {
                 store.commit('dialogosnackbar', 'No hay comprobantes para consolidar')
@@ -350,31 +465,30 @@ export default {
             }
 
             const mapa = {} // key = id producto
-            store.commit('dialogoprogress')
+            store.commit('dialogoprogress', true)
 
             try {
                 // Recorre todos los comprobantes cargados
-                for (const cab of this.desserts) {
-                    if (!cab || !cab.numeracion) continue
+                const detailPromises = this.desserts.map(cab => consultaDetalle(cab.numeracion).once('value'));
+                const snapshots = await Promise.all(detailPromises);
 
-                    const snapshot = await consultaDetalle(cab.numeracion).once('value')
-                    if (!snapshot.exists()) continue
-
+                snapshots.forEach((snapshot) => {
                     snapshot.forEach((itemSnap) => {
                         const det = itemSnap.val() || {}
                         const id = det.id || 'SIN_ID'
-                        const nombre = det.nombre || ''
-                        const medida = det.medida || ''
+
+                        // Ignorar items sin ID o nombre si es necesario
+                        if (!id || !det.nombre) return;
 
                         const cant = Number(det.cantidad || 0)
-                        const precio = Number(det.precioedita || 0)
-                        const descUnit = Number(det.preciodescuento || 0)
+                        const totalItem = Number(det.precioedita || 0) * cant;
+                        const descTotal = Number(det.preciodescuento || 0) * cant; // Asumiendo que el descuento ya está por unidad o total
 
                         if (!mapa[id]) {
                             mapa[id] = {
                                 id,
-                                nombre,
-                                medida,
+                                nombre: det.nombre,
+                                medida: det.medida || 'UNIDAD',
                                 cantidadTotal: 0,
                                 total: 0,
                                 totalDescuento: 0
@@ -382,10 +496,10 @@ export default {
                         }
 
                         mapa[id].cantidadTotal += cant
-                        mapa[id].total += cant * precio
-                        mapa[id].totalDescuento += cant * descUnit
+                        mapa[id].total += totalItem
+                        mapa[id].totalDescuento += descTotal
                     })
-                }
+                });
 
                 this.consolidadoProductos = Object.values(mapa).sort((a, b) =>
                     (a.nombre || '').localeCompare(b.nombre || '')
@@ -395,13 +509,9 @@ export default {
                 console.error(err)
                 store.commit('dialogosnackbar', 'Error al consolidar productos')
             } finally {
-                store.commit('dialogoprogress')
+                store.commit('dialogoprogress', false)
             }
         }
     }
 }
 </script>
-
-<style>
-/* puedes dejar vacío o agregar estilos luego */
-</style>

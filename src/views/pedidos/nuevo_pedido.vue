@@ -250,8 +250,21 @@
                             prepend-inner-icon="mdi-note-text" />
                     </v-col>
                 </v-row>
-                <v-switch v-model="imprime_orden" dense inset color="indigo" :label="`Imprime Orden Pedido`"
-                    prepend-icon="mdi-printer" class="mt-0" hide-details />
+                <v-row class="mt-n6" dense>
+                    <v-col cols="6">
+                        <v-switch v-model="imprime_orden" dense inset color="indigo" :label="`Imprime Orden Pedido`"
+                            prepend-icon="mdi-printer" class="mt-0" hide-details />
+                    </v-col>
+                    <v-col cols="6">
+                        <v-select v-if="$store.state.permisos.moduloempresa" outlined dense v-model="cod_vendedor"
+                            class="" :items="$store.state.array_sedes" item-text="nombre" item-value="codigo"
+                            label="Vendedor">
+                            <template v-slot:item="{ item }"><span>{{ item.nombre }}</span></template>
+                            <template v-slot:selection="{ item }"><span>{{ item && item.nombre }}</span></template>
+                        </v-select>
+                    </v-col>
+                </v-row>
+
 
 
                 <v-divider></v-divider>
@@ -268,30 +281,7 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
-        <v-dialog v-model="dial_direcciones" max-width="620">
-            <v-card>
-                <v-toolbar flat dense>
-                    <v-toolbar-title>Direcciones del cliente</v-toolbar-title>
-                    <v-spacer />
-                    <v-btn icon @click="dial_direcciones = false"><v-icon>mdi-close</v-icon></v-btn>
-                </v-toolbar>
 
-                <v-card-text class="pt-2">
-                    <v-radio-group v-model="direccionSeleccionadaIndex">
-                        <v-radio v-for="(d, idx) in list_direcciones" :key="idx" :value="idx"
-                            :label="formatDireccionLista(d)" class="my-1" />
-                    </v-radio-group>
-                </v-card-text>
-
-                <v-divider />
-                <v-card-actions>
-                    <v-spacer />
-                    <v-btn color="primary" :disabled="direccionSeleccionadaIndex === null" @click="aplicarDireccion()">
-                        Usar esta dirección
-                    </v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
 
         <!-- Dialog de progreso -->
         <v-dialog v-model="loadingGuardar" persistent max-width="300">
@@ -300,6 +290,10 @@
                 <div class="mt-3">Guardando pedido...</div>
             </v-card>
         </v-dialog>
+        <dialog_direcciones_cliente v-model="dial_direcciones"
+            :cliente-id="numero || (cliente_s && cliente_s.documento) || ''" @seleccion="onDireccionSeleccionada" />
+
+
         <dial_mapas v-model="dialogoMapa" :guardar_auto="true" @cierra="dialogoMapa = false" />
         <cronograma v-if="dialogoCronograma" :totalCredito="Number(sumaTotal())" @cierra="dialogoCronograma = false"
             @emite_cronograma="guarda_cronograma($event)" :pagoInicial="0" :moneda="moneda"
@@ -316,6 +310,7 @@ import cat_fijo from '@/components/catalogo_fijo'
 import dial_mapas from '../clientes/dial_mapa.vue'
 import { pdfGenera } from './formatos/orden_pedido.js'
 import { aplicaPreciosYBonos, agregarLista } from "../funciones/calculo_bonos";
+import dialog_direcciones_cliente from '@/views/clientes/dialogos/dial_direcciones'
 import cronograma from '../ventas/dialogos/cronograma_creditos.vue'
 import dial_edita_prod from '../ventas/edita_producto.vue'
 import axios from "axios"
@@ -327,7 +322,8 @@ export default {
         cat_fijo,
         dial_mapas,
         cronograma,
-        dial_edita_prod
+        dial_edita_prod,
+        dialog_direcciones_cliente
     },
 
     data() {
@@ -353,11 +349,11 @@ export default {
             formaPago: 'CONTADO',
             fechaVencimiento: '', // ISO yyyy-mm-dd cuando sea CREDITO
             dialogoMapa: false,
-            list_direcciones: [],
             dial_direcciones: false,
-            direccionSeleccionadaIndex: null,
             imprime_orden: false,
-            cronograma: null
+            cronograma: null,
+            modoOrdenProductos: 'push',
+            cod_vendedor: store.state.sedeActual.codigo,
         }
     },
     created() {
@@ -391,6 +387,10 @@ export default {
             store.state.lista_productos.length > 0) {
             // clon simple para no mutar directamente el state
             this.listaproductos = JSON.parse(JSON.stringify(store.state.lista_productos));
+        }
+        const savedModo = localStorage.getItem('modoOrdenProductos');
+        if (savedModo === 'push' || savedModo === 'top') {
+            this.modoOrdenProductos = savedModo;
         }
     },
     beforeDestroy() {
@@ -435,6 +435,9 @@ export default {
             },
             deep: true, // importante para detectar cambios dentro del array/objetos
         },
+        modoOrdenProductos(nuevo) {
+            localStorage.setItem('modoOrdenProductos', nuevo);
+        },
     },
 
     methods: {
@@ -448,35 +451,46 @@ export default {
             this.cronograma = cronograma; // Guarda el cronograma recibido
             this.dialogoCronograma = false; // Cierra el diálogo después de guardar
         },
-        ver_direcciones() {
-            try {
-                // Documento del cliente (prioriza lo digitado; si no, el del prop cliente)
-                const doc = String(this.numero || this.cliente?.dni || '').trim();
-                if (!doc) {
-                    store.commit && store.commit('dialogosnackbar', 'Primero ingrese/busque el documento del cliente.');
-                    return;
-                }
+        onDireccionSeleccionada(dir) {
+            if (!dir) return;
 
-                const cli = (store.state.clientes || []).find(
-                    x => String(x.documento || x.id || '') === doc
-                );
+            // 1) Asignar la calle al campo de dirección del pedido
+            this.direccion = (dir.direccion || '').trim();
 
-                const direcs = Array.isArray(cli?.direcciones) ? cli.direcciones : [];
-                if (!direcs.length) {
-                    store.commit && store.commit('dialogosnackbar', 'Este cliente no tiene direcciones registradas.');
-                    return;
-                }
+            // 2) Si la dirección trae coordenadas, úsalas para la cabecera (ubicacion_cliente)
+            if (!this.cliente_s || typeof this.cliente_s !== 'object') {
+                this.cliente_s = {};
+            }
 
-                this.list_direcciones = direcs;
-                // Preselecciona la principal si existe; si no, la primera
-                const idxPrincipal = this.list_direcciones.findIndex(x => !!x.principal);
-                this.direccionSeleccionadaIndex = idxPrincipal >= 0 ? idxPrincipal : 0;
-                this.dial_direcciones = true;
-            } catch (e) {
-                console.error(e);
-                store.commit && store.commit('dialogosnackbar', 'No se pudieron cargar las direcciones.');
+            if (dir.latitud !== undefined && dir.latitud !== null) {
+                this.$set(this.cliente_s, 'latitud', dir.latitud);
+            }
+
+            if (dir.longitud !== undefined && dir.longitud !== null) {
+                this.$set(this.cliente_s, 'longitud', dir.longitud);
             }
         },
+
+        ver_direcciones() {
+            // Documento del cliente (prioriza lo digitado; si no, el del cliente_s)
+            const doc = String(this.numero || this.cliente_s?.documento || '').trim();
+
+            if (!doc) {
+                store.commit &&
+                    store.commit(
+                        'dialogosnackbar',
+                        'Primero ingrese/busque el documento del cliente.'
+                    );
+                return;
+            }
+
+            // nos aseguramos de que "numero" tenga el doc
+            this.numero = doc;
+
+            // solo abrimos el diálogo; el componente hijo se encarga de leer al cliente
+            this.dial_direcciones = true;
+        },
+
         formatDireccionLista(d) {
             // Texto amigable para listar en el diálogo
             const linea = (d?.direccion || '').trim();
@@ -581,7 +595,7 @@ export default {
                     total: totalGeneral,
                     total_items: this.listaproductos.length,
                     observacion: this.observacion || '',
-                    cod_vendedor: store.state.sedeActual.codigo,
+                    cod_vendedor: this.cod_vendedor || store.state.sedeActual.codigo,
                     estado: 'pendiente',
                     ubicacion_cliente: {
                         lat: this.cliente_s.latitud,
@@ -651,7 +665,11 @@ export default {
             return a
         },
         buildIdemKeyPedido({ bd, cabecera = {}, detalle = [] }) {
+            const day = cabecera.fecha_emision
+                ? moment.unix(Number(cabecera.fecha_emision)).format("YYYY-MM-DD")
+                : moment().format("YYYY-MM-DD");
             const base = {
+                day,
                 t: cabecera.tipo_comprobante || "",
                 d: cabecera.doc_numero || "",
                 tot: cabecera.total || "",
@@ -668,17 +686,46 @@ export default {
 
             return `${bd}-${hash10}`;
         },
-
         agregar_lista(value) {
-            this.listaproductos = agregarLista({
+            // 1) Usamos tu helper para fusionar / sumar cantidades / etc.
+            console.log(value)
+            let nuevaLista = agregarLista({
                 listaActual: this.listaproductos,
                 nuevosItems: value,
                 createUUID: this.create_UUID,
                 redondear: (n) => this.redondear(n),
             });
-            console.log("todo")
+
+            // 2) Marcar timestamp interno para controlar el orden visual
+            const baseTs = Date.now();
+            let offset = 0;
+
+            nuevaLista = nuevaLista.map(item => {
+                // si ya tenía marca, la respetamos
+                if (item.__tsAdd) return item;
+
+                // si no, se la ponemos (sirve para items recién agregados)
+                const nuevo = { ...item };
+                nuevo.__tsAdd = baseTs + (offset++); // pequeño offset para evitar empates
+                return nuevo;
+            });
+
+            // 3) Ordenar según modo
+            if (this.modoOrdenProductos === 'top') {
+                // Últimos agregados arriba → mayor __tsAdd primero
+                nuevaLista.sort((a, b) => {
+                    const ta = a.__tsAdd || 0;
+                    const tb = b.__tsAdd || 0;
+                    return tb - ta;
+                });
+            }
+            // si es 'push', dejamos el orden que devuelve agregarLista
+
+            // 4) Asignamos y recalculamos bonos / precios
+            this.listaproductos = nuevaLista;
             this.recalculoCompleto();
         },
+
 
         recalculoCompleto() {
             this.listaproductos = aplicaPreciosYBonos({
@@ -689,6 +736,8 @@ export default {
                 redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
                 inPlace: true,
             });
+            console.log(this.listaproductos)
+        
         },
 
         editaProducto(val) {

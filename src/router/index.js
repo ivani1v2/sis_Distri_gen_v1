@@ -18,8 +18,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "carrito" */ "../views/panel.vue"),
+    component: () => import("../views/panel.vue"),
     meta: {
       requireAuth: true,
     },
@@ -30,8 +29,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "carrito" */ "../views/miempresa.vue"),
+    component: () => import("../views/miempresa.vue"),
     meta: {
       requireAuth: true,
     },
@@ -53,8 +51,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "carrito" */ "../views/soporte.vue"),
+    component: () => import("../views/soporte.vue"),
     meta: {
       requireAuth: true,
     },
@@ -76,8 +73,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "carrito" */ "../views/pedidos/lista_pedidos.vue"),
+    component: () => import("../views/pedidos/lista_pedidos.vue"),
     meta: {
       requireAuth: true,
     },
@@ -94,15 +90,34 @@ const routes = [
     },
   },
   {
+    path: "/gps_usuarios",
+    name: "gps_usuarios",
+    // route level code-splitting
+    // this generates a separate chunk (Produc.[hash].js) for this route
+    // which is lazy-loaded when the route is visited.
+    component: () => import("../views/reparto/gps_usuarios.vue"),
+    meta: {
+      requireAuth: true,
+    },
+    beforeEnter: (to, from, next) => {
+      if (to.matched.some((ruta) => ruta.meta.requireAuth)) {
+        if (store.state.permisos.reparto) {
+          next();
+        } else {
+          next({
+            name: "panel",
+          });
+        }
+      }
+    },
+  },
+  {
     path: "/liquida_reparto/:id",
     name: "liquida_reparto",
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/pedidos/liquida_reparto.vue"
-      ),
+    component: () => import("../views/pedidos/liquida_reparto.vue"),
     meta: {
       requireAuth: true,
     },
@@ -118,16 +133,13 @@ const routes = [
       }
     },
   },
-   {
-    path: "/reparto_transporte",
+  {
+    path: "/reparto_transporte/:id",
     name: "reparto_transporte",
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/reparto/reparto_transporte.vue"
-      ),
+    component: () => import("../views/reparto/reparto_transporte.vue"),
     meta: {
       requireAuth: true,
     },
@@ -143,14 +155,13 @@ const routes = [
       }
     },
   },
-    {
+  {
     path: "/lista_repartos",
     name: "lista_repartos",
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "carrito" */ "../views/reparto/lista_repartos.vue"),
+    component: () => import("../views/reparto/lista_repartos.vue"),
     meta: {
       requireAuth: true,
     },
@@ -172,8 +183,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "carrito" */ "../views/pedidos/nuevo_pedido.vue"),
+    component: () => import("../views/pedidos/nuevo_pedido.vue"),
     meta: {
       requireAuth: true,
     },
@@ -195,8 +205,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "carrito" */ "../views/ventas/caja2.vue"),
+    component: () => import("../views/ventas/caja2.vue"),
     meta: {
       requireAuth: true,
     },
@@ -219,10 +228,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/ventas/mapa_ventas.vue"
-      ),
+    component: () => import("../views/ventas/mapa_ventas.vue"),
     meta: {
       requireAuth: true,
     },
@@ -244,8 +250,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "carrito" */ "../views/ventas/flujocaja.vue"),
+    component: () => import("../views/ventas/flujocaja.vue"),
     meta: {
       requireAuth: true,
     },
@@ -267,10 +272,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/ventas/reporte_flujos.vue"
-      ),
+    component: () => import("../views/ventas/reporte_flujos.vue"),
     meta: {
       requireAuth: true,
     },
@@ -286,16 +288,13 @@ const routes = [
       }
     },
   },
-   {
+  {
     path: "/bonos_globales",
     name: "bonos_globales",
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/productos/bonos_globales.vue"
-      ),
+    component: () => import("../views/productos/bonos_globales.vue"),
     meta: {
       requireAuth: true,
     },
@@ -317,10 +316,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/productos/productos.vue"
-      ),
+    component: () => import("../views/productos/productos.vue"),
     meta: {
       requireAuth: true,
     },
@@ -342,8 +338,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "carrito" */ "../views/accesos_usuarios.vue"),
+    component: () => import("../views/accesos_usuarios.vue"),
     meta: {
       requireAuth: true,
     },
@@ -365,10 +360,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/kardex/transferencia_productos.vue"
-      ),
+    component: () => import("../views/kardex/transferencia_productos.vue"),
     meta: {
       requireAuth: true,
     },
@@ -390,10 +382,29 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/kardex/devoluciones.vue"
-      ),
+    component: () => import("../views/kardex/devoluciones.vue"),
+    meta: {
+      requireAuth: true,
+    },
+    beforeEnter: (to, from, next) => {
+      if (to.matched.some((ruta) => ruta.meta.requireAuth)) {
+        if (store.state.permisos.modulokardex) {
+          next();
+        } else {
+          next({
+            name: "panel",
+          });
+        }
+      }
+    },
+  },
+  {
+    path: "/integraciones/",
+    name: "integraciones",
+    // route level code-splitting
+    // this generates a separate chunk (Produc.[hash].js) for this route
+    // which is lazy-loaded when the route is visited.
+    component: () => import("../views/integraciones.vue"),
     meta: {
       requireAuth: true,
     },
@@ -415,10 +426,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/kardex/rep_mov_producto.vue"
-      ),
+    component: () => import("../views/kardex/rep_mov_producto.vue"),
     meta: {
       requireAuth: true,
     },
@@ -440,10 +448,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/kardex/movimientos_kardex.vue"
-      ),
+    component: () => import("../views/kardex/movimientos_kardex.vue"),
     meta: {
       requireAuth: true,
     },
@@ -460,15 +465,12 @@ const routes = [
     },
   },
   {
-    path: "/reporte_Guia_t",
-    name: "reporte_Guia_t",
+    path: "/reporte_Guia",
+    name: "reporte_Guia",
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/transporte/reporte_Guia_t.vue"
-      ),
+    component: () => import("../views/transporte/reporte_Guia.vue"),
     meta: {
       requireAuth: true,
     },
@@ -485,15 +487,12 @@ const routes = [
     },
   },
   {
-    path: "/reporte_Guia",
-    name: "reporte_Guia",
+    path: "/exportar_data",
+    name: "exportar_data",
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/transporte/reporte_Guia.vue"
-      ),
+    component: () => import("../views/reportes/exportar_data.vue"),
     meta: {
       requireAuth: true,
     },
@@ -509,7 +508,6 @@ const routes = [
       }
     },
   },
-
 
   {
     path: "/gr_movil",
@@ -517,10 +515,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/transporte/gr_movil.vue"
-      ),
+    component: () => import("../views/transporte/gr_movil.vue"),
     meta: {
       requireAuth: true,
     },
@@ -542,10 +537,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/transporte/gr_remitente.vue"
-      ),
+    component: () => import("../views/transporte/gr_remitente.vue"),
     meta: {
       requireAuth: true,
     },
@@ -567,10 +559,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/caja/reporte_proformas.vue"
-      ),
+    component: () => import("../views/caja/reporte_proformas.vue"),
     meta: {
       requireAuth: true,
     },
@@ -592,10 +581,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/clientes/cuentas_cobrar.vue"
-      ),
+    component: () => import("../views/clientes/cuentas_cobrar.vue"),
     meta: {
       requireAuth: true,
     },
@@ -617,10 +603,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/clientes/clientes.vue"
-      ),
+    component: () => import("../views/clientes/clientes.vue"),
     meta: {
       requireAuth: true,
     },
@@ -642,10 +625,7 @@ const routes = [
     // route level code-splitting
     // this generate  s a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/empleados/empleados.vue"
-      ),
+    component: () => import("../views/empleados/empleados.vue"),
     meta: {
       requireAuth: true,
     },
@@ -667,10 +647,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/gestorempresas/revision.vue"
-      ),
+    component: () => import("../views/gestorempresas/revision.vue"),
     meta: {
       requireAuth: true,
     },
@@ -692,8 +669,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "carrito" */ "../views/paneladmin.vue"),
+    component: () => import("../views/paneladmin.vue"),
     meta: {
       requireAuth: true,
     },
@@ -715,10 +691,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/gestorempresas/panelgeneral.vue"
-      ),
+    component: () => import("../views/gestorempresas/panelgeneral.vue"),
     meta: {
       requireAuth: true,
     },
@@ -740,10 +713,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/gestorempresas/gestionEmpresas.vue"
-      ),
+    component: () => import("../views/gestorempresas/gestionEmpresas.vue"),
     meta: {
       requireAuth: true,
     },
@@ -765,10 +735,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/productos/productos_x_sede.vue"
-      ),
+    component: () => import("../views/productos/productos_x_sede.vue"),
     meta: {
       requireAuth: true,
     },
@@ -790,10 +757,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/clientes/comprasClientes.vue"
-      ),
+    component: () => import("../views/clientes/comprasClientes.vue"),
     meta: {
       requireAuth: true,
     },
@@ -815,10 +779,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/reportes/filtro_ventas.vue"
-      ),
+    component: () => import("../views/reportes/filtro_ventas.vue"),
     meta: {
       requireAuth: true,
     },
@@ -840,10 +801,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/reportes/venta_x_sede.vue"
-      ),
+    component: () => import("../views/reportes/venta_x_sede.vue"),
     meta: {
       requireAuth: true,
     },
@@ -865,8 +823,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "carrito" */ "../views/comprobantes.vue"),
+    component: () => import("../views/comprobantes.vue"),
     meta: {
       requireAuth: true,
     },
@@ -882,16 +839,13 @@ const routes = [
       }
     },
   },
-    {
+  {
     path: "/reporte_stock",
     name: "reporte_stock",
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/reportes/reporte_stock.vue"
-      ),
+    component: () => import("../views/reportes/reporte_stock.vue"),
     meta: {
       requireAuth: true,
     },
@@ -907,16 +861,13 @@ const routes = [
       }
     },
   },
-    {
+  {
     path: "/reg_contables",
     name: "reg_contables",
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/reportes/reg_contables.vue"
-      ),
+    component: () => import("../views/reportes/reg_contables.vue"),
     meta: {
       requireAuth: true,
     },
@@ -938,10 +889,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/reportes/reportes.vue"
-      ),
+    component: () => import("../views/reportes/reportes.vue"),
     meta: {
       requireAuth: true,
     },
@@ -963,10 +911,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/tesoreria/tesoreria.vue"
-      ),
+    component: () => import("../views/tesoreria/tesoreria.vue"),
     meta: {
       requireAuth: true,
     },
@@ -988,10 +933,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/sunat/boletaFactura.vue"
-      ),
+    component: () => import("../views/sunat/boletaFactura.vue"),
     meta: {
       requireAuth: true,
     },
@@ -1013,8 +955,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "carrito" */ "../views/sunat/nuevaBaja.vue"),
+    component: () => import("../views/sunat/nuevaBaja.vue"),
     meta: {
       requireAuth: true,
     },
@@ -1036,10 +977,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/sunat/nuevaNCredito.vue"
-      ),
+    component: () => import("../views/sunat/nuevaNCredito.vue"),
     meta: {
       requireAuth: true,
     },
@@ -1061,10 +999,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/sunat/creditoDebito.vue"
-      ),
+    component: () => import("../views/sunat/creditoDebito.vue"),
     meta: {
       requireAuth: true,
     },
@@ -1086,10 +1021,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/sunat/resumenbaja.vue"
-      ),
+    component: () => import("../views/sunat/resumenbaja.vue"),
     meta: {
       requireAuth: true,
     },
@@ -1111,8 +1043,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "carrito" */ "../views/sunat/ticket.vue"),
+    component: () => import("../views/sunat/ticket.vue"),
     meta: {
       requireAuth: true,
     },
@@ -1134,8 +1065,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "carrito" */ "../views/ImportaExporta.vue"),
+    component: () => import("../views/ImportaExporta.vue"),
     meta: {
       requireAuth: true,
     },
@@ -1157,10 +1087,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/tranferenciaProductos.vue"
-      ),
+    component: () => import("../views/tranferenciaProductos.vue"),
     meta: {
       requireAuth: true,
     },
@@ -1177,15 +1104,35 @@ const routes = [
     },
   },
   {
+    path: "/catalogo_tienda",
+    name: "catalogo_tienda",
+    // route level code-splitting
+    // this generates a separate chunk (Produc.[hash].js) for this route
+    // which is lazy-loaded when the route is visited.
+    component: () => import("../views/tienda/catalogo_tienda.vue"),
+    meta: {
+      requireAuth: true,
+    },
+    beforeEnter: (to, from, next) => {
+      if (to.matched.some((ruta) => ruta.meta.requireAuth)) {
+        if (store.state.permisos.moduloproductos) {
+          next();
+        } else {
+          next({
+            name: "panel",
+          });
+        }
+      }
+    },
+  },
+
+  {
     path: "/bajarCartaQR/:id",
     name: "bajarCartaQR",
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/vistasLibres/bajarCartaQR.vue"
-      ),
+    component: () => import("../views/vistasLibres/bajarCartaQR.vue"),
   },
   {
     path: "/buscardocumentos",
@@ -1193,10 +1140,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/vistasLibres/buscardocumentos.vue"
-      ),
+    component: () => import("../views/vistasLibres/buscardocumentos.vue"),
   },
   {
     path: "/comprobantes_clientes/:bd/:ruc/:tipodoc/:serie/:correlativo/:cliente",
@@ -1204,10 +1148,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/vistasLibres/comprobantes_clientes.vue"
-      ),
+    component: () => import("../views/vistasLibres/comprobantes_clientes.vue"),
   },
   {
     path: "/gestionUsuarios",
@@ -1215,8 +1156,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "carrito" */ "../views/gestionUsuarios.vue"),
+    component: () => import("../views/gestionUsuarios.vue"),
     meta: {
       requireAuth: true,
     },
@@ -1232,16 +1172,13 @@ const routes = [
       }
     },
   },
-   {
+  {
     path: "/reporte_x_vendedor",
     name: "reporte_x_vendedor",
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/reportes/reporte_x_vendedor.vue"
-      ),
+    component: () => import("../views/reportes/reporte_x_vendedor.vue"),
     meta: {
       requireAuth: true,
     },
@@ -1252,24 +1189,18 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/reportes/reporteVentaDetalle.vue"
-      ),
+    component: () => import("../views/reportes/reporteVentaDetalle.vue"),
     meta: {
       requireAuth: true,
     },
   },
-    {
+  {
     path: "/reporte_ventas",
     name: "reporte_ventas",
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/reportes/reporte_ventas.vue"
-      ),
+    component: () => import("../views/reportes/reporte_ventas.vue"),
     meta: {
       requireAuth: true,
     },
@@ -1280,22 +1211,18 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(
-        /* webpackChunkName: "carrito" */ "../views/reportes/venta_x_pago.vue"
-      ),
+    component: () => import("../views/reportes/venta_x_pago.vue"),
     meta: {
       requireAuth: true,
     },
   },
-    {
+  {
     path: "/lista",
     name: "lista",
     // route level code-splitting
     // this generates a separate chunk (Produc.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "carrito" */ "../views/pedidos/visitas/lista.vue"),
+    component: () => import("../views/pedidos/visitas/lista.vue"),
     meta: {
       requireAuth: true,
     },

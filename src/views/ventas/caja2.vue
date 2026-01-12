@@ -22,52 +22,49 @@
                                         type="date" outlined dense label="Fecha de Emisión"
                                         prepend-inner-icon="mdi-calendar" hide-details
                                         class="flex-grow-1"></v-text-field>
-                                    <v-tooltip top v-if="false">
-                                        <template v-slot:activator="{ on, attrs }">
-                                            <v-icon color="primary" class="ml-2" v-bind="attrs" v-on="on"
-                                                @click="dial_config = !dial_config">
-                                                mdi-cog
-                                            </v-icon>
-                                        </template>
-                                        <span>Configuraciones adicionales</span>
-                                    </v-tooltip>
                                 </div>
                             </v-col>
 
                         </v-row>
                     </v-card-text>
-                    <v-row class="mx-auto mt-n5" dense>
-                        <!-- Catálogo -->
+                    <v-row :class="[
+                        'mx-auto mb-1',
+                        $store.state.esmovil ? 'mt-n8' : 'mt-n3'
+                    ]" dense justify="space-between">
                         <v-col :cols="permiteAgregar ? 4 : 6" class="text-center">
-                            <v-btn small elevation="3" rounded color="success" @click="abre_catalogo()">
-                                Catalogo
-                                <v-icon color="white" class="mx-auto text--center" small>mdi-archive-arrow-down</v-icon>
+                            <v-btn x-small elevation="3" rounded color="success" block @click="abre_catalogo()">
+                                <v-icon left small>mdi-archive-arrow-down</v-icon> Catálogo
                             </v-btn>
                         </v-col>
 
-                        <!-- Agregar (solo si tiene permiso) -->
                         <v-col v-if="permiteAgregar" cols="4" class="text-center">
-                            <v-btn small elevation="6" rounded color="info" @click="dialogAgrega = !dialogAgrega">
-                                Agregar
-                                <v-icon color="white" class="mx-auto text--center" small>mdi-plus</v-icon>
+                            <v-btn x-small elevation="6" rounded color="info" block @click="dialogAgrega = true">
+                                <v-icon left small>mdi-plus-circle</v-icon> Agregar
                             </v-btn>
                         </v-col>
 
-                        <!-- Proforma -->
                         <v-col :cols="permiteAgregar ? 4 : 6" class="text-center">
-                            <v-btn v-if="$store.state.permisos.proforma" small elevation="6" rounded color="warning"
-                                @click="dialogo_proforma = !dialogo_proforma">
-                                Proforma
-                                <v-icon color="white" class="mx-auto text--center"
-                                    medium>mdi-text-box-multiple-outline</v-icon>
+                            <v-btn v-if="$store.state.permisos.proforma" x-small elevation="6" rounded color="warning"
+                                block @click="dialogo_proforma = true">
+                                <v-icon left small>mdi-text-box-multiple-outline</v-icon> Proforma
                             </v-btn>
                         </v-col>
                     </v-row>
 
                 </v-card>
-                <h4 class="mb-n5 mt-1 red--text" v-if="cliente_s != ''">
-                    <div> Cliente : {{ cliente_s.nombre }}</div>
+                <h4 class="mb-n5 mt-1 red--text">
+                    <div class="d-flex align-center justify-space-between">
+                        <div v-if="cliente_s != ''"> Cliente : {{ cliente_s.nombre }} </div>
+
+                        <!-- Ícono de configuración -->
+                        <v-icon small color="blue darken-2" class="mr-2" @click="dial_config = !dial_config"
+                            title="Configuraciones adicionales">
+                            mdi-cog
+                        </v-icon>
+                    </div>
                 </h4>
+
+
                 <v-card class="mt-5">
                     <div class="tabla-scroll">
                         <v-simple-table class="elevation-0" dense>
@@ -97,8 +94,9 @@
                                                             class="ml-1" color="deep-orange" text-color="white" label>
                                                             −{{ moneda }} {{ redondear(item.preciodescuento) }}
                                                         </v-chip>
-                                                          <v-chip v-if="Number(item.precio_base) !== Number(item.precio)" x-small
-                                                            class="ml-1" color="deep-orange" text-color="white" label>
+                                                        <v-chip v-if="Number(item.precio_base) !== Number(item.precio)"
+                                                            x-small class="ml-1" color="deep-orange" text-color="white"
+                                                            label>
                                                             {{ moneda }} {{ redondear(item.precio_base) }}
                                                         </v-chip>
                                                         <v-chip v-if="item.medida" x-small class="ml-1" label>
@@ -114,7 +112,7 @@
                                                         style="max-width: 70vw;">
                                                         <span class="font-weight-bold red--text">{{
                                                             Number(item.cantidad)
-                                                        }}×</span>
+                                                            }}×</span>
                                                         {{ item.nombre }}
                                                     </div>
                                                 </div>
@@ -175,7 +173,7 @@
                                                 <v-list-item v-for="m in $store.state.moneda" :key="m.codigo"
                                                     @click="moneda = m.simbolo">
                                                     <v-list-item-title>{{ m.simbolo }} - {{ m.moneda
-                                                    }}</v-list-item-title>
+                                                        }}</v-list-item-title>
                                                 </v-list-item>
                                             </v-list>
                                         </v-menu>
@@ -215,6 +213,36 @@
                 </cat_fijo>
             </v-card>
         </v-dialog>
+        <v-dialog v-model="dial_config" max-width="420px">
+            <v-card>
+                <v-toolbar dense color="primary" dark>
+                    <v-toolbar-title>Configuración de lista</v-toolbar-title>
+                    <v-spacer></v-spacer>
+                    <v-btn icon @click="dial_config = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-toolbar>
+
+                <v-card-text class="pt-4">
+                    <v-subheader class="pl-0">Orden de productos</v-subheader>
+                    <v-radio-group v-model="modoOrdenProductos" column dense>
+                        <v-radio value="push" label="Agregar al final (orden tradicional)" />
+                        <v-radio value="top" label="Últimos agregados siempre arriba" />
+                    </v-radio-group>
+                    <p class="caption grey--text mt-2">
+                        Esta configuración solo afecta el orden visual de la lista, no cambia los totales ni el cálculo
+                        de
+                        bonos.
+                    </p>
+                </v-card-text>
+
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn text @click="dial_config = false">Cerrar</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <dial_proforma v-if="dialogo_proforma" @cierra="dialogo_proforma = false"
             @copia_proforma="copia_comprobante($event)" />
         <cobrar v-if="dial_cobro" @cierre="dial_cobro = false" @terminar='termina_venta($event)'
@@ -275,6 +303,8 @@ export default {
             array_ult_venta: [],
             cliente_s: [],
             lista_precios_selecta: ['1', '2', '3'],
+            dial_config: false,
+            modoOrdenProductos: 'push',
         }
     },
     created() {
@@ -316,6 +346,10 @@ export default {
             // clon simple para no mutar directamente el state
             this.listaproductos = JSON.parse(JSON.stringify(store.state.lista_productos));
         }
+        const savedModo = localStorage.getItem('modoOrdenProductos');
+        if (savedModo === 'push' || savedModo === 'top') {
+            this.modoOrdenProductos = savedModo;
+        }
     },
     beforeDestroy() {
         window.removeEventListener("keydown", this.detectarTecla);
@@ -340,6 +374,9 @@ export default {
                 store.commit("lista_productos", nuevo);
             },
             deep: true, // importante para detectar cambios dentro del array/objetos
+        },
+        modoOrdenProductos(nuevo) {
+            localStorage.setItem('modoOrdenProductos', nuevo);
         },
     },
 
@@ -464,17 +501,47 @@ export default {
         },
 
         agregar_lista(value) {
-            this.listaproductos = agregarLista({
+            // 1) Usamos tu helper para fusionar / sumar cantidades / etc.
+            let nuevaLista = agregarLista({
                 listaActual: this.listaproductos,
                 nuevosItems: value,
                 createUUID: this.create_UUID,
                 redondear: (n) => this.redondear(n),
             });
-            console.log("todo")
+
+            // 2) Marcar timestamp interno para controlar el orden visual
+            const baseTs = Date.now();
+            let offset = 0;
+
+            nuevaLista = nuevaLista.map(item => {
+                // si ya tenía marca, la respetamos
+                if (item.__tsAdd) return item;
+
+                // si no, se la ponemos (sirve para items recién agregados)
+                const nuevo = { ...item };
+                nuevo.__tsAdd = baseTs + (offset++); // pequeño offset para evitar empates
+                return nuevo;
+            });
+
+            // 3) Ordenar según modo
+            if (this.modoOrdenProductos === 'top') {
+                // Últimos agregados arriba → mayor __tsAdd primero
+                nuevaLista.sort((a, b) => {
+                    const ta = a.__tsAdd || 0;
+                    const tb = b.__tsAdd || 0;
+                    return tb - ta;
+                });
+            }
+            // si es 'push', dejamos el orden que devuelve agregarLista
+
+            // 4) Asignamos y recalculamos bonos / precios
+            this.listaproductos = nuevaLista;
             this.recalculoCompleto();
         },
 
+
         editaProducto(val) {
+            console.log(val)
             this.item_selecto = val
             this.dialogoProducto = true
         },

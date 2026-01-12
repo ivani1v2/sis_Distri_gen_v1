@@ -81,7 +81,7 @@ export async function registrarMovimientosTransferencia(doc) {
             cod_doc: '00',
             sreferencia: doc.sede_origen,
             creferencia: doc.sede_destino,
-            num_doc: '',
+            num_doc: doc.key,
             modo_pago: '',
             observacion: doc.observacion || 'TRANSFERENCIA ENTRE SEDES',
             baseimponible: totalNumber,
@@ -101,7 +101,6 @@ export async function registrarMovimientosTransferencia(doc) {
             tipodocumento: 'SALIDA',
             modo_ajuste: 'SALIDA',
             motivo: 'TRANSFERENCIA ENTRE SEDES',
-            creferencia: 'SALIDA',
             nom_proveedor: 'SALIDA',
         };
 
@@ -112,7 +111,6 @@ export async function registrarMovimientosTransferencia(doc) {
             tipodocumento: 'ENTRADA',
             modo_ajuste: 'ENTRADA',
             motivo: 'TRANSFERENCIA ENTRE SEDES',
-            creferencia: 'ENTRADA',
             nom_proveedor: 'ENTRADA',
         };
 

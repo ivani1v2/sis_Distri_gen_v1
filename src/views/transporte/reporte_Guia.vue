@@ -1,11 +1,17 @@
 <template>
     <div class="mb-6 pa-4 mt-3">
         <v-row class="text-center mt-n5">
-            <v-col cols="12">
-                <h3>GUIAS REMISION REMITENTE</h3>
+            <v-col cols="10">
+                <v-select outlined dense v-model="tipoSeleccionado" :items="tipos" item-text="text" item-value="value"
+                    label="Tipo de guía a mostrar" />
+            </v-col>
+            <v-col cols="2">
+                <v-btn elevation="3" color="success" @click="exportarExcel()" small>
+                    <v-icon left>mdi-microsoft-excel</v-icon>
+                </v-btn>
             </v-col>
         </v-row>
-        <v-row class="mt-n4">
+        <v-row class="mt-n9">
             <v-col cols="6">
                 <v-text-field type="date" outlined dense v-model="date1" label="INICIO"></v-text-field>
             </v-col>
@@ -140,10 +146,10 @@
             <v-card class="pa-2">
                 <v-card-text>
                     <span class="red--text">RESPUESTA SUNAT:</span> {{ item_selecto.estado }} - Ticket: {{
-                    item_selecto.num_ticket
-                }}
+                        item_selecto.num_ticket
+                    }}
                     <p class="red--text" v-if="item_selecto.mensaje_sunat != undefined">{{ item_selecto.mensaje_sunat
-                        }}</p>
+                    }}</p>
 
                 </v-card-text>
                 <v-row dense class="text-center mt-n5">
@@ -247,8 +253,14 @@ import {
 import {
     consula_guia
 } from '../../servidorsunat'
+import * as XLSX from 'xlsx'
 export default {
     data: () => ({
+        tipoSeleccionado: '09', // '09' Remitente | '31' Transportista
+        tipos: [
+            { value: '09', text: 'Guía de Remitente (09)' },
+            { value: '31', text: 'Guía de Transportista (31)' },
+        ],
         date1: moment(String(new Date)).format('YYYY-MM-DD'),
         date2: moment(String(new Date)).format('YYYY-MM-DD'),
         desserts: [],
@@ -333,12 +345,13 @@ export default {
                         data.color = '#46FF00'
                     }
 
-                    if (data.tipo_comprobante == '09') {
+                    if (data.tipo_comprobante == this.tipoSeleccionado) {
                         array.push(data)
                     }
 
                 })
             }
+            console.log(array)
             store.commit("dialogoprogress")
             this.desserts = array
         },
@@ -358,6 +371,7 @@ export default {
             this.dialogo_imprime = true
         },
         imprime(medida) {
+            console.log(this.item_selecto)
             generaGuia(this.item_selecto, medida)
             this.dialogo_imprime = false
         },
@@ -372,7 +386,44 @@ export default {
                 })
             }
         },
+        exportarExcel() {
+            // Fuente de datos: usa tu lista ya filtrada y mostrada en la tabla
+            const filas = (this.listafiltrada || []).map((it) => {
+                const con = (it.array_conductor && it.array_conductor[0]) || {}
+                const veh = (it.array_vehiculo && it.array_vehiculo[0]) || {}
 
-    }
+                return {
+                    'FECHA': this.conviertefecha(it.fecha_emision),
+                    'SERIE': it.serie || '',
+                    'NUMERO': it.correlativo || '',
+                    'PLACA': veh.placa || '',
+                    'PESO': it.peso_total || '',
+                    'LICENCIA': con.num_licencia || '',
+                    'CONDUCTOR': con.nom_conductor || '',
+                    'CLIENTE': it.razonsocial_destinatario || '',
+                    // Opcionales (columna amarilla de tu imagen):
+                    'PUNTO DE PARTIDA': it.dir_origen || '',
+                    'PUNTO DE LLEGADA': it.dir_destino || '',
+                }
+            })
+
+            // Crea hoja y libro
+            const ws = XLSX.utils.json_to_sheet(filas, {
+                header: [
+                    'FECHA', 'SERIE', 'NUMERO', 'PLACA', 'PESO', 'LICENCIA', 'CONDUCTOR', 'CLIENTE',
+                    'PUNTO DE PARTIDA', 'PUNTO DE LLEGADA'
+                ]
+            })
+            const wb = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(wb, ws, 'Guías')
+
+            // Descarga
+            const nombre = `guias_${this.date1}_a_${this.date2}.xlsx`
+            XLSX.writeFile(wb, nombre)
+        },
+        
+    
+
+}
 }
 </script>

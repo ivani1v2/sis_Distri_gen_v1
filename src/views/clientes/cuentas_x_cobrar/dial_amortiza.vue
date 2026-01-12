@@ -147,7 +147,7 @@ export default {
                     return
                 }
 
-                const totalCuota = Number(this.a_cuenta || 0)
+                const totalCuotaUI = Number(this.a_cuenta || 0) // referencia UI
                 const montoAbonado = Number(this.sumaPagosAmortiza.toFixed(2))
 
                 if (montoAbonado <= 0) {
@@ -155,11 +155,12 @@ export default {
                     return
                 }
 
-                // no permitir abonar más de la cuota
-                if (montoAbonado - totalCuota > 0.01) {
+                // Si NO quieres permitir pagar más que lo mostrado en la cuota (UI), deja esto.
+                // Si SÍ quieres permitir, elimina este bloque.
+                if (montoAbonado - totalCuotaUI > 0.01) {
                     alert(
                         `El total de los métodos de pago (${this.moneda} ${this.redondear(montoAbonado)}) ` +
-                        `no puede superar el monto de la cuota (${this.moneda} ${this.redondear(totalCuota)}).`
+                        `no puede superar el monto de la cuota (${this.moneda} ${this.redondear(totalCuotaUI)}).`
                     )
                     return
                 }
@@ -173,49 +174,69 @@ export default {
                         fecha: ahora
                     }))
 
-                // ✅ actualizar solo la cuota: monto abonado y pagado
-                cuota.monto = montoAbonado
+                const EPS = 0.01
+
+                // 1) Guardar monto original de la cuota (base histórica)
+                const montoOriginal = Number(cuota.monto_original ?? cuota.monto ?? 0)
+                cuota.monto_original = montoOriginal
+
+                // 2) Acumular pago en la cuota
+                const pagadoAntes = Number(cuota.monto_pagado_acum || 0)
+                const pagadoAhora = Number((pagadoAntes + montoAbonado).toFixed(2))
+                cuota.monto_pagado_acum = pagadoAhora
+
+                // 3) (COMO TÚ QUIERES) siempre PAGADO + reemplazar monto por lo pagado
                 cuota.estado = "PAGADO"
                 cuota.fecha_pagado = ahora
                 cuota.fecha_modificacion = ahora
-                cuota.pagos = pagos_filtrados
+                cuota.monto = pagadoAhora // muestra acumulado pagado en esa cuota
 
-                // nuevo monto pendiente = suma de montos de cuotas NO pagadas
-                const nuevoPendiente = datos
-                    .filter(c => c.estado !== "PAGADO")
-                    .reduce((acc, it) => acc + (parseFloat(it.monto) || 0), 0)
+                // 4) Acumular pagos
+                cuota.pagos = [...(cuota.pagos || []), ...pagos_filtrados]
+
+                // -------------------------------------------------------------------
+                // ✅ SALDO GLOBAL (NO POR SUMA DE CUOTAS)
+                // pendiente = monto_total - total_pagado_global
+                // -------------------------------------------------------------------
+                const totalPagadoGlobal = Number(
+                    datos.reduce((acc, c) => acc + (Number(c.monto_pagado_acum || 0)), 0).toFixed(2)
+                )
+
+                let montoPendienteReal = Number((Number(deuda.monto_total || 0) - totalPagadoGlobal).toFixed(2))
+                if (montoPendienteReal < 0) montoPendienteReal = 0
 
                 await editaCuentaxCobrar(deuda.doc_ref, 'datos', datos)
-                await editaCuentaxCobrar(deuda.doc_ref, 'monto_pendiente', nuevoPendiente)
+                await editaCuentaxCobrar(deuda.doc_ref, 'monto_pendiente', montoPendienteReal)
+                await editaCuentaxCobrar(deuda.doc_ref, 'pagado', totalPagadoGlobal)
 
-                // historial de pagos por método
-
-
-                const todoPagado = nuevoPendiente <= 0.01
+                const todoPagado = montoPendienteReal <= EPS
 
                 if (todoPagado) {
                     await editaCuentaxCobrar(deuda.doc_ref, 'estado', 'LIQUIDADO')
-                    await editaCuentaxCobrar(deuda.doc_ref, 'pagado', deuda.monto_total)
                     await grabaCabecera(deuda.doc_ref + '/forma_pago', 'PAGADO')
+                } else {
+                    await editaCuentaxCobrar(deuda.doc_ref, 'estado', 'PENDIENTE')
+                    await grabaCabecera(deuda.doc_ref + '/forma_pago', 'PENDIENTE')
                 }
 
                 for (const p of pagos_filtrados) {
                     await this.genera_flujo(p.nombre, p.monto, deuda)
                 }
+
                 reporte_liquidacion_cuota(
-                    {
-                        ...deuda,
-                        monto_pendiente: nuevoPendiente
-                    },
+                    { ...deuda, monto_pendiente: montoPendienteReal, pagado: totalPagadoGlobal },
                     cuota,
                     pagos_filtrados
-                );
+                )
+
                 this.$emit("actualizar-item", {
                     ...deuda,
                     datos,
-                    monto_pendiente: nuevoPendiente,
-                    estado: todoPagado ? "LIQUIDADO" : deuda.estado
+                    monto_pendiente: montoPendienteReal,
+                    pagado: totalPagadoGlobal,
+                    estado: todoPagado ? "LIQUIDADO" : "PENDIENTE"
                 })
+
             } catch (e) {
                 console.error("Error en amortiza:", e)
                 alert("Ocurrió un error al registrar el abono.")
@@ -223,6 +244,9 @@ export default {
                 store.commit("dialogoprogress")
             }
         },
+
+
+
         async genera_flujo(modo, monto, cabecera) {
             const fecha = moment().unix()
             const flujo = {

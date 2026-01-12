@@ -7,7 +7,7 @@
                 <h5></h5>
             </v-system-bar>
         </div>
-        <v-card class="pa-3">            
+        <v-card class="pa-3">
             <v-card class="mt-5">
                 <v-card class="mt-n2 pa-2 mb-2">
                     <v-row class="mt-n2" dense>
@@ -135,94 +135,101 @@ export default {
     },
     computed: {
         listafiltrada() {
-            return this.listaproductos.reverse()
+            return [...this.listaproductos].reverse()
         }
+
     },
     methods: {
         cierra() {
             this.$emit('cierra', false)
         },
         async genera_comprobante(val) {
+            // ✅ CLONAR para NO mutar el prop
+            const cabecera = JSON.parse(JSON.stringify(this.cabecera))
+            const items = [...this.listaproductos]
 
-            var cabecera = this.cabecera
-            var items = this.listaproductos
-            cabecera.id_anterior = cabecera.numeracion
+            // ✅ Guardar numeración anterior (para anularla)
+            const idAnterior = cabecera.numeracion
+
+            // ✅ Resetear campos que vienen “ANULADO”
+            cabecera.estado = "PENDIENTE"
+            cabecera.documentId = ""
+            cabecera.mensajeSunat = ""
+            cabecera.hash = ""
+            cabecera.color = ""
+
+            cabecera.id_anterior = idAnterior
+
             cabecera.fecha = moment().unix()
             cabecera.vencimientoDoc = cabecera.fecha
-            if (this.nombreCompleto == '') {
-                this.nombreCompleto = 'CLIENTES VARIOS'
-            }
-            if (this.numero == '') {
-                this.numero = '00000000'
-            }
-            if (val == 1) {
-                cabecera.tipocomprobante = 'B'
-            } else {
-                cabecera.tipocomprobante = 'F'
-            }
 
-            if (this.doc_fact == "DNI") {
-                var doccliente = "1" // 6 ruc --4 carnet --7 pasaporte -- 1 DNI
-            }
-            if (this.doc_fact == "RUC") {
-                var doccliente = "6" // 6 ruc --4 carnet --7 pasaporte -- 1 DNI
-            }
-            if (this.doc_fact == "Pasaporte") {
-                var doccliente = "7" // 6 ruc --4 carnet --7 pasaporte -- 1 DNI
-            }
-            if (this.doc_fact == "Carnet de Extranjeria") {
-                var doccliente = "4" // 6 ruc --4 carnet --7 pasaporte -- 1 DNI
-            }
+            cabecera.tipocomprobante = (val === 1) ? "B" : "F"
+
+            // Tipo doc cliente
+            let doccliente = "1"
+            if (this.doc_fact === "RUC") doccliente = "6"
+            if (this.doc_fact === "Pasaporte") doccliente = "7"
+            if (this.doc_fact === "Carnet de Extranjeria") doccliente = "4"
+
             store.commit("dialogoprogress", 1)
 
-            if (cabecera.tipocomprobante == 'B') {
-                var correlativo = await obten_contador('ordenboleta')
+            let correlativo = ""
+
+            if (cabecera.tipocomprobante === "B") {
+                correlativo = await obten_contador("ordenboleta")
                 cabecera.serie = store.state.seriesdocumentos.boleta
-                cabecera.cod_comprobante = '03'
+                cabecera.cod_comprobante = "03"
                 cabecera.dni = this.num_fact
                 cabecera.cliente = this.nom_fact
                 cabecera.direccion = this.dir_fact
             }
-            if (cabecera.tipocomprobante == 'F') {
-                if (this.num_fact.length != 11) {
-                    alert('DOCUMENTO NO CUMPLE EL FORMATO')
+
+            if (cabecera.tipocomprobante === "F") {
+                if ((this.num_fact || "").length !== 11) {
+                    alert("RUC NO CUMPLE EL FORMATO")
                     store.commit("dialogoprogress", 1)
                     return
                 }
-                var correlativo = await obten_contador('ordenfactura')
+
+                correlativo = await obten_contador("ordenfactura")
                 cabecera.serie = store.state.seriesdocumentos.factura
-                cabecera.cod_comprobante = '01'
-                cabecera.doc_fact = this.doc_fact
-                cabecera.num_fact = this.num_fact
-                cabecera.nom_fact = this.nom_fact
-                cabecera.dir_fact = this.dir_fact
+                cabecera.cod_comprobante = "01"
+
+                // ✅ IMPORTANTÍSIMO: actualizar los campos que usa tu XML
+                cabecera.dni = this.num_fact
+                cabecera.cliente = this.nom_fact
+                cabecera.direccion = this.dir_fact
             }
-            var fecha = moment(String(this.date)) / 1000
+
+
+            const fecha = moment(String(this.date)) / 1000
             cabecera.fecha = fecha
             cabecera.vencimientoDoc = fecha
             cabecera.tipoDocumento = this.doc_fact
             cabecera.cod_tipoDocumento = doccliente
-            cabecera.numeracion = cabecera.serie + '-' + correlativo
+
+            cabecera.numeracion = `${cabecera.serie}-${correlativo}`
             cabecera.correlativoDocEmitido = correlativo
-            console.log(cabecera)
+
+            // ✅ Grabar nuevo documento
             await grabaCabecera(cabecera.numeracion, cabecera)
             await grabaDetalle(cabecera.numeracion, items)
-            if (cabecera.tipocomprobante != 'T') {
-                enviaDocumentoApiSunat(cabecera, items).then((rrr) => {
-                    //console.log(rrr)
-                })
+
+            if (cabecera.tipocomprobante !== "T") {
+                enviaDocumentoApiSunat(cabecera, items).then(() => { })
             }
 
-            if (cabecera.tipocomprobante == 'B') {
-                await sumarCorrelativo('ordenboleta', correlativo)
-            }
-            if (cabecera.tipocomprobante == 'F') {
-                await sumarCorrelativo('ordenfactura', correlativo)
-            }
-            await grabaEstadoComprobante(cabecera.id_anterior, 'ANULADO', 'ANULADO', 'ANULADO', '')
+            // ✅ Incrementar contador
+            if (cabecera.tipocomprobante === "B") await sumarCorrelativo("ordenboleta", correlativo)
+            if (cabecera.tipocomprobante === "F") await sumarCorrelativo("ordenfactura", correlativo)
+
+            // ✅ Anular el anterior (usando idAnterior que NO cambia)
+            await grabaEstadoComprobante(idAnterior, "ANULADO", "ANULADO", "ANULADO", "")
+
             store.commit("dialogoprogress", 1)
             this.cierra()
         },
+
         BuscarDocumento1() {
             if (this.num_fact.length == 11) {
                 this.doc_fact = "RUC"

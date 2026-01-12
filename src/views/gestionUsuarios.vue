@@ -98,16 +98,14 @@
                                             <span>Editar datos y permisos</span>
                                         </v-tooltip>
                                     </v-col>
-                                     <v-col cols="4" class="text-center">
+                                    <v-col cols="4" class="text-center">
                                         <v-tooltip bottom>
                                             <template v-slot:activator="{ on, attrs }">
-                                                <v-btn
-                                                    icon
-                                                    v-bind="attrs"
-                                                    v-on="on"
+                                                <v-btn icon v-bind="attrs" v-on="on"
                                                     @click="toggleGps(item, !item.gps_activo)">
                                                     <v-icon :color="item.gps_activo ? 'blue' : 'grey'">
-                                                        {{ item.gps_activo ? 'mdi-map-marker-radius' : 'mdi-map-marker-off' }}
+                                                        {{ item.gps_activo ? 'mdi-map-marker-radius' :
+                                                        'mdi-map-marker-off' }}
                                                     </v-icon>
                                                 </v-btn>
                                             </template>
@@ -116,7 +114,7 @@
                                             </span>
                                         </v-tooltip>
                                     </v-col>
-                                    
+
                                 </v-row>
                             </td>
                         </tr>
@@ -178,7 +176,16 @@
                         </v-row>
                     </v-form>
                 </v-card-text>
-
+     <v-card-actions class="px-4 pb-4">
+            
+                    <v-spacer></v-spacer>
+              
+                    <v-btn small color="success" @click="dial_permitidos=!dial_permitidos">
+                        <v-icon left small>mdi-content-save</v-icon>
+                        Productos Permitidos
+                    </v-btn>
+                    
+                </v-card-actions>
                 <v-card-actions class="px-4 pb-4">
                     <v-btn text @click="dial_sett = false">Cancelar</v-btn>
                     <v-spacer></v-spacer>
@@ -190,6 +197,7 @@
                         <v-icon left small>mdi-content-save</v-icon>
                         Guardar
                     </v-btn>
+                    
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -229,6 +237,7 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+        <dial_lista :vendedor="item_selecto"  v-if="dial_permitidos" @cerrar="dial_permitidos = false" />
     </div>
 </template>
 
@@ -243,11 +252,15 @@ import {
 } from '../db'
 import axios from "axios";
 import store from '@/store/index'
+import dial_lista from '../components/dialogos/dial_lista_prod_vende.vue'
 import firebase from 'firebase'
 export default {
-
+    components: {
+        dial_lista
+    },
     data() {
         return {
+            dial_permitidos:false,
             dial_contra: false,
             token: '',
             nombre: '',
@@ -349,7 +362,7 @@ export default {
 
             this.desserts = array;
         },
-         async toggleGps(user, value) {
+        async toggleGps(user, value) {
             if (!user || !user.token) {
                 this.$store?.commit?.('dialogosnackbar', 'Usuario inválido');
                 return;
@@ -466,7 +479,7 @@ export default {
 
             for (var i = 0; i < this.desserts.length; i++) {
                 console.log(this.desserts[i].token)
-                nuevoCampoUsuario(this.desserts[i].token, "crea_producto", true)
+                nuevoCampoUsuario(this.desserts[i].token, "productos_edita_id", false)
             }
 
             //nuevoUsuario(this.token,array)

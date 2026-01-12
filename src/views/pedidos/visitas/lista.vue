@@ -524,7 +524,7 @@ export default {
                     q = q.where('zona', '==', this.zona);
                 }
 
-                const snap = await q.get({ source: 'cache' });
+                const snap = await q.get();
 
                 this.array_clientes = snap.docs.map(d => {
                     //console.log(d.data())

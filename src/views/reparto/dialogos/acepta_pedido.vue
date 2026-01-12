@@ -131,16 +131,37 @@
                             <div class="d-flex justify-space-between align-center" style="width:100%;">
                                 <div class="text-truncate" style="max-width:70%;">
                                     {{ item.nombre }}
-                                    <span class="grey--text">· {{ Number(item.cantidad) }} {{ item.medida || ''
-                                    }}</span>
+                                    <span class="grey--text">
+                                        · {{ Number(item.cantidad) }} {{ item.medida || '' }}
+                                    </span>
+
+                                    <!-- Etiqueta gratuita -->
+                                    <v-chip v-if="String(item.operacion || '').toUpperCase() === 'GRATUITA'" x-small
+                                        class="ml-1" color="pink" text-color="white" label>
+                                        Gratuita
+                                    </v-chip>
                                 </div>
+
                                 <div class="text-right">
-                                    {{ moneda }} {{ redondear((Number(item.total_antes_impuestos) +
-                                        Number(item.total_impuestos))) }}
+                                    <!-- Si es gratuita, valor 0 en rojo -->
+                                    <span v-if="String(item.operacion || '').toUpperCase() === 'GRATUITA'"
+                                        class="red--text font-weight-bold">
+                                        {{ moneda }} {{ redondear(0) }}
+                                    </span>
+
+                                    <!-- Si NO es gratuita, muestra el total real -->
+                                    <span v-else>
+                                        {{ moneda }} {{
+                                            redondear(
+                                                Number(item.total_antes_impuestos) + Number(item.total_impuestos)
+                                            )
+                                        }}
+                                    </span>
                                 </div>
                             </div>
                         </template>
                     </v-autocomplete>
+
 
                     <div v-if="seleccionActual" class="mt-2">
                         <div class="caption grey--text mb-1">
@@ -182,7 +203,8 @@
                         Cobrar: {{ moneda }} {{ redondear(totalACobrar) }}
                     </v-chip>
                 </div>
-                <!-- MÉTODOS DE PAGO: fila compacta con icono incrustado -->
+
+                <!-- MÉTODOS DE PAGO -->
                 <v-row dense v-for="p in pagosEntrega" :key="p.nombre" class="align-center">
                     <v-col cols="12">
                         <v-text-field :label="p.nombre.toUpperCase()" :prefix="moneda" :value="p.monto"
@@ -190,14 +212,12 @@
                             :type="$store.state.esmovil ? 'tel' : 'number'" inputmode="decimal" step="0.01" outlined
                             dense hide-details class="mpago-field" :class="{ 'mpago-activo': parseFloat(p.monto) > 0 }"
                             @focus="$event.target.select()">
-                            <!-- Icono del método como 'prepend-inner' (clic = llena con total) -->
                             <template v-slot:prepend-inner>
                                 <v-avatar size="28" class="mr-2" tile>
                                     <v-img :src="busca_ico(p.nombre)" @click.stop="cambia_modo_pago(p)" />
                                 </v-avatar>
                             </template>
 
-                            <!-- Botón rápido para llenar con el total a cobrar -->
                             <template v-slot:append>
                                 <v-btn icon x-small @click.stop="cambia_modo_pago(p)">
                                     <v-icon small>mdi-arrow-collapse-down</v-icon>
@@ -207,24 +227,43 @@
                     </v-col>
                 </v-row>
 
-
-                <div class="mt-n2 mb-3 caption grey--text" v-if="diferenciaPagos !== 0">
-                    Falta/Exceso: {{ moneda }} {{ redondear(diferenciaPagos) }}
+                <div class="mt-n2 mb-3 caption grey--text" v-if="diferenciaTotal !== 0">
+                    Falta/Exceso: {{ moneda }} {{ redondear(diferenciaTotal) }}
                 </div>
 
-                <v-btn class="mt-4" block color="success" :disabled="!pagosValidos" @click="finalizarEntrega">
-                    <v-icon left>mdi-cash-check</v-icon> Cobrar y finalizar
+                <!-- BOTÓN PARA MOSTRAR CRÉDITO -->
+                <v-btn v-if="!esCredito" small block color="indigo" class="mb-2" @click="toggleCredito">
+                    <v-icon left small>mdi-calendar-clock</v-icon>
+                    Generar crédito
+                </v-btn>
+                <v-expand-transition v-if="!esCredito">
+                    <div v-if="mostrarCredito" class="pa-2 mb-3 grey lighten-4 rounded">
+                        <v-text-field v-model="montoCredito" label="Monto del crédito" :prefix="moneda" type="number"
+                            inputmode="decimal" step="0.01" dense outlined hide-details class="mb-2"
+                            @input="onCreditoInput" />
+
+                        <v-text-field v-model="fechaVenceCredito" label="Fecha de vencimiento" type="date" dense
+                            outlined hide-details class="mb-2" readonly />
+
+                        <!-- 🔴 SIN botón de guardar aquí: el crédito se genera en Cobrar y finalizar -->
+                    </div>
+                </v-expand-transition>
+
+                <v-btn class="mt-2" block color="success" :disabled="!pagosValidos" @click="finalizarEntrega">
+                    <v-icon left>mdi-cash-check</v-icon>
+                    Cobrar y finalizar
                 </v-btn>
             </v-card>
         </v-dialog>
+
     </v-dialog>
 </template>
 
 <script>
-import { all_detalle_p, grabaCabecera_p, nuevo_detalle_entrega } from "../../../db";
+import { all_detalle_p, grabaCabecera_p, nuevo_detalle_entrega, nuevaCuentaxcobrar } from "../../../db";
 
 export default {
-    props: {grupo:null, item_selecto: { type: Object, required: true } },
+    props: { grupo: null, item_selecto: { type: Object, required: true } },
     data() {
         return {
             dial: false,
@@ -239,18 +278,28 @@ export default {
             rechazados: [],
             // Pagos
             dialPagos: false,
-            pagosEntrega: []
+            pagosEntrega: [],
+            mostrarCredito: false,
+            montoCredito: "",
+            fechaVenceCredito: ""
         };
     },
     async created() {
+        console.log(this.item_selecto);
         this.item_selecto.id_grupo = this.item_selecto.id_grupo || this.grupo;
         await this.busca_detalle();
         // base de métodos de pago desde el store
+        this.moneda = this.item_selecto.moneda || "S/";
         const lista = (this.$store?.state?.modopagos || []).map(n => ({ nombre: n, monto: "" }));
         this.pagosEntrega = lista;
         this.dial = true;
     },
     computed: {
+        esCredito() {
+            const f = (this.item_selecto?.forma_pago || "").toString().toLowerCase();
+            return f === "credito" || f === "crédito";
+        },
+
         totalItemsPedido() { return (this.array_detalle || []).length; },
         itemsCalculados() { return this.rechazados; },
         totalRechazados() { return this.rechazados.length; },
@@ -265,28 +314,46 @@ export default {
         },
         // $$$
         totalRechazosMonto() {
-            return this.rechazados.reduce((acc, it) => acc + this.totalLineaRechazo(it), 0);
+            return this.rechazados.reduce((acc, it) => {
+                // Los productos gratuitos NO descuentan nada del cobro
+                if (String(it.operacion || '').toUpperCase() === 'GRATUITA') return acc;
+                return acc + this.totalLineaRechazo(it);
+            }, 0);
         },
         totalACobrar() {
+            // Si el comprobante ya es a CRÉDITO, en entrega no se cobra nada
+            if (this.esCredito) return 0;
+
             const t = Number(this.item_selecto?.total || 0) - Number(this.totalRechazosMonto || 0);
             return t < 0 ? 0 : t;
         },
+
         sumaPagos() {
             return this.pagosEntrega.reduce((acc, p) => acc + (parseFloat(p.monto) || 0), 0);
         },
-        diferenciaPagos() {
-            // positivo => falta; negativo => exceso
-            return Number(this.totalACobrar.toFixed(2)) - Number(this.sumaPagos.toFixed(2));
+        montoCreditoNumber() {
+            return this.mostrarCredito ? Number(this.montoCredito || 0) : 0;
         },
+
+        // 🔹 nuevo: suma de pagos + crédito
+        sumaTotalConCredito() {
+            return this.sumaPagos + this.montoCreditoNumber;
+        },
+
+        // 🔹 nuevo: diferencia considerando crédito
+        diferenciaTotal() {
+            return Number(this.totalACobrar.toFixed(2)) - Number(this.sumaTotalConCredito.toFixed(2));
+        },
+
         pagosValidos() {
-            // exige que la suma coincida exactamente
-            return Math.abs(this.diferenciaPagos) < 0.01;
+            return Math.abs(this.diferenciaTotal) < 0.01;
         }
     },
     methods: {
         async busca_detalle() {
             const snap = await all_detalle_p(this.item_selecto.id_grupo, this.item_selecto.id).once("value");
             const raw = snap.val() || [];
+            console.log("Detalle pedido leído:", raw);
             if (Array.isArray(raw)) {
                 this.array_detalle = raw.map(x => ({ ...x, uuid: x.uuid || `${x.id}-${Math.random()}` }));
             } else {
@@ -320,9 +387,14 @@ export default {
         },
         formatItemText(it) {
             if (!it) return "";
-            const total = this.redondear((Number(it.total_antes_impuestos) + Number(it.total_impuestos)));
-            return `${it.nombre} · ${Number(it.cantidad)} ${it.medida || ""} · ${this.moneda} ${total}`;
+            const esGratuita = String(it.operacion || "").toUpperCase() === "GRATUITA";
+            const totalReal = Number(it.total_antes_impuestos) + Number(it.total_impuestos);
+            const total = esGratuita ? this.redondear(0) : this.redondear(totalReal);
+
+            return `${it.nombre} · ${Number(it.cantidad)} ${it.medida || ""} · ${this.moneda
+                } ${total}`;
         },
+
         customFilter(item, queryText, itemText) {
             const q = (queryText || "").toLowerCase();
             return (itemText || "").toLowerCase().includes(q)
@@ -357,6 +429,9 @@ export default {
             return cant ? (tot / cant) : 0;
         },
         totalLineaRechazo(it) {
+            // Si es gratuita, el valor monetario del rechazo es 0
+            if (String(it.operacion || '').toUpperCase() === 'GRATUITA') return 0;
+
             const q = Number(it.cantidad_rechazo || it.cantidad || 0);
             return this.unitPrice(it) * q;
         },
@@ -370,8 +445,20 @@ export default {
             this.dialPagos = true;
         },
 
+        onCreditoInput() {
+            const saldo = this.getMetodoSaldo();
+            if (!saldo) return;
+
+            const total = Number(this.totalACobrar.toFixed(2));
+            const otros = this.sumaSin(saldo.nombre);
+            let restante = Number((total - otros - this.montoCreditoNumber).toFixed(2));
+
+            if (restante < 0) restante = 0;
+            saldo.monto = restante ? restante.toFixed(2) : '0';
+        },
 
         // Guarda todo (estado entrega + observaciones + rechazos + pagos)
+        // Guarda todo (estado entrega + observaciones + rechazos + pagos + crédito)
         async finalizarEntrega() {
             if (!this.pagosValidos) return;
 
@@ -386,36 +473,112 @@ export default {
                 operacion: it.operacion || ""
             }));
 
-
             const pagos_filtrados = this.pagosEntrega
                 .filter(p => parseFloat(p.monto) > 0)
                 .map(p => ({ nombre: p.nombre, monto: Number(p.monto) }));
-            var data = {
+
+            // 🔹 montos clave
+            const totalCobrar = Number(this.totalACobrar.toFixed(2));       // lo que se debe por el pedido (ya con rechazos)
+            const totalPagado = Number(this.sumaPagos.toFixed(2));          // lo que realmente se pagó en caja
+            const montoCred = Number(this.montoCreditoNumber.toFixed(2)); // lo que se fue a crédito
+
+            // 🔹 fecha de vencimiento (solo si hay crédito)
+            let fechaVenceUnix = null;
+            if (montoCred > 0) {
+                if (!this.fechaVenceCredito) {
+                    this.setFechaVencePorDefecto();
+                }
+                fechaVenceUnix = Math.floor(
+                    new Date(this.fechaVenceCredito + "T23:59:59").getTime() / 1000
+                );
+            }
+
+            // 🔹 payload para nuevo_detalle_entrega (ahora incluye crédito)
+            const data = {
                 id_grupo: this.item_selecto.id_grupo,
                 id_pedido: this.item_selecto.id,
-                rechazos: rechazos,
+                rechazos,
                 rechazos_count: rechazos.length,
                 pagos_entrega: pagos_filtrados,
                 observaciones: this.observaciones || "",
                 total_pedido: Number(this.item_selecto.total || 0),
                 total_rechazado: Number(this.totalRechazosMonto.toFixed(2)),
-                total_cobrado: Number(this.totalACobrar.toFixed(2)),
-            }
-            console.log("Finalizar entrega con datos:", data);
-            this.$store.commit("dialogoprogress");
-            await Promise.all([
+                total_cobrar: totalCobrar,          // total que se debía cobrar
+                total_cobrado: totalPagado,         // 💰 realmente cobrado (solo pagos)
+                total_credito: montoCred,           // 💳 lo que quedó como crédito
+                fecha_vence_credito: fechaVenceUnix // null si no hubo crédito
+            };
+
+            const promesas = [
                 nuevo_detalle_entrega(this.item_selecto.id_grupo, this.item_selecto.id, data),
                 grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/estado_entrega`, "entregado"),
                 grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/observacion_entrega`, this.observaciones || ""),
                 grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/rechazos_count`, rechazos.length),
                 grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/pagos_entrega`, pagos_filtrados),
-                grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/total_cobrado`, Number(this.totalACobrar.toFixed(2)))
-            ]);
 
-            this.$store.commit("dialogoprogress");
-            this.dialPagos = false;
-            this.$emit("guardado", { grupo: this.item_selecto.id_grupo });
+                // 👉 en cabecera ahora guardamos los 3 montos
+                grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/total_cobrar`, totalCobrar),
+                grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/total_cobrado`, totalPagado),
+                grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/total_credito`, montoCred),
+            ];
+
+            if (fechaVenceUnix) {
+                promesas.push(
+                    grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/fecha_vence_credito`, fechaVenceUnix)
+                );
+            }
+
+            // 🔹 Si hay crédito, también generamos la cuenta por cobrar
+            if (montoCred > 0) {
+                const cab = this.item_selecto || {};
+                const pendiente = montoCred;
+
+                const payloadCredito = {
+                    monto_total: pendiente,
+                    monto_pendiente: pendiente,
+                    estado: "PENDIENTE",
+                    documento: cab.dni || "",
+                    moneda: cab.moneda || "S/",
+                    nombre: cab.cliente || "",
+                    vendedor: cab.vendedor || "",
+                    doc_ref: cab.numeracion || "",
+                    fecha: cab.fecha,
+                    fecha_vence: fechaVenceUnix,
+                    datos: [
+                        {
+                            id: 1,
+                            fecha_vence: fechaVenceUnix,
+                            monto: pendiente,
+                            estado: "PENDIENTE",
+                        },
+                    ],
+                };
+
+                const id = payloadCredito.doc_ref || `${payloadCredito.documento || "SIN_DOC"}_${cab.id || Date.now()}`;
+                promesas.push(nuevaCuentaxcobrar(id, payloadCredito));
+            }
+
+            try {
+                this.$store.commit("dialogoprogress");
+                await Promise.all(promesas);
+                this.$store.commit("dialogoprogress");
+
+                if (montoCred > 0) {
+                    this.$toast?.success?.("Entrega cobrada y crédito generado.") || alert("Entrega cobrada y crédito generado.");
+                } else {
+                    this.$toast?.success?.("Entrega cobrada correctamente.") || alert("Entrega cobrada correctamente.");
+                }
+
+                this.dialPagos = false;
+                this.$emit("guardado", { grupo: this.item_selecto.id_grupo });
+            } catch (e) {
+                console.error("Error al finalizar entrega:", e);
+                this.$store.commit("dialogoprogress");
+                this.$toast?.error?.("No se pudo guardar la entrega.") || alert("No se pudo guardar la entrega.");
+            }
         },
+
+
         busca_ico(data) {
             var iconos = this.$store.state.iconos_pagos.find(item => item.nombre == data)
             return iconos.icono
@@ -454,15 +617,34 @@ export default {
 
         // Cuando el usuario escribe en un método, ajusta automáticamente EFECTIVO con el restante
         onMontoInput(editado) {
-            // No autoajustes si el que edita es el método de saldo (EFECTIVO/primero)
             const saldo = this.getMetodoSaldo();
             if (!saldo || editado?.nombre === saldo.nombre) return;
 
             const total = Number(this.totalACobrar.toFixed(2));
-            const otros = this.sumaSin(saldo.nombre); // todo menos el de saldo
-            let restante = Number((total - otros).toFixed(2));
-            if (restante < 0) restante = 0; // evita negativos
-            saldo.monto = restante ? restante.toFixed(2) : (restante === 0 ? '0' : '');
+            const otros = this.sumaSin(saldo.nombre); // todos los métodos menos el de saldo
+            let restante = Number((total - otros - this.montoCreditoNumber).toFixed(2));
+
+            if (restante < 0) restante = 0;
+            saldo.monto = restante ? restante.toFixed(2) : '0';
+        },
+
+
+
+        setFechaVencePorDefecto() {
+            const d = new Date();
+            d.setDate(d.getDate() + 7);
+            this.fechaVenceCredito = d.toISOString().slice(0, 10); // YYYY-MM-DD
+        },
+
+        toggleCredito() {
+            if (!this.mostrarCredito) {
+                // al abrir: propone como crédito el faltante (total - pagos)
+                const faltante = this.totalACobrar - this.sumaPagos;
+                this.montoCredito = Number(faltante > 0 ? faltante : 0).toFixed(2);
+                this.setFechaVencePorDefecto();
+                this.onCreditoInput();
+            }
+            this.mostrarCredito = !this.mostrarCredito;
         },
     },
 };

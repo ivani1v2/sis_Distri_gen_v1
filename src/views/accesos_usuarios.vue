@@ -55,14 +55,14 @@ export default {
                     titulo: 'Productos',
                     items: [
                         [
-                            { label: 'Productos', value: 'moduloproductos' },
+                            { label: 'Modulo Productos', value: 'moduloproductos' },
                             { label: 'Crea', value: 'crea_producto' },
 
 
                         ],
                         [
                             { label: 'Edita Producto', value: 'productos_edita' },
-                            { label: 'Editar ID', value: 'productos_edita_id' },
+                            { label: 'Editar ID Productos', value: 'productos_edita_id' },
 
                         ],
                         [

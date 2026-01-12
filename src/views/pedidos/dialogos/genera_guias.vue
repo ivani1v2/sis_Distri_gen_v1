@@ -44,28 +44,31 @@
                 </v-col>
             </v-row>
 
-            <v-row dense>
-                <v-col cols="12" class="mt-n11">
-                    <v-radio-group dense v-model="modo_transporte" row>
-                        <template v-slot:label>Modo Transporte:&nbsp;</template>
-                        <v-radio label="Público" value="01" />
-                        <v-radio label="Privado" value="02" />
-                    </v-radio-group>
-                </v-col>
-            </v-row>
-            <v-row dense v-if="modo_transporte === '01'">
-                <v-col cols="12" sm="4">
-                    <v-text-field outlined dense v-model="ruc_transporte" label="RUC Transportista" />
-                </v-col>
+            <v-card class="pa-3 mt-1" v-if="modo_transporte === '01'">
+                <h4 style="font-size:13.5px" class="mb-1">Datos Transportista
+                    <v-btn class="mt-n1 ml-3" elevation="3" color="info" @click="dial_trans = true" x-small>
+                        <v-icon left>
+                            mdi-magnify
+                        </v-icon>Ver Lista
+                    </v-btn>
+                </h4>
+                <v-row class="text-center mb-n5" dense>
+                    <v-col cols="12" sm="3" :class="$vuetify.breakpoint.smAndDown ? '' : ''">
+                        <v-text-field style="font-size:13.5px" outlined type="number" dense v-model="ruc_transporte"
+                            label="RUC Transportista" append-icon="mdi-magnify" @click:append="buscar_transporte()"
+                            @keyup.enter="buscar_transporte()"></v-text-field>
 
-                <v-col cols="12" sm="4">
-                    <v-text-field outlined dense v-model="razon_transporte" label="Razón Social Transportista" />
-                </v-col>
-                <v-col cols="12" sm="4">
-                    <v-text-field outlined dense v-model="registro_mtc" :disabled="modo_transporte === '01'"
-                        label="Registro MTC (solo transportista)" />
-                </v-col>
-            </v-row>
+                    </v-col>
+                    <v-col cols="12" sm="5" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
+                        <v-text-field style="font-size:13.5px" outlined small dense v-model="razon_transporte"
+                            label="Razon Social"></v-text-field>
+                    </v-col>
+                    <v-col cols="12" sm="4" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
+                        <v-text-field style="font-size:13.5px" outlined dense v-model="registro_mtc"
+                            label="N° Registro MTC"></v-text-field>
+                    </v-col>
+                </v-row>
+            </v-card>
 
             <!-- 🔵 Vehículo y Conductor (solo PRIVADO) -->
             <v-row class="mt-2" dense v-if="modo_transporte === '02'">
@@ -142,17 +145,69 @@
                 </v-col>
             </v-row>
 
-            <!-- Ubigeos -->
-            <v-row dense>
 
-                <v-col cols="12" sm="4">
-                    <v-text-field outlined dense v-model="u_destino_comun" label="Ubigeo Destino (SUNAT) - Común" />
-                </v-col>
-                <v-col cols="12" sm="4">
-                    <v-select outlined dense v-model="medida_t" :items="array_medidas" label="Medida Peso Total" />
-                </v-col>
-                <v-col cols="12" sm="4">
-                    <v-text-field outlined dense v-model="observacion" label="Observación (opcional)" />
+            <v-row class="mt-1 " dense>
+
+                <v-col cols="12">
+                    <v-card class="pa-3 ">
+                        <v-row dense>
+                            <v-row class="text-left">
+                                <v-col cols="6">
+                                    <h4 style="font-size:13.5px">Punto de Partida
+                                    </h4>
+                                </v-col>
+                                <v-col cols="6">
+
+                                </v-col>
+                            </v-row>
+                            <v-col cols="12">
+                                <v-row class="" dense>
+                                    <v-col cols="4">
+                                        <v-autocomplete outlined dense clearable v-model="departamento_p"
+                                            :items="arrayDepas" item-text="nombre" return-object label="DEPARTAMENTO">
+                                            <template v-slot:item="{ item }">
+                                                <div class="d-flex justify-space-between" style="width:100%">
+                                                    <span>{{ item.nombre }}</span>
+                                                    <small class="grey--text">{{ item.ubigeo_sunat || item.ubigeo
+                                                    }}</small>
+                                                </div>
+                                            </template>
+                                        </v-autocomplete>
+                                    </v-col>
+                                    <v-col cols="4">
+                                        <v-autocomplete outlined dense clearable v-model="provincia_p"
+                                            :items="arrayProvsP" item-text="nombre" return-object label="PROVINCIA"
+                                            :disabled="!departamento_p">
+                                            <template v-slot:item="{ item }">
+                                                <div class="d-flex justify-space-between" style="width:100%">
+                                                    <span>{{ item.nombre }}</span>
+                                                    <small class="grey--text">{{ item.ubigeo_sunat || item.ubigeo
+                                                    }}</small>
+                                                </div>
+                                            </template>
+                                        </v-autocomplete>
+
+                                    </v-col>
+                                    <v-col cols="4">
+                                        <v-autocomplete outlined dense clearable v-model="distrito_p"
+                                            :items="arrayDistsP" item-text="nombre" return-object label="DISTRITO"
+                                            :disabled="!provincia_p">
+                                            <template v-slot:item="{ item }">
+                                                <div class="d-flex justify-space-between" style="width:100%">
+                                                    <span>{{ item.nombre }}</span>
+                                                    <small class="grey--text">{{ item.ubigeo_sunat || item.ubigeo
+                                                    }}</small>
+                                                </div>
+                                            </template>
+                                        </v-autocomplete>
+                                    </v-col>
+                                </v-row>
+                                <v-textarea :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : 'mt-n5'"
+                                    style="font-size:13.5px" outlined dense v-model="dir_p" auto-grow filled
+                                    label="DIRECCION ORIGEN" rows="1"></v-textarea>
+                            </v-col>
+                        </v-row>
+                    </v-card>
                 </v-col>
             </v-row>
 
@@ -160,27 +215,88 @@
 
             <!-- Resumen de destinatarios a emitir -->
             <h4 class="mb-2">Destinatarios ({{ clientes.length }})</h4>
-            <v-simple-table dense fixed-header height="50vh">
-                <thead>
-                    <tr>
-                        <th>Cliente</th>
-                        <th>Dirección destino</th>
-                        <th class="text-right">Peso</th>
-                        <th class="text-center">Items</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="(c, i) in clientes" :key="i">
-                        <td>{{ c.cliente }}</td>
-                        <td>{{ c.direccion }}</td>
-                        <td class="text-right">{{ c.peso_total }}</td>
-                        <td class="text-center">
-                            <span v-if="Array.isArray(c.items)">{{ c.items.length }}</span>
-                            <span v-else class="red--text">0</span>
-                        </td>
-                    </tr>
-                </tbody>
-            </v-simple-table>
+
+            <v-data-table :headers="headersDest" :items="clientes" item-key="numeracion" dense fixed-header
+                height="50vh" show-expand class="elevation-0">
+                <!-- Items count -->
+                <template v-slot:item.doc_relacionado="{ item }">
+                    <span class="font-weight-medium">
+                        {{ item.cod_comprobante }} : {{ item.numeracion }}
+                    </span>
+                </template>
+
+                <template v-slot:item.items_count="{ item }">
+                    <span v-if="Array.isArray(item.items)">{{ item.items.length }}</span>
+                    <span v-else class="red--text">0</span>
+                </template>
+
+                <!-- Peso -->
+                <template v-slot:item.peso_total="{ item }">
+                    <div class="text-right">{{ item.peso_total }}</div>
+                </template>
+
+                <!-- EXPAND: Observación + detalle items -->
+                <template v-slot:expanded-item="{ headers, item }">
+                    <td :colspan="headers.length" class="pa-3 grey lighten-4">
+                        <v-row dense>
+                            <v-col cols="12" sm="6">
+                                <v-text-field v-model.number="item.peso_total" label="Peso (KG)" type="number" min="0"
+                                    step="0.01" dense outlined hide-details class="mb-2" />
+                                <v-textarea outlined dense rows="2" auto-grow label="Observación"
+                                    v-model="item.observacion" />
+
+                            </v-col>
+
+                            <v-col cols="12" sm="6">
+                                <v-card outlined class="pa-2">
+                                    <v-row dense class="mb-2">
+                                        <v-col cols="12" class="d-flex justify-end">
+                                            <v-btn x-small color="error" class="mr-2" @click="quitarTodosItems(item)">
+                                                <v-icon left small>mdi-broom</v-icon> Quitar todo
+                                            </v-btn>
+
+                                            <v-btn x-small color="primary" @click="abrirDialAgregarItem(item)">
+                                                <v-icon left small>mdi-plus</v-icon> Agregar ítem
+                                            </v-btn>
+                                        </v-col>
+                                    </v-row>
+
+                                    <div class="font-weight-medium mb-2">Ítems ({{ (item.items || []).length }})</div>
+
+                                    <v-simple-table dense>
+                                        <thead>
+                                            <tr>
+                                                <th style="width:30px"></th>
+                                                <th>Producto</th>
+                                                <th class="text-right">Cant</th>
+                                                <th>Medida</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            <tr v-for="(it, k) in (item.items || [])" :key="k">
+                                                <td>
+                                                    <v-icon small color="red"
+                                                        @click="quitarItem(item, k)">mdi-close</v-icon>
+                                                </td>
+                                                <td style="font-size:12px">{{ it.nombre || it.descripcion || "-" }}</td>
+                                                <td class="text-right" style="font-size:12px">{{ it.cantidad || 0 }}
+                                                </td>
+                                                <td style="font-size:12px">{{ it.medida || "-" }}</td>
+                                            </tr>
+
+                                            <tr v-if="!(item.items || []).length">
+                                                <td colspan="4" class="red--text">Sin ítems</td>
+                                            </tr>
+                                        </tbody>
+                                    </v-simple-table>
+
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                    </td>
+                </template>
+            </v-data-table>
 
 
             <!-- Resultados -->
@@ -193,6 +309,7 @@
                         <tr>
                             <th>ID</th>
                             <th>Cliente</th>
+
                             <th>Estado</th>
                             <th>Mensaje</th>
                         </tr>
@@ -201,6 +318,7 @@
                         <tr v-for="r in resultados" :key="r.id">
                             <td>{{ r.id || '-' }}</td>
                             <td>{{ r.cliente }}</td>
+
                             <td>
                                 <span :class="r.ok ? 'green--text' : 'red--text'">
                                     {{ r.ok ? 'ENVIADO' : 'NO EMITIDO' }}
@@ -214,19 +332,28 @@
         </v-card>
 
         <!-- Diálogos -->
+        <transportista v-if="dial_trans" @cierre="dial_trans = false" @agrega_lista="agregar_empresa($event)" />s
         <vehiculos v-if="dial_agrega_v" @cierre="dial_agrega_v = false" @agrega_lista="agrega_vehiculo($event)" />
         <choferes v-if="dial_agrega_c" @cierre="dial_agrega_c = false" @agrega_lista="agrega_conductor($event)" />
+        <dial_items v-if="dial_agrega" @cierre="dial_agrega = false" @agrega_item="guada_item($event)" />
+
     </v-dialog>
 </template>
 
 <script>
-import { obtenContador, nuevaGuiaremision, sumaContador,grabaCabecera_p } from '@/db'
+import { obtenContador, nuevaGuiaremision, sumaContador, grabaCabecera_p } from '@/db'
+import transportista from '@/views/transporte/dial/dial_transportista'
 import { guia_remision } from '@/servidorsunat'
 import moment from 'moment'
 import store from '@/store'
 import vehiculos from '@/views/transporte/vehiculos'
 import choferes from '@/views/transporte/choferes'
-
+import dial_items from "@/views/transporte/dial/dialogo_agrega_items.vue";
+import {
+    departamento,
+    provincia,
+    distrito
+} from '../../../ubigeos'
 export default {
     name: 'GuiaMasivaSimple',
     props: {
@@ -235,9 +362,15 @@ export default {
     components: {
         vehiculos,
         choferes,
+        transportista,
+        dial_items
     },
     data: () => ({
         // Cabecera común (misma lógica que unitaria)
+        dial_agrega: false,
+        destinatarioActivo: null, // aquí guardamos la fila actual
+
+        dial_trans: false,
         dial: false,
         tipo_guia: 'GUIA REMITENTE',                // 'GUIA REMITENTE' | 'GUIA TRANSPORTISTA'
         array_tipo_guia: ['GUIA REMITENTE'],
@@ -253,20 +386,53 @@ export default {
         u_destino_comun: store.state.baseDatos.ubigeo,                        // simple: 1 ubigeo destino para todos
         medida_t: 'KILOGRAMO',
         array_medidas: ['KILOGRAMO', 'TONELADA'],
-        observacion: '',
-
+        headersDest: [
+            { text: "Cliente", value: "cliente" },
+            { text: "Doc Relacionado", value: "doc_relacionado" },
+            { text: "Punto llegada", value: "direccion" },
+            { text: "Peso", value: "peso_total", align: "end" },
+            { text: "Items", value: "items_count", align: "center" },
+            { text: "", value: "data-table-expand" }
+        ],
         // Vehículos y conductores (privado)
         dial_agrega_v: false,
         dial_agrega_c: false,
         array_vehiculo: [],                         // { placa, num_habilitacion, autorizacion, emisor_autori }
         array_conductor: [],                        // { num_doc_conductor, nom_conductor, num_licencia, title? }
-
+        departamento_p: null,
+        provincia_p: null,
+        distrito_p: null,
+        arrayDepas: [],
+        arrayProvsP: [],
+        arrayDistsP: [],
+        cascadaLock: false,
         // Estado UI
         procesando: false,
         resultados: [],
         erroresGenerales: '',
     }),
     created() {
+        this.arrayDepas = departamento() || []
+        const bd = store.state.baseDatos || {}
+        this.cascadaLock = true
+        try {
+            const depP = this.findDep(bd.departamento)
+            const provP = this.findProv(depP, bd.provincia)
+            const distP = this.findDist(provP, bd.distrito)
+
+            // Set partida (objetos)
+            this.departamento_p = depP
+            this.arrayProvsP = depP ? (provincia(depP.ubigeo || depP.ubigeo_sunat) || []) : []
+            this.provincia_p = provP
+            this.arrayDistsP = provP ? (distrito(provP.ubigeo || provP.ubigeo_sunat) || []) : []
+            this.distrito_p = distP
+
+            // Dirección + ubigeo
+            this.dir_p = bd.direccion || ''
+            this.u_origen = bd.ubigeo || ''
+        } finally {
+            this.$nextTick(() => { this.cascadaLock = false })
+        }
         this.dial = true
     },
     computed: {
@@ -277,7 +443,52 @@ export default {
             return this.modo_transporte === '01' ? 'Entrega al transportista' : 'Inicio del traslado'
         },
     },
+    watch: {
+        'departamento_p'(depa) {
+            if (this.cascadaLock) return
+            this.provincia_p = null
+            this.distrito_p = null
+            this.arrayDistsP = []
+            if (depa && (depa.ubigeo || depa.ubigeo_sunat)) {
+                this.arrayProvsP = provincia(depa.ubigeo || depa.ubigeo_sunat) || []
+            } else {
+                this.arrayProvsP = []
+            }
+            if (!this.distrito_p) this.u_origen = ''
+        },
+        'provincia_p'(prov) {
+            if (this.cascadaLock) return
+            this.distrito_p = null
+            if (prov && (prov.ubigeo || prov.ubigeo_sunat)) {
+                this.arrayDistsP = distrito(prov.ubigeo || prov.ubigeo_sunat) || []
+            } else {
+                this.arrayDistsP = []
+            }
+            if (!this.distrito_p) this.u_origen = ''
+        },
+
+        'distrito_p'(dist) {
+            if (this.cascadaLock) return
+            const dep = this.departamento_p || null
+            const prov = this.provincia_p || null
+            const dis = dist || null
+
+            const uDep = dep?.ubigeo_sunat ?? dep?.ubigeo ?? ''
+            const uProv = prov?.ubigeo_sunat ?? prov?.ubigeo ?? ''
+            const uDist = dis?.ubigeo_sunat ?? dis?.ubigeo ?? ''
+
+            this.u_origen = (uDep && uProv && uDist) ? `${uDep}${uProv}${uDist}` : ''
+            console.log(this.u_origen)
+        },
+    },
     methods: {
+        agregar_empresa(data) {
+            console.log(data)
+            this.ruc_transporte = data.ruc
+            this.razon_transporte = data.razon_transporte
+            this.registro_mtc = data.registro_mtc
+            this.dial_trans = false
+        },
         obtencodigomedida(nombre) {
             const it = store.state.medidassunat.find(x => x.nombre === nombre)
             return it ? it.corto : 'TNL' // fallback simple
@@ -342,11 +553,14 @@ export default {
 
                 for (const c of this.clientes) {
                     // Items: si no trae, no emitimos esa guía
+                    console.log(c)
                     const items = Array.isArray(c.items) ? c.items : []
                     if (!items.length) {
                         this.resultados.push({ id: '-', cliente: c.cliente, ok: false, msg: 'Sin ítems' })
                         continue
                     }
+                    const docRel = this.buildDocRelacionado(c);
+                    const doc_relacionados = docRel ? [docRel] : [];
 
                     // Documento destinatario
                     const codDocDest = this.obten_codigo_doc(String(c.cod_tipoDocumento || '').trim() || (c.dni?.length === 11 ? 'RUC' : 'DNI'))
@@ -365,7 +579,7 @@ export default {
                         fecha_traslado: Traslado,
                         motivo: this.motivos_guia,
                         cod_motivo: this.codMotivo(this.motivos_guia),
-                        observacion: this.observacion,
+                        observacion: (c.observacion || ''),
                         modo_transporte: this.modo_transporte,
                         modo_transporte_desc: this.modo_transporte === '01' ? 'PUBLICO' : 'PRIVADO',
                         ruc_transporte: this.ruc_transporte,
@@ -383,9 +597,9 @@ export default {
                         // Origen común
                         u_origen: this.u_origen,
                         dir_origen: String(this.dir_origen || '').toUpperCase(),
-                        departamento_p: store.state.baseDatos.departamento?.nombre || store.state.baseDatos.departamento || '',
-                        provincia_p: store.state.baseDatos.provincia?.nombre || store.state.baseDatos.provincia || '',
-                        distrito_p: store.state.baseDatos.distrito?.nombre || store.state.baseDatos.distrito || '',
+                        departamento_p: this.departamento_p.nombre || store.state.baseDatos.departamento || '',
+                        provincia_p: this.provincia_p.nombre || store.state.baseDatos.provincia || '',
+                        distrito_p: this.distrito_p.nombre || store.state.baseDatos.distrito || '',
                         cod_documento: codDocDest,
                         ruc_destinatario: rucDest,
                         razonsocial_destinatario: razonDest,
@@ -408,13 +622,14 @@ export default {
                         ruc_subcontrata: '',
                         razon_subcontrata: '',
                         pagado_por: 'Remitente',
-                        doc_relacionados: []
+                        doc_relacionados,
+
                     }
 
                     try {
                         await nuevaGuiaremision(array.id, array)  // guardas en tu BD
                         guia_remision(array, array.data)          // envías a SUNAT
-                        console.log(    this.data_guia.id_grupo,
+                        console.log(this.data_guia.id_grupo,
                             `${c.numeracion}/guia_id`,
                             array.id)
                         await grabaCabecera_p(
@@ -484,7 +699,101 @@ export default {
         cierra() {
             this.dial = false
             this.$emit('cierra')
-        }
+        },
+        findDep(val) {
+            if (!val) return null
+            if (typeof val === 'object') return val
+            return (this.arrayDepas || []).find(d =>
+                String(d.nombre || '').toUpperCase() === String(val).toUpperCase()
+                || d.ubigeo === val
+                || d.ubigeo_sunat === val
+            ) || null
+        },
+
+        findProv(depObj, val) {
+            if (!depObj || !val) return null
+            if (typeof val === 'object') return val
+            const provs = provincia(depObj.ubigeo || depObj.ubigeo_sunat) || []
+            return provs.find(p =>
+                String(p.nombre || '').toUpperCase() === String(val).toUpperCase()
+                || p.ubigeo === val
+                || p.ubigeo_sunat === val
+            ) || null
+        },
+
+        findDist(provObj, val) {
+            if (!provObj || !val) return null
+            if (typeof val === 'object') return val
+            const dists = distrito(provObj.ubigeo || provObj.ubigeo_sunat) || []
+            return dists.find(d =>
+                String(d.nombre || '').toUpperCase() === String(val).toUpperCase()
+                || d.ubigeo === val
+                || d.ubigeo_sunat === val
+            ) || null
+        },
+        clean(v) {
+            return (v == null ? '' : String(v)).replace(/\s+/g, '');
+        },
+
+        buildDocRelacionado(c) {
+            // En tu data: c.dni es del CLIENTE, NO del emisor.
+            const rucEmisor = this.clean(store.state.baseDatos?.ruc);      // TU RUC
+            const tipo = this.clean(c?.cod_comprobante);                  // 01/03/07/08...
+            const id = this.clean(c?.numeracion);                         // BD06-00000466
+
+            if (!rucEmisor || !tipo || !id) return null;
+            return { ruc: rucEmisor, tipo, id };
+        },
+        abrirDialAgregarItem(dest) {
+            // dest es el "item" de la fila (destinatario)
+            this.destinatarioActivo = dest;
+            if (!Array.isArray(this.destinatarioActivo.items)) {
+                this.$set(this.destinatarioActivo, "items", []);
+            }
+            this.dial_agrega = true;
+        },
+
+        guada_item(data) {
+            // data viene del diálogo
+            if (!this.destinatarioActivo) {
+                this.dial_agrega = false;
+                return;
+            }
+
+            // normaliza estructura mínima esperada
+            const nuevo = {
+                uuid: data.uuid || data.cod_producto || data.id || String(Date.now()),
+                cod_producto: data.cod_producto || data.uuid || data.id || "",
+                descripcion: data.descripcion || data.nombre || "",
+                nombre: data.nombre || data.descripcion || "",
+                cantidad: Number(data.cantidad || 0),
+                medida: data.medida || "NIU",
+                des_medida: data.des_medida || "",
+                peso: Number(data.peso || 0),
+                peso_total_item: Number(data.peso_total_item || 0),
+            };
+
+            if (!Array.isArray(this.destinatarioActivo.items)) {
+                this.$set(this.destinatarioActivo, "items", []);
+            }
+
+            this.destinatarioActivo.items.push(nuevo);
+
+            this.dial_agrega = false;
+            this.destinatarioActivo = null;
+        },
+
+        quitarItem(dest, index) {
+            if (!dest || !Array.isArray(dest.items)) return;
+            dest.items.splice(index, 1);
+        },
+
+        quitarTodosItems(dest) {
+            if (!dest) return;
+            this.$set(dest, "items", []);
+        },
+
+
     },
 }
 </script>

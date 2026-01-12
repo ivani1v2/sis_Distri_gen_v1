@@ -6,7 +6,7 @@
             menu-props="{ maxHeight: '300px', auto: true }" outlined dense ref="buscarField"
             @keydown.native="detectarEntrada" :autofocus="!$store.state.esmovil && muestra_tabla"
             append-icon="mdi-magnify" :loading="cargando" :search-input.sync="buscar"
-            no-data-text="No se encontraron productos" @change="prod_selecto" >
+            no-data-text="No se encontraron productos" @change="prod_selecto">
             <template v-slot:item="{ item }">
                 <v-list-item-content>
                     <v-list-item-title>
@@ -20,6 +20,12 @@
                         </small>
                         — <strong class="red--text">S/. {{ Number(item.precio || 0).toFixed(2) }}</strong>
                     </v-list-item-title>
+                    <v-list-item-subtitle class="mt-n1 mb-n2">
+                        <span class="text-caption"
+                            :class="Number(item.stock) > 0 ? 'green--text text--darken-2' : 'orange--text text--darken-1'">
+                            Stock: <strong> {{ convierte_stock(item.stock, item.factor) }}</strong>
+                        </span>
+                    </v-list-item-subtitle>
                 </v-list-item-content>
             </template>
 
@@ -111,6 +117,7 @@
                 <v-system-bar window dark>
                     <v-icon @click="dialo_cantidad = false">mdi-close</v-icon>
                     <v-spacer></v-spacer>
+                    <v-checkbox v-if="$store.state.permisos.edita_bono" v-model="es_bono" label="ES BONO"></v-checkbox>
                 </v-system-bar>
                 <v-card-text class="mt-4">
                     <!-- Selector CAJAS + UND simultáneos -->
@@ -246,7 +253,7 @@
 <script>
 import store from '@/store/index'
 export default {
-    name: 'caja',
+    name: 'catalogo_fijo',
 
     props: {
         data: [],
@@ -278,6 +285,7 @@ export default {
             cantUnd: 0,
             snackAgregar: false,
             snackMsg: 'Producto agregado',
+            es_bono: false
         }
     },
     computed: {
@@ -367,6 +375,7 @@ export default {
         },
     },
     created() {
+
         this.buscar = ''
         this._tierSugerido = 1; // estado interno para pintar sugerencia
     },
@@ -418,7 +427,7 @@ export default {
                 // Se asume que es lector de código de barra
                 this.esCodigoDeBarras = true;
                 this.codigoIngresado += event.key;
-                
+
             } else {
                 // Se asume que es teclado
                 this.esCodigoDeBarras = false;
@@ -463,8 +472,14 @@ export default {
             const medidaEmitida = (factor === 1)
                 ? (this.producto_selecto.medida || 'UNIDAD')
                 : (esCaja ? (this.producto_selecto.medida || 'CAJA') : 'UNIDAD');
+            const ope = this.es_bono
+                ? 'GRATUITA'
+                : (this.producto_selecto.operacion || 'GRAVADA');
+
+
             const linea = {
                 ...this.producto_selecto,
+                operacion: ope,
                 cantidad: cantidadEmitida,                       // cajas o unidades, según modo
                 precio: Number(precioEmitido.toFixed(4)),        // precio por caja o por unidad
                 medida: medidaEmitida,
@@ -544,6 +559,7 @@ export default {
                 }
                 this.cantidadInput = 1;
                 this.producto_selecto = producto;
+                this.es_bono = false
                 this.dialo_cantidad = true;
                 this.cantCajas = 0;
                 this.cantUnd = 1; // por defecto 1 und para no quedar en 0
@@ -567,6 +583,7 @@ export default {
                 this.cantidadInput = 1;
                 this.producto_selecto = valor;
                 this.precioSeleccionado = null;
+                this.es_bono = false
                 this.dialo_cantidad = true;
                 this.cantCajas = 0;
                 this.cantUnd = 1; // por defecto 1 und para no quedar en 0

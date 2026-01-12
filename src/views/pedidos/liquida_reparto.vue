@@ -1,296 +1,361 @@
 <template>
-    <div class="pa-3 mt-6">
-        <v-row dense class="mt-2">
-            <v-col cols="4">
-                <h5 class="">
-                    FECHA REPARTO : {{ conviertefecha(cabecera_total.fecha_emision) }}
-                </h5>
-            </v-col>
-            <v-col cols="4">
-                <v-menu bottom offset-y transition="scale-transition">
+    <div class="pa-4">
+        <v-card class="elevation-4 rounded-lg">
+
+            <v-card-title class="pa-3 blue-grey lighten-5 d-flex align-center">
+
+                <div class="d-flex align-center">
+                    <v-icon color="red" large @click="anterior" title="Reparto Anterior">mdi-arrow-left-bold</v-icon>
+                    <h3 class="text-h6 mx-2">
+                        REPARTO N° {{ router_grupo }}
+                    </h3>
+                    <v-icon color="red" large @click="siguiente" title="Reparto Siguiente">mdi-arrow-right-bold</v-icon>
+                </div>
+
+                <v-spacer></v-spacer>
+
+                <v-menu bottom offset-y transition="scale-transition" nudge-bottom="5" :close-on-content-click="false">
                     <template v-slot:activator="{ on, attrs }">
-                        <v-btn color="red darken-2" dark block small v-bind="attrs" v-on="on" class="rounded-lg">
-                            <v-icon left small>mdi-file-chart</v-icon>
-                            Reportes
-                            <v-spacer></v-spacer>
-                            <v-icon right small>mdi-chevron-down</v-icon>
+                        <v-btn color="red darken-2" dark small v-bind="attrs" v-on="on" class="rounded-lg mx-1">
+                            <v-icon left small>mdi-file-chart</v-icon> Reportes
                         </v-btn>
                     </template>
-
                     <v-list dense class="py-1">
                         <v-list-item @click="dial_descarga = true">
                             <v-list-item-icon><v-icon color="blue darken-2">mdi-warehouse</v-icon></v-list-item-icon>
                             <v-list-item-title>Reporte Almacén</v-list-item-title>
                         </v-list-item>
-
                         <v-list-item @click="reporte_producto_cliente()">
                             <v-list-item-icon><v-icon
                                     color="green darken-2">mdi-account-multiple</v-icon></v-list-item-icon>
                             <v-list-item-title>Producto x Cliente</v-list-item-title>
                         </v-list-item>
-
                         <v-list-item @click="pdf_transporte()">
                             <v-list-item-icon><v-icon color="indigo darken-2">mdi-truck</v-icon></v-list-item-icon>
                             <v-list-item-title>Reporte Transporte</v-list-item-title>
                         </v-list-item>
-
                         <v-list-item @click="reporte_cobrar()">
                             <v-list-item-icon><v-icon
                                     color="orange darken-2">mdi-account-cash</v-icon></v-list-item-icon>
                             <v-list-item-title>Por Cobrar</v-list-item-title>
                         </v-list-item>
-
                         <v-list-item @click="ver_detalle_masivo()">
                             <v-list-item-icon><v-icon color="purple darken-2">mdi-file-eye</v-icon></v-list-item-icon>
-                            <v-list-item-title>Ver Detalle</v-list-item-title>
+                            <v-list-item-title>Ver Detalle (Consol.)</v-list-item-title>
                         </v-list-item>
-
                         <v-divider></v-divider>
-
-                        <v-list-item @click="dialogo_imprime = !dialogo_imprime">
+                        <v-list-item @click="dialogo_imprime = true">
                             <v-list-item-icon><v-icon color="teal darken-2">mdi-printer</v-icon></v-list-item-icon>
                             <v-list-item-title>Imprimir Comprobantes</v-list-item-title>
                         </v-list-item>
                     </v-list>
                 </v-menu>
-            </v-col>
 
-            <v-col cols="4">
-                <v-menu bottom offset-y transition="scale-transition">
+                <v-menu bottom offset-y transition="scale-transition" nudge-bottom="5">
                     <template v-slot:activator="{ on, attrs }">
-                        <v-btn color="blue darken-3" dark block small v-bind="attrs" v-on="on" class="rounded-lg">
-                            <v-icon left small>mdi-cogs</v-icon>
-                            Acciones
-                            <v-spacer></v-spacer>
-                            <v-icon right small>mdi-chevron-down</v-icon>
+                        <v-btn color="blue darken-3" dark small v-bind="attrs" v-on="on" class="rounded-lg mx-1">
+                            <v-icon left small>mdi-cogs</v-icon> Acciones
                         </v-btn>
                     </template>
-
                     <v-list dense class="py-1">
-
                         <v-list-item @click="envia_sunat">
                             <v-list-item-icon><v-icon color="green">mdi-cloud-upload</v-icon></v-list-item-icon>
                             <v-list-item-title>Enviar a Sunat</v-list-item-title>
                         </v-list-item>
-
                         <v-list-item @click="abare_guias()">
                             <v-list-item-icon><v-icon color="cyan darken-2">mdi-file-send</v-icon></v-list-item-icon>
-                            <v-list-item-title>Guía de Remisión</v-list-item-title>
+                            <v-list-item-title>Generar Guía</v-list-item-title>
                         </v-list-item>
-
                         <v-list-item @click="transferir_pedidos()">
                             <v-list-item-icon><v-icon
                                     color="deep-purple darken-1">mdi-swap-horizontal</v-icon></v-list-item-icon>
                             <v-list-item-title>Transferir Pedidos</v-list-item-title>
                         </v-list-item>
-
                         <v-list-item @click="anular_masivo()">
                             <v-list-item-icon><v-icon color="red">mdi-cancel</v-icon></v-list-item-icon>
                             <v-list-item-title>Anular Masivo</v-list-item-title>
                         </v-list-item>
-
                     </v-list>
                 </v-menu>
-            </v-col>
-        </v-row>
-        <v-row dense class="mt-n1">
-            <v-col cols="4">
 
-                <h3>
-                    <v-icon color="red" large @click="anterior()">mdi-arrow-left-bold</v-icon>
-                    REPARTO N°{{ router_grupo }}
-                    <v-icon color="red" large @click="siguiente()">mdi-arrow-right-bold</v-icon>
-                </h3>
+            </v-card-title>
 
-            </v-col>
-            <v-col cols="4">
-                <h4>TOTAL (S/.): {{ t_general }}</h4>
-                <h6>Contado (S/.): {{ t_contado }}</h6>
-                <h6>Credito (S/.): {{ t_credito }}</h6>
-            </v-col>
-            <v-col cols="4">
-                <h4>TOTAL PEDIDOS: {{ suma_pedidos }}</h4>
-            </v-col>
-
-        </v-row>
-
-        <v-simple-table fixed-header dense height='65vh'>
-            <template v-slot:default>
-                <thead>
-                    <tr>
-                        <th class="text-left">
-
-                            Correlativo
-                        </th>
-                        <th class="text-left">
-                            Nombre
-                        </th>
-
-                        <th class="text-left">
-                            <v-icon color="info"
-                                @click="(ordenar_correlativo = false, ordenar_vendedor = !ordenar_vendedor)">mdi-sort-alphabetical-descending</v-icon>
-                            Vend.
-                        </th>
-                        <th class="text-left">
-                            Peso (KG)
-                        </th>
-                        <th class="text-left">
-                            Modo
-                        </th>
-                        <th class="text-left">
-                            Estado
-                        </th>
-                        <th class="text-left">
-                            Monto Credito
-                        </th>
-                        <th class="text-left">
-                            Total
-                        </th>
-                        <th class="text-left">
-                            <div class="d-flex">
-                                Accion
-                                <v-checkbox class="mt-n1 mb-n8" dense v-model="consolida_t" @click="consolida_todo()">
-                                </v-checkbox>
-                            </div>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="item in listafiltrada" :key="item.numeracion">
-                        <td style="font-size:75%;" width="150">{{ item.numeracion }} <span @click="imprime_guia(item)"
-                                class="red--text" v-if="item.guia_id"> - GR</span> </td>
-                        <td style="font-size:75%;" width="500">{{ item.dni }} - {{ item.cliente }}</td>
-                        <td style="font-size:75%;" width="20">{{ item.vendedor }}</td>
-                        <td style="font-size:75%;" width="20">{{ item.peso_total }}</td>
-                        <td style="font-size:75%;" white="30">{{ item.forma_pago }}</td>
-                        <td style="font-size:75%;" white="15" v-if="item.estado == 'ANULADO'" class="red--text">ANUL
-                        </td>
-                        <td style="font-size:75%;" white="15" v-if="item.estado == 'PENDIENTE'" class="orange--text">
-                            PEND
-                        </td>
-                        <td style="font-size:75%;" white="15" v-if="item.estado == 'ENVIADO'" class="green--text">ENVI
-                        </td>
-                        <td style="font-size:75%;" white="20">{{ item.moneda }}{{ item.pendiente_pago }}</td>
-                        <td style="font-size:75%;" white="20">{{ item.moneda }}{{ item.total }}</td>
-                        <td width="50">
-                            <v-row dense>
-                                <v-col cols="6">
-                                    <v-menu>
-                                        <template v-slot:activator="{ on, attrs }">
-                                            <v-btn icon v-bind="attrs" v-on="on">
-                                                <v-icon>mdi-dots-vertical</v-icon>
-                                            </v-btn>
-                                        </template>
-                                        <v-list dense>
-                                            <v-list-item @click='ver_detalle(item)'>
-                                                <v-list-item-icon>
-                                                    <v-icon color="warning"> mdi-eye</v-icon>
-                                                </v-list-item-icon>
-                                                <v-list-item-title>ver Detalle</v-list-item-title>
-                                            </v-list-item>
-                                            <v-list-item @click='imprimir(item)'>
-                                                <v-list-item-icon>
-                                                    <v-icon color="info"> mdi-cash-register</v-icon>
-                                                </v-list-item-icon>
-                                                <v-list-item-title>Imprimir</v-list-item-title>
-                                            </v-list-item>
-                                            <v-list-item @click='edita_c(item)' v-if="item.estado == 'PENDIENTE'">
-                                                <v-list-item-icon>
-                                                    <v-icon color="success"> mdi-pencil</v-icon>
-                                                </v-list-item-icon>
-                                                <v-list-item-title>Editar</v-list-item-title>
-                                            </v-list-item>
-                                            <v-list-item @click='abrirDialogoAnulacion(item)'
-                                                v-if="item.estado == 'PENDIENTE'">
-                                                <v-list-item-icon>
-                                                    <v-icon color="error"> mdi-delete</v-icon>
-                                                </v-list-item-icon>
-                                                <v-list-item-title>Anular</v-list-item-title>
-                                            </v-list-item>
-                                        </v-list>
-                                    </v-menu>
-                                </v-col>
-                                <v-col cols="6">
-                                    <v-checkbox class="mb-n9" dense v-model="item.consolida"></v-checkbox>
-                                </v-col>
-                            </v-row>
-
-                        </td>
-                    </tr>
-                </tbody>
-            </template>
-        </v-simple-table>
-
-        <v-dialog v-model="dialogo_detalle" max-width="850px">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="(dialogo_detalle = false)">mdi-close</v-icon>
-                    <v-spacer></v-spacer>
-                    <v-icon @click="Exporta_excel()" large color="success">mdi-microsoft-excel</v-icon>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
+            <v-card-text class="py-3">
                 <v-row dense>
-                    <v-col cols="12">
+                    <v-col cols="12" sm="4">
+                        <h4 class="text-subtitle-1">
+                            FECHA TRASLADO: <span class="primary--text">{{ conviertefecha(cabecera_total.fecha_traslado)
+                                }}</span>
+                        </h4>
+                    </v-col>
+                    <v-col cols="12" sm="4">
+                        <h4 class="text-subtitle-1">
+                            TOTAL PEDIDOS: <span class="font-weight-bold">{{ suma_pedidos }}</span>
+                            <span class="ml-4">PESO TOTAL: <span class="font-weight-bold">{{ suma_peso }}
+                                    KG</span></span>
+                        </h4>
+                    </v-col>
+                    <v-col cols="12" sm="4">
+                        <h4 class="text-subtitle-1">
+                            TOTAL VENTA: <span class="green--text text--darken-2">S/.{{ t_general }}</span>
+                        </h4>
+                        <span class="caption">Contado: S/.{{ t_contado }} | Crédito: S/.{{ t_credito }}</span>
                     </v-col>
                 </v-row>
-                <v-simple-table dark fixed-header height="70vh" dense>
-                    <template v-slot:default>
+            </v-card-text>
 
+            <v-divider></v-divider>
+
+            <v-simple-table fixed-header dense height='65vh' class="elevation-0">
+                <template v-slot:default>
+                    <thead>
+                        <tr class="blue-grey lighten-5">
+                            <th class="text-left">Correlativo</th>
+                            <th class="text-left">Cliente</th>
+                            <th class="text-left">
+                                <v-btn icon x-small
+                                    @click="ordenar_correlativo = false; ordenar_vendedor = !ordenar_vendedor"
+                                    color="info">
+                                    <v-icon small>mdi-sort-alphabetical-descending</v-icon>
+                                </v-btn>
+                                Vend.
+                            </th>
+                            <th class="text-center">Peso (KG)</th>
+                            <th class="text-left">Modo</th>
+                            <th class="text-center">SUNAT</th>
+                            <th class="text-right">Monto Crédito</th>
+                            <th class="text-right">Total</th>
+                            <th class="text-center">
+                                Accion
+                                <v-checkbox class="d-inline-block ml-2 mt-0" dense v-model="consolida_t"
+                                    @click="consolida_todo()" hide-details></v-checkbox>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="item in listafiltrada" :key="item.numeracion">
+                            <td class="caption font-weight-medium">
+                                {{ item.numeracion }}
+                                <v-chip v-if="item.guia_id" x-small color="cyan" dark class="ml-1"
+                                    @click="imprime_guia(item)">GR</v-chip>
+                            </td>
+                            <td class="caption">{{ item.dni }} - {{ item.cliente }}</td>
+                            <td class="caption">{{ item.vendedor }}</td>
+                            <td class="text-center caption">{{ item.peso_total }}</td>
+                            <td class="caption">
+                                <v-chip x-small :color="item.forma_pago === 'CREDITO' ? 'orange' : 'success'" dark>
+                                    {{ item.forma_pago }}
+                                </v-chip>
+                            </td>
+                            <td class="text-center">
+                                <v-chip x-small
+                                    :color="item.estado === 'ANULADO' ? 'red' : (item.estado === 'PENDIENTE' ? 'orange' : 'green')"
+                                    dark>
+                                    {{ item.estado.substring(0, 4) }}
+                                </v-chip>
+                            </td>
+                            <td class="text-right caption red--text">{{ item.moneda }}{{ redondear(item.pendiente_pago)
+                                }}</td>
+                            <td class="text-right caption font-weight-bold">{{ item.moneda }}{{ redondear(item.total) }}
+                            </td>
+                            <td class="text-center">
+                                <v-row dense align="center">
+                                    <v-col cols="6" class="pr-0">
+                                        <v-menu offset-y>
+                                            <template v-slot:activator="{ on, attrs }">
+                                                <v-btn icon x-small v-bind="attrs" v-on="on">
+                                                    <v-icon small>mdi-dots-vertical</v-icon>
+                                                </v-btn>
+                                            </template>
+                                            <v-list dense>
+                                                <v-list-item @click='ver_detalle(item)'>
+                                                    <v-list-item-icon><v-icon
+                                                            color="warning">mdi-eye</v-icon></v-list-item-icon>
+                                                    <v-list-item-title>Ver Detalle</v-list-item-title>
+                                                </v-list-item>
+                                                <v-list-item @click='genera_guia(item)'>
+                                                    <v-list-item-icon><v-icon
+                                                            color="success">mdi-truck</v-icon></v-list-item-icon>
+                                                    <v-list-item-title>Genera Guia Rem</v-list-item-title>
+                                                </v-list-item>
+                                                <v-list-item @click='imprimir(item)'>
+                                                    <v-list-item-icon><v-icon
+                                                            color="info">mdi-printer-check</v-icon></v-list-item-icon>
+                                                    <v-list-item-title>Imprimir Comprobante</v-list-item-title>
+                                                </v-list-item>
+                                                <v-list-item @click='edita_c(item)' v-if="item.estado == 'PENDIENTE'">
+                                                    <v-list-item-icon><v-icon
+                                                            color="success">mdi-pencil</v-icon></v-list-item-icon>
+                                                    <v-list-item-title>Editar (PENDIENTE)</v-list-item-title>
+                                                </v-list-item>
+                                                <v-list-item @click='abrirDialogoAnulacion(item)'
+                                                    v-if="item.estado != 'ANULADO'">
+                                                    <v-list-item-icon><v-icon
+                                                            color="error">mdi-delete</v-icon></v-list-item-icon>
+                                                    <v-list-item-title>Anular</v-list-item-title>
+                                                </v-list-item>
+                                            </v-list>
+                                        </v-menu>
+                                    </v-col>
+                                    <v-col cols="6" class="pl-0">
+                                        <v-checkbox class="mt-0" dense v-model="item.consolida"
+                                            hide-details></v-checkbox>
+                                    </v-col>
+                                </v-row>
+                            </td>
+                        </tr>
+                    </tbody>
+                </template>
+            </v-simple-table>
+        </v-card>
+
+        <v-dialog v-model="dialogDetalle" max-width="650">
+            <v-card class="rounded-lg">
+                <v-toolbar color="warning" dense dark><v-toolbar-title>Detalle del
+                        Pedido</v-toolbar-title><v-spacer></v-spacer><v-btn icon
+                        @click="dialogDetalle = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-card-text class="pa-4">
+                    <v-simple-table dense>
                         <thead>
                             <tr>
-                                <th class="text-left">
-                                    Descripcion
-                                </th>
-                                <th class="text-left">
-                                    Medida
-                                </th>
-                                <th class="text-left">
-                                    Cantidad.
-                                </th>
-                                <th class="text-left">
-                                    Precio
-                                </th>
-                                <th class="text-left">
-                                    Total
-                                </th>
+                                <th class="text-left">Producto</th>
+                                <th class="text-left">Medida</th>
+                                <th class="text-right">Precio Unitario</th>
+                                <th class="text-right">Total Neto</th>
                             </tr>
                         </thead>
-
                         <tbody>
-
-                            <tr v-for="item in arrayConsolidar" :key="item">
-                                <td>{{ item.id + ' ' + item.nombre }}</td>
-                                <td>{{ item.medida }}</td>
-                                <td>{{ item.cantidad }}</td>
-                                <td>S/.{{ item.precio }} </td>
-                                <td>S/.{{ item.total }}</td>
+                            <tr v-for="d in pedidoSeleccionado" :key="`${d.id}-${d.nombre}`">
+                                <td class="caption">
+                                    <strong class="red--text mr-1">{{ d.cantidad }}</strong> x {{ d.nombre }}
+                                    <v-chip v-if="d.operacion == 'GRATUITA'" x-small color="teal" dark
+                                        class="ml-1">GRATUITA</v-chip>
+                                </td>
+                                <td class="caption">{{ d.medida }}</td>
+                                <td class="text-right caption">
+                                    S/.{{ d.precio }}
+                                    <strong v-if="d.preciodescuento != 0" class="red--text ml-1">(-S/.{{
+                                        d.preciodescuento
+                                        }})</strong>
+                                </td>
+                                <td class="text-right caption font-weight-bold">S/.{{
+                                    redondear((Number(d.total_antes_impuestos)
+                                        + Number(d.total_impuestos))) }}</td>
                             </tr>
                         </tbody>
-                    </template>
-                </v-simple-table>
+                    </v-simple-table>
+                </v-card-text>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="dialogo_motivo_anulacion" max-width="520px" persistent>
+            <v-card class="rounded-lg">
+                <v-toolbar color="error" dense dark>
+                    <v-toolbar-title>Anulación de Comprobante</v-toolbar-title>
+                    <v-spacer></v-spacer>
+                    <v-btn icon @click="cerrarDialogoAnulacion"><v-icon>mdi-close</v-icon></v-btn>
+                </v-toolbar>
+                <v-card-text class="pt-4">
+                    <div class="mb-3 text-subtitle-2 grey--text text--darken-1">
+                        Anulando comprobante: <strong class="error--text">{{ comp_anular ? comp_anular.numeracion : ''
+                            }}</strong>
+                    </div>
+
+                    <v-select dense outlined clearable :items="motivos_predeterminados"
+                        label="Motivo (selección rápida)" v-model="motivo_seleccion" @change="sincronizaMotivo" />
+
+                    <v-textarea outlined dense auto-grow rows="2" v-model.trim="motivo_anulacion"
+                        label="Detalle del motivo (obligatorio)" :rules="[v => !!v || 'Ingrese el motivo']" />
+
+                    <div v-if="error_motivo" class="red--text text-caption mt-1">{{ error_motivo }}</div>
+                </v-card-text>
+                <v-card-actions class="px-4 pb-4">
+                    <v-btn text @click="cerrarDialogoAnulacion">Cancelar</v-btn>
+                    <v-spacer></v-spacer>
+                    <v-btn color="error" :loading="anulando" @click="confirmarAnulacion">
+                        <v-icon left>mdi-delete</v-icon> Anular comprobante
+                    </v-btn>
+                </v-card-actions>
             </v-card>
         </v-dialog>
 
         <v-dialog v-model="dial_descarga" max-width="500">
-            <v-card class="pa-5">
-                <h4 class="text-center">Seleccione el formato de descarga</h4>
-                <v-textarea v-model="observacion_reporte" label="Observación" outlined dense rows="2"
-                    auto-grow></v-textarea>
-                <v-row class="pa-1 mt-n2">
-                    <v-col cols="6">
-                        <v-btn class="mt-5" color="success" block @click="pdf_almacen()"> PDF </v-btn>
-                    </v-col>
-                    <v-col cols="6">
-                        <v-btn class="mt-5" color="error" block @click="exportar_ex()"> EXCEL </v-btn>
-                    </v-col>
-                </v-row>
+            <v-card class="rounded-lg">
+                <v-toolbar color="red darken-2" dense dark>
+                    <v-toolbar-title>Reporte de Almacén</v-toolbar-title>
+                    <v-spacer></v-spacer>
+                    <v-btn icon @click="dial_descarga = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-toolbar>
 
+                <v-card-text class="pa-4">
+                    <h4 class="text-subtitle-1 mb-2">Seleccione Formato de descarga</h4>
+
+                    <v-radio-group v-model="formato_descarga" row dense>
+                        <v-radio value="F1" label="CODIGO - DESCRIPCION - MEDIDA - CAJAS - UND - PESO" />
+                        <v-radio value="F2" label="CAJAS - UND - MEDIDA - DESCRIPCION - PESO" />
+                    </v-radio-group>
+
+                    <v-textarea v-model="observacion_reporte" label="Observación" outlined dense rows="2" auto-grow
+                        class="mt-3"></v-textarea>
+
+                    <v-row class="pa-1">
+                        <v-col cols="6">
+                            <v-btn class="mt-2" color="success" block @click="pdf_almacen()">
+                                <v-icon left>mdi-file-pdf-box</v-icon> PDF
+                            </v-btn>
+                        </v-col>
+                        <v-col cols="6">
+                            <v-btn class="mt-2" color="error" block @click="exportar_ex()">
+                                <v-icon left>mdi-file-excel</v-icon> EXCEL
+                            </v-btn>
+                        </v-col>
+                    </v-row>
+                </v-card-text>
+            </v-card>
+        </v-dialog>
+
+
+        <v-dialog v-model="dialogo_imprime" max-width="490px">
+            <v-card class="rounded-lg">
+                <v-toolbar color="teal darken-2" dense dark><v-toolbar-title>Seleccionar
+                        Formato</v-toolbar-title><v-spacer></v-spacer><v-btn icon
+                        @click="dialogo_imprime = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-card-text class="pa-4">
+                    <v-row dense>
+                        <v-col cols="12" md="4">
+                            <v-card outlined class="pa-3 text-center" @click.prevent="imprime_comprobante('A4')">
+                                <v-icon size="35" color="red">mdi-file-pdf-box</v-icon>
+                                <h5 class="text-caption mt-1">PDF A4</h5>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="12" md="4">
+                            <v-card outlined class="pa-3 text-center" @click.prevent="imprime_comprobante('80')">
+                                <v-icon size="35" color="red">mdi-printer-pos</v-icon>
+                                <h5 class="text-caption mt-1">Ticket 80mm</h5>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="12" md="4">
+                            <v-card outlined class="pa-3 text-center" @click.prevent="imprime_comprobante('58')">
+                                <v-icon size="35" color="red">mdi-printer-pos</v-icon>
+                                <h5 class="text-caption mt-1">Ticket 58mm</h5>
+                            </v-card>
+                        </v-col>
+                    </v-row>
+                </v-card-text>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog persistent v-model="progress" max-width="500">
+            <v-card class="pa-8 text-center rounded-lg">
+                <h5 class="text-subtitle-1 mb-2">Procesando...</h5>
+                <v-progress-linear indeterminate color="blue-grey" height="25" />
             </v-card>
         </v-dialog>
         <v-dialog persistent v-model="progress2" max-width="500">
-            <v-card class="pa-12">
-                <h5 class="text-center">No interrumpa el proceso</h5>
+            <v-card class="pa-8 text-center rounded-lg">
+                <h5 class="text-subtitle-1 mb-2">Generando Reporte...</h5>
                 <v-progress-linear v-model="skill" color="blue-grey" height="25">
                     <template v-slot:default="{ value }">
                         <strong>{{ Math.ceil(value) }}%</strong>
@@ -298,65 +363,18 @@
                 </v-progress-linear>
             </v-card>
         </v-dialog>
-        <v-dialog persistent v-model="progress" max-width="500">
-            <v-card class="pa-12">
-                <h5 class="text-center">No interrumpa el proceso</h5>
-                <v-progress-linear indeterminate color="blue-grey" height="25">
-                </v-progress-linear>
-            </v-card>
-        </v-dialog>
-        <v-dialog v-model="dialogo_motivo_anulacion" max-width="520px" persistent>
-            <v-card>
-                <v-system-bar window dark>
-                    <v-icon @click="cerrarDialogoAnulacion">mdi-close</v-icon>
-                    <v-spacer></v-spacer>
-                    <span class="caption">Motivo de anulación</span>
-                </v-system-bar>
-
-                <v-card-text class="pt-4">
-                    <div class="mb-3 grey--text text--darken-1 text-caption">
-                        Indique el motivo por el cual se anula el comprobante
-                        <strong v-if="comp_anular">{{ comp_anular.numeracion }}</strong>.
-                    </div>
-
-                    <!-- Opciones rápidas (opcional) -->
-                    <v-select dense outlined clearable :items="motivos_predeterminados"
-                        label="Motivo (selección rápida)" v-model="motivo_seleccion" @change="sincronizaMotivo" />
-
-                    <!-- Texto libre -->
-                    <v-textarea outlined dense auto-grow rows="2" v-model.trim="motivo_anulacion"
-                        label="Detalle del motivo (obligatorio)" :rules="[v => !!v || 'Ingrese el motivo']" />
-
-                    <!-- Mostrar error simple -->
-                    <div v-if="error_motivo" class="red--text text-caption mt-1">{{ error_motivo }}</div>
-                </v-card-text>
-
-                <v-card-actions class="px-4 pb-4">
-                    <v-spacer></v-spacer>
-                    <v-btn text @click="cerrarDialogoAnulacion">Cancelar</v-btn>
-                    <v-btn color="error" :loading="anulando" @click="confirmarAnulacion">
-                        Anular comprobante
-                    </v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
-        <!-- 🔵 DIALOGO DE PROGRESO DE IMPRESIÓN -->
         <v-dialog v-model="printDialog" persistent max-width="500">
-            <v-card class="pa-6">
-                <h5 class="text-center">Imprimiendo comprobantes…</h5>
-
+            <v-card class="pa-6 rounded-lg">
+                <h5 class="text-center text-subtitle-1">Imprimiendo comprobantes…</h5>
                 <div class="text-center caption mb-2">
                     {{ printDone }} / {{ printTotal }} completados — faltan {{ Math.max(printTotal - printDone, 0) }}
                 </div>
-
                 <v-progress-linear :value="printPercent" height="22" color="blue-grey">
                     <template v-slot:default="{ value }">
                         <strong>{{ Math.ceil(value) }}%</strong>
                     </template>
                 </v-progress-linear>
-
                 <div v-if="printError" class="red--text text-caption mt-2">{{ printError }}</div>
-
                 <div class="mt-4 d-flex justify-end">
                     <v-btn text color="primary" @click="printDialog = false" :disabled="printDone < printTotal">
                         Cerrar
@@ -364,71 +382,7 @@
                 </div>
             </v-card>
         </v-dialog>
-        <!-- Detalle (por pedido) -->
-        <v-dialog v-model="dialogDetalle" max-width="650">
-            <v-card>
-                <v-simple-table dense>
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th>Medida</th>
-                            <th>Precio</th>
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="d in pedidoSeleccionado" :key="`${d.id}-${d.nombre}`">
-                            <td style="font-size:75%;"> <strong class="red--text">{{ d.cantidad }}</strong> x {{
-                                d.nombre }}
-                                <strong class="red--text" v-if="d.operacion == 'GRATUITA'">{{ d.operacion }}</strong>
-                            </td>
-                            <td style="font-size:75%;">{{ d.medida }}</td>
-                            <td style="font-size:75%;">S/.{{ d.precio }} <strong v-if="d.preciodescuento != 0"
-                                    class="red--text">
-                                    - {{ d.preciodescuento }}</strong></td>
-                            <td style="font-size:75%;">S/.{{ (Number(d.total_antes_impuestos) +
-                                Number(d.total_impuestos)).toFixed(2) }}</td>
-                        </tr>
-                    </tbody>
-                </v-simple-table>
-            </v-card>
-        </v-dialog>
-        <v-dialog v-model="dialogo_imprime" max-width="490px">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dialogo_imprime = !dialogo_imprime">mdi-close</v-icon>
-                    <v-spacer></v-spacer>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <v-row dense>
-                    <v-col cols="12" md="4" sm="12">
-                        <v-card @click.prevent="imprime_comprobante('A4')">
-                            <v-container>
-                                <v-img class="mx-auto" height="35" width="35" src="/pdf.png"></v-img>
-                                <h5 block class="text-center pa-1">PDF A4</h5>
-                            </v-container>
-                        </v-card>
-                    </v-col>
-                    <v-col cols="12" md="4" sm="12">
-                        <v-card @click.prevent="imprime_comprobante('80')">
-                            <v-container>
-                                <v-img class="mx-auto" height="35" width="35" src="/pdf.png"></v-img>
-                                <h5 block class="text-center pa-1">PDF 80mm</h5>
-                            </v-container>
-                        </v-card>
-                    </v-col>
-                    <v-col cols="12" md="4" sm="12">
-                        <v-card @click.prevent="imprime_comprobante('58')">
-                            <v-container>
-                                <v-img class="mx-auto" height="35" width="35" src="/pdf.png"></v-img>
-                                <h5 block class="text-center pa-1">PDF 58mm</h5>
-                            </v-container>
-                        </v-card>
-                    </v-col>
-                </v-row>
-            </v-card>
-        </v-dialog>
+
         <genera_guias v-if="dialogo_guia" @cierra="dialogo_guia = false" @graba="carga_Guia()" :data_guia="data_guia" />
         <dialogo_edita_c v-if="dialogo_edita_" @cierra="dialogo_edita_ = false, recalcula_cabecera()"
             :cabecera="cabecera_selecta" :detalle="detalle_selecto" />
@@ -544,6 +498,8 @@ export default {
             printDone: 0,
             printError: '',
             observacion_reporte: '',
+            observacion_reporte: '',
+            formato_descarga: 'F1', // 👈 NUEVO: formato por defecto
         }
     },
     created() {
@@ -616,6 +572,25 @@ export default {
         }
     },
     methods: {
+        async genera_guia(data) {
+            store.commit("dialogoprogress", 1)
+            const snapshot = await all_detalle_p(this.router_grupo,data.numeracion).once("value");
+            var array = {
+                arrayCabecera: data,
+                array_item: snapshot.val()
+            }
+            store.commit("array_guia", array)
+            if (store.state.esmovil) {
+                this.$router.push({
+                    path: '/gr_movil'
+                })
+            } else {
+                this.$router.push({
+                    path: '/gr_remitente'
+                })
+            }
+            store.commit("dialogoprogress", 1)
+        },
         recalcula_cabecera() {
             const resumen = {
                 peso_total: 0,
@@ -688,6 +663,7 @@ export default {
 
         },
         async imprimir(data) {
+            store.commit("dialogoprogress");
             const snapshot = await all_detalle_p(this.router_grupo, data.numeracion).once("value");
             this.detalle_selecto = snapshot.val()
             var cliente = store.state.clientes.find(e => Number(e.documento) == Number(data.dni))
@@ -696,6 +672,7 @@ export default {
                 data.referencia = cliente.referencia || ''
             }
             this.seleccionado = data
+            store.commit("dialogoprogress");
             this.genera_pdf = true
         },
         async reporte_cobrar() {
@@ -749,7 +726,7 @@ export default {
             console.log(a);
 
             // Generar reporte de almacén
-            reporte_almacen(this.router_grupo, this.suma_peso, a, this.observacion_reporte);
+            reporte_almacen(this.router_grupo, this.suma_peso, a, this.observacion_reporte, this.formato_descarga);
         },
         filtrarLista() {
             let array = this.desserts.filter((item) =>
@@ -900,7 +877,7 @@ export default {
                         peso: data.peso,
                         guia: data.guia,
                         pedidos: data.pedidos,
-                        fecha_emision: data.fecha_emision,
+                        fecha_traslado: data.fecha_traslado,
                         envio_stock: data.envio_stock
                     }
                     this.total_peso = data.peso
@@ -1051,6 +1028,8 @@ export default {
                     snapshot.forEach((item) => {
                         const producto = item.val();
                         const invet = store.state.productos.find((id) => String(id.id) === String(producto.id));
+                        console.log(producto.id,invet)
+                        if (!invet) return;
 
                         let cantidad = parseFloat(producto.cantidad) * parseFloat(invet.factor);
                         if (producto.medida === "UNIDAD" && invet.factor > 1) {
@@ -1277,54 +1256,75 @@ export default {
             this.progress = false
         },
         async exportar_ex() {
-            store.commit("dialogoprogress")
-            this.arrayConsolidar = []
-            var array = this.desserts.filter((item) => (item.consolida == true && item.estado != 'ANULADO'))
-            await this.consuta_detalle(array)
-            this.arrayConsolidar.sort(function (a, b) {
-                if (a.nombre > b.nombre) {
-                    return 1;
-                }
-                if (a.nombre < b.nombre) {
-                    return -1;
-                }
-                // a must be equal to b
+            store.commit("dialogoprogress");
+            this.arrayConsolidar = [];
+
+            const array = this.desserts.filter(
+                (item) => item.consolida === true && item.estado !== 'ANULADO'
+            );
+
+            await this.consuta_detalle(array);
+
+            // Ordenar por nombre y luego por id
+            this.arrayConsolidar.sort((a, b) => {
+                if (a.nombre > b.nombre) return 1;
+                if (a.nombre < b.nombre) return -1;
                 return 0;
             });
-            this.arrayConsolidar.sort(function (a, b) {
-                if (a.id > b.id) {
-                    return 1;
-                }
-                if (a.id < b.id) {
-                    return -1;
-                }
-                // a must be equal to b
+            this.arrayConsolidar.sort((a, b) => {
+                if (a.id > b.id) return 1;
+                if (a.id < b.id) return -1;
                 return 0;
             });
-            var data = (this.arrayConsolidar)
-            var array = []
-            for (var i = 0; i < data.length; i++) {
-                var dd = data[i]
-                console.log(dd)
-                var invet = store.state.productos.find(id => String(id.id) === String(dd.id))
-                var valor = await this.convierte_stock(dd.cantidad, invet.factor)
-                array.push({
-                    id: dd.id,
-                    producto: dd.nombre,
-                    medida: 'und',
-                    cajas: valor.entero,
-                    unidades: valor.und,
-                    cantidad: dd.cantidad,
-                })
+
+            const dataConsolidada = this.arrayConsolidar;
+            const filas = [];
+
+            for (let i = 0; i < dataConsolidada.length; i++) {
+                const dd = dataConsolidada[i];
+                const invet = store.state.productos.find(
+                    (id) => String(id.id) === String(dd.id)
+                );
+
+                const valor = await this.convierte_stock(
+                    Number(dd.cantidad),
+                    Number(invet?.factor || 1)
+                );
+
+                const pesoTotal = Number(dd.peso || 0);
+
+                if (this.formato_descarga === 'F1') {
+                    // CODIGO - DESCRIPCION - MEDIDA - CAJAS - UND - PESO
+                    filas.push({
+                        CODIGO: dd.id,
+                        DESCRIPCION: dd.nombre,
+                        MEDIDA: 'UND',
+                        CAJAS: valor.entero,
+                        UND: valor.und,
+                        PESO: pesoTotal,
+                    });
+                } else {
+                    // F2: CAJAS - UND - MEDIDA - DESCRIPCION - PESO
+                    filas.push({
+                        CAJAS: valor.entero,
+                        UND: valor.und,
+                        MEDIDA: 'UND',
+                        DESCRIPCION: dd.nombre,
+                        PESO: pesoTotal,
+                    });
+                }
             }
-            // reporte_almacen(this.router_grupo, this.suma_peso, this.arrayConsolidar)
-            var data = XLSX.utils.json_to_sheet(array)
-            const workbook = XLSX.utils.book_new()
-            const filename = 'rep'
-            XLSX.utils.book_append_sheet(workbook, data, "anulados")
-            XLSX.writeFile(workbook, `${filename}.xlsx`)
-            store.commit("dialogoprogress")
+
+            const hoja = XLSX.utils.json_to_sheet(filas);
+            const workbook = XLSX.utils.book_new();
+            const filename = 'rep_reparto_almacen';
+
+            XLSX.utils.book_append_sheet(workbook, hoja, "almacen");
+            XLSX.writeFile(workbook, `${filename}.xlsx`);
+
+            store.commit("dialogoprogress");
         },
+
         async convierte_stock(stock, factor) {
             var cajas = Math.floor(stock / factor)
             var und = stock - cajas * factor
@@ -1343,28 +1343,44 @@ export default {
             }
         },
         async envia_sunat() {
-            //const pendientes = this.listafiltrada.filter(x => x.estado === 'PENDIENTE');
-            const pendientes = this.listafiltrada;
-            if (pendientes.length === 0) {
-                // Muestra aviso y no envía
-                this.$store.commit('dialogosnackbar', 'No hay comprobantes PENDIENTES para enviar.');
+            // ✅ Solo COMPROBANTES SELECCIONADOS (checkbox consolida) y en estado PENDIENTE
+            const seleccionados = this.listafiltrada.filter(
+                x => x.consolida && x.estado === 'PENDIENTE'
+            );
+
+            if (!seleccionados.length) {
+                this.$store.commit(
+                    'dialogosnackbar',
+                    'Seleccione comprobantes con estado PENDIENTE para enviar.'
+                );
                 return;
             }
 
-            store.commit("dialogoprogress")
-            const array = {
-                cabeceras: this.listafiltrada,
-                id_reparto: this.router_grupo
+            try {
+                store.commit("dialogoprogress");
+
+                const array = {
+                    cabeceras: seleccionados,      // 👈 solo los seleccionados y pendientes
+                    id_reparto: this.router_grupo
+                };
+
+                await this.api_rest(array, 'sunat_reparto');
+
+                this.$store.commit('dialogosnackbar', 'Envío a Sunat iniciado correctamente.');
+            } catch (e) {
+                console.error(e);
+                this.$store.commit('dialogosnackbar', 'Ocurrió un error al enviar a Sunat.');
+            } finally {
+                store.commit("dialogoprogress");
             }
-            await this.api_rest(array, 'sunat_reparto')
-            store.commit("dialogoprogress")
         },
+
         async api_rest(data, metodo) {
             console.log(data)
             var a = axios({
                 method: 'POST',
-                //url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
-                url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
+                url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
+                //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
                 headers: {},
                 data: {
                     "bd": store.state.baseDatos.bd,

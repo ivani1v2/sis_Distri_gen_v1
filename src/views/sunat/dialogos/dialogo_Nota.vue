@@ -14,27 +14,34 @@
         </div>
 
         <v-card class="pa-3">
-
             <v-row class="mt-1" dense>
                 <v-col cols="6">
-                    <v-text-field type="date" outlined dense v-model="date" label="Emision"></v-text-field>
+                    <v-text-field type="date" outlined dense v-model="date" label="Emisión"></v-text-field>
                 </v-col>
+
                 <v-col cols="6">
-                    <v-select outlined dense v-model="motivo" :items="$store.state.motivos" hide-details
-                        label="Motivo"></v-select>
+                    <v-select outlined dense v-model="motivo" :items="$store.state.motivosSunat" hide-details
+                        label="Motivo" item-text="nombre"></v-select>
+
+                    <!-- 🔁 Switch para regresar stock -->
+
                 </v-col>
             </v-row>
 
+
             <v-row class="pa-2 mt-n12">
-                <v-col cols="6">
+                <v-col cols="4">
                     <h5>Documento: {{ info_comprobante.dni }}</h5>
                     <h5>Nombre: {{ info_comprobante.cliente }}</h5>
                 </v-col>
-                <v-col cols="6">
+                <v-col cols="4">
                     <h5>
                         Ref: {{ info_comprobante.serie }}-{{ info_comprobante.correlativoDocEmitido }}
                     </h5>
                     <h5>Total: {{ moneda }} {{ info_comprobante.total }}</h5>
+                </v-col>
+                <v-col cols="4">
+                    <v-switch dense class="mt-2" v-model="regresar_stock" label="Regresar stock" inset></v-switch>
                 </v-col>
             </v-row>
 
@@ -52,9 +59,7 @@
                         </thead>
 
                         <tbody>
-                            <tr v-for="item in lista_productos"
-                                :key="item.id"
-                                @click.prevent="editaProducto(item.id)">
+                            <tr v-for="item in lista_productos" :key="item.id" @click.prevent="editaProducto(item.id)">
                                 <td>{{ item.cantidad }}</td>
                                 <td>{{ item.id }} - {{ item.nombre }}</td>
                                 <td>{{ item.medida }}</td>
@@ -78,14 +83,8 @@
                 <v-spacer></v-spacer>
 
                 <v-col cols="6" md="4" sm="4" xs="6">
-                    <v-btn
-                        block
-                        elevation="15"
-                        rounded
-                        v-if="listaproductos.length"
-                        color="error"
-                        @click="obtencorrelativo()"
-                    >
+                    <v-btn block elevation="15" rounded v-if="listaproductos.length" color="error"
+                        @click="obtencorrelativo()">
                         GENERA NC
                     </v-btn>
                 </v-col>
@@ -107,14 +106,8 @@
                     </v-col>
 
                     <v-col cols="4" xs="4">
-                        <v-text-field
-                            dense
-                            type="number"
-                            outlined
-                            v-model="cantidadEdita"
-                            label="Cantidad"
-                            @keyup.enter="grabaEdita()"
-                        ></v-text-field>
+                        <v-text-field dense type="number" outlined v-model="cantidadEdita" label="Cantidad"
+                            @keyup.enter="grabaEdita()"></v-text-field>
                     </v-col>
 
                     <v-col cols="4" xs="4">
@@ -124,25 +117,13 @@
 
                 <v-row class="mx-auto text-center" dense>
                     <v-col cols="12" class="mb-n4 mt-n4">
-                        <v-text-field
-                            disabled
-                            dense
-                            class="pa-3"
-                            v-model="nombreEdita"
-                            label="Nombre"
-                            @keyup.enter="grabaEdita()"
-                        ></v-text-field>
+                        <v-text-field disabled dense class="pa-3" v-model="nombreEdita" label="Nombre"
+                            @keyup.enter="grabaEdita()"></v-text-field>
                     </v-col>
 
                     <v-col cols="12" xs="6">
-                        <v-text-field
-                            dense
-                            type="number"
-                            class="pa-3"
-                            v-model="precioedita"
-                            label="Precio"
-                            @keyup.enter="grabaEdita()"
-                        ></v-text-field>
+                        <v-text-field dense type="number" class="pa-3" v-model="precioedita" label="Precio"
+                            @keyup.enter="grabaEdita()"></v-text-field>
                     </v-col>
                 </v-row>
 
@@ -209,16 +190,10 @@
                                 <td>{{ item.id }} - {{ item.nombre }}</td>
                                 <td class="text-right">{{ item.maxCantidad }}</td>
                                 <td class="text-right">
-                                    <v-text-field
-                                        dense
-                                        type="number"
-                                        hide-details
+                                    <v-text-field dense type="number" hide-details
                                         style="max-width: 80px; margin-left:auto;"
-                                        v-model.number="item.cantidadSeleccionada"
-                                        @change="validaCantidad(item)"
-                                        min="0"
-                                        :max="item.maxCantidad"
-                                    ></v-text-field>
+                                        v-model.number="item.cantidadSeleccionada" @change="validaCantidad(item)"
+                                        min="0" :max="item.maxCantidad"></v-text-field>
                                 </td>
                             </tr>
                         </tbody>
@@ -265,7 +240,7 @@ export default {
             dialogoProducto: false,
             dialogoanula: false,
             dialogoAgregar: false,
-
+            regresar_stock: false,
             codigo: '',
             listaproductos: [],
             itemsOriginales: [],
@@ -324,6 +299,22 @@ export default {
         this.info_comprobante = this.cabecera || {}
         this.moneda = this.info_comprobante.moneda || 'S/'
     },
+    watch: {
+        motivo: {
+            immediate: true,
+            handler(val) {
+                const motivosRegresanStock = [
+                    "Anulación de la operación",
+                    "Anulación por error en el RUC",
+                    "Devolución total",
+                    "Devolución por ítem",
+                ];
+                // Se enciende solo si el motivo está en la lista
+                this.regresar_stock = motivosRegresanStock.includes(val);
+            }
+        }
+    },
+
     methods: {
         // Limpia por completo el detalle de la NC
         limpiar_items() {
@@ -405,7 +396,7 @@ export default {
         grabaEdita() {
             if (
                 parseFloat(this.cantidadEdita) >
-                    parseFloat(this.listaproductos[this.codigoedita].stock) &&
+                parseFloat(this.listaproductos[this.codigoedita].stock) &&
                 this.listaproductos[this.codigoedita].controstock &&
                 store.state.configuracion.inventario
             ) {
@@ -523,7 +514,8 @@ export default {
                     total_op_gravadas: data.totaloperaGravada,
                     total_op_exoneradas: data.totaloperaExonerada,
                     total_cargo: data.total_cargo,
-                    igv: data.totalIGV
+                    igv: data.totalIGV,
+                    regresar_stock: this.regresar_stock,
                 }
 
                 const items = data.item
@@ -535,7 +527,21 @@ export default {
 
                 this.dialogoanula = false
                 const r = await envioNCredito(arrayCabecera, items)
+                if (this.regresar_stock) {
+                    try {
+                        // Solo necesitamos id, cantidad y medida para el control de stock
+                        const itemsStock = this.listaproductos.map(it => ({
+                            id: it.id,
+                            cantidad: Number(it.cantidad),
+                            medida: it.medida,
+                        }))
 
+                        await modifica_stock_array('SUMA', itemsStock)
+                    } catch (e) {
+                        console.error('Error al regresar stock desde NC:', e)
+                        store.commit('dialogosnackbar', 'Nota generada, pero hubo un problema al regresar el stock.')
+                    }
+                }
                 if (r.status_message === '0') {
                     await grabaEstadoComprobanteNCD(
                         arrayCabecera.numeracion,
@@ -550,11 +556,11 @@ export default {
                     )
                     await grabaAnulacionreferecia(
                         this.info_comprobante.numeracion,
-                        'anulado',
+                        'editado',
                         'Editado mediante Nota de Credito : ' +
-                            this.serienc +
-                            '-' +
-                            this.ordenNcredito
+                        this.serienc +
+                        '-' +
+                        this.ordenNcredito
                     )
                 } else {
                     await grabaEstadoComprobanteNCD(
@@ -654,13 +660,11 @@ export default {
                         precioedita: data.precio,
                         tipoproducto: data.tipoproducto,
                         operacion: data.operacion,
-                        icbper: 0,
+                        factor : data.factor || 1,
                         cargoxconsumo: false,
                         valor_unitario: valor_unitario.toFixed(5),
                         valor_total: valorTotal.toFixed(2),
                         igv: igv.toFixed(2),
-                        valor_icbper: 0.0,
-                        factor_icbper: 0,
                         total_antes_impuestos: antesimpuesto.toFixed(2),
                         total_impuestos: totalImpuesto.toFixed(2),
                         precioVentaUnitario: this.redondear(precioVentaUnitario)

@@ -1,206 +1,244 @@
 <template>
     <v-dialog v-model="dial" max-width="1100px" persistent>
-        <div>
-            <v-system-bar window dark>
-                <v-icon @click="cierra()">mdi-close</v-icon>
+        <v-card class="rounded-lg">
+
+            <v-toolbar :color="arra_cabe_doC.modo_ajuste === 'ENTRADA' ? 'info' : 'red darken-1'" dense dark>
+                <v-icon @click="cierra">mdi-close</v-icon>
+                <v-toolbar-title class="ml-2 font-weight-bold">
+                    Ajuste de Inventario ({{ arra_cabe_doC.modo_ajuste }})
+                </v-toolbar-title>
                 <v-spacer></v-spacer>
-                <v-icon large color="info" @click="dial_lista = true">mdi-magnify</v-icon>
-                <v-icon color="red" large @click="(dial_anula = true)">mdi-delete</v-icon>
-                <v-icon color="green" large @click="dialogo_genera = true">mdi-content-save</v-icon>
-            </v-system-bar>
-        </div>
-        <v-card class="pa-3">
-            <v-card-text>
-                <v-row class="mb-n5 " dense>
-                    <v-col cols="6">
-                        <h4>FECHA DE EMISION: {{ conviertefecha(arra_cabe_doC.fecha_emision) }}</h4>
-                        <h4>FECHA DE INGRESO: {{ conviertefecha(arra_cabe_doC.fecha_ingreso) }}</h4>
-                        <h4>DOCUMENTO: {{ arra_cabe_doC.tipodocumento }} /
-                            {{ arra_cabe_doC.sreferencia }}-{{ arra_cabe_doC.creferencia }}</h4>
+
+                <v-btn icon color="info lighten-2" @click="dial_lista = true" title="Buscar y Añadir Producto">
+                    <v-icon>mdi-magnify</v-icon>
+                </v-btn>
+                <v-divider vertical class="mx-2"></v-divider>
+                <v-btn icon color="red lighten-2" @click="dial_anula = true" title="Anular Ajuste">
+                    <v-icon>mdi-delete</v-icon>
+                </v-btn>
+                <v-btn icon color="green lighten-1" @click="dialogo_genera = true" title="Guardar Cambios">
+                    <v-icon>mdi-content-save</v-icon>
+                </v-btn>
+            </v-toolbar>
+
+            <v-card-text class="pa-4">
+
+                <v-row dense class="mb-3">
+                    <v-col cols="12" md="6">
+                        <v-card outlined class="pa-3 fill-height">
+                            <h4 class="text-subtitle-1 primary--text mb-1">
+                                <v-icon small left>mdi-calendar-range</v-icon> Datos del Ajuste
+                            </h4>
+                            <v-divider class="mb-2"></v-divider>
+                            <h5 class="text-caption">
+                                **DOCUMENTO:** {{ arra_cabe_doC.tipodocumento }} / {{ arra_cabe_doC.sreferencia }}-{{
+                                arra_cabe_doC.creferencia }}
+                            </h5>
+                            <h5 class="text-caption">
+                                **MODO:** <span
+                                    :class="arra_cabe_doC.modo_ajuste === 'ENTRADA' ? 'info--text' : 'error--text'">{{
+                                    arra_cabe_doC.modo_ajuste }}</span>
+                                | **MOTIVO:** {{ arra_cabe_doC.motivo }}
+                            </h5>
+                            <h5 class="text-caption">
+                                **EMISIÓN:** {{ conviertefecha(arra_cabe_doC.fecha_emision) }} | **MOVIMIENTO:** {{
+                                    conviertefecha(arra_cabe_doC.fecha_ingreso) }}
+                            </h5>
+                            <h5 class="text-caption">
+                                **RESPONSABLE:** {{ arra_cabe_doC.responsable }}
+                            </h5>
+                        </v-card>
                     </v-col>
-                    <v-col cols="6">
-                        <h4>Modo Ajuste : <span class="red--text">{{ arra_cabe_doC.modo_ajuste }}</span></h4>
-                        <h4>Motivo : {{ arra_cabe_doC.motivo }}</h4>
-                        <div class="mt-2 mb-n5" v-if="!$store.state.esmovil">
-                            <v-autocomplete v-model="busca_p" :items="productosConStock" item-value="id"
-                                item-text="nombre" label="Buscar producto" outlined dense clearable auto-select-first
-                                return-object @change="seleccionDirecta">
+
+                    <v-col cols="12" md="6">
+                        <v-card outlined class="pa-3 fill-height d-flex flex-column justify-center">
+                            <h4 class="text-subtitle-1 success--text mb-2">
+                                <v-icon small left>mdi-package-variant</v-icon> Búsqueda Rápida
+                            </h4>
+                            <v-autocomplete outlined dense autofocus label="Buscar producto por ID o Nombre"
+                                auto-select-first v-model="busca_p" :items="productosConStock" item-text="nombre"
+                                item-value="id" return-object @change="seleccionDirecta" hide-details>
                                 <template v-slot:item="{ item }">
-                                    <div>
-                                        <strong>{{ item.nombre }}</strong>
-                                        <small class="grey--text ml-2">({{ item.id }} - Stock: {{ item.stock }})</small>
-                                    </div>
+                                    <v-list-item-content>
+                                        <v-list-item-title>
+                                            <strong>{{ item.nombre }}</strong>
+                                        </v-list-item-title>
+                                        <v-list-item-subtitle class="caption">
+                                            ID: {{ item.id }} - Stock: {{ item.stock }} {{ item.medida }}
+                                        </v-list-item-subtitle>
+                                    </v-list-item-content>
                                 </template>
                             </v-autocomplete>
-
-
-                        </div>
+                            <v-alert v-if="!lista_productos.length" type="info" outlined dense
+                                class="mt-2 text-caption">
+                                Use la lista desplegable o la lupa <v-icon x-small>mdi-magnify</v-icon> para añadir
+                                ítems.
+                            </v-alert>
+                        </v-card>
                     </v-col>
                 </v-row>
+
+                <v-divider class="my-3"></v-divider>
+                <v-simple-table fixed-header height="45vh" dense class="elevation-1">
+                    <template v-slot:default>
+                        <thead class="grey darken-3 black--text">
+                            <tr>
+                                <th class="text-left black--text" width="50%">Descripción (ID)</th>
+                                <th class="text-left black--text" width="15%">Medida Base</th>
+                                <th class="text-center black--text" width="15%">Cantidad</th>
+                                <th class="text-center black--text" width="20%">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-if="!lista_productos.length">
+                                <td colspan="4" class="text-center grey--text text-caption">
+                                    No hay productos registrados en este ajuste.
+                                </td>
+                            </tr>
+                            <tr v-for="(item, index) in lista_productos" :key="item.uuid || index">
+                                <td>
+                                    <v-icon color="green" @click="editaProducto(item, index)" small
+                                        class="mr-1">mdi-pencil</v-icon>
+                                    <span class="font-weight-medium">{{ item.nombre }}</span>
+                                    <div class="caption grey--text">{{ item.id }}</div>
+                                </td>
+                                <td>{{ item.medida }}</td>
+                                <td class="text-center font-weight-bold">{{ item.cantidad }}</td>
+                                <td class="text-center">
+                                    <v-btn icon x-small color="error" @click="editaProducto(item, index)">
+                                        <v-icon small>mdi-delete</v-icon>
+                                    </v-btn>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </template>
+                </v-simple-table>
             </v-card-text>
-            <v-simple-table dark fixed-header height="60vh" dense>
-                <template v-slot:default>
-                    <thead>
-                        <tr>
-                            <th class="text-left">
-                                Descripcion
-                            </th>
-                            <th class="text-left">
-                                Medida
-                            </th>
-                            <th class="text-left">
-                                Cantidad
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="item in lista_productos" :key="item.key">
-                            <td width="380">
-                                <v-icon color="green" @click="editaProducto(item)" small
-                                    class="mt-n1">mdi-pencil</v-icon>
-                                {{ item.id }} {{ item.nombre }}
-                            </td>
-                            <td width="30">{{ item.medida }}</td>
-                            <td width="35">{{ item.cantidad }}</td>
-                        </tr>
-                    </tbody>
-                </template>
-            </v-simple-table>
-            <v-spacer></v-spacer>
         </v-card>
 
         <v-dialog v-model="dialogo_genera" max-width="460px">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dialogo_genera = !dialogo_genera">mdi-close</v-icon>
-                </v-system-bar>
-            </div>
-
-            <v-card class="pa-3">
-                <v-card-text>
-                    <h2 class="text-center">SEGURO DE CONTINUAR??</h2>
-
+            <v-card class="rounded-lg">
+                <v-toolbar color="green" dense dark><v-toolbar-title>Confirmar
+                        Guardado</v-toolbar-title><v-spacer></v-spacer><v-btn icon
+                        @click="dialogo_genera = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-card-text class="pa-4 text-center">
+                    <h2 class="text-h5">¿SEGURO DE CONTINUAR Y GRABAR EL AJUSTE?</h2>
                 </v-card-text>
-                <v-card-actions>
-                    <v-btn color="success" block @click="genera_compra(true)">SI</v-btn>
+                <v-card-actions class="pa-4 pt-0">
+                    <v-btn color="success" block large @click="genera_compra(true)">SÍ, GUARDAR AJUSTE</v-btn>
                 </v-card-actions>
+            </v-card>
+        </v-dialog>
 
-            </v-card>
-        </v-dialog>
-        <v-dialog v-model="dialogoProducto" max-width="390">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dialogoProducto = false">mdi-close</v-icon>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <v-select :items="arrayOperacion" label="Operacion" dense outlined v-model="operacion_edita"></v-select>
-                <v-row class="mx-auto text-center" dense>
-                    <v-col cols="6" class="mb-n4 mt-n1">
-                        <v-text-field dense @keyup.enter="grabaEdita()" class="pa-3" v-model="costo_edita"
-                            label="Costo Unitario"></v-text-field>
-                    </v-col>
-                </v-row>
-                <v-row class="mx-auto text-center" dense>
-                    <v-col cols="12" class="mb-n4 mt-n1">
-                        <v-text-field dense @keyup.enter="grabaEdita()" class="pa-3" v-model="nombreEdita"
-                            label="Nombre"></v-text-field>
-                    </v-col>
-                </v-row>
-                <v-card-actions class="mt-n6">
-                    <v-spacer></v-spacer>
+        <v-dialog v-model="dialogoProducto" max-width="450px">
+            <v-card class="rounded-lg">
+                <v-toolbar color="info" dense dark><v-toolbar-title>Editar
+                        Ítem</v-toolbar-title><v-spacer></v-spacer><v-btn icon
+                        @click="dialogoProducto = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-card-text class="pa-4">
+                    <v-select :items="arrayOperacion" label="Operación" dense outlined v-model="operacion_edita"
+                        hint="Solo para referencia en inventario (Gravada/Gratuita)" persistent-hint></v-select>
+                    <v-text-field dense outlined v-model="costo_edita" label="Costo Unitario (opcional)" type="number"
+                        prefix="S/." />
+                    <v-text-field dense outlined v-model="nombreEdita" label="Nombre del Producto" />
+                </v-card-text>
+                <v-card-actions class="pa-4 pt-0">
                     <v-btn color="error" text @click="eliminar()">
-                        Elimina
+                        <v-icon left>mdi-delete</v-icon> Eliminar Ítem
                     </v-btn>
-                    <v-btn color="green darken-1" text @click="grabaEdita()">
-                        Graba
+                    <v-spacer></v-spacer>
+                    <v-btn color="green darken-1" @click="grabaEdita()">
+                        <v-icon left>mdi-content-save</v-icon> Grabar
                     </v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
         <v-dialog v-model="dialo_cantidad" max-width="400px">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dialo_cantidad = !dialo_cantidad, btn = false, modo = false">mdi-close</v-icon>
-                    <v-spacer></v-spacer>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <v-card-title class="flex flex-col">
-                    <div v-if="selecto" class="mb-2">
-                        <div class="grey--text text--darken-1" style="font-size:12px;">
-                            Presentación: <strong>{{ selecto.medida || 'PAQ' }}</strong> → <strong>UND</strong>
-                            (factor: <strong>{{ Number(selecto.factor) || 1 }}</strong>)
+            <v-card class="rounded-lg">
+                <v-toolbar color="primary" dense dark><v-toolbar-title>Añadir
+                        Cantidad</v-toolbar-title><v-spacer></v-spacer><v-btn icon
+                        @click="dialo_cantidad = false, btn = false, modo = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-card-text class="pa-4">
+                    <div v-if="selecto" class="mb-3">
+                        <div class="text-subtitle-2 font-weight-bold">{{ selecto.nombre }} (ID: {{ selecto.id }})</div>
+                        <div class="caption grey--text">
+                            Stock actual: <strong>{{ Number(selecto.stock).toFixed(2) }} UND.</strong>
                         </div>
-                        <div class="grey--text" style="font-size:12px;" v-if="modo">
-                            Modo: <strong>{{ modo === 'entero' ? (selecto.medida || 'PAQ') : 'UND' }}</strong>
+                        <div class="caption grey--text" v-if="selecto.medida">
+                            Factor Paquete ({{ selecto.medida }}): <strong>{{ Number(selecto.factor) || 1 }}
+                                UND.</strong>
                         </div>
                     </div>
 
-                    <v-row v-if="!btn" class="pa-1">
+                    <v-row v-if="!modo" dense class="mb-3">
+                        <v-col cols="12" class="mb-n2">
+                            <v-alert type="warning" dense text class="text-caption">¿Cómo desea ingresar/retirar la
+                                cantidad?</v-alert>
+                        </v-col>
                         <v-col cols="6">
-                            <v-btn color="success" block @click="seleeciona_modo('entero')">
-                                {{ selecto.medida || 'PAQ' }}
+                            <v-btn block :color="modo === 'entero' ? 'primary' : 'success lighten-1'"
+                                @click="seleeciona_modo('entero')">
+                                <v-icon left small>mdi-cube-outline</v-icon> {{ selecto.medida || 'PAQ' }}
                             </v-btn>
                         </v-col>
                         <v-col cols="6">
-                            <v-btn color="success" block @click="seleeciona_modo('fraccion')">
-                                UND.
+                            <v-btn block :color="modo === 'fraccion' ? 'primary' : 'success lighten-1'"
+                                @click="seleeciona_modo('fraccion')">
+                                <v-icon left small>mdi-numeric</v-icon> UNIDAD
                             </v-btn>
                         </v-col>
                     </v-row>
 
-                    <v-text-field class="mt-3" type="number" autofocus outlined dense v-model.number="cantidad"
-                        :label="modo === 'entero' ? ((selecto.medida || 'PAQ') + ' (cant.)') : 'UND. (cant.)'"
+                    <v-text-field v-if="modo" type="number" autofocus outlined dense v-model.number="cantidad"
+                        :label="modo === 'entero' ? ((selecto.medida || 'PAQ') + ' (cant.)') : 'UNIDAD (cant.)'"
                         @focus="$event.target.select()" @keyup.enter="agregaCatalogo()"></v-text-field>
 
-                    <div class="grey--text text--darken-1 mt-1" style="font-size:12px;">
-                        Unidades que se moverán:
-                        <strong>
-                            {{ (modo === 'entero'
-                                ? ((Number(cantidad) || 0) * (Number(selecto.factor) || 1))
-                                : (Number(cantidad) || 0)
-                            ).toFixed(0) }}
+                    <div class="grey--text text--darken-1 mt-2 text-caption" v-if="modo">
+                        Unidades que se **{{ arra_cabe_doC.modo_ajuste === 'ENTRADA' ? 'añadirán' : 'retirarán' }}**:
+                        <strong class="font-weight-medium">
+                            {{ (modo === 'entero' ? ((Number(cantidad) || 0) * (Number(selecto.factor) || 1)) :
+                                (Number(cantidad) || 0)).toFixed(2) }} UND.
                         </strong>
                     </div>
+                </v-card-text>
 
-                    <v-btn class="mt-2" color="red" @click="agregaCatalogo()" block>OK</v-btn>
-                </v-card-title>
+                <v-card-actions class="pa-4 pt-0">
+                    <v-btn class="mt-2" color="success" @click="agregaCatalogo()" block
+                        :disabled="!modo || cantidad <= 0">
+                        <v-icon left>mdi-check</v-icon> AÑADIR AL AJUSTE
+                    </v-btn>
+                </v-card-actions>
             </v-card>
         </v-dialog>
-
 
         <v-dialog persistent v-model="progress" max-width="250">
-            <v-card class="pa-12">
-                <v-progress-linear indeterminate color="blue-grey" height="25">
-                </v-progress-linear>
+            <v-card class="pa-8 text-center rounded-lg">
+                <v-progress-linear indeterminate color="blue-grey" height="25" class="mb-3" />
+                <span class="text-caption">Procesando operación...</span>
             </v-card>
         </v-dialog>
+
         <v-dialog v-model="dial_anula" max-width="460px">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="(dial_anula = !dial_anula)">mdi-close</v-icon>
-                </v-system-bar>
-            </div>
-
-            <v-card class="pa-3">
-                <v-card-text>
-                    <h2 class="text-center">SEGURO DE QUE DESEA ANULAR??</h2>
+            <v-card class="rounded-lg">
+                <v-toolbar color="red" dense dark><v-toolbar-title>Confirmar
+                        Anulación</v-toolbar-title><v-spacer></v-spacer><v-btn icon
+                        @click="dial_anula = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-card-text class="pa-4 text-center">
+                    <h2 class="text-h5 red--text text--darken-2">¿SEGURO QUE DESEA ANULAR ESTE AJUSTE?</h2>
+                    <p class="mt-3 caption">Esta acción revertirá los movimientos de stock realizados.</p>
                 </v-card-text>
-                <v-card-actions>
-                    <v-spacer></v-spacer>
-                    <v-btn color="info" @click="anula_mov()">SI</v-btn>
-                    <v-btn color="success" @click="dial_anula = false">NO</v-btn>
+                <v-card-actions class="pa-4 pt-0">
+                    <v-btn color="red" block large @click="anula_mov()">SÍ, ANULAR</v-btn>
                 </v-card-actions>
-
             </v-card>
         </v-dialog>
+
         <v-dialog v-model="dial_lista" max-width="800px">
             <cata_productos v-if="dial_lista" @array="abre_cantidad($event)" @cierra="dial_lista = $event" />
         </v-dialog>
     </v-dialog>
 </template>
-
 <script>
 import clientes from '@/components/dialogos/dialogoClientes'
 import moment from 'moment'
@@ -498,7 +536,7 @@ export default {
                     ...item,
                     // Por compatibilidad, algunos helpers esperan "cantidad" como unidades
                     cantidad: unidades,
-                  //  uuid: crypto.randomUUID(),
+                    //  uuid: crypto.randomUUID(),
                 });
 
                 // Cerrar diálogo y refrescar lista

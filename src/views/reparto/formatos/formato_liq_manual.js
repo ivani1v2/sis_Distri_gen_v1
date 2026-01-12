@@ -236,7 +236,7 @@ const pdf_a4_h = (cabecera, datos) => {
   let finalss = doc.previousAutoTable.finalY;
   linea = finalss + 5;
 
-  for (var i = 0; i < 12; i++) {
+  for (var i = 0; i < 10; i++) {
     var item = filt[i];
     nuevoArray[i] = new Array(4);
     nuevoArray[i][0] = "";
@@ -495,15 +495,14 @@ const pdf_a4_v = (cabecera, datos) => {
   });
   linea = linea + 80;
 
-  var filt = datos.filter((e) => e.forma_pago == "CREDITO");
+ var filt = datos.filter((e) => e.forma_pago == "CREDITO");
 
-  var tm = filt.length;
-  if (filt.length < 10) {
-    tm = 10;
-  }
+  const maxCredRows = 5;              // ⭐ máximo 5 filas
+  var tm = maxCredRows;
   var nuevoArray = new Array(tm);
+
   for (var i = 0; i < tm; i++) {
-    var item = filt[i];
+    var item = filt[i];               // si no existe, se rellena vacío
 
     if (item != undefined) {
       let indice = item.cliente.indexOf(" ");

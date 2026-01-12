@@ -184,10 +184,6 @@ export default {
             }
         },
         abre_cantidad(valor) {
-            if (valor.stock <= 0) {
-                alert('SIN STOCK')
-                return
-            }
 
             if (valor) {
                 // Filtrar las observaciones disponibles

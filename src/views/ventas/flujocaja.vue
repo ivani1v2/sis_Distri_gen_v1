@@ -1,437 +1,301 @@
 <template>
-    <div class="pa-4 mt-10">
-        <v-dialog persistent v-model="dialogoprogress" max-width="200">
-            <v-card class="pa-12">
-                <v-progress-circular :rotate="90" :size="100" :width="15" color="primary"
-                    indeterminate></v-progress-circular>
+    <div class="pa-4">
+        
+        <v-dialog persistent v-model="dialogoprogress" max-width="250">
+            <v-card class="pa-8 text-center rounded-lg">
+                <v-progress-circular :rotate="360" :size="80" :width="10" color="primary" indeterminate />
+                <div class="mt-3 text-subtitle-1">Procesando...</div>
             </v-card>
         </v-dialog>
 
+        <v-card class="elevation-3 mb-4 rounded-lg">
+            <v-card-text class="py-3">
+                <v-row align="center" dense>
+                    <v-col cols="12" md="5" sm="12">
+                        <div class="d-flex align-center">
+                            <v-icon large left color="primary">mdi-cash-multiple</v-icon>
+                            <div>
+                                <h3 class="text-h6 primary--text">TOTAL CAJA: S/.{{ sumatotal() }}</h3>
+                                <span class="caption">
+                                    VENTA (Ingresos): S/.{{ sumaVentas() }} | Apertura: {{ fecha_inicio }}
+                                </span>
+                            </div>
+                        </div>
+                    </v-col>
 
-        <v-row dense class="mt-n5">
-            <v-col cols="12" md="6" xs="12">
-                <h3> T.GENERAL: S/.{{ sumatotal() }} </h3>
-                <h4> Venta: S/.{{ sumaVentas() }} </h4>
-                <h5>APERTURA: {{ fecha_inicio }}</h5>
-            </v-col>
-            <v-col cols="12" md="2" xs="12">
-                <v-btn v-if="$store.state.permisos.punto_venta" block small elevation="6" color="error"
-                    @click="abrir_caja()">
-                    Caja
-                    <v-spacer></v-spacer>
-                    <v-icon color="white" class="mx-auto text--center" medium>mdi-cash-register</v-icon>
-                </v-btn>
-            </v-col>
-            <v-col cols="12" md="4" xs="12">
-                <v-menu v-model="menuOpc" bottom offset-y :close-on-content-click="false">
-                    <template v-slot:activator="{ on, attrs }">
-                        <v-btn color="success" block small v-bind="attrs" v-on="on">
-                            Opciones
-                            <v-spacer></v-spacer>
-                            <v-icon left>mdi-arrow-down-bold</v-icon>
+                    <v-col cols="12" md="2" sm="4" class="text-center">
+                        <v-btn small v-if="$store.state.permisos.punto_venta" block  color="error" @click="abrir_caja()">
+                            <v-icon left>mdi-cash-register</v-icon> Punto Venta
                         </v-btn>
-                    </template>
+                    </v-col>
 
-                    <v-list dense>
-                        <!-- Filtro de movimientos -->
-                        <v-list-item @click.stop>
-                            <v-select outlined dense v-model="filtroMov" :items="arrayFiltroMov" item-text="text"
-                                item-value="value" label="Filtrar movimientos" hide-details />
-                        </v-list-item>
+                    <v-col cols="12" md="5" sm="8" class="text-right">
+                        <v-menu v-model="menuOpc" bottom offset-y :close-on-content-click="false" nudge-bottom="10" max-width="300">
+                            <template v-slot:activator="{ on, attrs }">
+                                <v-btn color="primary" block small v-bind="attrs" v-on="on">
+                                    <v-icon left>mdi-tune</v-icon> Opciones de Flujo
+                                </v-btn>
+                            </template>
 
-                        <v-list-item class="">
-                            <v-btn dark small color="info" block @click="evento(5)">
-                                Inicio Caja
-                            </v-btn>
-                        </v-list-item>
-                        <v-list-item>
-                            <v-btn dark small color="info" block @click="evento(2)">
-                                INGR/EGRE
-                            </v-btn>
-                        </v-list-item>
-                        <v-list-item>
-                            <v-btn dark small color="info" block @click="evento(3)">
-                                CIERRA CAJA
-                            </v-btn>
-                        </v-list-item>
-                        <v-list-item>
-                            <v-btn dark small color="info" block @click="evento(4)">
-                                HISTORIAL
-                            </v-btn>
-                        </v-list-item>
-                        <v-list-item>
-                            <v-btn dark small color="info" block @click="dialog_reporte = !dialog_reporte">
-                                Productos Vendidos
-                            </v-btn>
-                        </v-list-item>
-                        <v-list-item>
-                            <v-btn dark small color="info" block @click="evento(6)">
-                                REPORTE GENERAL
-                            </v-btn>
-                        </v-list-item>
-                    </v-list>
-                </v-menu>
-            </v-col>
+                            <v-list dense>
+                                <v-list-item @click.stop>
+                                    <v-select outlined dense v-model="filtroMov" :items="arrayFiltroMov" item-text="text"
+                                        item-value="value" label="Filtrar movimientos" hide-details />
+                                </v-list-item>
+                                <v-divider class="my-1"></v-divider>
 
-        </v-row>
-        <v-row gutters class="mt-n3" style="font-size:80%;">
-            <v-col cols="12" md="3" sm="6" xs="12" v-for="item in suma_reportes()" :key="item.nombre">
-
-                <TABLE BORDER CELLPADDING=10 CELLSPACING=0 WIDTH="100%">
-                    <TR BGCOLOR="LightGRAY">
-                        <TH COLSPAN=3>{{ item.nombre }}</TH>
-                    </TR>
-                    <TR BGCOLOR="LightGRAY">
-                        <TH>Ing.</TH>
-                        <TH>Egr.</TH>
-                        <TH>Saldo</TH>
-                    </TR>
-                    <TR class="text-center" fontSize=1px>
-                        <TD>
-                            <h5>S/.{{ redondear(item.ingreso) }}</h5>
-                        </TD>
-                        <TD class="red--text">
-                            <h5>S/.{{ item.egreso }}</h5>
-                        </TD>
-                        <TD>
-                            <h5>S/.{{ redondear(item.ingreso - item.egreso) }}</h5>
-                        </TD>
-                    </TR>
-                </TABLE>
-
+                                <v-list-item @click="evento(5)">
+                                    <v-list-item-icon><v-icon color="info">mdi-cash-plus</v-icon></v-list-item-icon>
+                                    <v-list-item-title>Inicio / Apertura Caja</v-list-item-title>
+                                </v-list-item>
+                                <v-list-item @click="evento(2)">
+                                    <v-list-item-icon><v-icon color="info">mdi-swap-horizontal</v-icon></v-list-item-icon>
+                                    <v-list-item-title>Nuevo Ingreso / Egreso</v-list-item-title>
+                                </v-list-item>
+                                <v-list-item @click="evento(3)">
+                                    <v-list-item-icon><v-icon color="info">mdi-lock</v-icon></v-list-item-icon>
+                                    <v-list-item-title>Cerrar Caja (Reporte)</v-list-item-title>
+                                </v-list-item>
+                                <v-list-item @click="evento(4)">
+                                    <v-list-item-icon><v-icon color="info">mdi-history</v-icon></v-list-item-icon>
+                                    <v-list-item-title>Ver Historial</v-list-item-title>
+                                </v-list-item>
+                                <v-list-item @click="dialog_reporte = true">
+                                    <v-list-item-icon><v-icon color="info">mdi-chart-box-outline</v-icon></v-list-item-icon>
+                                    <v-list-item-title>Productos Vendidos</v-list-item-title>
+                                </v-list-item>
+                                <v-list-item @click="evento(6)">
+                                    <v-list-item-icon><v-icon color="info">mdi-file-chart-outline</v-icon></v-list-item-icon>
+                                    <v-list-item-title>Reporte General</v-list-item-title>
+                                </v-list-item>
+                            </v-list>
+                        </v-menu>
+                    </v-col>
+                </v-row>
+            </v-card-text>
+        </v-card>
+        
+        <v-row dense>
+            <v-col cols="12" md="3" sm="6" v-for="item in suma_reportes()" :key="item.nombre">
+                <v-card class="pa-3 elevation-2 rounded-lg" :color="item.nombre === 'EFE' ? 'amber lighten-5' : 'blue-grey lighten-5'">
+                    <div class="text-subtitle-1 font-weight-bold">{{ item.nombre }}</div>
+                    <v-divider class="my-1"></v-divider>
+                    <v-row dense class="text-caption font-weight-medium text-center">
+                        <v-col cols="4">Ingreso</v-col>
+                        <v-col cols="4">Egreso</v-col>
+                        <v-col cols="4">Saldo</v-col>
+                    </v-row>
+                    <v-row dense class="text-center font-weight-bold">
+                        <v-col cols="4" class="green--text text--darken-2">S/.{{ redondear(item.ingreso) }}</v-col>
+                        <v-col cols="4" class="red--text text--darken-2">S/.{{ redondear(item.egreso) }}</v-col>
+                        <v-col cols="4" :class="{'green--text': (item.ingreso - item.egreso) >= 0, 'red--text': (item.ingreso - item.egreso) < 0}">
+                            S/.{{ redondear(item.ingreso - item.egreso) }}
+                        </v-col>
+                    </v-row>
+                </v-card>
             </v-col>
         </v-row>
 
-        <v-simple-table class="elevation-1" fixed-header height="60vh" dense>
+        <v-divider class="my-4"></v-divider>
+        
+        <v-simple-table class="elevation-1 rounded-lg" fixed-header height="60vh" dense>
             <template v-slot:default>
                 <thead>
-
-                    <tr>
-                        <th class="text-left">
-                            Mov.
-                        </th>
-                        <th class="text-left">
-                            MODO
-                        </th>
-                        <th class="text-left">
-                            FECHA
-                        </th>
-                        <th class="text-left">
-                            Total
-                        </th>
-                        <th class="text-left" v-if="true">
-                            Obs.
-                        </th>
-                        <th class="text-left">
-                            Estado
-                        </th>
-                        <th class="text-left">
-                            Accion
-                        </th>
+                    <tr class="blue-grey lighten-5">
+                        <th class="text-left">Mov.</th>
+                        <th class="text-left">Modo</th>
+                        <th class="text-left">Fecha</th>
+                        <th class="text-right">Total</th>
+                        <th class="text-left">Observación</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-center">Accion</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="item in listafiltrada" :key="item.id"
-                        :class="{ 'credito-row': item.operacion === 'credito' }">
-                        <td style=" font-size:80%;">{{ extrae_texto(item.operacion, 4) }}</td>
-                        <td style="font-size:80%;">{{ extrae_texto(item.modo, 4) }}</td>
-                        <td style="font-size:80%;">{{ conviertefecha(item.fecha) }}</td>
-                        <td style="font-size:80%;" v-if="item.operacion == 'ingreso'">S/.{{ redondear(item.total) }}
+                    <tr v-for="item in listafiltrada" :key="item.id" :class="{ 'grey lighten-4': item.operacion === 'credito' }">
+                        <td>
+                            <v-chip 
+                                x-small 
+                                :color="item.operacion === 'ingreso' ? 'success' : (item.operacion === 'egreso' ? 'error' : 'primary')" 
+                                dark
+                            >
+                                {{ extrae_texto(item.operacion, 4) }}
+                            </v-chip>
                         </td>
-                        <td style="font-size:80%;" v-if="item.operacion == 'credito'">S/.{{ redondear(item.total) }}
+                        <td>{{ extrae_texto(item.modo, 4) }}</td>
+                        <td><span class="caption">{{ conviertefecha(item.fecha) }}</span></td>
+                        <td class="text-right font-weight-bold" 
+                            :class="{ 'red--text': item.operacion === 'egreso', 'success--text': item.operacion === 'ingreso' }">
+                            S/.{{ redondear(item.total) }}
                         </td>
-                        <td style="font-size:80%;" v-if="item.operacion == 'egreso'" class="red--text">- S/.{{
-                            redondear(item.total)
-                        }}
+                        <td><span class="caption">{{ item.observacion }}</span></td>
+                        <td class="text-center">
+                            <v-chip x-small :color="item.estado === 'activo' ? 'green' : 'red'" dark>
+                                {{ item.estado }}
+                            </v-chip>
                         </td>
-                        <td style="font-size:80%;" v-if="true">{{ item.observacion }}</td>
-                        <td style="font-size:80%;" v-if="item.estado == 'activo'">{{ item.estado }}</td>
-                        <td style="font-size:80%;" v-if="item.estado != 'activo'" class="red--text">{{ item.estado
-                        }}
-                        </td>
-                        <td width="100">
-                            <v-row>
-                                <v-col cols="6" xs="6">
-                                    <v-icon color="red" @click="abre_editar(item)">mdi-pencil</v-icon>
-                                </v-col>
-                                <v-col cols="6" xs="6">
-                                    <v-icon color="green" @click.prevent="ver_items(item)">mdi-eye</v-icon>
-                                </v-col>
-                            </v-row>
+                        <td class="text-center" width="100">
+                            <v-btn icon x-small color="red" @click="abre_editar(item)" title="Ver / Anular">
+                                <v-icon>mdi-pencil</v-icon>
+                            </v-btn>
+                            <v-btn icon x-small color="green" @click.prevent="ver_items(item)" title="Ver Detalle Venta">
+                                <v-icon>mdi-eye</v-icon>
+                            </v-btn>
                         </td>
                     </tr>
                 </tbody>
             </template>
-
         </v-simple-table>
-        <v-row gutters class="mt-1 mb-12" v-if="false">
-            <h4 class="text--center">TOTALIZADOS </h4>
-            <v-col cols="12" md="3" sm="6" xs="12" v-for="item in suma_reportes()" :key="item.nombre">
 
-                <TABLE BORDER CELLPADDING=10 CELLSPACING=0 WIDTH="100%">
-                    <TR BGCOLOR="LightGRAY">
-                        <TH COLSPAN=3>{{ item.nombre }}</TH>
-                    </TR>
-                    <TR BGCOLOR="LightGRAY">
-                        <TH>Ing.</TH>
-                        <TH>Egr.</TH>
-                        <TH>Saldo</TH>
-                    </TR>
-                    <TR class="text-center" fontSize=1px>
-                        <TD>
-                            <h5>S/.{{ redondear(item.ingreso) }}</h5>
-                        </TD>
-                        <TD class="red--text">
-                            <h5>S/.{{ item.egreso }}</h5>
-                        </TD>
-                        <TD>
-                            <h5>S/.{{ redondear(item.ingreso - item.egreso) }}</h5>
-                        </TD>
-                    </TR>
-                </TABLE>
-
-            </v-col>
-        </v-row>
         <v-dialog v-model="dialogoegreso" max-width="600">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dialogoegreso = false">mdi-close</v-icon>
-                    <v-spacer></v-spacer>
-                    <v-icon large color="green" @click="graba()">mdi-content-save</v-icon>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <v-row dense>
-                    <v-col cols="6">
-                        <v-text-field type="date" outlined dense v-model="date" label="Fecha"></v-text-field>
-                    </v-col>
-                    <v-col cols="6">
-                        <v-select v-model="operacion" :items="arrayoperacion2" menu-props="auto" hide-details
-                            label="Modo" outlined dense></v-select>
-                    </v-col>
-                </v-row>
-                <v-row dense class="mt-n5">
-                    <v-col cols="6">
-                        <v-text-field type="number" v-model="monto" label="Monto S/." outlined dense></v-text-field>
-                    </v-col>
-                    <v-col cols="6">
-                        <v-select v-model="modo_pago" :items="$store.state.modopagos" menu-props="auto" hide-details
-                            label="Modo" outlined dense></v-select>
-                    </v-col>
-                </v-row>
-                <v-row dense class="mt-n5">
-                    <v-col cols="12">
-                        <v-textarea v-model="obs" auto-grow filled dense outlined color="deep-purple"
-                            label="observacion" rows="1"></v-textarea>
-                    </v-col>
-                </v-row>
+            <v-card class="rounded-lg">
+                <v-toolbar color="info" dense dark><v-toolbar-title>Registro Ingreso / Egreso</v-toolbar-title><v-spacer></v-spacer><v-btn icon @click="dialogoegreso = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-card-text class="pa-4">
+                    <v-row dense>
+                        <v-col cols="6"><v-text-field type="date" outlined dense v-model="date" label="Fecha"></v-text-field></v-col>
+                        <v-col cols="6"><v-select v-model="operacion" :items="arrayoperacion2" label="Tipo Operación" outlined dense></v-select></v-col>
+                    </v-row>
+                    <v-row dense class="mt-n4">
+                        <v-col cols="6"><v-text-field type="number" v-model="monto" label="Monto S/." outlined dense prefix="S/." /></v-col>
+                        <v-col cols="6"><v-select v-model="modo_pago" :items="$store.state.modopagos" label="Modo Pago" outlined dense></v-select></v-col>
+                    </v-row>
+                    <v-row dense class="mt-n4">
+                        <v-col cols="12"><v-textarea v-model="obs" auto-grow outlined dense label="Observación" rows="1" /></v-col>
+                    </v-row>
+                </v-card-text>
+                <v-card-actions class="pa-4 pt-0">
+                    <v-btn color="green" block large @click="graba()"><v-icon left>mdi-content-save</v-icon> GUARDAR</v-btn>
+                </v-card-actions>
             </v-card>
         </v-dialog>
 
         <v-dialog v-model="dialogoObservacion" max-width="390">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dialogoObservacion = false">mdi-close</v-icon>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-
-                <h4>Modo Pago = <strong class="red--text">{{ this.itemelecto.modo }}</strong>
-                    <v-icon color="green" class="" @click="cambia_metodo = true">mdi-lead-pencil</v-icon>
-                </h4>
-                <h4>{{ this.itemelecto.observacion }}</h4>
-                <h4>Total = S/.{{ this.itemelecto.total }}</h4>
-
-                <v-card-actions>
-                    <v-row dense class="mt-5">
-                        <v-col cols="12">
-                            <v-btn color="error" block @click="pre_anular = true">Anular</v-btn>
-                        </v-col>
-                    </v-row>
-
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
-
-        <v-dialog v-model="pre_anular" max-width="390">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="pre_anular = false">mdi-close</v-icon>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <h4 class="text-center">ESTE PROCESO ANULARÁ</h4>
-                <h4 class="text-center">SOLO! LA ENTRADA EN EL FLUJO DE CAJA</h4>
-                <h4 class="text-center">RECUERDE QUE DEBE ANULAR EL COMPROBANTE EMITIDO CON UNA NOTA DE CREDITO O
-                    CON
-                    BAJA
-                    DE COMPROBANTE EN LA OPCION SUNAT!!!</h4>
-                <v-card-actions>
-                    <v-row dense class="mt-5">
-                        <v-col cols="12">
-                            <v-btn color="error" block @click="anular()">CONTINUAR !</v-btn>
-                        </v-col>
-                    </v-row>
-
-                </v-card-actions>
-            </v-card>
-
-        </v-dialog>
-        <v-dialog v-model="cambia_metodo" max-width="390">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="cambia_metodo = false">mdi-close</v-icon>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <v-select v-model="modo_pago" :items="$store.state.modopagos" menu-props="auto" hide-details
-                    label="Modo" outlined dense></v-select>
-                <v-card-actions>
-                    <v-row dense class="mt-5">
-                        <v-col cols="12">
-                            <v-btn color="success" block @click="cambia_edita_modo()">MODIFICAR</v-btn>
-                        </v-col>
-                    </v-row>
-
-                </v-card-actions>
-            </v-card>
-
-        </v-dialog>
-        <v-dialog v-model="dialogocierre" max-width="390">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dialogocierre = false">mdi-close</v-icon>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <H4 class="text-center">CIERRE DE CAJA</H4>
-                <v-card-text>
-                    <v-text-field disabled type="date" outlined dense v-model="date" label="Fecha"></v-text-field>
-                    <v-textarea class="mt-n2" dense v-model="observacion" auto-grow filled color="deep-purple"
-                        label="Observacion" rows="1"></v-textarea>
+            <v-card class="rounded-lg">
+                <v-toolbar color="red" dense dark><v-toolbar-title>Detalle y Gestión</v-toolbar-title><v-spacer></v-spacer><v-btn icon @click="dialogoObservacion = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-card-text class="pa-4">
+                    <h4 class="mb-2">Total: <strong class="success--text">S/.{{ redondear(itemelecto.total) }}</strong></h4>
+                    <h4 class="mb-2">Modo Pago: <strong class="red--text">{{ itemelecto.modo }}</strong> 
+                         <v-btn icon x-small color="green" class="ml-1" @click="cambia_metodo = true" title="Cambiar método de pago"><v-icon small>mdi-lead-pencil</v-icon></v-btn>
+                    </h4>
+                    <h4 class="mb-4">Observación: {{ itemelecto.observacion }}</h4>
                 </v-card-text>
-
-                <v-card-actions>
-
-                    <v-spacer></v-spacer>
-                    <v-row>
-                        <v-col cols="6">
-                            <v-btn color="red" text @click="ejecuta_reporte_detallado()">
-                                Ver reporte
-                            </v-btn>
-                        </v-col>
-                        <v-col cols="6">
-                            <v-btn color="green darken-1" text @click="cierraflujos()">
-                                Graba
-                            </v-btn>
-                        </v-col>
-                    </v-row>
+                <v-card-actions class="pa-4 pt-0">
+                    <v-btn color="error" block large @click="pre_anular = true"><v-icon left>mdi-delete</v-icon> ANULAR FLUJO</v-btn>
                 </v-card-actions>
             </v-card>
-
+        </v-dialog>
+        
+        <v-dialog v-model="pre_anular" max-width="460">
+             <v-card class="rounded-lg">
+                <v-toolbar color="red darken-2" dense dark><v-toolbar-title>Confirmar Anulación (Atención)</v-toolbar-title><v-spacer></v-spacer><v-btn icon @click="pre_anular = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-card-text class="pa-4 text-center">
+                    <h4 class="text-h6 red--text">¡ADVERTENCIA DE ANULACIÓN!</h4>
+                    <p class="mt-3 text-subtitle-2">
+                        Este proceso anulará **SOLO** la entrada en el **Flujo de Caja**.
+                    </p>
+                    <p class="caption font-weight-bold">
+                        RECUERDE: Debe anular el comprobante de venta asociado (Boleta/Factura) con una **NOTA DE CRÉDITO** o solicitud de **BAJA** en el sistema de la SUNAT/facturador.
+                    </p>
+                </v-card-text>
+                <v-card-actions class="pa-4 pt-0">
+                    <v-btn color="error" block large @click="anular()">CONTINUAR (Anular Flujo)</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+        
+        <v-dialog v-model="cambia_metodo" max-width="390">
+            <v-card class="rounded-lg">
+                <v-toolbar color="green" dense dark><v-toolbar-title>Cambiar Modo de Pago</v-toolbar-title><v-spacer></v-spacer><v-btn icon @click="cambia_metodo = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                 <v-card-text class="pa-4">
+                    <v-select v-model="modo_pago" :items="$store.state.modopagos" label="Nuevo Modo" outlined dense></v-select>
+                </v-card-text>
+                <v-card-actions class="pa-4 pt-0">
+                    <v-btn color="success" block large @click="cambia_edita_modo()">MODIFICAR</v-btn>
+                </v-card-actions>
+            </v-card>
         </v-dialog>
 
+        <v-dialog v-model="dialogocierre" max-width="460">
+            <v-card class="rounded-lg">
+                <v-toolbar color="primary" dense dark><v-toolbar-title>Cierre de Caja</v-toolbar-title><v-spacer></v-spacer><v-btn icon @click="dialogocierre = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-card-text class="pa-4">
+                    <v-text-field disabled type="date" outlined dense v-model="date" label="Fecha de Cierre"></v-text-field>
+                    <v-textarea class="mt-n2" dense v-model="observacion" auto-grow filled outlined color="deep-purple" label="Observación del Cierre" rows="1"></v-textarea>
+                </v-card-text>
+                <v-card-actions class="pa-4 pt-0">
+                    <v-btn color="red" large @click="ejecuta_reporte_detallado()">Ver Reporte</v-btn>
+                    <v-spacer></v-spacer>
+                    <v-btn color="green darken-1" large @click="cierraflujos()">Cerrar y Grabar</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+        
         <v-dialog v-model="dialogo_apertura" max-width="390">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dialogo_apertura = false">mdi-close</v-icon>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <H4 class="text-center">APERTURA CAJA</H4>
-                <v-card-text>
+             <v-card class="rounded-lg">
+                <v-toolbar color="info" dense dark><v-toolbar-title>Apertura de Caja</v-toolbar-title><v-spacer></v-spacer><v-btn icon @click="dialogo_apertura = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                 <v-card-text class="pa-4">
                     <v-text-field disabled type="date" outlined dense v-model="date" label="Fecha"></v-text-field>
-                    <v-text-field class="mt-n2" outlined type="number" dense v-model="monto_apertura"
-                        label="Monto Apertura"></v-text-field>
+                    <v-text-field class="mt-n2" outlined type="number" dense v-model="monto_apertura" label="Monto Apertura (Efectivo)" prefix="S/." />
                     <v-checkbox v-model="guardar_stock" label="Guardar stock actual" class="mt-2" dense></v-checkbox>
                 </v-card-text>
+                <v-card-actions class="pa-4 pt-0">
+                    <v-btn color="green darken-1" block large @click="crea_apertura()">
+                        <v-icon left>mdi-cash-lock-open</v-icon> CREAR APERTURA
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
 
-                <v-card-actions>
-
-                    <v-spacer></v-spacer>
-                    <v-row class="mt-n6">
-                        <v-col cols="12">
-                            <v-btn color="green darken-1" text @click="crea_apertura()">
-                                Crea
+        <v-dialog v-model="dial_reportes" max-width="390">
+            <v-card class="rounded-lg">
+                <v-toolbar color="teal darken-1" dense dark><v-toolbar-title>Generar Reporte General</v-toolbar-title><v-spacer></v-spacer><v-btn icon @click="dial_reportes = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-card-text class="pa-4">
+                    <v-row dense>
+                        <v-col cols="6">
+                            <v-btn color="warning" block @click="ejecuta_reporte_detallado()">
+                                <v-icon left>mdi-file-pdf-box</v-icon> PDF
+                            </v-btn>
+                        </v-col>
+                        <v-col cols="6">
+                            <v-btn color="success" block @click="exportaExcel()">
+                                <v-icon left>mdi-file-excel</v-icon> Excel
                             </v-btn>
                         </v-col>
                     </v-row>
-                </v-card-actions>
+                </v-card-text>
             </v-card>
-
         </v-dialog>
-        <v-dialog v-model="dial_reportes" max-width="390">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dial_reportes = false">mdi-close</v-icon>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <v-row>
-                    <v-col cols="6">
-                        <v-btn color="warning" block @click="ejecuta_reporte_detallado()">
-                            TOTAL
-                        </v-btn>
-                    </v-col>
-                    <v-col cols="6">
-                        <v-btn color="success" block @click="exportaExcel()">
-                            Excel
-                        </v-btn>
-                    </v-col>
-                </v-row>
-            </v-card>
-
-        </v-dialog>
+        
         <v-dialog v-model="dialog" max-width="850px">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dialog = !dialog">mdi-close</v-icon>
-                    <v-spacer></v-spacer>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <v-row dense>
-                    <v-col cols="12">
-                    </v-col>
-                </v-row>
-                <v-simple-table dark fixed-header max-width="68vh" dense>
-                    <template v-slot:default>
-
-                        <thead>
-                            <tr>
-                                <th class="text-left">
-                                    Descripcion
-                                </th>
-                                <th class="text-left">
-                                    Medida
-                                </th>
-                                <th class="text-left">
-                                    Cantidad.
-                                </th>
-                                <th class="text-left">
-                                    Precio
-                                </th>
-                                <th class="text-left">
-                                    Total
-                                </th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-
-                            <tr v-for="item in arrayConsolidar" :key="item.id">
-                                <td>{{ item.nombre }}</td>
-                                <td>{{ item.medida }}</td>
-                                <td>{{ item.cantidad }}</td>
-                                <td>S/.{{ item.precioedita }}</td>
-                                <td>S/.{{ redondear(item.precioedita * item.cantidad) }}</td>
-                            </tr>
-                        </tbody>
-                    </template>
-                </v-simple-table>
+            <v-card class="rounded-lg">
+                <v-toolbar color="primary" dense dark><v-toolbar-title>Detalle de Items</v-toolbar-title><v-spacer></v-spacer><v-btn icon @click="dialog = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-card-text class="pa-4">
+                    <v-simple-table fixed-header height="60vh" dense class="elevation-1">
+                        <template v-slot:default>
+                            <thead class="blue-grey lighten-5">
+                                <tr>
+                                    <th class="text-left font-weight-bold">Descripción</th>
+                                    <th class="text-left font-weight-bold">Medida</th>
+                                    <th class="text-center font-weight-bold">Cantidad</th>
+                                    <th class="text-right font-weight-bold">Precio Unit.</th>
+                                    <th class="text-right font-weight-bold">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(item, index) in arrayConsolidar" :key="index">
+                                    <td>{{ item.nombre }}</td>
+                                    <td>{{ item.medida }}</td>
+                                    <td class="text-center">{{ item.cantidad }}</td>
+                                    <td class="text-right">S/.{{ redondear(item.precioedita) }}</td>
+                                    <td class="text-right font-weight-bold">S/.{{ redondear(item.precioedita * item.cantidad) }}</td>
+                                </tr>
+                            </tbody>
+                        </template>
+                    </v-simple-table>
+                </v-card-text>
             </v-card>
-
         </v-dialog>
+        
         <dial_rep_vend v-if="dialog_reporte" :data="desserts" @cierra="dialog_reporte = false" />
 
     </div>
@@ -686,7 +550,7 @@ export default {
                 console.log('Método encontrado:', metodo);
                 if (metodo) {
                     const saldoDisponible = parseFloat(metodo.ingreso) - parseFloat(metodo.egreso);
-                    if (parseFloat(this.monto) > saldoDisponible) {
+                    if (parseFloat(this.monto) > saldoDisponible && !store.state.permisos.es_admin) {
                         this.$store.commit('dialogosnackbar', `Saldo insuficiente en ${this.modo_pago}`);
                         return;
                     }

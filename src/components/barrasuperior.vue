@@ -31,482 +31,266 @@
                 <v-icon color="green">mdi-whatsapp</v-icon>
             </v-btn>
         </v-app-bar>
-
         <v-navigation-drawer v-model="drawer" temporary app class="drawer-estilo">
 
-            <v-list-item class="px-3">
+            <v-list-item class="pa-4 primary darken-1 white--text">
                 <v-list-item-avatar>
                     <v-img
-                        src="https://firebasestorage.googleapis.com/v0/b/mitienda-f5ef8.appspot.com/o/carpetaiconos%2Ficono25?alt=media&token=9ead45f5-7735-4386-8647-e1d80cc913ab"></v-img>
+                        src="https://firebasestorage.googleapis.com/v0/b/mitienda-f5ef8.appspot.com/o/carpetaiconos%2Ficono25?alt=media&token=9ead45f5-7735-4386-8647-e1d80cc913ab"
+                        alt="User Avatar"></v-img>
                 </v-list-item-avatar>
 
-                <v-list-item-title class="mb-2">
-                    <v-row no-gutters>
-                        <v-col cols="12">
-                            <span style="font-size: 0.8em; color: #FF2D00;">Usuario:</span>
+                <v-list-item-content>
+                    <div class="caption font-weight-light">USUARIO:</div>
+                    <v-list-item-title class="subtitle-1 font-weight-bold text-uppercase">
+                        {{ nombreusuario }}
+                    </v-list-item-title>
 
-                        </v-col>
-                        <v-col cols="12">
-                            <span style="font-size: 0.8em ; text-transform:uppercase">{{ nombreusuario }}</span>
-                        </v-col>
-                    </v-row>
-
-                    <v-btn dark v-if="$store.state.baseDatos.multi_empresa" class="ma-2" color="red" small text
-                        @click="abre_tiendas()">
-                        {{ sede_acual }}
-                        <v-icon color="white" right>
-                            mdi-storefront
-                        </v-icon>
-
+                    <v-btn v-if="$store.state.baseDatos.multi_empresa" small text color="white" class="pa-0 mt-1"
+                        @click="abre_tiendas">
+                        <v-icon small left>mdi-storefront</v-icon>
+                        <span class="caption text-decoration-underline">{{ sede_acual }}</span>
                     </v-btn>
-                </v-list-item-title>
+                </v-list-item-content>
 
-                <v-btn icon @click.stop="drawer = !drawer">
+                <v-btn icon color="white" @click.stop="drawer = !drawer" title="Cerrar Menú">
                     <v-icon>mdi-chevron-left</v-icon>
                 </v-btn>
             </v-list-item>
 
             <v-divider></v-divider>
 
-            <v-list dense>
-                <v-list-item link @click.prevent="router('panel')">
-                    <v-list-item-icon>
-                        <v-icon>mdi-account</v-icon>
-                    </v-list-item-icon>
-                    <v-list-item-content>
-                        <v-list-item-title>Home</v-list-item-title>
-                    </v-list-item-content>
+            <v-list nav dense>
 
+                <v-list-item link @click.prevent="router('panel')">
+                    <v-list-item-icon><v-icon color="grey darken-2">mdi-home</v-icon></v-list-item-icon>
+                    <v-list-item-title class="font-weight-medium">Home</v-list-item-title>
                 </v-list-item>
 
                 <v-list-group v-if="$store.state.permisos.modulocaja && $store.state.baseDatos.caja2" :value="listaMenu"
-                    prepend-icon="mdi-cash-register">
+                    prepend-icon="mdi-cash-register" color="primary">
                     <template v-slot:activator>
-                        <v-list-item-title>Venta</v-list-item-title>
+                        <v-list-item-title class="font-weight-medium">Venta</v-list-item-title>
                     </template>
-                    <v-container>
-
-                        <v-list-item v-if="$store.state.permisos.punto_venta && $store.state.baseDatos.caja2" link
-                            @click.prevent="opcionCaja()">
-                            <v-list-item-icon>
-                                <v-icon>mdi-cash-register</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Punto de Venta</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-
-                        <v-list-item link @click.prevent="router('reporte_proformas')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-text-box-multiple-outline</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Proformas</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-
-
-                        <v-list-item v-if="$store.state.permisos.flujo_caja" link @click.prevent="router('flujocaja')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-chart-areaspline</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Flujo de Caja</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-
-                        <v-list-item link @click.prevent="router('cuentas_cobrar')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-account-cash</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Creditos</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                    </v-container>
+                    <v-list-item link v-if="$store.state.permisos.punto_venta && $store.state.baseDatos.caja2"
+                        @click.prevent="opcionCaja()">
+                        <v-list-item-icon><v-icon small>mdi-point-of-sale</v-icon></v-list-item-icon>
+                        <v-list-item-title>Punto de Venta</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item link @click.prevent="router('reporte_proformas')">
+                        <v-list-item-icon><v-icon small>mdi-text-box-multiple-outline</v-icon></v-list-item-icon>
+                        <v-list-item-title>Proformas</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item v-if="$store.state.permisos.flujo_caja" link @click.prevent="router('flujocaja')">
+                        <v-list-item-icon><v-icon small>mdi-chart-areaspline</v-icon></v-list-item-icon>
+                        <v-list-item-title>Flujo de Caja</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item link @click.prevent="router('cuentas_cobrar')">
+                        <v-list-item-icon><v-icon small>mdi-account-cash</v-icon></v-list-item-icon>
+                        <v-list-item-title>Créditos</v-list-item-title>
+                    </v-list-item>
                 </v-list-group>
-                <v-list-group v-if="$store.state.permisos.modulotransporte" :value="listaMenu"
-                    prepend-icon="mdi-dump-truck">
-                    <template v-slot:activator>
-                        <v-list-item-title>Transporte</v-list-item-title>
-                    </template>
-                    <v-container>
 
-                        <v-list-item link @click.prevent="router('reporte_Guia')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-dump-truck</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>G.R.Remitente</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                        <v-list-item link @click.prevent="router('reporte_Guia_t')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-dump-truck</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>G.R. Transportista</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                    </v-container>
+                <v-list-group v-if="$store.state.permisos.modulotransporte" :value="listaMenu"
+                    prepend-icon="mdi-dump-truck" color="primary">
+                    <template v-slot:activator>
+                        <v-list-item-title class="font-weight-medium">Transporte</v-list-item-title>
+                    </template>
+                    <v-list-item link @click.prevent="router('reporte_Guia')">
+                        <v-list-item-icon><v-icon small>mdi-file-send</v-icon></v-list-item-icon>
+                        <v-list-item-title>G.R. Remitente</v-list-item-title>
+                    </v-list-item>
+
                 </v-list-group>
 
                 <v-list-group v-if="$store.state.permisos.moduloproductos" :value="listaMenu"
-                    prepend-icon="mdi-package-variant-closed">
+                    prepend-icon="mdi-package-variant-closed" color="primary">
                     <template v-slot:activator>
+                        <v-list-item-title class="font-weight-medium">Productos</v-list-item-title>
+                    </template>
+                    <v-list-item link @click.prevent="router('productos')">
+                        <v-list-item-icon><v-icon small>mdi-package-variant-closed</v-icon></v-list-item-icon>
                         <v-list-item-title>Productos</v-list-item-title>
-                    </template>
-                    <v-container>
-
-                        <v-list-item link @click.prevent="router('productos')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-package-variant-closed</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title> Productos</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                        <v-list-item link @click.prevent="router('bonos_globales')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-package-variant-closed</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title> Bonos Globales</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                        <v-list-item v-if="$store.state.permisos.productos_sede" link
-                            @click.prevent="router('productos_x_sede')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-package-variant-closed</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title> Productos x Sede</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-
-                    </v-container>
+                    </v-list-item>
+                    <v-list-item link @click.prevent="router('bonos_globales')">
+                        <v-list-item-icon><v-icon small>mdi-gift</v-icon></v-list-item-icon>
+                        <v-list-item-title>Bonos Globales</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item v-if="$store.state.permisos.productos_sede" link
+                        @click.prevent="router('productos_x_sede')">
+                        <v-list-item-icon><v-icon small>mdi-store-outline</v-icon></v-list-item-icon>
+                        <v-list-item-title>Productos x Sede</v-list-item-title>
+                    </v-list-item>
                 </v-list-group>
+
                 <v-list-group v-if="$store.state.permisos.moduloclientes" :value="listaMenu"
-                    prepend-icon="mdi-account-search">
+                    prepend-icon="mdi-account-group" color="primary">
                     <template v-slot:activator>
-                        <v-list-item-title>Clientes</v-list-item-title>
+                        <v-list-item-title class="font-weight-medium">Clientes</v-list-item-title>
                     </template>
-                    <v-container>
-                        <v-list-item link @click.prevent="router('clientes')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-account-search</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Lista Clientes</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                        <v-list-item link @click.prevent="router('comprasClientes')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-account-search</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Historial Compra</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                    </v-container>
+                    <v-list-item link @click.prevent="router('clientes')">
+                        <v-list-item-icon><v-icon small>mdi-account-details</v-icon></v-list-item-icon>
+                        <v-list-item-title>Lista Clientes</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item link @click.prevent="router('comprasClientes')">
+                        <v-list-item-icon><v-icon small>mdi-history</v-icon></v-list-item-icon>
+                        <v-list-item-title>Historial Compra</v-list-item-title>
+                    </v-list-item>
                 </v-list-group>
+
                 <v-list-group v-if="$store.state.permisos.lista_pedidos" :value="listaMenu"
-                    prepend-icon="mdi-account-convert">
+                    prepend-icon="mdi-clipboard-list-outline" color="primary">
                     <template v-slot:activator>
-                        <v-list-item-title>Pedidos</v-list-item-title>
+                        <v-list-item-title class="font-weight-medium">Pedidos</v-list-item-title>
                     </template>
-                    <v-container>
-                        <v-list-item link @click.prevent="router('lista')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-clipboard-list</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Lista Visitas</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                        <v-list-item link @click.prevent="router('lista_pedidos')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-clipboard-list</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Lista Pedidos</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                        <v-list-item v-if="$store.state.permisos.reparto" link
-                            @click.prevent="router('lista_repartos')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-clipboard-list</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Reparto</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                    </v-container>
+                    <v-list-item link @click.prevent="router('lista')">
+                        <v-list-item-icon><v-icon small>mdi-calendar-check</v-icon></v-list-item-icon>
+                        <v-list-item-title>Lista Visitas</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item link @click.prevent="router('lista_pedidos')">
+                        <v-list-item-icon><v-icon small>mdi-clipboard-text-outline</v-icon></v-list-item-icon>
+                        <v-list-item-title>Lista Pedidos</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item v-if="$store.state.permisos.reparto" link @click.prevent="router('lista_repartos')">
+                        <v-list-item-icon><v-icon small>mdi-truck-delivery</v-icon></v-list-item-icon>
+                        <v-list-item-title>Reparto</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item v-if="$store.state.permisos.reparto" link @click.prevent="router('gps_usuarios')">
+                        <v-list-item-icon><v-icon small>mdi-crosshairs-gps</v-icon></v-list-item-icon>
+                        <v-list-item-title>GPS Usuarios</v-list-item-title>
+                    </v-list-item>
                 </v-list-group>
-                <v-list-group v-if="false" :value="listaMenu" prepend-icon="mdi-account-convert">
+                <v-list-group :value="listaMenu" prepend-icon="mdi-shopping" color="primary">
                     <template v-slot:activator>
-                        <v-list-item-title>Empleados</v-list-item-title>
+                        <v-list-item-title class="font-weight-medium">Tienda Virtual</v-list-item-title>
                     </template>
-                    <v-container>
-                        <v-list-item disabled link @click.prevent="router('clientes')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-clipboard-list</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Lista Empleados</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                        <v-list-item disabled link @click.prevent="router('comprasClientes')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-list-status</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Control Asistencia</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                    </v-container>
-                </v-list-group>
-                <v-list-group v-if="$store.state.permisos.moduloFinanzas" :value="listaMenu" prepend-icon="mdi-finance">
-                    <template v-slot:activator>
-                        <v-list-item-title>Finanzas</v-list-item-title>
-                    </template>
-                    <v-container>
-                        <v-list-item v-if="$store.state.permisos.tesoreria" link @click.prevent="router('tesoreria')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-account-cash</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Tesoreria</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                        <v-list-item v-if="$store.state.permisos.cuentas_cobrar" link
-                            @click.prevent="router('cuentas_cobrar')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-account-cash</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>C x Cobrar</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-
-                        <v-list-item v-if="false" link>
-                            <v-list-item-icon>
-                                <v-icon>mdi-truck-fast</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>C x Pagar</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-
-                        <v-list-item v-if="false" link>
-                            <v-list-item-icon>
-                                <v-icon>mdi-truck-fast</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Balance</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-
-                    </v-container>
+                    <v-list-item link @click.prevent="router('catalogo_tienda')">
+                        <v-list-item-icon><v-icon small>mdi-calendar-check</v-icon></v-list-item-icon>
+                        <v-list-item-title>Catalogo</v-list-item-title>
+                    </v-list-item>
                 </v-list-group>
 
-                <v-list-group v-if="$store.state.permisos.modulokardex" :value="listaMenu"
-                    prepend-icon="mdi-dump-truck">
+                <v-list-group v-if="$store.state.permisos.moduloFinanzas" :value="listaMenu" prepend-icon="mdi-finance"
+                    color="primary">
                     <template v-slot:activator>
-                        <v-list-item-title>Kardex</v-list-item-title>
+                        <v-list-item-title class="font-weight-medium">Finanzas</v-list-item-title>
                     </template>
-                    <v-container>
-                        <v-list-item v-if="$store.state.permisos.modulokardex" link
-                            @click.prevent="router('movimientos_kardex')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-swap-horizontal</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Kardex</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                        <v-list-item v-if="$store.state.permisos.modulokardex" link
-                            @click.prevent="router('rep_mov_producto')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-swap-horizontal</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Mov x Producto</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                        <v-list-item v-if="$store.state.permisos.transferencias" link
-                            @click.prevent="router('transferencia_productos')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-swap-horizontal</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Transferencias</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                        <v-list-item v-if="true" link @click.prevent="router('reporte_stock')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-swap-horizontal</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Stock</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                    </v-container>
+                    <v-list-item v-if="$store.state.permisos.tesoreria" link @click.prevent="router('tesoreria')">
+                        <v-list-item-icon><v-icon small>mdi-bank</v-icon></v-list-item-icon>
+                        <v-list-item-title>Tesoreria</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item v-if="$store.state.permisos.cuentas_cobrar" link
+                        @click.prevent="router('cuentas_cobrar')">
+                        <v-list-item-icon><v-icon small>mdi-cash-remove</v-icon></v-list-item-icon>
+                        <v-list-item-title>C x Cobrar</v-list-item-title>
+                    </v-list-item>
                 </v-list-group>
 
-                <v-list-item link @click.prevent="router('lista_periodos')" v-if="false">
-                    <v-list-item-icon>
-                        <v-icon>mdi-bank</v-icon>
-                    </v-list-item-icon>
-                    <v-list-item-content>
-                        <v-list-item-title>SIRE Compras (new)</v-list-item-title>
-                    </v-list-item-content>
-                </v-list-item>
-
-                <v-list-group v-if="$store.state.permisos.modulosunat" :value="listaMenu"
-                    prepend-icon="mdi-text-box-multiple-outline">
+                <v-list-group v-if="$store.state.permisos.modulokardex" :value="listaMenu" prepend-icon="mdi-archive"
+                    color="primary">
                     <template v-slot:activator>
-                        <v-list-item-title>SUNAT</v-list-item-title>
+                        <v-list-item-title class="font-weight-medium">Kardex</v-list-item-title>
                     </template>
-                    <v-container>
+                    <v-list-item v-if="$store.state.permisos.modulokardex" link
+                        @click.prevent="router('movimientos_kardex')">
+                        <v-list-item-icon><v-icon small>mdi-swap-horizontal-bold</v-icon></v-list-item-icon>
+                        <v-list-item-title>Movimientos</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item v-if="$store.state.permisos.modulokardex" link
+                        @click.prevent="router('rep_mov_producto')">
+                        <v-list-item-icon><v-icon small>mdi-file-chart-outline</v-icon></v-list-item-icon>
+                        <v-list-item-title>Mov x Producto</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item v-if="$store.state.permisos.transferencias" link
+                        @click.prevent="router('transferencia_productos')">
+                        <v-list-item-icon><v-icon small>mdi-truck-fast-outline</v-icon></v-list-item-icon>
+                        <v-list-item-title>Transferencias</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item link @click.prevent="router('reporte_stock')">
+                        <v-list-item-icon><v-icon small>mdi-counter</v-icon></v-list-item-icon>
+                        <v-list-item-title>Stock Actual</v-list-item-title>
+                    </v-list-item>
+                </v-list-group>
 
-                        <v-list-item @click.prevent="router('boletaFactura')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-text-box-multiple-outline</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Boletas, Facturas</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-
-                        <v-list-item @click.prevent="router('creditoDebito')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-text-box-multiple-outline</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>N.Credito</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-
-                        <v-list-item @click.prevent="router('resumenbaja')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-text-box-multiple-outline</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Resumen Bajas</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-
-                        <v-list-item @click.prevent="router('ticket')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-web-box</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Tickets</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                    </v-container>
+                <v-list-group v-if="$store.state.permisos.modulosunat" :value="listaMenu" prepend-icon="mdi-receipt"
+                    color="primary">
+                    <template v-slot:activator>
+                        <v-list-item-title class="font-weight-medium">SUNAT</v-list-item-title>
+                    </template>
+                    <v-list-item @click.prevent="router('comprobantes')"
+                        v-if="$store.state.permisos.modulocomprobantes">
+                        <v-list-item-icon><v-icon small>mdi-file-edit-outline</v-icon></v-list-item-icon>
+                        <v-list-item-title>Comprobantes</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click.prevent="router('boletaFactura')">
+                        <v-list-item-icon><v-icon small>mdi-file-document-multiple-outline</v-icon></v-list-item-icon>
+                        <v-list-item-title>Boletas, Facturas</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click.prevent="router('creditoDebito')">
+                        <v-list-item-icon><v-icon small>mdi-note-edit-outline</v-icon></v-list-item-icon>
+                        <v-list-item-title>N. Crédito</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click.prevent="router('resumenbaja')">
+                        <v-list-item-icon><v-icon small>mdi-file-cancel-outline</v-icon></v-list-item-icon>
+                        <v-list-item-title>Resumen Bajas</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click.prevent="router('ticket')">
+                        <v-list-item-icon><v-icon small>mdi-web-box</v-icon></v-list-item-icon>
+                        <v-list-item-title>Tickets</v-list-item-title>
+                    </v-list-item>
                 </v-list-group>
 
                 <v-list-group v-if="$store.state.permisos.moduloreportes" :value="listaMenu"
-                    prepend-icon="mdi-chart-bar">
+                    prepend-icon="mdi-chart-areaspline" color="primary">
                     <template v-slot:activator>
-                        <v-list-item-title>REPORTES</v-list-item-title>
+                        <v-list-item-title class="font-weight-medium">REPORTES</v-list-item-title>
                     </template>
-                    <v-container>
-                        <v-list-item @click.prevent="router('reporte_ventas')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-text-box-multiple-outline</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Reporte Ventas</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                        <v-list-item @click.prevent="router('ventasxempleado')"
-                            v-if="$store.state.configuracion.comisiones">
-                            <v-list-item-icon>
-                                <v-icon>mdi-text-box-multiple-outline</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Ventas x Emp.</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
+                    <v-list-item @click.prevent="router('reporte_ventas')">
+                        <v-list-item-icon><v-icon small>mdi-file-document-outline</v-icon></v-list-item-icon>
+                        <v-list-item-title>Reporte Ventas</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click.prevent="router('ventasxempleado')"
+                        v-if="$store.state.configuracion.comisiones">
+                        <v-list-item-icon><v-icon small>mdi-account-tie</v-icon></v-list-item-icon>
+                        <v-list-item-title>Ventas x Emp.</v-list-item-title>
+                    </v-list-item>
 
-                        <v-list-item @click.prevent="router('comprobantes')"
-                            v-if="$store.state.permisos.modulocomprobantes">
-                            <v-list-item-icon>
-                                <v-icon>mdi-text-box-multiple-outline</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Comprobantes</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-
-                        <v-list-item @click.prevent="router('reporteVentaDetalle')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-cash-100</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title> X Producto</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                        <v-list-item @click.prevent="router('reporte_x_vendedor')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-cash-100</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title> X Vendedor</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                        <v-list-item @click.prevent="router('venta_x_sede')" v-if="false">
-                            <v-list-item-icon>
-                                <v-icon>mdi-cash-100</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title> X Sede</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                        <v-list-item @click.prevent="router('reg_contables')">
-                            <v-list-item-icon>
-                                <v-icon>mdi-finance</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-content>
-                                <v-list-item-title>Reg. Contable</v-list-item-title>
-                            </v-list-item-content>
-                        </v-list-item>
-                    </v-container>
+                    <v-list-item @click.prevent="router('reporteVentaDetalle')">
+                        <v-list-item-icon><v-icon small>mdi-package-variant-closed</v-icon></v-list-item-icon>
+                        <v-list-item-title>Ventas X Producto</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click.prevent="router('reporte_x_vendedor')">
+                        <v-list-item-icon><v-icon small>mdi-account-tie-voice</v-icon></v-list-item-icon>
+                        <v-list-item-title>Ventas X Vendedor</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click.prevent="router('reg_contables')">
+                        <v-list-item-icon>
+                            <v-icon small>mdi-calculator-variant-outline</v-icon></v-list-item-icon>
+                        <v-list-item-title>Reg. Contable</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click.prevent="router('exportar_data')">
+                        <v-list-item-icon>
+                            <v-icon color="green" small>mdi-file-excel</v-icon></v-list-item-icon>
+                        <v-list-item-title>Exportar Data</v-list-item-title>
+                    </v-list-item>
                 </v-list-group>
 
-                <v-spacer></v-spacer>
-                <v-divider></v-divider>
+                <v-divider class="mt-2 mb-1"></v-divider>
 
                 <v-list-item v-if="user == 'ivanac1992@domotica.com'" @click.prevent="router('panelgeneral')">
-                    <v-list-item-icon>
-                        <v-icon>mdi-logout-variant</v-icon>
-                    </v-list-item-icon>
-
-                    <v-list-item-content>
-                        <v-list-item-title>Admin</v-list-item-title>
-                    </v-list-item-content>
+                    <v-list-item-icon><v-icon color="pink">mdi-wrench</v-icon></v-list-item-icon>
+                    <v-list-item-content><v-list-item-title>Panel Admin</v-list-item-title></v-list-item-content>
                 </v-list-item>
 
                 <v-list-item v-if="$store.state.permisos.moduloempresa" link @click.prevent="router('miempresa')">
-                    <v-list-item-icon>
-                        <v-icon>mdi-cog-outline</v-icon>
-                    </v-list-item-icon>
-                    <v-list-item-content>
-                        <v-list-item-title>Configuracion</v-list-item-title>
-                    </v-list-item-content>
+                    <v-list-item-icon><v-icon>mdi-cog-outline</v-icon></v-list-item-icon>
+                    <v-list-item-content><v-list-item-title>Configuración</v-list-item-title></v-list-item-content>
                 </v-list-item>
 
-                <v-list-item @click.prevent="accion('Cerrar Sesion')">
-                    <v-list-item-icon>
-                        <v-icon>mdi-logout-variant</v-icon>
-                    </v-list-item-icon>
-
-                    <v-list-item-content>
-                        <v-list-item-title>Cerrar Sesion</v-list-item-title>
-                    </v-list-item-content>
+                <v-list-item link @click.prevent="accion('Cerrar Sesion')">
+                    <v-list-item-icon><v-icon color="red">mdi-logout-variant</v-icon></v-list-item-icon>
+                    <v-list-item-content><v-list-item-title class="font-weight-bold">Cerrar
+                            Sesión</v-list-item-title></v-list-item-content>
                 </v-list-item>
 
             </v-list>
@@ -621,6 +405,7 @@ import {
     allUsuarios,
     allnotificaciones,
     allProductos,
+    allClientes,
     obtenerSeries,
     allCategorias,
     lee_multiEmpresas,
@@ -886,7 +671,7 @@ export default {
         async obtenerYGuardarTipoCambio() {
             try {
                 if (!store.state.configuracion.sincroniza_tipo_cambio) {
-                    console.log("No se usará la API de tipo de cambio según configuración.");
+                    //console.log("No se usará la API de tipo de cambio según configuración.");
                     return;
                 }
                 const fecha = moment().format("YYYY-MM-DD");
@@ -937,34 +722,32 @@ export default {
                 console.log("Error:", e);
             }
         },
-        cargar_datos() {
+        async cargarClientesRealtime() {
+            try {
+                const ref = allClientes();
 
-            const idxById = new Map();     // id -> posición en array
-            const clientessearch = [];
-            const unsub = colClientes().onSnapshot({ includeMetadataChanges: true }, (querySnapshot) => {
+                // 1) Carga masiva inicial: solo clientessearch
+                const snap = await ref.once('value');
+                const obj = snap.val() || {};
 
-                querySnapshot.docChanges().forEach((ch) => {
-                    const id = ch.doc.id;
+                const clientessearch = Object.keys(obj).map((k) => {
+                    const d = obj[k] || {};
+                    return { id: k, nombre: String(d.nombre || '').trim() };
+                });
 
-                    if (ch.type === 'removed') {
-                        // eliminar en O(1) con swap&pop
-                        const i = idxById.get(id);
-                        if (i !== undefined) {
-                            const last = clientessearch.length - 1;
-                            const lastItem = clientessearch[last];
-                            clientessearch[i] = lastItem;
-                            clientessearch.pop();
-                            idxById.delete(id);
-                            if (lastItem) idxById.set(lastItem.id, i);
-                        }
-                        return;
-                    }
+                // Publicas SOLO clientessearch
+                store.state.clientessearch = clientessearch; // o usa tu mutación si la tienes
+                //console.log(`📥 Clientes iniciales (ligero): ${clientessearch.length}`);
 
-                    // added | modified -> upsert versión corta
-                    const d = ch.doc.data() || {};
-                    const nombre = String(d.nombre || '').trim();
-                    const nota = String(d.nota || '').trim();
-                    const item = { id, nombre, nota };
+                // 2) Índice para upserts/eliminaciones O(1)
+                const idxById = new Map();
+                for (let i = 0; i < clientessearch.length; i++) idxById.set(clientessearch[i].id, i);
+
+                // 3) Cambios incrementales (agregados/modificados)
+                ref.on('child_changed', (snap) => {
+                    const id = snap.key;
+                    const d = snap.val() || {};
+                    const item = { id, nombre: String(d.nombre || '').trim() };
 
                     const i = idxById.get(id);
                     if (i === undefined) {
@@ -973,21 +756,63 @@ export default {
                     } else {
                         clientessearch.splice(i, 1, item);
                     }
-                });
-                if (typeof store !== 'undefined' && store.state) {
+                    // Re-publica
                     store.state.clientessearch = clientessearch;
+                });
+
+                // 4) Eliminaciones
+                ref.on('child_removed', (snap) => {
+                    const id = snap.key;
+                    const i = idxById.get(id);
+                    if (i !== undefined) {
+                        const last = clientessearch.length - 1;
+                        const lastItem = clientessearch[last];
+                        clientessearch[i] = lastItem;
+                        clientessearch.pop();
+                        idxById.delete(id);
+                        if (lastItem) idxById.set(lastItem.id, i);
+                        store.state.clientessearch = clientessearch;
+                    }
+                });
+
+                //console.log('✅ Escuchando cambios incrementales en RTDB (solo clientessearch)...');
+            } catch (err) {
+                console.error('❌ Error en cargarClientesRealtime:', err);
+                alert('Error al cargar clientes. Revisa la consola.');
+            }
+        },
+
+        cargar_datos() {
+            this.cargarClientesRealtime()
+            const lista = store.state?.permisos?.list_prod;
+            const tieneLista = Array.isArray(lista) && lista.length > 0;
+
+            console.log("antes de cargar", lista);
+
+            allProductos().on("value", (snapshot) => {
+                let array = [];
+
+                if (snapshot.exists()) {
+                    if (tieneLista) {
+                        const setIds = new Set(lista.map(x => String(x).trim()).filter(Boolean));
+
+                        snapshot.forEach((item) => {
+                            const data = item.val();
+                            const id = String(data?.id ?? item.key ?? "").trim(); // por si tu producto usa id o key
+                            if (setIds.has(id)) array.push(data);
+                        });
+
+                    } else {
+                        snapshot.forEach((item) => {
+                            array.push(item.val());
+                        });
+                    }
+
+                    store.commit("productos", array);
+                } else {
+                    store.commit("productos", []);
                 }
             });
-            allProductos().on('value', (snapshot) => {
-                let array = [];
-                if (snapshot.exists()) {
-                    snapshot.forEach((item) => {
-                        let data = item.val();
-                        array.push(data);
-                    });
-                    store.commit('productos', array)
-                }
-            })
             allCategorias("categorias").on('value', (snapshot) => {
                 let array = [];
                 if (snapshot.exists()) {

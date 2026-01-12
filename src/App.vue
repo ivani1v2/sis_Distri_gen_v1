@@ -183,6 +183,8 @@ export default {
             });
         },
 
+
+        
         calcularDistancia(lat1, lon1, lat2, lon2) {
             const R = 6371e3;
             const toRad = (deg) => (deg * Math.PI) / 180;

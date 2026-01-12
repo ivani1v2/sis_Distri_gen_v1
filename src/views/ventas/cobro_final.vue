@@ -7,7 +7,7 @@
                 <h3>Total = {{ moneda }} {{ total }}</h3>
 
                 <v-spacer></v-spacer>
-                <v-btn v-if="false" x-small color="primary" @click="visualizar()">
+                <v-btn v-if="true" x-small color="primary" @click="visualizar()">
                     vista previa
                 </v-btn>
             </v-system-bar>
@@ -66,15 +66,17 @@
                         <v-switch v-model="genera_guia" label="Genera G-Rem" :false-value="false"
                             :true-value="true"></v-switch>
                     </v-col>
-                    <v-col cols="6" class="d-flex align-center">
-                        <v-btn color="primary" @click="abrirDialogoMapa" outlined v-if="cliente_selecto != ''">
-                            <v-icon left>mdi-crosshairs-gps</v-icon>
-                            GPS Cliente
-                        </v-btn>
+                    <v-col cols="6">
+                        <v-select v-if="$store.state.permisos.moduloempresa" outlined dense v-model="cod_vendedor"
+                            class="mt-2" :items="$store.state.array_sedes" item-text="nombre" item-value="codigo"
+                            label="Vendedor">
+                            <template v-slot:item="{ item }"><span>{{ item.nombre }}</span></template>
+                            <template v-slot:selection="{ item }"><span>{{ item && item.nombre }}</span></template>
+                        </v-select>
                     </v-col>
                 </v-row>
 
-                <v-row class="mt-n3">
+                <v-row class="mt-n4">
                     <v-col cols="4">
                         <v-btn block color="primary" @click="cobrar()" small>
                             EFECTIVO<span v-if="!$store.state.esmovil">(F3)</span>
@@ -195,31 +197,9 @@
 
             </v-card>
         </v-dialog>
-        <v-dialog v-model="dial_direcciones" max-width="620">
-            <v-card>
-                <v-toolbar flat dense>
-                    <v-toolbar-title>Direcciones del cliente</v-toolbar-title>
-                    <v-spacer />
-                    <v-btn icon @click="dial_direcciones = false"><v-icon>mdi-close</v-icon></v-btn>
-                </v-toolbar>
 
-                <v-card-text class="pt-2">
-                    <v-radio-group v-model="direccionSeleccionadaIndex">
-                        <v-radio v-for="(d, idx) in list_direcciones" :key="idx" :value="idx"
-                            :label="formatDireccionLista(d)" class="my-1" />
-                    </v-radio-group>
-                </v-card-text>
-
-                <v-divider />
-                <v-card-actions>
-                    <v-spacer />
-                    <v-btn color="primary" :disabled="direccionSeleccionadaIndex === null" @click="aplicarDireccion()">
-                        Usar esta dirección
-                    </v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
-
+        <dialog_direcciones_cliente v-model="dial_direcciones" :cliente-id="numero || (cliente && cliente.dni) || ''"
+            @seleccion="onDireccionSeleccionada" />
 
 
         <busca_clis v-if="dial_cliente" @cerrar="dial_cliente = false" @agregar="agregacliente($event)"></busca_clis>
@@ -231,10 +211,10 @@
 import {
     allEmpleados,
     obtenContador,
-    nuevoCliente,
+
     nuevaCuentaxcobrar
 } from '../../db'
-import { colClientes } from '../../db_firestore'
+import { crearOActualizarCliente as nuevoCliente, colClientes } from '../../db_firestore'
 import {
     pdfGenera
 } from '../../pdf_comprobantes'
@@ -246,6 +226,7 @@ import store from '@/store/index'
 import axios from "axios"
 
 import moment from 'moment'
+import dialog_direcciones_cliente from '@/views/clientes/dialogos/dial_direcciones'
 import busca_clis from '@/views/clientes/dialogos/busca_cliente'
 import {
     cobrar_js
@@ -255,7 +236,8 @@ export default {
 
     components: {
         dial_mapa,
-        busca_clis
+        busca_clis,
+        dialog_direcciones_cliente
 
     },
     props: {
@@ -303,9 +285,8 @@ export default {
             intervalo: true,
             paravuelto: '',
             calculavuelto: 0,
-            list_direcciones: [],
             dial_direcciones: false,
-            direccionSeleccionadaIndex: null,
+            cod_vendedor: store.state.sedeActual.codigo,
         }
     },
 
@@ -394,6 +375,36 @@ export default {
         window.removeEventListener("keydown", this.detectarTecla);
     },
     methods: {
+        onDireccionSeleccionada(dir) {
+            if (!dir) return
+
+            // Dirección principal en el comprobante (solo la calle)
+            this.direccion = (dir.direccion || '').trim()
+
+            // Si quieres aprovechar para setear info extra:
+            if (dir.departamento) {
+                this.departamento = typeof dir.departamento === 'object'
+                    ? (dir.departamento.nombre || '').trim()
+                    : String(dir.departamento).trim()
+            }
+
+            if (dir.provincia) {
+                this.provincia = typeof dir.provincia === 'object'
+                    ? (dir.provincia.nombre || '').trim()
+                    : String(dir.provincia).trim()
+            }
+
+            if (dir.distrito) {
+                this.distrito = typeof dir.distrito === 'object'
+                    ? (dir.distrito.nombre || '').trim()
+                    : String(dir.distrito).trim()
+            }
+
+            if (dir.ubigeo) {
+                this.ubigeo = String(dir.ubigeo).trim()
+            }
+        },
+
         money(v, mon) {
             const n = parseFloat(v) || 0
             return `${mon} ${n.toFixed(2)}`
@@ -412,59 +423,23 @@ export default {
         },
 
         ver_direcciones() {
-            try {
-                // Documento del cliente (prioriza lo digitado; si no, el del prop cliente)
-                const doc = String(this.numero || this.cliente?.dni || '').trim();
-                if (!doc) {
-                    store.commit && store.commit('dialogosnackbar', 'Primero ingrese/busque el documento del cliente.');
-                    return;
-                }
+            // Documento del cliente (prioriza lo digitado; si no, el del prop cliente)
+            const doc = String(this.numero || this.cliente?.dni || '').trim()
 
-                const cli = (store.state.clientes || []).find(
-                    x => String(x.documento || x.id || '') === doc
-                );
-
-                const direcs = Array.isArray(cli?.direcciones) ? cli.direcciones : [];
-                if (!direcs.length) {
-                    store.commit && store.commit('dialogosnackbar', 'Este cliente no tiene direcciones registradas.');
-                    return;
-                }
-
-                this.list_direcciones = direcs;
-                // Preselecciona la principal si existe; si no, la primera
-                const idxPrincipal = this.list_direcciones.findIndex(x => !!x.principal);
-                this.direccionSeleccionadaIndex = idxPrincipal >= 0 ? idxPrincipal : 0;
-                this.dial_direcciones = true;
-            } catch (e) {
-                console.error(e);
-                store.commit && store.commit('dialogosnackbar', 'No se pudieron cargar las direcciones.');
+            if (!doc) {
+                store.commit && store.commit(
+                    'dialogosnackbar',
+                    'Primero ingrese/busque el documento del cliente.'
+                )
+                return
             }
-        },
-        formatDireccionLista(d) {
-            // Texto amigable para listar en el diálogo
-            const linea = (d?.direccion || '').trim();
-            const dis = (d?.distrito?.nombre || '').trim();
-            const prov = (d?.provincia?.nombre || '').trim();
-            const ref = (d?.referencia || '').trim();
 
-            const loc = [dis, prov].filter(Boolean).join(', ');
-            const base = [linea, loc].filter(Boolean).join(' — ');
-            return ref ? `${base} · Ref: ${ref}` : base;
+            // nos aseguramos de que "numero" tenga el doc
+            this.numero = doc
+            // abrimos el diálogo de direcciones
+            this.dial_direcciones = true
         },
 
-        aplicarDireccion() {
-            const d = this.list_direcciones?.[this.direccionSeleccionadaIndex];
-            if (!d) { this.dial_direcciones = false; return; }
-
-            // Pegamos al campo 'direccion' del comprobante (calle + distrito + provincia)
-            this.direccion = [
-                (d?.direccion || '').trim(),
-                (d?.distrito?.nombre || '').trim(),
-                (d?.provincia?.nombre || '').trim()
-            ].filter(Boolean).join(' - ');
-
-            this.dial_direcciones = false;
-        },
         abrirDialogoMapa() {
             this.dialogoMapa = !this.dialogoMapa;
         },
@@ -489,7 +464,7 @@ export default {
                 vencimiento: this.conviertefecha(this.fecha_cuota()),
                 estado: 'pendiente',
                 fecha_modificacion: moment().unix(),
-                vendedor: store.state.sedeActual.codigo
+                vendedor: this.cod_vendedor || store.state.sedeActual.codigo
             })
             this.dialogocredito = true
         },
@@ -502,7 +477,7 @@ export default {
                 vencimiento: this.conviertefecha(this.fecha_cuota()),
                 estado: 'pendiente',
                 fecha_modificacion: moment().unix(),
-                vendedor: store.state.sedeActual.codigo
+                vendedor: this.cod_vendedor || store.state.sedeActual.codigo
             })
         },
         eliminacuota() {
@@ -594,7 +569,7 @@ export default {
                 }
             }
             if (this.telfcliente && this.numero && this.numero !== '00000000') {
-                nuevoCliente(this.numero + '/telefono', this.telfcliente)
+                nuevoCliente(this.numero, { telefono: this.telfcliente })
             }
 
             this.cabecera.detraccion = detra
@@ -624,8 +599,8 @@ export default {
                 delete this.cabecera.metodo_pago_credito // no guardar campo vacío
             }
             this.cabecera.ubicacion = this.$store.getters.ubicacionActual || ''
-            this.cabecera.cod_vendedor = store.state.sedeActual.codigo
-            this.cabecera.vendedor = store.state.sedeActual.codigo
+            this.cabecera.cod_vendedor = this.cod_vendedor || this.$store.state.sedeActual.codigo
+            this.cabecera.vendedor = this.cod_vendedor || this.$store.state.sedeActual.codigo
 
             var arrayCabecera = this.cabecera
             var array_item = this.items
@@ -669,6 +644,18 @@ export default {
         otros() {
             this.dial_pagos = true
         },
+        getDireccionPreferida(data = {}) {
+            // 1) Si tiene direccion en la raíz, usar esa
+            let dir = (data.direccion || '').trim();
+
+            // 2) Si no hay, pero tiene direcciones[], usar el nodo 0
+            if (!dir && Array.isArray(data.direcciones) && data.direcciones.length > 0) {
+                const d0 = data.direcciones[0] || {};
+                dir = (d0.direccion || '').trim();
+            }
+
+            return dir;
+        },
         async BuscarDocumento() {
             if (this.numero == '') {
                 this.dial_cliente = true
@@ -688,24 +675,29 @@ export default {
                 const docSnap = await colClientes().doc(num).get()
 
                 if (docSnap.exists) {
-                    // ✅ Ya está en tu BD local, NO llamamos al dispatch
                     const data = docSnap.data() || {}
 
-                    // completar campos si existen
+                    // Nombre
                     if (data.nombre) this.nombreCompleto = data.nombre
-                    if (data.direccion) this.direccion = data.direccion
+
+                    // 👉 Dirección con lógica combinada (raíz o direcciones[0])
+                    const dirFinal = this.getDireccionPreferida(data)
+                    if (dirFinal) this.direccion = dirFinal
+
+                    // Si ya tienes estos campos en el doc, los respetas
                     if (data.departamento) this.departamento = data.departamento
                     if (data.provincia) this.provincia = data.provincia
                     if (data.distrito) this.distrito = data.distrito
                     if (data.ubigeo) this.ubigeo = data.ubigeo
 
-                    // si tienes telf en Firestore lo pasas también
+                    // Teléfono
                     if (data.telefono) this.telfcliente = data.telefono
 
-                    this.text = 'Cliente encontrado (local)'
+                    console.log('Cliente encontrado en Firestore:', data)
                     store.commit("dialogoprogress")
                     return
                 }
+
 
                 // 2. Si NO existe en Firestore -> usar tu flujo actual con el store
                 const {
@@ -721,7 +713,19 @@ export default {
                     documento: this.documento,
                     numero: this.numero,
                 })
-
+                console.log('antes de guardar')
+                nuevoCliente(this.numero, {
+                    nombre,
+                    tipodoc: this.documento,
+                    documento: this.numero,
+                    id: this.numero,
+                    direccion,
+                    departamento,
+                    provincia,
+                    distrito,
+                    ubigeo,
+                    sede: store.state.sedeActual.codigo
+                })
                 // Autocompleta con resultado remoto / SUNAT / RENIEC, etc.
                 if (nombre) this.nombreCompleto = nombre
                 if (direccion) this.direccion = direccion
@@ -746,18 +750,60 @@ export default {
 
 
         agregacliente(data) {
-            console.log(data)
-            this.cliente_selecto = data
-            this.numero = data.documento
-            if (this.numero.length == 11) {
-                this.documento = "RUC"
+            if (!data) return;
+
+            console.log('agregacliente()', data);
+
+            // Normaliza número de documento desde varias posibles claves
+            const num = String(
+                data.documento ||
+                data.id ||
+                data.dni ||
+                ''
+            ).trim();
+
+            this.cliente_selecto = data;
+            this.numero = num;
+
+            // Tipo de documento según longitud
+            if (num.length === 11) {
+                this.documento = 'RUC';
+            } else if (num.length === 8) {
+                this.documento = 'DNI';
             } else {
-                this.documento = "DNI"
+                this.documento = this.documento || 'DNI';
             }
-            this.nombreCompleto = data.nombre
-            this.direccion = data.direccion
-            this.dial_cliente = false
+
+            this.nombreCompleto = data.nombre || data.nombre_lc || '';
+
+            // ====== LÓGICA DE DIRECCIÓN ======
+            let dirFinal = (data.direccion || '').trim();
+
+            // Si no tiene `direccion` pero sí `direcciones`, usar siempre el nodo 0
+            if (!dirFinal && Array.isArray(data.direcciones) && data.direcciones.length > 0) {
+                const d0 = data.direcciones[0] || {};
+                // Solo la calle, como pediste
+                dirFinal = (d0.direccion || '').trim();
+
+                // Si quisieras algo más completo (comentado):
+                // dirFinal = [
+                //   (d0.direccion || '').trim(),
+                //   (d0.distrito && d0.distrito.nombre ? d0.distrito.nombre.trim() : ''),
+                //   (d0.provincia && d0.provincia.nombre ? d0.provincia.nombre.trim() : ''),
+                // ].filter(Boolean).join(' - ');
+            }
+
+            this.direccion = dirFinal;
+            // =================================
+
+            // Teléfono si viene
+            if (data.telefono) {
+                this.telfcliente = data.telefono;
+            }
+
+            this.dial_cliente = false;
         },
+
 
         busca_ico(data) {
             var iconos = store.state.iconos_pagos.find(item => item.nombre == data)
@@ -783,7 +829,108 @@ export default {
         cierre() {
             this.$emit('cierre', false)
         },
+    async visualizar() {
+            store.commit("dialogoprogress")
+            if (this.valida_pagos() != parseFloat(this.total)) {
+                alert('Debe ingresar monto correcto')
+                store.commit("dialogoprogress")
+                return
+            }
 
+            let snapshot = await obtenContador().once("value")
+            var contadores = snapshot.val()
+            var auto = ""
+            if (this.documento == "DNI") {
+                var doccliente = "1" // 6 ruc --4 carnet --7 pasaporte -- 1 DNI
+            }
+            if (this.documento == "RUC") {
+                var doccliente = "6" // 6 ruc --4 carnet --7 pasaporte -- 1 DNI
+            }
+            if (this.documento == "Pasaporte") {
+                var doccliente = "7" // 6 ruc --4 carnet --7 pasaporte -- 1 DNI
+            }
+            if (this.documento == "Carnet de Extranjeria") {
+                var doccliente = "4" // 6 ruc --4 carnet --7 pasaporte -- 1 DNI
+            }
+            if (this.documento == 'Otro Documento') {
+                var doccliente = "0" // 6 ruc --4 carnet --7 pasaporte -- 1 DNI
+            }
+            if (this.tipocomprobante == "B") { //Catálogo No. 01: Código de Tipo de documento
+                var cod_comprobante = '03' //01-factura -- 03-boleta -- 07-notaCred -- 08-notadebit -- 
+                var serie = store.state.seriesdocumentos.boleta
+                var correlativo = contadores.ordenboleta
+            }
+            if (this.tipocomprobante == "F") { //Catálogo No. 01: Código de Tipo de documento 
+                var cod_comprobante = '01' //01-factura -- 03-boleta -- 07-notaCred -- 08-notadebit -- 
+                var serie = store.state.seriesdocumentos.factura
+                var correlativo = contadores.ordenfactura
+            }
+            if (this.tipocomprobante == "T") {
+                var cod_comprobante = '00'
+                var serie = store.state.seriesdocumentos.ticket
+                var correlativo = contadores.ordenticket
+                this.cabecera.estado = 'aprobado'
+                auto = "NO"
+            }
+            if (this.nombreCompleto == '') {
+                this.nombreCompleto = 'CLIENTES VARIOS'
+            }
+
+            this.cabecera.forma_pago = "Contado"
+            this.cabecera.cuotas = ''
+            if (this.cuotasCredito != '') {
+                var vencimientodoc = moment(String(this.cuotasCredito[this.cuotasCredito.length - 1].vencimiento)) / 1000
+                this.cabecera.vencimientoDoc = vencimientodoc
+                this.cabecera.cuotas = this.cuotasCredito
+                this.cabecera.forma_pago = "Credito"
+            }
+            this.cabecera.nomempleado = ''
+            if (store.state.configImpresora.vendedor) {
+                this.cabecera.nomempleado = (store.state.permisos.correo).substr(0, store.state.permisos.correo.length - 13)
+                console.log(store.state.permisos.correo)
+            }
+            var detra = {}
+            if (this.detraccion != '' && this.detraccion != '000') {
+                const detraSeleccionada = store.state.detracciones.find(d => d.cod === this.detraccion);
+                console.log(detraSeleccionada)
+                if (detraSeleccionada) {
+                    // Si encontramos el código de detracción, completamos los datos del objeto `detra`
+                    detra = {
+                        cod_detraccion: this.detraccion,
+                        porcentaje: detraSeleccionada.porcentaje,
+                        cuenta: store.state.configuracion.cuenta_detra,
+                        monto: (parseFloat(this.total) * detraSeleccionada.porcentaje / 100).toFixed(2)
+                    };
+                }
+            }
+            this.cabecera.moneda = this.moneda
+            this.cabecera.detraccion = detra
+            this.cabecera.serie = serie
+            this.cabecera.correlativoDocEmitido = correlativo
+            this.cabecera.numeracion = serie + '-' + correlativo
+            this.cabecera.tipoDocumento = this.documento
+            this.cabecera.cod_tipoDocumento = doccliente
+            this.cabecera.dni = this.numero
+            this.cabecera.cliente = this.nombreCompleto
+            this.cabecera.direccion = this.direccion
+            this.cabecera.telefono = this.telfcliente
+            this.cabecera.observacion = this.observacion
+            this.cabecera.referenciacliente = this.refcliente
+            this.cabecera.tipocomprobante = this.tipocomprobante
+            this.cabecera.cod_comprobante = cod_comprobante
+            this.cabecera.placa_cliente = this.placa_cliente
+            this.cabecera.automata = auto
+            this.cabecera.modopago = this.modopagos
+            var arrayCabecera = this.cabecera
+            var array_item = this.items
+            var array = {
+                arrayCabecera: arrayCabecera,
+                array_item: array_item,
+            }
+            var modo = 'imprime'
+            pdfGenera(array_item, arrayCabecera, store.state.configImpresora.tamano, modo === 'descarga' ? 'descarga' : 'abre');
+            store.commit("dialogoprogress")
+        },
 
     },
 

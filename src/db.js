@@ -1,5 +1,5 @@
 // Conveniently import this file anywhere to use db
-
+// db.js
 import firebase from "firebase/app";
 import "firebase/database";
 import store from "@/store/index";
@@ -55,6 +55,7 @@ export const all_multiEmpresas = () => {
   return multi_empresas;
 };
 export const lee_multiEmpresas = (id) => {
+  console.log("consultadno",id)
   return multi_empresas.child(id);
 };
 export const nueva_multiEmpresa = (id, array) => {
@@ -619,6 +620,22 @@ export const nuevoCliente = (id, array) => {
     .child(id)
     .set(array)
 };
+export const nuevoCliente_migra = (ruc, array) => {
+  return db
+    .database()
+    .ref("general")
+    .child(String(ruc).trim())
+    .child("clientes")
+    .set(array)
+};
+export const elimina_cliente_migra =(ruc) => {
+  return db
+    .database()
+    .ref("general")
+    .child(String(ruc).trim())
+    .child("clientes")
+    .remove();
+}
 export const eliminaCliente = (id) => {
   return db
     .database()
@@ -1186,13 +1203,6 @@ export const nuevaCuentaxcobrar = (id, array) => {
     .child("x_cobrar")
     .child(id)
     .set(array)
-    .then(() => {
-      return true;
-    })
-    .catch(function (error) {
-      return error;
-    });
-  return c;
 };
 export const editaCuentaxCobrar = (id, tipo, data) => {
   return db
@@ -1542,6 +1552,25 @@ export const nuevo_transporte = (id, array) => {
     .child(id)
     .set(array);
 };
+export const all_tablas_transporte = (tabla) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("transporte")
+    .child("tabla")
+    .child(tabla);
+};
+export const nuevo_tablas_transporte = (tabla,id, array) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("transporte")
+    .child("tabla")
+    .child(tabla)
+    .child(id)
+    .set(array);
+};
+//---
 //---------PASAJES----------
 
 export const all_transferencia = () => {
@@ -1568,24 +1597,7 @@ export function actualiza_transferencia(clave, data) {
     .update(data);
 }
 
-// visitas
-export const nueva_visita = (id_cliente, array) => {
-  return db
-    .database()
-    .ref("general")
-    .child(store.state.baseDatos.ruc_asociado)
-    .child("visita_clientes")
-    .child(id_cliente)
-    .push(array)
-};
-export const visita_x_id = (id_cliente) => {
-  return db
-    .database()
-    .ref("general")
-    .child(store.state.baseDatos.ruc_asociado)
-    .child("visita_clientes")
-    .child(id_cliente)
-};
+
 export const all_pedidos = () => {
   return db
     .database()
@@ -1784,4 +1796,33 @@ export const all_detalle_entrega = (grupo) => {
     .child("detalle_reparto")
     .child(grupo)
     .child("entregas"); 
+};
+
+
+export const obten_datos_tienda = (tabla) => {
+  return db
+    .database()
+    .ref('BD97')
+    .child("tienda")
+    .child(tabla)
+};
+
+export const guarda_datos_tienda = (tabla,data) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("tienda")
+    .child(tabla).
+    set(data)
+};
+
+export const elimina_datos_tienda = (tabla,id) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("tienda")
+    .child(tabla)
+    .child(id)
+    .remove()
+
 };

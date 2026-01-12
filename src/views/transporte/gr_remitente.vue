@@ -39,40 +39,63 @@
                 </v-col>
             </v-row>
         </v-card>
+        <v-row class="mt-1" dense>
+            <v-col cols="6">
+                <v-card class="pa-3 mt-1">
+                    <v-row class="mx-auto text-center mt-n5" dense>
+                        <v-col cols="4">
+                            <v-switch dense v-model="retorno_vacio" label="Retorno Vehiculo Vacio" color="red"
+                                hide-details></v-switch>
+                        </v-col>
+                        <v-col cols="4" class="mx-auto text-center">
+                            <v-switch dense v-model="retorno_envaces" label="Retorno con Envases Vacíos" color="red"
+                                hide-details></v-switch>
+                        </v-col>
+                        <v-col cols="4" class="mx-auto text-center">
+                            <v-switch dense v-model="programado" label="Transbordo Programado" color="red"
+                                hide-details></v-switch>
+                        </v-col>
+                    </v-row>
+                    <v-row class="mx-auto text-center mt-n5" dense>
+                        <v-col cols="4" class="mx-auto text-center">
+                            <v-switch v-if="valida_guia" dense v-model="vehic_m1" label="Vehículos Categoría M1 o L"
+                                color="red" hide-details></v-switch>
+                        </v-col>
+                        <v-col cols="4" class="mx-auto text-center">
+                            <v-switch dense v-model="traslado_total" label="Traslado total (DAM o DS)" color="red"
+                                hide-details></v-switch>
+                        </v-col>
+                        <v-col cols="4" class="mx-auto text-center">
+                            <v-switch v-if="valida_guia" dense v-model="datos_transpor" label="Datos del Transportista"
+                                color="red" hide-details></v-switch>
+                            <v-switch v-if="!valida_guia" dense v-model="trans_sub" label="Trasporte Subcontratado"
+                                color="red" hide-details></v-switch>
+                        </v-col>
 
-        <v-card class="pa-3 mt-1">
-            <v-row class="mx-auto text-center mt-n5" dense>
-                <v-col cols="4">
-                    <v-switch dense v-model="retorno_vacio" label="Retorno Vehiculo Vacio" color="red"
-                        hide-details></v-switch>
-                </v-col>
-                <v-col cols="4" class="mx-auto text-center">
-                    <v-switch dense v-model="retorno_envaces" label="Retorno con Envases Vacíos" color="red"
-                        hide-details></v-switch>
-                </v-col>
-                <v-col cols="4" class="mx-auto text-center">
-                    <v-switch dense v-model="programado" label="Transbordo Programado" color="red"
-                        hide-details></v-switch>
-                </v-col>
-            </v-row>
-            <v-row class="mx-auto text-center mt-n5" dense>
-                <v-col cols="4" class="mx-auto text-center">
-                    <v-switch v-if="valida_guia" dense v-model="vehic_m1" label="Vehículos Categoría M1 o L" color="red"
-                        hide-details></v-switch>
-                </v-col>
-                <v-col cols="4" class="mx-auto text-center">
-                    <v-switch dense v-model="traslado_total" label="Traslado total (DAM o DS)" color="red"
-                        hide-details></v-switch>
-                </v-col>
-                <v-col cols="4" class="mx-auto text-center">
-                    <v-switch v-if="valida_guia" dense v-model="datos_transpor" label="Datos del Transportista"
-                        color="red" hide-details></v-switch>
-                    <v-switch v-if="!valida_guia" dense v-model="trans_sub" label="Trasporte Subcontratado" color="red"
-                        hide-details></v-switch>
-                </v-col>
+                    </v-row>
+                </v-card>
+            </v-col>
+            <v-col cols="6">
+                <v-card class="pa-3 mt-1">
+                    <v-row dense>
+                        <v-col cols="12" sm="6" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : 'mt-n1'"
+                            v-if="!valida_guia">
+                            <v-select style="font-size:13.5px" outlined dense v-model="pagado_por" :items="array_pagos"
+                                menu-props="auto" hide-details label="Flete pagado por:"></v-select>
+                        </v-col>
+                        <v-col cols="12" :sm="!valida_guia ? 6 : 12"
+                            :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : 'mt-n1 mb-n6'">
+                            <v-text-field style="font-size:13.5px" outlined dense :value="resumenRelacionados"
+                                label="Doc. Relacionados" readonly class="cursor-pointer" persistent-hint
+                                append-icon="mdi-file-document-edit-outline"
+                                @click="dial_relacionados = !dial_relacionados"
+                                @click:append="dial_relacionados = !dial_relacionados" />
+                        </v-col>
+                    </v-row>
+                </v-card>
+            </v-col>
+        </v-row>
 
-            </v-row>
-        </v-card>
         <v-card class="pa-3 mt-1" v-if="trans_sub">
             <h4 style="font-size:13.5px" class="mb-1">Empresa Subcontrata</h4>
             <v-row dense>
@@ -88,21 +111,17 @@
                 </v-col>
             </v-row>
         </v-card>
-        <v-card class="pa-3 mt-1" v-if="!valida_guia">
-            <v-row dense>
-                <v-col cols="12" sm="6" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : 'mt-n1'">
-                    <v-select style="font-size:13.5px" outlined dense v-model="pagado_por" :items="array_pagos"
-                        menu-props="auto" hide-details label="Flete pagado por:"></v-select>
-                </v-col>
-                <v-col cols="12" sm="6" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : 'mt-n1 mb-n6'">
-                    <v-text-field style="font-size:13.5px" outlined dense v-model="doc_relacionados"
-                        label="Doc. Relacionados"></v-text-field>
-                </v-col>
-            </v-row>
-        </v-card>
+
         <v-card class="pa-3 mt-1">
-            <h4 style="font-size:13.5px" class="mb-1" v-if="valida_guia">Emisor</h4>
-            <h4 style="font-size:13.5px" class="mb-1" v-if="!valida_guia">REMITENTE</h4>
+            <h4 style="font-size:13.5px" class="mb-1" v-if="valida_guia">Emisor
+            </h4>
+            <h4 style="font-size:13.5px" class="mb-1" v-if="!valida_guia">REMITENTE
+                <v-btn class="mt-n1 ml-3" elevation="3" color="info" @click="di_remitente = true" x-small>
+                    <v-icon left>
+                        mdi-magnify
+                    </v-icon>Ver Lista
+                </v-btn>
+            </h4>
             <v-row class="text-center" dense :class="$vuetify.breakpoint.smAndDown ? 'mb-n2' : 'mb-n6'">
 
                 <v-col cols="6" sm="3">
@@ -113,69 +132,80 @@
                     <v-text-field style="font-size:13.5px" type="date" outlined dense v-model="date_traslado"
                         :label="texto_fecha"></v-text-field>
                 </v-col>
-                <v-col cols="6" sm="3" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
-                    <v-select :disabled="valida_guia" style="font-size:13.5px" outlined dense v-model="documento"
-                        :items="documentos" menu-props="auto" hide-details label="Tipo Doc"></v-select>
+                <v-col v-if="!valida_guia" cols="6" sm="3" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
+                    <v-select style="font-size:13.5px" outlined dense v-model="documento" :items="documentos"
+                        menu-props="auto" hide-details label="Tipo Doc"></v-select>
                 </v-col>
-                <v-col cols="6" sm="3" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
-                    <v-text-field :disabled="valida_guia" style="font-size:13.5px" outlined type="number" dense
-                        v-model="numero_doc" label="N° Doc" append-icon="mdi-magnify" @click:append="BuscarDocumento()"
+                <v-col v-if="!valida_guia" cols="6" sm="3" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
+                    <v-text-field style="font-size:13.5px" outlined type="number" dense v-model="numero_doc"
+                        label="N° Doc" append-icon="mdi-magnify" @click:append="BuscarDocumento()"
                         @keyup.enter="BuscarDocumento()"></v-text-field>
                 </v-col>
-                <v-col cols="12" sm="6" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : 'mt-n5'">
-                    <v-text-field :disabled="valida_guia" style="font-size:13.5px" outlined small dense
-                        v-model="razon_social" label="Razon Social"></v-text-field>
+                <v-col v-if="!valida_guia" cols="12" sm="6" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : 'mt-n5'">
+                    <v-text-field style="font-size:13.5px" outlined small dense v-model="razon_social"
+                        label="Razon Social"></v-text-field>
                 </v-col>
-                <v-col cols="12" sm="6" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : 'mt-n5'">
+                <v-col cols="12" sm="6" :class="!valida_guia ? 'mt-n5' : ''">
                     <v-select style="font-size:13.5px" outlined dense v-model="motivos_guia"
                         :items="$store.state.motivos_guia" menu-props="auto" hide-details
                         label="Motivo Traslado"></v-select>
                 </v-col>
             </v-row>
         </v-card>
-        <v-card class="pa-3 mt-1">
-            <h4 style="font-size:13.5px" class="mb-1">Destinatario</h4>
-            <v-row class="text-center" dense :class="$vuetify.breakpoint.smAndDown ? 'mb-n2' : 'mb-n6'">
-                <v-col cols="6" sm="3" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
-                    <v-select style="font-size:13.5px" outlined dense v-model="documento_dest" :items="documentos"
-                        menu-props="auto" hide-details label="Tipo Doc"></v-select>
-                </v-col>
-                <v-col cols="6" sm="3">
-                    <v-text-field style="font-size:13.5px" outlined type="number" dense v-model="ruc_destinatario"
-                        label="N° Doc" append-icon="mdi-magnify" @click:append="buscar_destina()"
-                        @keyup.enter="buscar_destina()"></v-text-field>
-                </v-col>
-                <v-col cols="12" sm="6" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
-                    <v-text-field style="font-size:13.5px" outlined small dense v-model="razonsocial_destinatario"
-                        label="Razon Social"></v-text-field>
-                </v-col>
-            </v-row>
-        </v-card>
-        <v-card class="pa-3 mt-1" v-if="valida_modo">
-            <h4 style="font-size:13.5px" class="mb-1">Datos Transportista
-                <v-btn class="mt-n1 ml-3" elevation="3" color="info" @click="dial_trans = true" x-small>
-                    <v-icon left>
-                        mdi-magnify
-                    </v-icon>Ver Lista
-                </v-btn>
-            </h4>
-            <v-row class="text-center mb-n5" dense>
-                <v-col cols="12" sm="3" :class="$vuetify.breakpoint.smAndDown ? '' : ''">
-                    <v-text-field style="font-size:13.5px" outlined type="number" dense v-model="ruc_transporte"
-                        label="RUC Transportista" append-icon="mdi-magnify" @click:append="buscar_transporte()"
-                        @keyup.enter="buscar_transporte()"></v-text-field>
+        <v-row class="mt-1" dense>
+            <v-col :cols="valida_modo ? 6 : 12">
+                <v-card class="pa-3 mt-1">
+                    <h4 style="font-size:13.5px" class="mb-1">Destinatario
 
-                </v-col>
-                <v-col cols="12" sm="5" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
-                    <v-text-field style="font-size:13.5px" outlined small dense v-model="razon_transporte"
-                        label="Razon Social"></v-text-field>
-                </v-col>
-                <v-col cols="12" sm="4" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
-                    <v-text-field style="font-size:13.5px" outlined dense v-model="registro_mtc"
-                        label="N° Registro MTC"></v-text-field>
-                </v-col>
-            </v-row>
-        </v-card>
+                    </h4>
+
+                    <v-row class="text-center" dense :class="$vuetify.breakpoint.smAndDown ? 'mb-n2' : 'mb-n6'">
+                        <v-col cols="6" sm="3" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
+                            <v-select style="font-size:13.5px" outlined dense v-model="documento_dest"
+                                :items="documentos" menu-props="auto" hide-details label="Tipo Doc"></v-select>
+                        </v-col>
+                        <v-col cols="6" sm="3">
+                            <v-text-field style="font-size:13.5px" outlined type="number" dense
+                                v-model="ruc_destinatario" label="N° Doc" append-icon="mdi-magnify"
+                                @click:append="buscar_destina()" @keyup.enter="buscar_destina()"></v-text-field>
+                        </v-col>
+                        <v-col cols="12" sm="6" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
+                            <v-text-field style="font-size:13.5px" outlined small dense
+                                v-model="razonsocial_destinatario" label="Razon Social"></v-text-field>
+                        </v-col>
+                    </v-row>
+                </v-card>
+            </v-col>
+            <v-col cols="6" v-if="valida_modo">
+                <v-card class="pa-3 mt-1">
+                    <h4 style="font-size:13.5px" class="mb-1">Datos Transportista
+                        <v-btn class="mt-n1 ml-3" elevation="3" color="info" @click="dial_trans = true" x-small>
+                            <v-icon left>
+                                mdi-magnify
+                            </v-icon>Ver Lista
+                        </v-btn>
+                    </h4>
+                    <v-row class="text-center mb-n5" dense>
+                        <v-col cols="12" sm="3" :class="$vuetify.breakpoint.smAndDown ? '' : ''">
+                            <v-text-field style="font-size:13.5px" outlined type="number" dense v-model="ruc_transporte"
+                                label="RUC Transportista" append-icon="mdi-magnify" @click:append="buscar_transporte()"
+                                @keyup.enter="buscar_transporte()"></v-text-field>
+
+                        </v-col>
+                        <v-col cols="12" sm="5" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
+                            <v-text-field style="font-size:13.5px" outlined small dense v-model="razon_transporte"
+                                label="Razon Social"></v-text-field>
+                        </v-col>
+                        <v-col cols="12" sm="4" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
+                            <v-text-field style="font-size:13.5px" outlined dense v-model="registro_mtc"
+                                label="N° Registro MTC"></v-text-field>
+                        </v-col>
+                    </v-row>
+                </v-card>
+            </v-col>
+        </v-row>
+
+
         <v-row class="mt-1" dense v-if="datos_transpor">
             <v-col cols="6">
                 <v-card class="pa-3">
@@ -283,30 +313,48 @@
                     <v-row dense>
                         <v-row class="text-left">
                             <v-col cols="6">
-                                <h4 style="font-size:13.5px">Punto de Partida</h4>
+                                <h4 style="font-size:13.5px">Punto de Partida
+                                </h4>
                             </v-col>
                             <v-col cols="6">
-                                <v-btn elevation="3" color="info" @click="abre_direcciones('partida')" x-small
-                                    v-if="false">
-                                    <v-icon left>
-                                        mdi-magnify
-                                    </v-icon>Frecuente
-                                </v-btn>
+
                             </v-col>
                         </v-row>
                         <v-col cols="12">
                             <v-row class="" dense>
                                 <v-col cols="4">
-                                    <v-text-field outlined dense @click="abredialogo('depa', true)"
-                                        v-model="departamento_p" label="DEPARTAMENTO" readonly></v-text-field>
+                                    <v-autocomplete outlined dense clearable v-model="departamento_p"
+                                        :items="arrayDepas" item-text="nombre" return-object label="DEPARTAMENTO">
+                                        <template v-slot:item="{ item }">
+                                            <div class="d-flex justify-space-between" style="width:100%">
+                                                <span>{{ item.nombre }}</span>
+                                                <small class="grey--text">{{ item.ubigeo_sunat || item.ubigeo }}</small>
+                                            </div>
+                                        </template>
+                                    </v-autocomplete>
                                 </v-col>
                                 <v-col cols="4">
-                                    <v-text-field outlined dense @click="abredialogo('prov', true)"
-                                        v-model="provincia_p" label="PROVINCIA" readonly></v-text-field>
+                                    <v-autocomplete outlined dense clearable v-model="provincia_p" :items="arrayProvsP"
+                                        item-text="nombre" return-object label="PROVINCIA" :disabled="!departamento_p">
+                                        <template v-slot:item="{ item }">
+                                            <div class="d-flex justify-space-between" style="width:100%">
+                                                <span>{{ item.nombre }}</span>
+                                                <small class="grey--text">{{ item.ubigeo_sunat || item.ubigeo }}</small>
+                                            </div>
+                                        </template>
+                                    </v-autocomplete>
+
                                 </v-col>
                                 <v-col cols="4">
-                                    <v-text-field outlined dense @click="abredialogo('distr', true)"
-                                        v-model="distrito_p" label="DISTRITO" readonly></v-text-field>
+                                    <v-autocomplete outlined dense clearable v-model="distrito_p" :items="arrayDistsP"
+                                        item-text="nombre" return-object label="DISTRITO" :disabled="!provincia_p">
+                                        <template v-slot:item="{ item }">
+                                            <div class="d-flex justify-space-between" style="width:100%">
+                                                <span>{{ item.nombre }}</span>
+                                                <small class="grey--text">{{ item.ubigeo_sunat || item.ubigeo }}</small>
+                                            </div>
+                                        </template>
+                                    </v-autocomplete>
                                 </v-col>
                             </v-row>
                             <v-textarea :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : 'mt-n5'"
@@ -320,20 +368,46 @@
             <v-col cols="6">
                 <v-card class="pa-3">
                     <v-row class="" dense>
-                        <h4 style="font-size:13.5px">Punto de Llegada</h4>
+                        <h4 style="font-size:13.5px">Punto de Llegada
+                            <v-btn x-small color="info" class="mr-1" @click="abrirDialogDireccion()">
+                                <v-icon left>mdi-plus</v-icon>Direcciones
+                            </v-btn>
+                        </h4>
                         <v-col cols="12">
                             <v-row class="" dense>
                                 <v-col cols="4">
-                                    <v-text-field outlined dense @click="abredialogo('depa', false)"
-                                        v-model="departamento_l" label="DEPARTAMENTO" readonly></v-text-field>
+                                    <v-autocomplete outlined dense clearable v-model="departamento_l"
+                                        :items="arrayDepas" item-text="nombre" return-object label="DEPARTAMENTO">
+                                        <template v-slot:item="{ item }">
+                                            <div class="d-flex justify-space-between" style="width:100%">
+                                                <span>{{ item.nombre }}</span>
+                                                <small class="grey--text">{{ item.ubigeo_sunat || item.ubigeo }}</small>
+                                            </div>
+                                        </template>
+                                    </v-autocomplete>
                                 </v-col>
                                 <v-col cols="4">
-                                    <v-text-field outlined dense @click="abredialogo('prov', false)"
-                                        v-model="provincia_l" label="PROVINCIA" readonly></v-text-field>
+                                    <v-autocomplete outlined dense clearable v-model="provincia_l" :items="arrayProvsL"
+                                        item-text="nombre" return-object label="PROVINCIA" :disabled="!departamento_l">
+                                        <template v-slot:item="{ item }">
+                                            <div class="d-flex justify-space-between" style="width:100%">
+                                                <span>{{ item.nombre }}</span>
+                                                <small class="grey--text">{{ item.ubigeo_sunat || item.ubigeo }}</small>
+                                            </div>
+                                        </template>
+                                    </v-autocomplete>
+
                                 </v-col>
                                 <v-col cols="4">
-                                    <v-text-field outlined dense @click="abredialogo('distr', false)"
-                                        v-model="distrito_l" label="DISTRITO" readonly></v-text-field>
+                                    <v-autocomplete outlined dense clearable v-model="distrito_l" :items="arrayDistsL"
+                                        item-text="nombre" return-object label="DISTRITO" :disabled="!provincia_l">
+                                        <template v-slot:item="{ item }">
+                                            <div class="d-flex justify-space-between" style="width:100%">
+                                                <span>{{ item.nombre }}</span>
+                                                <small class="grey--text">{{ item.ubigeo_sunat || item.ubigeo }}</small>
+                                            </div>
+                                        </template>
+                                    </v-autocomplete>
                                 </v-col>
                             </v-row>
                             <v-textarea :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : 'mt-n5'"
@@ -353,8 +427,12 @@
                 <v-text-field outlined dense v-model="peso" type="number" label="Peso Total"></v-text-field>
             </v-col>
             <v-col cols="5">
+
+
                 <v-textarea style="font-size:13.5px" outlined dense v-model="observacion" auto-grow filled
                     label="Observacion" rows="1"></v-textarea>
+
+
             </v-col>
             <v-col cols="3">
                 <v-btn block elevation="3" color="warning" @click="agregar_item()" small>
@@ -396,70 +474,7 @@
                 </template>
             </v-simple-table>
         </v-card>
-        <v-dialog v-model="dialogoubicaciones" max-width="490">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dialogoubicaciones = false">mdi-close</v-icon>
-                </v-system-bar>
-            </div>
-            <v-card>
-                <v-simple-table fixed-header height="400px" dense>
-                    <template v-slot:default>
-                        <thead>
-                            <tr>
-                                <th class="text-left">
-                                    UBIGEO
-                                </th>
-                                <th class="text-left">
-                                    NOMBRE
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="item in arrayubicaciones" :key="item.id" @click="seleccionaUbica(item)">
-                                <td>{{ item.ubigeo }}</td>
-                                <td>{{ item.nombre }}</td>
-                            </tr>
-                        </tbody>
-                    </template>
-                </v-simple-table>
 
-            </v-card>
-
-        </v-dialog>
-
-        <v-dialog v-model="dial_agrega" max-width="550">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dial_agrega = false">mdi-close</v-icon>
-                    <v-spacer></v-spacer>
-                    <v-icon color="green" large @click="guada_item()">mdi-content-save</v-icon>
-                </v-system-bar>
-            </div>
-
-            <v-card class="pa-6">
-                <v-row dense :class="$vuetify.breakpoint.smAndDown ? 'mb-n6' : 'mb-n6'">
-                    <v-col cols="12" sm="4">
-                        <v-text-field style="font-size:13.5px" outlined type="number" dense v-model="cantidad"
-                            label="Cantidad"></v-text-field>
-                    </v-col>
-                    <v-col cols="12" sm="3">
-                        <v-select outlined dense v-model="medida" :items="$store.state.medidas" menu-props="auto"
-                            hide-details label="Medida"></v-select>
-                    </v-col>
-                    <v-col cols="12" sm="5" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
-                        <v-text-field style="font-size:13.5px" outlined dense v-model="cod_producto"
-                            label="Codigo"></v-text-field>
-                    </v-col>
-                    <v-col cols="12" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : 'mt-n5'">
-                        <v-textarea style="font-size:13.5px" outlined dense v-model="descripcion" auto-grow filled
-                            label="Descripcion" rows="1"></v-textarea>
-                    </v-col>
-
-                </v-row>
-
-            </v-card>
-        </v-dialog>
 
         <v-dialog v-model="dial_imprime" max-width="550" persistent>
             <div>
@@ -519,13 +534,19 @@
                 </v-row>
             </v-card>
         </v-dialog>
+        <dial_destinatario v-if="di_destinatario" @cierre="di_destinatario = false"
+            @agrega_lista="agregar_destinatario($event)" />
+        <dial_remitente v-if="di_remitente" @cierre="di_remitente = false" @agrega_lista="agregar_remitente($event)" />
+        <dial_items v-if="dial_agrega" @cierre="dial_agrega = false" @agrega_item="guada_item($event)" />
+        <vehiculos v-if="dial_agrega_v" @cierre="dial_agrega_v = false" @agrega_lista="agrega_vehiculo($event)" />
+        <choferes v-if="dial_agrega_c" @cierre="dial_agrega_c = false" @agrega_lista="agrega_conductor($event)" />
+        <transportista v-if="dial_trans" @cierre="dial_trans = false" @agrega_lista="agregar_empresa($event)" />
+        <dial_relaciona v-if="dial_relacionados" @cierre="dial_relacionados = false"
+            @agregar="agrega_relacionado($event)" @limpiar="array_relacionados = [], dial_relacionados = false" />
+        <dial_obs v-if="dial_observa" @cierre="dial_observa = false" @agrega_lista="agrega_obs($event)" />
 
-        <vehiculos v-if="dial_agrega_v" @cierre="dial_agrega_v = false" @agrega_lista="agrega_vehiculo($event)">
-        </vehiculos>
-        <choferes v-if="dial_agrega_c" @cierre="dial_agrega_c = false" @agrega_lista="agrega_conductor($event)">
-        </choferes>
-        <transportista v-if="dial_trans" @cierre="dial_trans = false" @agrega_lista="agregar_empresa($event)">
-        </transportista>
+        <dialog_direcciones_cliente v-model="dial_direcciones" :cliente-id="numero || ''"
+            @seleccion="onDireccionSeleccionada" />
     </div>
 </template>
 
@@ -536,11 +557,14 @@ import {
     sumaContador,
     nuevo_transporte,
     buscaGuiaremision,
-    grabaConfigura
+    grabaConfigura,
+    nuevo_tablas_transporte
 } from '../../db'
 import vehiculos from '@/views/transporte/vehiculos'
 import choferes from '@/views/transporte/choferes'
-import transportista from '@/views/transporte/transportista'
+import transportista from '@/views/transporte/dial/dial_transportista'
+import dial_relaciona from './dial/dialogo_relacionados.vue'
+import dial_items from './dial/dialogo_agrega_items.vue'
 import {
     guia_remision
 } from '../../servidorsunat'
@@ -550,6 +574,7 @@ import {
 import moment from 'moment'
 import store from '@/store/index'
 import axios from "axios"
+import dialog_direcciones_cliente from '@/views/clientes/dialogos/dial_direcciones'
 import {
     departamento,
     provincia,
@@ -559,9 +584,19 @@ export default {
     components: {
         vehiculos,
         choferes,
-        transportista
+        transportista,
+        dial_relaciona,
+        dial_items,
+        dialog_direcciones_cliente
     },
     data: () => ({
+        dial_direcciones: false,
+        dial_agrega: false,
+        dial_observa: false,
+        di_remitente: false,
+        di_destinatario: false,
+        dial_relacionados: false,
+        array_relacionados: [],
         pendiente: true,
         dial_imprime: false,
         dial_agrega_v: false,
@@ -609,15 +644,11 @@ export default {
         observacion: '',
         lista_items: [],
         ubicacion_partida: false,
-        cantidad: '',
-        medida: 'TONELADA',
-        cod_producto: '',
-        descripcion: '',
         documento_dest: 'DNI',
         ruc_destinatario: '',
         razonsocial_destinatario: '',
         ubigeo1: '',
-        ubigeo3: '',
+        ubigeo2: '',
         ubigeo3: '',
         u_origen: '',
         u_destino: '',
@@ -635,43 +666,184 @@ export default {
         medida_t: 'KILOGRAMO',
         item_selecto: [],
         pagado_por: 'Remitente',
-        doc_relacionados: '',
         ruc_subcontrata: '',
-        razon_subcontrata: ''
+        razon_subcontrata: '',
+        arrayDepas: [],
+        arrayProvsP: [], // provincias para Partida
+        arrayDistsP: [], // distritos para Partida
+        arrayProvsL: [], // provincias para Llegada
+        arrayDistsL: [], // distritos para Llegada
+        cascadaLock: false,
+        dialogo_dire: false,
+        modo_direccion: '',
+        numero: ''
     }),
+    watch: {
+        'departamento_p'(depa) {
+            if (this.cascadaLock) return
+            this.provincia_p = null
+            this.distrito_p = null
+            this.arrayDistsP = []
+            if (depa && (depa.ubigeo || depa.ubigeo_sunat)) {
+                this.arrayProvsP = provincia(depa.ubigeo || depa.ubigeo_sunat) || []
+            } else {
+                this.arrayProvsP = []
+            }
+            if (!this.distrito_p) this.u_origen = ''
+        },
+        'provincia_p'(prov) {
+            if (this.cascadaLock) return
+            this.distrito_p = null
+            if (prov && (prov.ubigeo || prov.ubigeo_sunat)) {
+                this.arrayDistsP = distrito(prov.ubigeo || prov.ubigeo_sunat) || []
+            } else {
+                this.arrayDistsP = []
+            }
+            if (!this.distrito_p) this.u_origen = ''
+        },
+
+        'distrito_p'(dist) {
+            if (this.cascadaLock) return
+            const dep = this.departamento_p || null
+            const prov = this.provincia_p || null
+            const dis = dist || null
+
+            const uDep = dep?.ubigeo_sunat ?? dep?.ubigeo ?? ''
+            const uProv = prov?.ubigeo_sunat ?? prov?.ubigeo ?? ''
+            const uDist = dis?.ubigeo_sunat ?? dis?.ubigeo ?? ''
+
+            this.u_origen = (uDep && uProv && uDist) ? `${uDep}${uProv}${uDist}` : ''
+            console.log(this.u_origen)
+        },
+        'departamento_l'(depa) {
+            if (this.cascadaLock) return
+            this.provincia_l = null
+            this.distrito_l = null
+            this.arrayDistsL = []
+            if (depa && (depa.ubigeo || depa.ubigeo_sunat)) {
+                this.arrayProvsL = provincia(depa.ubigeo || depa.ubigeo_sunat) || []
+            } else {
+                this.arrayProvsL = []
+            }
+            if (!this.distrito_l) this.u_destino = ''
+        },
+
+        'provincia_l'(prov) {
+            if (this.cascadaLock) return
+            this.distrito_l = null
+            if (prov && (prov.ubigeo || prov.ubigeo_sunat)) {
+                this.arrayDistsL = distrito(prov.ubigeo || prov.ubigeo_sunat) || []
+
+            } else {
+                this.arrayDistsL = []
+            }
+
+            if (!this.distrito_l) this.u_destino = ''
+        },
+
+        'distrito_l'(dist) {
+            if (this.cascadaLock) return
+            const dep = this.departamento_l || null
+            const prov = this.provincia_l || null
+            const dis = dist || null
+
+            const uDep = dep?.ubigeo_sunat ?? dep?.ubigeo ?? ''
+            const uProv = prov?.ubigeo_sunat ?? prov?.ubigeo ?? ''
+            const uDist = dis?.ubigeo_sunat ?? dis?.ubigeo ?? ''
+
+            this.u_destino = (uDep && uProv && uDist) ? `${uDep}${uProv}${uDist}` : ''
+            console.log(this.u_destino)
+        },
+
+    },
     created() {
+        this.arrayDepas = departamento() || []
+
         if (store.state.array_guia) {
-            console.log(store.state.array_guia)
-            var detalle = store.state.array_guia.array_item
-            var cabecera = store.state.array_guia.arrayCabecera
+            console.log(store.state.baseDatos)
+
+            // --- precarga UBICACIÓN PARTIDA desde baseDatos ---
+            const bd = store.state.baseDatos || {}
+
+            this.cascadaLock = true
+            try {
+                const depP = this.findDep(bd.departamento)
+                const provP = this.findProv(depP, bd.provincia)
+                const distP = this.findDist(provP, bd.distrito)
+
+                // Set partida (objetos)
+                this.departamento_p = depP
+                this.arrayProvsP = depP ? (provincia(depP.ubigeo || depP.ubigeo_sunat) || []) : []
+                this.provincia_p = provP
+                this.arrayDistsP = provP ? (distrito(provP.ubigeo || provP.ubigeo_sunat) || []) : []
+                this.distrito_p = distP
+
+                // Dirección + ubigeo
+                this.dir_p = bd.direccion || ''
+                this.u_origen = bd.ubigeo || ''
+            } finally {
+                this.$nextTick(() => { this.cascadaLock = false })
+            }
+
+            // --- lo tuyo (destinatario + items) ---
+            const detalle = store.state.array_guia.array_item
+            const cabecera = store.state.array_guia.arrayCabecera
+            console.log("detalle", detalle)
             this.ruc_destinatario = cabecera.dni
             this.documento_dest = cabecera.tipoDocumento
             this.razonsocial_destinatario = cabecera.cliente
-            this.u_origen = store.state.baseDatos.ubigeo
-            this.dir_p = store.state.baseDatos.direccion
-            this.departamento_p = store.state.baseDatos.departamento
-            this.provincia_p = store.state.baseDatos.provincia
-            this.distrito_p = store.state.baseDatos.distrito
-            for (var i = 0; i < detalle.length; i++) {
 
-                var data = detalle[i]
-                var array = {
+            for (let i = 0; i < detalle.length; i++) {
+                const data = detalle[i]
+                this.lista_items.push({
                     uuid: data.id,
                     cantidad: data.cantidad,
                     medida: this.obtencodigomedida(data.medida),
                     des_medida: data.medida,
                     cod_producto: data.id,
                     descripcion: data.nombre
-                }
-                this.lista_items.push(array)
+                })
             }
+            // ---- Documento relacionado (automático desde cabecera) ----
+            const clean = v => (v == null ? '' : String(v)).replace(/\s+/g, '');
+
+            const docRel = {
+                ruc: clean(cabecera?.dni),                // RUC/DNI del emisor del doc relacionado
+                tipo: clean(cabecera?.cod_comprobante),   // 03/01/07/08/etc
+                id: clean(cabecera?.numeracion || cabecera?.serie + '-' + cabecera?.correlativoDocEmitido),
+            };
+
+            // evita duplicados
+            if (docRel.ruc && docRel.tipo && docRel.id) {
+                const key = `${docRel.ruc}|${docRel.tipo}|${docRel.id}`;
+                const existe = (this.array_relacionados || []).some(x =>
+                    `${clean(x.ruc)}|${clean(x.tipo)}|${clean(x.id)}` === key
+                );
+                if (!existe) this.array_relacionados = [docRel];
+            }
+
         }
     },
+
     beforeDestroy() {
         store.commit('array_guia', '')
     },
 
     computed: {
+
+        resumenRelacionados() {
+            const arr = this.array_relacionados;
+            if (!Array.isArray(arr) || arr.length === 0) return 'Sin documentos';
+
+            // Acepta distintas claves por si tu diálogo emite con otros nombres
+            return arr.map(d => {
+                const tipo = d.tipo ?? d.documento_tipo ?? d.doc_tipo ?? '';
+                const id = d.id ?? d.documento ?? d.doc_id ?? '';
+                const ruc = d.ruc ?? d.ruc_emisor ?? '';
+                return `${tipo}:${id}${ruc ? ' (RUC ' + ruc + ')' : ''}`;
+            }).join(' · ');
+        },
+
         valida_modo() {
             if (this.modo_transporte == '01') {
                 return true
@@ -707,25 +879,122 @@ export default {
                 return 'INICIO DEL TRASLADO'
             }
         },
-        arrayubicaciones() {
-            var array = []
-            switch (this.tipoubicacion) {
-                case 1:
-                    array = this.arraydepa
-                    break;
-                case 2:
-                    array = this.arrayprov
-                    break;
-                case 3:
-                    array = this.arraydistr
-                    break;
-                default:
-                    break;
-            }
-            return array
-        },
     },
     methods: {
+        abrirDialogDireccion() {
+            this.numero = this.ruc_destinatario
+            this.dialogo_dire = true
+            this.dial_direcciones = true
+            this.modo_direccion = 'llegada'
+        },
+        onDireccionSeleccionada(data) {
+            if (!data) return;
+
+            const depObj = data.departamento || null;
+            const provObj = data.provincia || null;
+            const distObj = data.distrito || null;
+
+            // Claves para cargar listas en cascada
+            const depKey = depObj?.ubigeo ?? depObj?.ubigeo_sunat ?? '';
+            const provKey = provObj?.ubigeo ?? provObj?.ubigeo_sunat ?? '';
+
+
+            // Ubigeo final: tu objeto ya trae ubigeo completo "130111"
+            const ubigeoFinal = String(data.ubigeo || '').trim();
+
+            this.cascadaLock = true;
+            try {
+                if (this.modo_direccion === 'llegada') {
+                    // --- LLEGADA ---
+                    this.departamento_l = depObj;
+
+                    // provincias y distritos disponibles para selects
+                    this.arrayProvsL = depKey ? (provincia(depKey) || []) : [];
+                    this.provincia_l = provObj;
+
+                    this.arrayDistsL = provKey ? (distrito(provKey) || []) : [];
+                    this.distrito_l = distObj;
+
+                    // dirección + ubigeo
+                    this.dir_l = (data.direccion || '').toUpperCase();
+                    this.u_destino = ubigeoFinal;
+                } else {
+                    // --- PARTIDA ---
+                    this.departamento_p = depObj;
+
+                    this.arrayProvsP = depKey ? (provincia(depKey) || []) : [];
+                    this.provincia_p = provObj;
+
+                    this.arrayDistsP = provKey ? (distrito(provKey) || []) : [];
+                    this.distrito_p = distObj;
+
+                    this.dir_p = (data.direccion || '').toUpperCase();
+                    this.u_origen = ubigeoFinal;
+                }
+            } finally {
+                this.$nextTick(() => {
+                    this.cascadaLock = false;
+
+                    // Cerrar diálogo
+                    this.dial_direcciones = false;
+
+                    // Si usas dialogo_dire también:
+                    this.dialogo_dire = false;
+                });
+            }
+        },
+
+        selecciona_ubicaciones(data) {
+            console.log(data)
+            this.cascadaLock = true
+            try {
+                const dep = data.departamento || null
+                const prov = data.provincia || null
+                const dist = data.distrito || null
+
+                const uDep = dep?.ubigeo || ''
+                const uProv = prov?.ubigeo || ''
+
+
+                if (this.modo_direccion === 'llegada') {
+                    this.departamento_l = dep
+                    this.provincia_l = prov
+                    this.distrito_l = dist
+                    this.dir_l = data.direccion || ''
+                    this.u_destino = data.ubigeo
+
+                    // cargar listas auxiliares
+                    this.arrayProvsL = provincia(uDep) || []
+                    this.arrayDistsL = distrito(uProv) || []
+                } else {
+                    this.departamento_p = dep
+                    this.provincia_p = prov
+                    this.distrito_p = dist
+                    this.dir_p = data.direccion || ''
+                    this.u_origen = data.ubigeo
+                    this.arrayProvsP = provincia(uDep) || []
+                    this.arrayDistsP = distrito(uProv) || []
+                }
+            } finally {
+                this.$nextTick(() => {
+                    this.cascadaLock = false
+                })
+            }
+        },
+
+        agrega_relacionado(data) {
+            console.log(data)
+            const clean = v => (v == null ? '' : String(v)).replace(/\s+/g, ''); // quita todos los espacios
+
+            const item = {
+                ...data,
+                id: clean(data.id),
+                ruc: clean(data.ruc),
+            };
+
+            this.array_relacionados.push(item);
+            this.dial_relacionados = false;
+        },
 
         async finaliza_(array) {
             await new Promise(resolve => setTimeout(resolve, 2000))
@@ -745,9 +1014,6 @@ export default {
             await new Promise(resolve => setTimeout(resolve, 5000))
             buscaGuiaremision(array.id + '/qr').off()
             this.pendiente = false
-        },
-        abre_direcciones(modo) {
-
         },
         agrega_vehiculo(data) {
             if (this.array_vehiculo.length != 0) {
@@ -769,6 +1035,19 @@ export default {
             this.array_conductor.push(data)
             this.dial_agrega_c = false
         },
+        agregar_remitente(data) {
+            this.documento = data.documento
+            this.numero_doc = data.ruc
+            this.razon_social = data.razonsocial
+            this.di_remitente = false
+        },
+        agregar_destinatario(data) {
+            console.log(data)
+            this.documento_dest = data.documento
+            this.ruc_destinatario = data.ruc
+            this.razonsocial_destinatario = data.razonsocial
+            this.di_destinatario = false
+        },
         agregar_empresa(data) {
             console.log(data)
             this.ruc_transporte = data.ruc
@@ -780,103 +1059,12 @@ export default {
             var pos = this.array_conductor.map(e => e.num_licencia).indexOf(item.num_licencia)
             this.array_conductor.splice(pos, 1)
         },
-        ir_nuevo() {
-            this.$router.push({
-                path: '/gr_remitente'
-            })
-        },
-        abredialogo(ubica, modo) {
-            this.ubicacion_partida = modo
-            this.arrayubica = []
-            switch (ubica) {
-                case 'depa':
-                    this.arraydepa = departamento()
-                    this.tipoubicacion = 1
-                    break;
-                case 'prov':
-                    this.arrayprov = provincia(this.ubigeodepa)
-                    this.tipoubicacion = 2
-                    break;
-                case 'distr':
-                    this.arraydistr = distrito(this.ubigeoprov)
-                    this.tipoubicacion = 3
-                    break;
 
-                default:
-                    break;
-            }
-
-            this.dialogoubicaciones = true
-        },
-        seleccionaUbica(item) {
-            if (this.ubicacion_partida) {
-                switch (this.tipoubicacion) {
-                    case 1:
-                        this.departamento_p = item.nombre.toUpperCase()
-                        this.ubigeodepa = item.ubigeo
-                        this.ubigeo1 = item.ubigeo_sunat
-                        break;
-                    case 2:
-                        this.provincia_p = item.nombre.toUpperCase()
-                        this.ubigeoprov = item.ubigeo
-                        this.ubigeo2 = item.ubigeo_sunat
-                        break;
-                    case 3:
-                        this.distrito_p = item.nombre.toUpperCase()
-                        this.ubigeoselecto = item.ubigeo
-                        this.ubigeo3 = item.ubigeo_sunat
-                        this.u_origen = this.ubigeo1 + this.ubigeo2 + this.ubigeo3
-                        break;
-                    default:
-                        break;
-                }
-            } else {
-                switch (this.tipoubicacion) {
-                    case 1:
-                        this.departamento_l = item.nombre.toUpperCase()
-                        this.ubigeodepa = item.ubigeo
-                        this.ubigeo1 = item.ubigeo_sunat
-                        break;
-                    case 2:
-                        this.provincia_l = item.nombre.toUpperCase()
-                        this.ubigeoprov = item.ubigeo
-                        this.ubigeo2 = item.ubigeo_sunat
-                        break;
-                    case 3:
-                        this.distrito_l = item.nombre.toUpperCase()
-                        this.ubigeoselecto = item.ubigeo
-                        this.ubigeo3 = item.ubigeo_sunat
-                        this.u_destino = this.ubigeo1 + this.ubigeo2 + this.ubigeo3
-                        break;
-                    default:
-                        break;
-                }
-            }
-            console.log(this.u_origen, this.u_destino)
-            this.dialogoubicaciones = false
-        },
         agregar_item() {
-            this.cantidad = ''
-            this.medida = 'UNIDAD'
-            this.cod_producto = ''
-            this.descripcion = ''
             this.dial_agrega = true
         },
-        guada_item() {
-            if (this.cantidad == '' || this.cantidad == 0 || this.descripcion == '') {
-                alert('faltan Datos')
-                return
-            }
-            var array = {
-                uuid: this.create_UUID(),
-                cantidad: this.cantidad,
-                medida: this.obtencodigomedida(this.medida),
-                des_medida: this.medida,
-                cod_producto: this.cod_producto,
-                descripcion: this.descripcion
-            }
-            console.log(array)
-            this.lista_items.push(array)
+        guada_item(data) {
+            this.lista_items.push(data)
             this.dial_agrega = false
         },
         eliminar(item) {
@@ -978,15 +1166,7 @@ export default {
                 ))
             return resp.data
         },
-        create_UUID() {
-            var dt = new Date().getTime();
-            var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-                var r = (dt + Math.random() * 16) % 16 | 0;
-                dt = Math.floor(dt / 16);
-                return (c == 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-            });
-            return uuid.substring(29);
-        },
+
         async vista_previa() {
             if (this.lista_items == '') {
                 alert('Es obligatorio Agregar Items')
@@ -1041,17 +1221,17 @@ export default {
                 razonsocial_remitente: this.razon_social,
                 u_origen: this.u_origen,
                 dir_origen: this.dir_p.toUpperCase(),
-                departamento_p: this.departamento_p,
-                provincia_p: this.provincia_p,
-                distrito_p: this.distrito_p,
+                departamento_p: this.departamento_p.nombre,
+                provincia_p: this.provincia_p.nombre,
+                distrito_p: this.distrito_p.nombre,
                 cod_documento: this.obten_codigo_doc(this.documento_dest),
                 ruc_destinatario: this.ruc_destinatario,
                 razonsocial_destinatario: this.razonsocial_destinatario,
                 u_destino: this.u_destino,
                 dir_destino: this.dir_l.toUpperCase(),
-                departamento_l: this.departamento_l,
-                provincia_l: this.provincia_l,
-                distrito_l: this.distrito_l,
+                departamento_l: this.departamento_l.nombre,
+                provincia_l: this.provincia_l.nombre,
+                distrito_l: this.distrito_l.nombre,
                 medida_t: this.medida_t,
                 cod_medida_t: this.obtencodigomedida(this.medida_t),
                 peso_total: this.peso,
@@ -1066,9 +1246,10 @@ export default {
                 ruc_subcontrata: this.ruc_subcontrata,
                 razon_subcontrata: this.razon_subcontrata,
                 pagado_por: this.pagado_por,
-                doc_relacionados: this.doc_relacionados
+                doc_relacionados: this.array_relacionados
             }
             this.item_selecto = array
+            this.guarda_empresa_t()
             this.genera_pdf('vista')
             store.commit("dialogoprogress")
         },
@@ -1117,7 +1298,7 @@ export default {
                 var serie_guia = store.state.seriesdocumentos.guia_t
                 var cont = contador.val().orden_guia_t
             }
-
+            console.log('depa', this.departamento_l)
             var array = {
                 id: serie_guia + '-' + cont,
                 serie: serie_guia,
@@ -1141,17 +1322,17 @@ export default {
                 razonsocial_remitente: this.razon_social,
                 u_origen: this.u_origen,
                 dir_origen: this.dir_p.toUpperCase(),
-                departamento_p: this.departamento_p,
-                provincia_p: this.provincia_p,
-                distrito_p: this.distrito_p,
+                departamento_p: this.departamento_p.nombre,
+                provincia_p: this.provincia_p.nombre,
+                distrito_p: this.distrito_p.nombre,
                 cod_documento: this.obten_codigo_doc(this.documento_dest),
                 ruc_destinatario: this.ruc_destinatario,
                 razonsocial_destinatario: this.razonsocial_destinatario,
                 u_destino: this.u_destino,
                 dir_destino: this.dir_l.toUpperCase(),
-                departamento_l: this.departamento_l,
-                provincia_l: this.provincia_l,
-                distrito_l: this.distrito_l,
+                departamento_l: this.departamento_l.nombre,
+                provincia_l: this.provincia_l.nombre,
+                distrito_l: this.distrito_l.nombre,
                 medida_t: this.medida_t,
                 cod_medida_t: this.obtencodigomedida(this.medida_t),
                 peso_total: this.peso,
@@ -1166,7 +1347,8 @@ export default {
                 ruc_subcontrata: this.ruc_subcontrata,
                 razon_subcontrata: this.razon_subcontrata,
                 pagado_por: this.pagado_por,
-                doc_relacionados: this.doc_relacionados
+
+                doc_relacionados: this.array_relacionados
             }
             await nuevaGuiaremision(array.id, array)
             await this.guarda_empresa_t()
@@ -1205,6 +1387,24 @@ export default {
                 }
                 await nuevo_transporte(array.id, array)
             }
+            if (this.ruc_destinatario != '') {
+                var arra = {
+                    id: this.ruc_destinatario,
+                    documento: this.documento_dest,
+                    ruc: this.ruc_destinatario,
+                    razonsocial: this.razonsocial_destinatario,
+                }
+                await nuevo_tablas_transporte('destinatario', arra.id, arra)
+            }
+            if (this.numero_doc != '') {
+                var arr = {
+                    id: this.numero_doc,
+                    documento: this.documento,
+                    ruc: this.numero_doc,
+                    razonsocial: this.razon_social,
+                }
+                await nuevo_tablas_transporte('remitente', arr.id, arr)
+            }
             return true
 
         },
@@ -1238,7 +1438,64 @@ export default {
         obtencodigomedida(medida) {
             var array = store.state.medidassunat.find(item => item.nombre == medida)
             return array.corto
-        }
+        },
+        async Guardar_obs() {
+            if (confirm('seguro de guardar??')) {
+                store.commit("dialogoprogress")
+                var array = {
+                    uuid: this.create_UUID(),
+                    observacion: this.observacion,
+                }
+                await nuevo_tablas_transporte('obs', array.uuid, array)
+                store.commit("dialogoprogress")
+            }
+
+        },
+        create_UUID() {
+            var dt = new Date().getTime();
+            var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                var r = (dt + Math.random() * 16) % 16 | 0;
+                dt = Math.floor(dt / 16);
+                return (c == 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+            });
+            return uuid.substring(29);
+        },
+        agrega_obs(data) {
+            this.observacion = data.observacion
+            this.dial_observa = false
+        },
+        findDep(val) {
+            if (!val) return null
+            if (typeof val === 'object') return val
+            return (this.arrayDepas || []).find(d =>
+                String(d.nombre || '').toUpperCase() === String(val).toUpperCase()
+                || d.ubigeo === val
+                || d.ubigeo_sunat === val
+            ) || null
+        },
+
+        findProv(depObj, val) {
+            if (!depObj || !val) return null
+            if (typeof val === 'object') return val
+            const provs = provincia(depObj.ubigeo || depObj.ubigeo_sunat) || []
+            return provs.find(p =>
+                String(p.nombre || '').toUpperCase() === String(val).toUpperCase()
+                || p.ubigeo === val
+                || p.ubigeo_sunat === val
+            ) || null
+        },
+
+        findDist(provObj, val) {
+            if (!provObj || !val) return null
+            if (typeof val === 'object') return val
+            const dists = distrito(provObj.ubigeo || provObj.ubigeo_sunat) || []
+            return dists.find(d =>
+                String(d.nombre || '').toUpperCase() === String(val).toUpperCase()
+                || d.ubigeo === val
+                || d.ubigeo_sunat === val
+            ) || null
+        },
+
     }
 }
 </script>

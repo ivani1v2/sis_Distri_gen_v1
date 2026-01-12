@@ -441,10 +441,10 @@ export default {
             if (catalogo && this.costo_catalogo) {
               costoCatalogo = Number(catalogo.costo || 0)
             }
-
+            
             const cantidad = Number(p.cantidad || 0)
             const descuento = Number(p.preciodescuento || 0)
-            const precioUnit = Number(p.precioedita || 0)
+            const precioUnit = Number(p.precio || 0)
 
             // Para GRAVADA computa venta; para GRATUITA, venta = 0 (pero sí costo si está habilitado)
             const ventaLinea = esGratuita

@@ -1,276 +1,304 @@
 <template>
-    <div class="mb-6 pa-4">
-        <v-row class="mb-n5 mt-n2" dense>
-            <v-col cols="7">
-                <h4>Movimientos de Kardex</h4>
-                <v-row dense :class="$vuetify.breakpoint.smAndDown ? 'mt-n3' : 'mb-4 mt-n4'">
-                    <v-col cols="12" md="3" xs="12" v-if="true">
-                        <v-btn v-if="true" color="success" class="btn mt-2" block small
-                            @click="abre_creador_documento()">REGISTRO
-                            COMPRA</v-btn>
+    <div class="pa-4">
+        <v-card class="elevation-4 rounded-lg">
+
+            <v-card-title class="pa-4 blue-grey lighten-5">
+                <v-icon large left color="blue-grey darken-3">mdi-warehouse</v-icon>
+                <span class="text-h5 font-weight-bold blue-grey--text text--darken-3">Historial de Movimientos de
+                    Kardex</span>
+                <v-spacer></v-spacer>
+
+                <v-row dense class="ml-4" style="max-width: 450px;">
+                    <v-col cols="5">
+                        <v-text-field outlined dense type="date" v-model="date1" label="Desde" hide-details
+                            @change="suscribir"></v-text-field>
                     </v-col>
-                    <v-col v-if="true" cols="12" md="3" xs="12">
-                        <v-btn color="error" class="mt-2" block small
-                            @click="(crea_ajuste = true)">Entradas/Salidas</v-btn>
+                    <v-col cols="5">
+                        <v-text-field outlined dense type="date" v-model="date2" label="Hasta" hide-details
+                            @change="suscribir"></v-text-field>
                     </v-col>
-                    <v-col cols="12" md="3" xs="12">
-                        <v-btn color="success" class="btn mt-2" block small @click="registro_merma">Registro
-                            Merma</v-btn>
+                    <v-col cols="2" class="d-flex align-center">
+                        <v-btn icon color="primary" @click="suscribir" class="mt-n6">
+                            <v-icon>mdi-refresh</v-icon>
+                        </v-btn>
                     </v-col>
                 </v-row>
-            </v-col>
-            <v-col cols="5">
-                <v-row dense :class="$vuetify.breakpoint.smAndDown ? 'mt-4' : 'mb-n7 mt-n1 text-center'">
-                    <v-col cols="12" md="6" xs="12">
-                        <v-text-field type="date" class="redondeado" outlined dense v-model="date1"
-                            label="INICIO"></v-text-field>
-                    </v-col>
-                    <v-col cols="12" md="6" xs="12">
-                        <v-text-field type="date" class="redondeado" outlined dense v-model="date2"
-                            label="INICIO"></v-text-field>
-                    </v-col>
+            </v-card-title>
 
+            <v-divider></v-divider>
+
+            <v-card-text class="py-3">
+                <v-row dense>
+                    <v-col cols="12" md="3">
+                        <v-btn small color="success" block @click="abre_creador_documento()">
+                            <v-icon left>mdi-package-variant-closed</v-icon> REGISTRO COMPRA
+                        </v-btn>
+                    </v-col>
+                    <v-col cols="12" md="3">
+                        <v-btn small color="info" block @click="(crea_ajuste = true)">
+                            <v-icon left>mdi-swap-horizontal</v-icon> ENTRADAS / SALIDAS
+                        </v-btn>
+                    </v-col>
+                    <v-col cols="12" md="3">
+                        <v-btn small color="error" block @click="registro_merma">
+                            <v-icon left>mdi-delete-sweep</v-icon> REGISTRO MERMA
+                        </v-btn>
+                    </v-col>
+                    <v-col cols="12" md="3" class="text-right">
+                        <v-btn v-if="false" small color="primary" @click="exportar_excel">
+                            <v-icon left>mdi-file-excel</v-icon> Exportar
+                        </v-btn>
+                    </v-col>
                 </v-row>
-            </v-col>
-        </v-row>
+            </v-card-text>
 
-        <v-card>
-            <v-simple-table fixed-header height="70vh" dense>
+            <v-divider></v-divider>
+
+            <v-simple-table fixed-header height="70vh" dense class="elevation-0">
                 <template v-slot:default>
                     <thead>
-                        <tr>
-                            <th class="text-left">
-                                Id mov
-                            </th>
-                            <th class="text-left">
-                                Razon social
-                            </th>
-                            <th class="text-left">
-                                Documento
-                            </th>
-                            <th class="text-left">
-                                Ref
-                            </th>
-                            <th class="text-left">
-                                Fecha Emision
-                            </th>
-                            <th class="text-left">
-                                Fecha Ing. Prod
-                            </th>
-                            <th class="text-left">
-                                MODO
-                            </th>
-                            <th class="text-left">
-                                Total
-                            </th>
-                            <th class="text-left">
-                                Accion
-                            </th>
+                        <tr class="blue-grey lighten-5">
+                            <th class="text-left font-weight-bold">ID</th>
+                            <th class="text-left font-weight-bold">Proveedor / Motivo</th>
+                            <th class="text-left font-weight-bold">Documento / Tipo</th>
+                            <th class="text-left font-weight-bold">Referencia</th>
+                            <th class="text-left font-weight-bold">Emisión / Ingreso</th>
+                            <th class="text-left font-weight-bold">Total</th>
+                            <th class="text-left font-weight-bold">Acción</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="item in listafiltrada" :key="item.id">
-                            <td>{{ item.id }}</td>
-                            <td>{{ item.num_doc }}-{{ item.nom_proveedor }}</td>
-                            <td v-if="item.operacion == 'COMPRA'">
-                                {{ item.tipodocumento }}
+                            <td><v-chip x-small>{{ item.id }}</v-chip></td>
+
+                            <td>
+                                <span v-if="item.operacion === 'COMPRA'">
+                                    {{ item.nom_proveedor }}
+                                </span>
+                                <span v-else class="font-italic black--text">
+                                    {{ item.motivo || item.tipodocumento }}
+                                </span>
+                                <div class="caption grey--text">{{ item.num_doc }}</div>
                             </td>
-                            <td v-if="item.operacion == 'AJUSTE'">
-                                -
+
+                            <td>
+                                <v-chip
+                                    :color="item.operacion === 'COMPRA' ? 'green lighten-4' : (item.modo_ajuste === 'SALIDA' ? 'red lighten-4' : 'blue lighten-4')"
+                                    small>
+                                    {{ item.tipodocumento }}
+                                </v-chip>
                             </td>
-                            <td v-if="item.operacion == 'AJUSTE'">
-                                {{ item.motivo }}
+
+                            <td>
+                                <span v-if="item.operacion === 'COMPRA'">
+                                    {{ item.sreferencia }}-{{ item.creferencia }}
+                                </span>
+                                <span v-else>-</span>
                             </td>
-                            <td v-if="item.operacion == 'COMPRA'">
-                                {{ item.sreferencia }}-{{ item.creferencia }}
+
+                            <td>
+                                <span class="caption">E: {{ conviertefecha(item.fecha_emision) }}</span><br>
+                                <span class="caption">I: {{ conviertefecha(item.fecha_ingreso) }}</span>
                             </td>
-                            <td>{{ conviertefecha(item.fecha_emision) }}</td>
-                            <td>{{ conviertefecha(item.fecha_ingreso) }}</td>
-                            <td>{{ item.modo_pago }}</td>
-                            <td>S/.{{ item.total }}</td>
+
+                            <td class="font-weight-bold">
+                                {{ item.moneda || 'S/.' }}{{ redondear(item.total) }}
+                                <div class="caption grey--text">{{ item.modo_pago }}</div>
+                            </td>
+
                             <td width="100">
-                                <v-row>
-                                    <v-col cols="6">
-                                        <v-icon :disabled="item.motivo=='TRANSFERENCIA ENTRE SEDES'" color="green" @click.prevent="edita_compra(item)">mdi-pencil</v-icon>
-                                    </v-col>
-                                    <v-col cols="6">
-                                        <v-icon color="green" @click.prevent="abre_visualizacion(item)">mdi-eye</v-icon>
-                                    </v-col>
-                                </v-row>
+                                <v-menu offset-y>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <v-btn icon v-bind="attrs" v-on="on" small>
+                                            <v-icon>mdi-dots-vertical</v-icon>
+                                        </v-btn>
+                                    </template>
+                                    <v-list dense>
+                                        <v-list-item @click.prevent="edita_compra(item)"
+                                            :disabled="item.motivo == 'TRANSFERENCIA ENTRE SEDES'">
+                                            <v-list-item-icon><v-icon
+                                                    color="warning">mdi-pencil</v-icon></v-list-item-icon>
+                                            <v-list-item-title>Editar Movimiento</v-list-item-title>
+                                        </v-list-item>
+                                        <v-list-item @click.prevent="abre_visualizacion(item)">
+                                            <v-list-item-icon><v-icon color="info">mdi-eye</v-icon></v-list-item-icon>
+                                            <v-list-item-title>Ver Detalle</v-list-item-title>
+                                        </v-list-item>
+                                    </v-list>
+                                </v-menu>
                             </td>
                         </tr>
                     </tbody>
                 </template>
             </v-simple-table>
         </v-card>
+
         <v-dialog v-model="crea_movimiento" max-width="800px" persistent>
-
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="crea_movimiento = !crea_movimiento">mdi-close</v-icon>
-                    <h5 class="text-center">REGISTRO DE COMPRAS</h5>
+            <v-card class="rounded-lg">
+                <v-toolbar color="success" dense dark>
+                    <v-toolbar-title>Crear Registro de Compra</v-toolbar-title>
                     <v-spacer></v-spacer>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-2">
-                <v-row class="pa-1" dense>
-                    <v-col cols="6">
-                        <v-text-field type="date" outlined dense v-model="date" label="Emision"></v-text-field>
-                    </v-col>
-                    <v-col cols="6">
-                        <v-text-field type="date" outlined dense v-model="date_ingreso"
-                            label="Ingreso Producto"></v-text-field>
-                    </v-col>
-                </v-row>
-                <v-row class="pa-1 mt-n8" dense>
-                    <v-col cols="12" md="6" xs="12">
-                        <v-text-field outlined dense v-model="num_doc" label="N° DOC PROVEE." append-icon="mdi-magnify"
-                            @click:append="busca_proveedor()"></v-text-field>
-                    </v-col>
-                    <v-col cols="12" md="6" xs="12" :class="$vuetify.breakpoint.smAndDown ? 'mt-n5' : ''">
-                        <v-text-field outlined dense v-model="nom_proveedor" label="NOMBRE PROVEEDOR"></v-text-field>
-                    </v-col>
-                </v-row>
-                <v-row class="pa-1 mt-n8" dense>
-                    <v-col cols="12" md="4" xs="12">
-                        <v-select :items="arraydocumento" label="Tipo" dense outlined
-                            v-model="tipodocumento"></v-select>
-                    </v-col>
-                    <v-col cols="6" md="4" xs="6" :class="$vuetify.breakpoint.smAndDown ? 'mt-n5' : ''">
-                        <v-text-field :disabled="(num_doc == '')" type="text" outlined dense v-model="sreferencia"
-                            label="Serie Referencia" placeholder="F001"></v-text-field>
-                    </v-col>
-                    <v-col cols="6" md="4" xs="6" :class="$vuetify.breakpoint.smAndDown ? 'mt-n5' : ''">
-                        <v-text-field :disabled="(sreferencia == '')" type="number" outlined dense v-model="creferencia"
-                            label="Correlativo Referencia" placeholder="1234"></v-text-field>
-                    </v-col>
-                </v-row>
-                <v-row class="pa-1 mt-n8" dense>
-                    <v-col cols="12" md="6" xs="12">
-                        <v-select :items="arraymodo" label="Modo Pago" dense outlined v-model="modo_pago"></v-select>
-                    </v-col>
-                    <v-col cols="12" md="6" xs="12" :class="$vuetify.breakpoint.smAndDown ? 'mt-n4' : ''">
-                        <v-textarea outlined dense v-model="observacion" auto-grow filled label="OBSERVACION"
-                            rows="1"></v-textarea>
-                    </v-col>
-                </v-row>
-                <v-row class="pa-1 mt-n2" dense>
-                    <v-col cols="12">
-                        <v-btn block class="" @click="nueva_compra()" color="success">Crea Documento</v-btn>
-                    </v-col>
-                </v-row>
-
+                    <v-btn icon @click="crea_movimiento = false"><v-icon>mdi-close</v-icon></v-btn>
+                </v-toolbar>
+                <v-card-text class="pa-4">
+                    <v-row dense>
+                        <v-col cols="6">
+                            <v-text-field type="date" outlined dense v-model="date"
+                                label="Fecha Emisión"></v-text-field>
+                        </v-col>
+                        <v-col cols="6">
+                            <v-text-field type="date" outlined dense v-model="date_ingreso"
+                                label="Fecha Ingreso Producto"></v-text-field>
+                        </v-col>
+                    </v-row>
+                    <v-row dense class="mt-n4">
+                        <v-col cols="12" md="6">
+                            <v-text-field outlined dense v-model="num_doc" label="N° DOC PROVEE."
+                                append-icon="mdi-magnify" @click:append="busca_proveedor()"></v-text-field>
+                        </v-col>
+                        <v-col cols="12" md="6">
+                            <v-text-field outlined dense v-model="nom_proveedor"
+                                label="NOMBRE PROVEEDOR"></v-text-field>
+                        </v-col>
+                    </v-row>
+                    <v-row dense class="mt-n4">
+                        <v-col cols="4">
+                            <v-select :items="arraydocumento" label="Tipo" dense outlined
+                                v-model="tipodocumento"></v-select>
+                        </v-col>
+                        <v-col cols="4">
+                            <v-text-field :disabled="(num_doc == '')" type="text" outlined dense v-model="sreferencia"
+                                label="Serie Referencia" placeholder="F001"></v-text-field>
+                        </v-col>
+                        <v-col cols="4">
+                            <v-text-field :disabled="(sreferencia == '')" type="number" outlined dense
+                                v-model="creferencia" label="Correlativo Referencia" placeholder="1234"></v-text-field>
+                        </v-col>
+                    </v-row>
+                    <v-row dense class="mt-n4">
+                        <v-col cols="6">
+                            <v-select :items="arraymodo" label="Modo Pago" dense outlined
+                                v-model="modo_pago"></v-select>
+                        </v-col>
+                        <v-col cols="6">
+                            <v-select v-model="moneda" :items="$store.state.moneda"
+                                :item-text="item => `${item.simbolo} ${item.moneda} (${item.codigo})`" return-object
+                                label="Moneda" outlined dense hide-details></v-select>
+                        </v-col>
+                    </v-row>
+                    <v-row dense class="mt-n4">
+                        <v-col cols="12">
+                            <v-textarea outlined dense v-model="observacion" auto-grow filled label="OBSERVACION"
+                                rows="1"></v-textarea>
+                        </v-col>
+                    </v-row>
+                </v-card-text>
+                <v-card-actions class="pa-4 pt-0">
+                    <v-btn block large @click="nueva_compra()" color="success">
+                        <v-icon left>mdi-plus-circle</v-icon> CREAR DOCUMENTO
+                    </v-btn>
+                </v-card-actions>
             </v-card>
-
         </v-dialog>
+
         <v-dialog v-model="crea_ajuste" max-width="800px" persistent>
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="(crea_ajuste = !crea_ajuste)">mdi-close</v-icon>
-                    <h5 class="text-center">ENTRADA SALIDA</h5>
+            <v-card class="rounded-lg">
+                <v-toolbar color="info" dense dark>
+                    <v-toolbar-title>Crear Movimiento de Ajuste (Entrada/Salida)</v-toolbar-title>
                     <v-spacer></v-spacer>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <v-row class="pa-1" dense>
-                    <v-col cols="6" md="4" xs="6">
-                        <v-select :disabled="!$store.state.permisos.es_admin" :items="arrayajuste"
-                            label="Tipo movimiento" dense outlined v-model="modo_ajuste"></v-select>
-                    </v-col>
-                    <v-col cols="6" md="4" xs="6">
-                        <v-text-field type="date" outlined dense v-model="date" label="Emision"></v-text-field>
-                    </v-col>
-                    <v-col cols="12" md="4" xs="12" :class="$vuetify.breakpoint.smAndDown ? 'mt-n5' : ''">
-                        <v-text-field type="date" outlined dense v-model="date_ingreso"
-                            label="Fecha de movimiento Producto"></v-text-field>
-                    </v-col>
-                </v-row>
-                <v-row class="pa-1 mt-n8" dense>
-                    <v-col cols="12" md="6" xs="12">
-                        <v-select :disabled="!$store.state.permisos.es_admin" :items="$store.state.motivos_ajuste"
-                            label="Motivo" dense outlined v-model="motivos_ajuste"></v-select>
-                    </v-col>
-                    <v-col cols="12" md="6" xs="12" :class="$vuetify.breakpoint.smAndDown ? 'mt-n5' : ''">
-                        <v-textarea outlined dense v-model="observacion" auto-grow filled label="OBSERVACION"
-                            rows="1"></v-textarea>
-                    </v-col>
-
-                </v-row>
-                <v-row class="pa-1 mt-n8" dense>
-                    <v-col cols="12" md="12" :class="$vuetify.breakpoint.smAndDown ? 'mt-n1' : ''">
-                        <v-textarea outlined dense v-model="responsable" auto-grow filled label="RESPONSABLE"
-                            rows="1"></v-textarea>
-                    </v-col>
-                </v-row>
-                <v-row class="pa-1 mt-n2" dense>
-                    <v-col cols="12">
-                        <v-btn block class="" @click="nuevo_ajuste()" color="success">Crea Documento</v-btn>
-                    </v-col>
-                </v-row>
-
+                    <v-btn icon @click="crea_ajuste = false"><v-icon>mdi-close</v-icon></v-btn>
+                </v-toolbar>
+                <v-card-text class="pa-4">
+                    <v-row dense>
+                        <v-col cols="4">
+                            <v-select :disabled="!$store.state.permisos.es_admin" :items="arrayajuste"
+                                label="Tipo movimiento" dense outlined v-model="modo_ajuste"></v-select>
+                        </v-col>
+                        <v-col cols="4">
+                            <v-text-field type="date" outlined dense v-model="date"
+                                label="Fecha Emisión"></v-text-field>
+                        </v-col>
+                        <v-col cols="4">
+                            <v-text-field type="date" outlined dense v-model="date_ingreso"
+                                label="Fecha de Movimiento"></v-text-field>
+                        </v-col>
+                    </v-row>
+                    <v-row dense class="mt-n4">
+                        <v-col cols="6">
+                            <v-select :disabled="!$store.state.permisos.es_admin" :items="$store.state.motivos_ajuste"
+                                label="Motivo" dense outlined v-model="motivos_ajuste"></v-select>
+                        </v-col>
+                        <v-col cols="6">
+                            <v-textarea outlined dense v-model="observacion" auto-grow filled label="OBSERVACIÓN"
+                                rows="1"></v-textarea>
+                        </v-col>
+                    </v-row>
+                    <v-row dense class="mt-n4">
+                        <v-col cols="12">
+                            <v-textarea outlined dense v-model="responsable" auto-grow filled label="RESPONSABLE"
+                                rows="1"></v-textarea>
+                        </v-col>
+                    </v-row>
+                </v-card-text>
+                <v-card-actions class="pa-4 pt-0">
+                    <v-btn block large @click="nuevo_ajuste()" color="info">
+                        <v-icon left>mdi-plus-circle</v-icon> CREAR DOCUMENTO DE AJUSTE
+                    </v-btn>
+                </v-card-actions>
             </v-card>
         </v-dialog>
 
         <v-dialog v-model="dial_detalle" max-width="850px">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dial_detalle = !dial_detalle">mdi-close</v-icon>
+            <v-card class="rounded-lg">
+                <v-toolbar color="primary" dense dark>
+                    <v-toolbar-title>Detalle de Movimiento: {{ item_selecto.id }}</v-toolbar-title>
                     <v-spacer></v-spacer>
-                    <v-icon color="success" @click="impreme_rep()">mdi-printer</v-icon>
-                </v-system-bar>
-
-            </div>
-            <v-card class="pa-3">
-                <v-row dense>
-                    <v-col cols="12">
-                    </v-col>
-                </v-row>
-                <v-simple-table dark fixed-header max-width="75vh" dense>
-                    <template v-slot:default>
-                        <thead>
-                            <tr>
-                                <th class="text-left">
-                                    Descripcion
-                                </th>
-                                <th class="text-left">
-                                    Medida
-                                </th>
-                                <th class="text-left">
-                                    Cantidad.
-                                </th>
-                                <th class="text-left">
-                                    Precio
-                                </th>
-                                <th class="text-left">
-                                    Total
-                                </th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-
-                            <tr v-for="item in arrayConsolidar" :key="item.id">
-                                <td>{{ item.nombre }}</td>
-                                <td>{{ item.medida }}</td>
-                                <td>{{ item.cantidad }}</td>
-                                <td>S/.{{ item.costo_nuevo }}</td>
-                                <td>S/.{{ redondear(item.costo_nuevo * item.cantidad) }}</td>
-                            </tr>
-                        </tbody>
-                    </template>
-                </v-simple-table>
+                    <v-btn icon color="success" @click="impreme_rep()"><v-icon>mdi-printer</v-icon></v-btn>
+                    <v-btn icon @click="dial_detalle = false"><v-icon>mdi-close</v-icon></v-btn>
+                </v-toolbar>
+                <v-card-text class="pa-4">
+                    <h5 class="text-subtitle-1 mb-3">
+                        <span v-if="item_selecto.operacion === 'COMPRA'">Proveedor: {{ item_selecto.nom_proveedor
+                        }}</span>
+                        <span v-else>Motivo: {{ item_selecto.motivo }}</span>
+                    </h5>
+                    <h4 v-if="item_selecto.motivo == 'TRANSFERENCIA ENTRE SEDES'"> ORIGEN : {{
+                        nombreSede(item_selecto.sreferencia) }} DESTINO: {{ nombreSede(item_selecto.creferencia)
+                        }}</h4>
+                    <v-simple-table fixed-header height="60vh" dense class="elevation-1">
+                        <template v-slot:default>
+                            <thead class="grey darken-3 white--text">
+                                <tr>
+                                    <th class="text-left white--text">Descripción</th>
+                                    <th class="text-left white--text">Medida</th>
+                                    <th class="text-center white--text">Cantidad</th>
+                                    <th class="text-right white--text">Precio Unit.</th>
+                                    <th class="text-right white--text">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(item, index) in arrayConsolidar" :key="index">
+                                    <td>{{ item.nombre }}</td>
+                                    <td>{{ item.medida }}</td>
+                                    <td class="text-center">{{ item.cantidad }}</td>
+                                    <td class="text-right">{{ item_selecto.moneda || 'S/.' }}{{
+                                        redondear(item.costo_nuevo) }}</td>
+                                    <td class="text-right font-weight-bold">{{ item_selecto.moneda || 'S/.' }}{{
+                                        redondear(item.costo_nuevo * item.cantidad) }}</td>
+                                </tr>
+                            </tbody>
+                        </template>
+                    </v-simple-table>
+                </v-card-text>
             </v-card>
-
         </v-dialog>
+
         <v-dialog v-model="dial_proveedor" max-width="1100px">
             <tabla_proveedor v-if="dial_proveedor" @respuesta="completa_proveedor($event)" />
         </v-dialog>
 
         <compras v-if="dialo_compras" :data="data_edita" @cierra_compra="dialo_compras = $event" />
-
-
         <ajuste_inv v-if="dialo_ajuste" :data="data_edita" @cierra_compra="dialo_ajuste = $event" />
-
 
     </div>
 </template>
@@ -342,23 +370,24 @@ export default {
         responsable: '',
         item_selecto: [],
         _subRef: null,
+        moneda: store.state.moneda.find(m => m.codigo === 'PEN'),
     }),
     mounted() {
         this.inicio();
         this.suscribir();
     },
     beforeDestroy() {
-    if (this._subRef) this._subRef.off('value', this.onDataChange);
+        if (this._subRef) this._subRef.off('value', this.onDataChange);
     },
     computed: {
-   listafiltrada() {
-    return this.desserts; // o aplica filtros locales
-  }
+        listafiltrada() {
+            return this.desserts; // o aplica filtros locales
+        }
     },
     watch: {
-  date1() { this.suscribir(); },
-  date2() { this.suscribir(); },
-},
+        date1() { this.suscribir(); },
+        date2() { this.suscribir(); },
+    },
 
     created() {
         this.inicio()
@@ -384,10 +413,7 @@ export default {
             items.forEach((item) => {
                 let data = item.val();
                 array.push(data);
-                console.log(data);
-
             });
-            console.log(array)
             this.desserts = array;
         },
         conviertefecha(date) {
@@ -457,6 +483,7 @@ export default {
                 total: 0,
                 responsable: store.state.permisos.correo.slice(0, -13),
                 data: [],
+                moneda: this.moneda.simbolo,
             }
             this.data_edita = array
             await nuevoMovimiento(array.id, array)
@@ -508,7 +535,6 @@ export default {
             this.crea_ajuste = false
         },
         edita_compra(data) {
-            console.log(data)
             this.data_edita = data
             if (data.operacion == 'DEVOLUCION DE COMPRA') {
                 this.dialo_nc = true
@@ -525,7 +551,6 @@ export default {
             return m.isValid() ? m.unix() : moment().unix();
         },
         abre_visualizacion(item) {
-
             console.log(item)
             this.item_selecto = item
             this.arrayConsolidar = item.data
@@ -556,6 +581,13 @@ export default {
                 .endAt(fin);
 
             this._subRef.on('value', this.onDataChange);
+        },
+        nombreSede(base) {
+            if (!base) return '-';
+            // Puedes usar store.state o this.$store si usas namespaced modules
+            const sedes = store.state.array_sedes.filter(e => e.tipo == 'sede') || [];
+            const s = sedes.find(s => s.base == base);
+            return s ? s.nombre : base;
         },
     }
 

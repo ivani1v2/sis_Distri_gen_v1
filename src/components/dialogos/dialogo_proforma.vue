@@ -236,7 +236,6 @@ export default {
 
     },
     created() {
-        console.log(this.data)
         if (this.data != '') {
             console.log('editando')
             this.num_cliente = this.data.num_cliente

@@ -1,275 +1,289 @@
 <template>
     <v-dialog v-model="ui.main" max-width="1100px" persistent>
-        <!-- Barra superior -->
-        <div>
-            <v-system-bar window dark>
+        <v-card class="rounded-lg">
+            <v-toolbar color="blue-grey darken-3" dense dark>
                 <v-icon @click="emitCerrar">mdi-close</v-icon>
+                <v-toolbar-title class="ml-2 font-weight-bold">
+                    Registro de Compras
+                </v-toolbar-title>
                 <v-spacer></v-spacer>
-                <v-icon large color="info" @click="ui.productos = true">mdi-magnify</v-icon>
-                <v-icon color="red" large @click="ui.confirmaAnulacion = true">mdi-delete</v-icon>
-                <v-icon color="green" large @click="ui.confirmaGrabar = true">mdi-content-save</v-icon>
-            </v-system-bar>
-        </div>
 
-        <v-card class="pa-3">
-            <!-- Cabecera -->
-            <v-card-text>
-                <v-row dense class="mb-n5">
-                    <v-col cols="6">
-                        <h4>FECHA DE EMISIÓN: {{ fmtFecha(cabecera.fecha_emision) }}</h4>
-                        <h4>FECHA DE INGRESO: {{ fmtFecha(cabecera.fecha_ingreso) }}</h4>
-                        <h4>
-                            DOCUMENTO: {{ cabecera.tipodocumento }} /
-                            {{ cabecera.sreferencia }}-{{ cabecera.creferencia }}
-                        </h4>
-                        <h4>Pago: {{ cabecera.modo_pago }}</h4>
-                        <v-btn x-small color="warning" class="mb-1" @click="abreEditarCabecera">
-                            Editar Cabecera
-                        </v-btn>
+                <v-btn icon color="info" @click="ui.productos = true" title="Buscar y Añadir Producto">
+                    <v-icon>mdi-magnify</v-icon>
+                </v-btn>
+                <v-divider vertical class="mx-2"></v-divider>
+                <v-btn icon color="red lighten-1" @click="ui.confirmaAnulacion = true" title="Anular Compra">
+                    <v-icon>mdi-delete</v-icon>
+                </v-btn>
+                <v-btn icon color="success" @click="ui.confirmaGrabar = true" title="Guardar Cambios">
+                    <v-icon>mdi-content-save</v-icon>
+                </v-btn>
+            </v-toolbar>
+
+            <v-card-text class="pa-4">
+
+                <v-row dense class="mb-3">
+                    <v-col cols="12" md="6">
+                        <v-card outlined class="pa-3">
+                            <div class="d-flex align-center justify-space-between mb-2">
+                                <h4 class="text-subtitle-1 primary--text">
+                                    <v-icon small left>mdi-file-document-outline</v-icon>
+                                    Documento: {{ cabecera.tipodocumento }} ({{ cabecera.sreferencia }}-{{
+                                    cabecera.creferencia }})
+                                </h4>
+                                <v-btn x-small color="warning" @click="abreEditarCabecera">
+                                    <v-icon x-small left>mdi-pencil</v-icon> Editar Cabecera
+                                </v-btn>
+                            </div>
+                            <v-divider class="mb-2"></v-divider>
+                            <h5 class="text-caption">
+                                **PROVEEDOR:** {{ cabecera.nom_proveedor || 'N/A' }} ({{ cabecera.num_doc || 'N/A' }})
+                            </h5>
+                            <h5 class="text-caption">
+                                **EMISIÓN:** {{ fmtFecha(cabecera.fecha_emision) }} | **INGRESO:** {{
+                                fmtFecha(cabecera.fecha_ingreso) }}
+                            </h5>
+                            <h5 class="text-caption">
+                                **OBSERVACIÓN:** {{ cabecera.observacion }}
+                            </h5>
+                            <h5 class="text-caption">
+                                **PAGO:** {{ cabecera.modo_pago }}
+                            </h5>
+                        </v-card>
                     </v-col>
-                    <v-col cols="6">
-                        <h4>RUC : {{ cabecera.num_doc }}</h4>
-                        <h4>RAZÓN SOCIAL : {{ cabecera.nom_proveedor }}</h4>
-                        <h4>Observación : {{ cabecera.observacion }}</h4>
 
-                        <div class="mt-2 mb-n5" v-if="!$store.state.esmovil">
-                            <v-autocomplete autofocus class="mt-n3" label="Busca Producto" auto-select-first
-                                v-model="busqueda.texto" :items="busqueda.items" @keyup.enter="onBuscarEnter" />
-                        </div>
+                    <v-col cols="12" md="6">
+                        <v-card outlined class="pa-3 fill-height d-flex flex-column justify-center">
+                            <h4 class="text-subtitle-1 success--text mb-2">
+                                <v-icon small left>mdi-barcode-scan</v-icon> Búsqueda Rápida de Producto
+                            </h4>
+                            <v-autocomplete outlined dense autofocus label="Buscar por ID o Nombre (ENTER para agregar)"
+                                auto-select-first v-model="busqueda.texto" :items="busqueda.items"
+                                @keyup.enter="onBuscarEnter" hide-details   @change="onBuscarEnter"/>
+
+                        </v-card>
+                    </v-col>
+                </v-row>
+
+                <v-divider class="my-3"></v-divider>
+                <v-simple-table fixed-header height="35vh" dense class="elevation-1">
+                    <template v-slot:default>
+                        <thead class="grey darken-3 black--text">
+                            <tr>
+                                <th class="text-left black--text" width="5%">Acción</th>
+                                <th class="text-left black--text" width="45%">Descripción</th>
+                                <th class="text-left black--text" width="10%">Medida</th>
+                                <th class="text-right black--text" width="15%">Costo Unit. (C/IGV)</th>
+                                <th class="text-center black--text" width="10%">Cantidad</th>
+                                <th class="text-right black--text" width="15%">Importe</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-if="!detalle.length">
+                                <td colspan="6" class="text-center grey--text text-caption">
+                                    No hay productos en este comprobante.
+                                </td>
+                            </tr>
+                            <tr v-for="it in detalle" :key="it.uuid">
+                                <td>
+                                    <v-btn icon x-small color="green" title="Editar ítem" @click="abreEditarItem(it)">
+                                        <v-icon small>mdi-pencil</v-icon>
+                                    </v-btn>
+                                </td>
+                                <td>
+                                    <span class="font-weight-medium">{{ it.nombre }}</span>
+                                    <div class="caption grey--text">{{ it.id }} ({{ it.operacion }})</div>
+                                </td>
+                                <td>{{ it.medida }}</td>
+                                <td class="text-right">{{ moneda }} {{ fmtDec(it.costo_nuevo) }}</td>
+                                <td class="text-center">{{ it.cantidad }}</td>
+                                <td class="text-right font-weight-bold">
+                                    <span v-if="it.operacion === 'GRATUITA'"
+                                        class="caption orange--text">GRATUITO</span>
+                                    <span v-else>{{ moneda }} {{ fmtDec(it.cantidad * it.costo_nuevo) }}</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </template>
+                </v-simple-table>
+
+                <v-row dense class="mt-4">
+                    <v-col cols="6"></v-col>
+                    <v-col cols="6" class="text-right">
+                        <v-divider></v-divider>
+                        <h5 class="mt-1"> Op. Gravada (Base): <span class="red--text">{{ moneda }} {{
+                                totales.baseGravada }}</span></h5>
+                        <h5> Op. Exonerada: <span class="red--text">{{ moneda }} {{ totales.exonerada }}</span></h5>
+                        <h5> Op. Gratuita (Base): <span class="red--text">{{ moneda }} {{ totales.gratuita }}</span>
+                        </h5>
+                        <h5 class="font-weight-bold"> IGV {{ igv }}%: <span class="red--text">{{ moneda }} {{
+                                totales.igv }}</span></h5>
+                        <v-divider class="my-1"></v-divider>
+                        <h4 class="text-h5 font-weight-black success--text"> TOTAL: <span class="red--text">{{ moneda }}
+                                {{
+                                totales.total }}</span></h4>
                     </v-col>
                 </v-row>
             </v-card-text>
-
-            <!-- Detalle -->
-            <v-simple-table dark fixed-header height="55vh" dense>
-                <template v-slot:default>
-                    <thead>
-                        <tr>
-                            <th class="text-left">Descripción</th>
-                            <th class="text-left">Medida</th>
-                            <th class="text-left">Cost Unit</th>
-                            <th class="text-left">Cantidad</th>
-                            <th class="text-left">Importe</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="it in detalle" :key="it.uuid">
-                            <td width="380">
-                                <v-icon color="green" small class="mt-n1"
-                                    @click="abreEditarItem(it)">mdi-pencil</v-icon>
-                                {{ it.id }} {{ it.nombre }}
-                            </td>
-                            <td width="30">{{ it.medida }}</td>
-                            <td width="35">{{ fmtDec(it.costo_nuevo) }}</td>
-                            <td width="35">{{ it.cantidad }}</td>
-                            <td width="35">
-                                <span v-if="it.operacion === 'GRAVADA'">S/. {{ fmtDec(it.cantidad * it.costo_nuevo)
-                                }}</span>
-                                <span v-else-if="it.operacion === 'GRATUITA'">S/. 0.00</span>
-                                <span v-else>S/. {{ fmtDec(it.cantidad * it.costo_nuevo) }}</span>
-                            </td>
-                        </tr>
-                    </tbody>
-                </template>
-            </v-simple-table>
-
-            <!-- Totales -->
-            <v-row dense>
-                <v-col cols="6"></v-col>
-                <v-col cols="6" class="text-right">
-                    <h5> Op. Gravada: <span class="red--text">S/. {{ totales.baseGravada }}</span></h5>
-                    <h5> Op. Gratuita: <span class="red--text">S/. {{ totales.gratuita }}</span></h5>
-                    <h5> Op. Exonerada: <span class="red--text">S/. {{ totales.exonerada }}</span></h5>
-                    <h5> IGV {{ igv }}%: <span class="red--text">S/. {{ totales.igv }}</span></h5>
-                    <h5> TOTAL: <span class="red--text">S/. {{ totales.total }}</span></h5>
-                </v-col>
-            </v-row>
         </v-card>
 
-        <!-- Confirmar grabar -->
         <v-dialog v-model="ui.confirmaGrabar" max-width="460px">
-            <div><v-system-bar window dark><v-icon @click="ui.confirmaGrabar = false">mdi-close</v-icon></v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <v-card-text>
-                    <h2 class="text-center">¿SEGURO DE CONTINUAR?</h2>
+            <v-card class="rounded-lg">
+                <v-toolbar color="success" dense dark><v-toolbar-title>Confirmar
+                        Guardado</v-toolbar-title><v-spacer></v-spacer><v-btn icon
+                        @click="ui.confirmaGrabar = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-card-text class="pa-4 text-center">
+                    <h2 class="text-h5">¿SEGURO DE CONTINUAR Y GUARDAR LOS CAMBIOS?</h2>
                 </v-card-text>
-                <v-card-actions><v-btn color="success" block @click="grabar(true)">Sí</v-btn></v-card-actions>
-            </v-card>
-        </v-dialog>
-
-        <!-- Editar Item -->
-        <v-dialog v-model="ui.editarItem" max-width="390px">
-            <div><v-system-bar window dark><v-icon @click="ui.editarItem = false">mdi-close</v-icon></v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <v-select :items="constantes.operaciones" label="Operación" dense outlined
-                    v-model="formItem.operacion" />
-                <v-text-field dense class="pa-3" v-model="formItem.costo" label="Costo Unitario"
-                    @keyup.enter="guardarItemEditado" />
-                <v-text-field dense class="pa-3" v-model="formItem.nombre" label="Nombre"
-                    @keyup.enter="guardarItemEditado" />
-                <v-card-actions class="mt-n4">
-                    <v-spacer></v-spacer>
-                    <v-btn color="error" text @click="eliminarItem">Eliminar</v-btn>
-                    <v-btn color="green darken-1" text @click="guardarItemEditado">Grabar</v-btn>
+                <v-card-actions class="pa-4 pt-0">
+                    <v-btn color="success" block large @click="grabar(true)">SÍ, GUARDAR</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
 
-        <!-- Agregar Item / Cantidad + Precios -->
-  <!-- Agregar Item / Cantidad + Precios -->
-<v-dialog v-model="ui.agregarItem" max-width="360px">
-  <div>
-    <v-system-bar window dark>
-      <v-icon @click="ui.agregarItem = false">mdi-close</v-icon>
-    </v-system-bar>
-  </div>
-  <v-card class="pa-3">
-    <v-select
-      :items="constantes.operaciones"
-      label="Operación"
-      dense
-      outlined
-      v-model="formNuevo.operacion"
-    />
+        <v-dialog v-model="ui.editarItem" max-width="450px">
+            <v-card class="rounded-lg">
+                <v-toolbar color="info" dense dark><v-toolbar-title>Editar
+                        Ítem</v-toolbar-title><v-spacer></v-spacer><v-btn icon
+                        @click="ui.editarItem = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-card-text class="pa-4">
+                    <v-select :items="constantes.operaciones" label="Operación" dense outlined
+                        v-model="formItem.operacion" />
+                    <v-text-field dense outlined v-model="formItem.costo" label="Costo Unitario (C/IGV)"
+                        type="number" />
+                    <v-text-field dense outlined v-model="formItem.nombre" label="Nombre del Producto" />
+                </v-card-text>
+                <v-card-actions class="pa-4 pt-0">
+                    <v-btn color="error" text @click="eliminarItem">
+                        <v-icon left>mdi-delete</v-icon> Eliminar Ítem
+                    </v-btn>
+                    <v-spacer></v-spacer>
+                    <v-btn color="green darken-1" @click="guardarItemEditado">
+                        <v-icon left>mdi-content-save</v-icon> Grabar
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
 
-    <!-- Si NO es exonerada: 2 campos (sin/con IGV) -->
-    <v-row v-if="formNuevo.operacion !== 'EXONERADA'" dense class="mx-auto text-center">
-      <v-col cols="6" class="mb-n1">
-        <v-text-field
-          dense
-          label="PRECIO SIN IGV"
-          v-model="formNuevo.sinIgv"
-          @focus="precioFocus = 'sin'"
-        />
-      </v-col>
-      <v-col cols="6" class="mb-n1">
-        <v-text-field
-          dense
-          label="PRECIO CON IGV"
-          v-model="formNuevo.conIgv"
-          @focus="precioFocus = 'con'"
-        />
-      </v-col>
-    </v-row>
+        <v-dialog v-model="ui.agregarItem" max-width="400px">
+            <v-card class="rounded-lg">
+                <v-toolbar color="green darken-1" dense dark><v-toolbar-title>Añadir
+                        Producto</v-toolbar-title><v-spacer></v-spacer><v-btn icon
+                        @click="ui.agregarItem = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-card-text class="pa-4">
+                    <v-select :items="constantes.operaciones" label="Operación" dense outlined
+                        v-model="formNuevo.operacion" />
 
-    <!-- Si es exonerada: 1 solo campo -->
-    <v-row v-else dense class="mx-auto text-center">
-      <v-col cols="12" class="mb-n1">
-        <v-text-field
-          dense
-          label="PRECIO EXONERADO"
-          v-model="formNuevo.conIgv"
-          @focus="precioFocus = 'con'"
-        />
-      </v-col>
-    </v-row>
+                    <v-row dense class="mx-auto text-center">
+                        <v-col v-if="formNuevo.operacion !== 'EXONERADA'" cols="6" class="mb-n1">
+                            <v-text-field dense label="PRECIO SIN IGV" v-model="formNuevo.sinIgv"
+                                @focus="precioFocus = 'sin'" />
+                        </v-col>
+                        <v-col :cols="formNuevo.operacion === 'EXONERADA' ? 12 : 6" class="mb-n1">
+                            <v-text-field dense
+                                :label="formNuevo.operacion === 'EXONERADA' ? 'PRECIO EXONERADO' : 'PRECIO CON IGV'"
+                                v-model="formNuevo.conIgv" @focus="precioFocus = 'con'" />
+                        </v-col>
+                    </v-row>
 
-    <v-row dense class="mx-auto text-center">
-      <v-col cols="12" class="mb-n2">
-        <v-text-field dense label="Nombre" v-model="formNuevo.nombre" @keyup.enter="confirmAgregar" />
-      </v-col>
-    </v-row>
+                    <v-text-field dense outlined label="Nombre (detallado)" v-model="formNuevo.nombre"
+                        @keyup.enter="confirmAgregar" class="mt-2" />
 
-    <v-row dense class="mx-auto text-center">
-      <v-col cols="6">
-        <v-btn block color="success" @click="seleccionarModo('entero')">{{ prodSelecto.medida }}</v-btn>
-      </v-col>
-      <v-col cols="6">
-        <v-btn block color="success" @click="seleccionarModo('fraccion')">UND.</v-btn>
-      </v-col>
-    </v-row>
+                    <h5 class="mt-3 mb-2">Seleccione Modo de Ingreso:</h5>
+                    <v-row dense class="mx-auto text-center">
+                        <v-col cols="6">
+                            <v-btn block :color="formNuevo.modo === 'entero' ? 'primary' : 'grey lighten-2'"
+                                @click="seleccionarModo('entero')">{{ prodSelecto.medida }}</v-btn>
+                        </v-col>
+                        <v-col cols="6">
+                            <v-btn block :color="formNuevo.modo === 'fraccion' ? 'primary' : 'grey lighten-2'"
+                                @click="seleccionarModo('fraccion')">UNIDAD</v-btn>
+                        </v-col>
+                    </v-row>
 
-    <v-text-field
-      type="number"
-      outlined
-      dense
-      v-model.number="formNuevo.cantidad"
-      label="CANTIDAD"
-      @focus="$event.target.select()"
-      @keyup.enter="confirmAgregar"
-      class="mt-2"
-    />
-    <v-btn class="mt-2" color="red" block @click="confirmAgregar">OK</v-btn>
-  </v-card>
-</v-dialog>
+                    <v-text-field type="number" outlined dense v-model.number="formNuevo.cantidad" label="CANTIDAD"
+                        @focus="$event.target.select()" @keyup.enter="confirmAgregar" class="mt-4" />
+                </v-card-text>
+                <v-card-actions class="pa-4 pt-0">
+                    <v-btn color="success" block large @click="confirmAgregar">
+                        <v-icon left>mdi-plus-circle</v-icon> AÑADIR AL COMPROBANTE
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
 
-
-        <!-- Editar Cabecera -->
         <v-dialog v-model="ui.editarCabecera" max-width="800px" persistent>
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="ui.editarCabecera = false">mdi-close</v-icon>
-                    <h5 class="text-center">REGISTRO DE COMPRAS</h5>
+            <v-card class="rounded-lg">
+                <v-toolbar color="warning" dense dark>
+                    <v-toolbar-title>Editar Cabecera de Compra</v-toolbar-title>
                     <v-spacer></v-spacer>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <v-row dense class="pa-1">
-                    <v-col cols="6"><v-text-field type="date" outlined dense v-model="formCabecera.emision"
-                            label="Emisión" /></v-col>
-                    <v-col cols="6"><v-text-field type="date" outlined dense v-model="formCabecera.ingreso"
-                            label="Ingreso Producto" /></v-col>
-                </v-row>
-                <v-row dense class="pa-1 mt-n4">
-                    <v-col cols="6"><v-text-field readonly outlined dense v-model="formCabecera.num_doc"
-                            label="N° DOC PROVEE." append-icon="mdi-magnify"
-                            @click:append="$store.commit('dialogo_tabla_proveedores', false)" /></v-col>
-                    <v-col cols="6"><v-text-field readonly outlined dense v-model="formCabecera.nom_proveedor"
-                            label="NOMBRE PROVEEDOR" /></v-col>
-                </v-row>
-                <v-row dense class="pa-1 mt-n4">
-                    <v-col cols="4"><v-select :items="constantes.tiposDocumento" label="Tipo" dense outlined
-                            v-model="formCabecera.tipodocumento" /></v-col>
-                    <v-col cols="4"><v-text-field type="text" outlined dense v-model="formCabecera.sreferencia"
-                            label="Serie Ref." placeholder="F001" :disabled="!formCabecera.num_doc" /></v-col>
-                    <v-col cols="4"><v-text-field type="number" outlined dense v-model="formCabecera.creferencia"
-                            label="Correlativo Ref." placeholder="1234" :disabled="!formCabecera.sreferencia" /></v-col>
-                </v-row>
-                <v-row dense class="pa-1 mt-n4">
-                    <v-col cols="3"><v-select :items="constantes.modosPago" label="Modo Pago" dense outlined
-                            v-model="formCabecera.modo_pago" /></v-col>
-                    <v-col cols="9"><v-textarea outlined dense v-model="formCabecera.observacion" auto-grow
-                            label="OBSERVACIÓN" rows="1" /></v-col>
-                </v-row>
-                <v-row dense class="pa-1 mt-n1">
-                    <v-col cols="12"><v-btn block color="success" @click="guardarCabecera">GUARDAR</v-btn></v-col>
-                </v-row>
-            </v-card>
-        </v-dialog>
-
-        <!-- Progreso -->
-        <v-dialog persistent v-model="ui.progreso" max-width="250px">
-            <v-card class="pa-12">
-                <v-progress-linear indeterminate color="blue-grey" height="25" />
-            </v-card>
-        </v-dialog>
-
-        <!-- Confirmar anulación -->
-        <v-dialog v-model="ui.confirmaAnulacion" max-width="460px">
-            <div><v-system-bar window dark><v-icon
-                        @click="ui.confirmaAnulacion = false">mdi-close</v-icon></v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <v-card-text>
-                    <h2 class="text-center">¿SEGURO QUE DESEA ANULAR?</h2>
+                    <v-btn icon @click="ui.editarCabecera = false"><v-icon>mdi-close</v-icon></v-btn>
+                </v-toolbar>
+                <v-card-text class="pa-4">
+                    <v-row dense>
+                        <v-col cols="6"><v-text-field type="date" outlined dense v-model="formCabecera.emision"
+                                label="Fecha Emisión" /></v-col>
+                        <v-col cols="6"><v-text-field type="date" outlined dense v-model="formCabecera.ingreso"
+                                label="Fecha Ingreso Producto" /></v-col>
+                    </v-row>
+                    <v-row dense class="mt-n4">
+                        <v-col cols="6">
+                            <v-text-field readonly outlined dense v-model="formCabecera.num_doc" label="N° DOC PROVEE."
+                                append-icon="mdi-magnify"
+                                @click:append="$store.commit('dialogo_tabla_proveedores', false)" />
+                        </v-col>
+                        <v-col cols="6"><v-text-field readonly outlined dense v-model="formCabecera.nom_proveedor"
+                                label="NOMBRE PROVEEDOR" /></v-col>
+                    </v-row>
+                    <v-row dense class="mt-n4">
+                        <v-col cols="4"><v-select :items="constantes.tiposDocumento" label="Tipo Documento" dense
+                                outlined v-model="formCabecera.tipodocumento" /></v-col>
+                        <v-col cols="4"><v-text-field type="text" outlined dense v-model="formCabecera.sreferencia"
+                                label="Serie Ref." placeholder="F001" :disabled="!formCabecera.num_doc" /></v-col>
+                        <v-col cols="4"><v-text-field type="number" outlined dense v-model="formCabecera.creferencia"
+                                label="Correlativo Ref." placeholder="1234"
+                                :disabled="!formCabecera.sreferencia" /></v-col>
+                    </v-row>
+                    <v-row dense class="mt-n4">
+                        <v-col cols="3"><v-select :items="constantes.modosPago" label="Modo Pago" dense outlined
+                                v-model="formCabecera.modo_pago" /></v-col>
+                        <v-col cols="9"><v-textarea outlined dense v-model="formCabecera.observacion" auto-grow
+                                label="OBSERVACIÓN" rows="1" /></v-col>
+                    </v-row>
                 </v-card-text>
-                <v-card-actions>
-                    <v-spacer></v-spacer>
-                    <v-btn color="info" @click="anular">Sí</v-btn>
-                    <v-btn color="success" @click="ui.confirmaAnulacion = false">No</v-btn>
+                <v-card-actions class="pa-4 pt-0">
+                    <v-btn block color="success" large @click="guardarCabecera">GUARDAR CAMBIOS DE CABECERA</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
 
-        <!-- Catálogo de productos -->
+        <v-dialog persistent v-model="ui.progreso" max-width="250px">
+            <v-card class="pa-8 text-center rounded-lg">
+                <v-progress-linear indeterminate color="blue-grey" height="25" class="mb-3" />
+                <span class="text-caption">Procesando operación...</span>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="ui.confirmaAnulacion" max-width="460px">
+            <v-card class="rounded-lg">
+                <v-toolbar color="red" dense dark><v-toolbar-title>Confirmar
+                        Anulación</v-toolbar-title><v-spacer></v-spacer><v-btn icon
+                        @click="ui.confirmaAnulacion = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-card-text class="pa-4 text-center">
+                    <h2 class="text-h5 red--text text--darken-2">¿SEGURO QUE DESEA ANULAR ESTA COMPRA?</h2>
+                    <p class="mt-3 caption">Esta acción revertirá los movimientos de stock.</p>
+                </v-card-text>
+                <v-card-actions class="pa-4 pt-0">
+                    <v-btn color="red" block large @click="anular">SÍ, ANULAR COMPRA</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <v-dialog v-model="ui.productos" max-width="800px">
             <cata_productos v-if="ui.productos" @array="onProductoSeleccionado" @cierra="ui.productos = $event" />
         </v-dialog>
     </v-dialog>
 </template>
-
 <script>
 import moment from "moment"
 import store from "@/store/index"
@@ -285,6 +299,7 @@ export default {
     data() {
         return {
             // Cabecera y detalle
+            moneda: 'S/',
             cabecera: this.cloneCabecera(this.data),
             detalle: Array.isArray(this.data?.data) ? [...this.data.data] : [],
 
@@ -347,27 +362,30 @@ export default {
         },
     },
 
-watch: {
-  "formNuevo.sinIgv"(v) {
-    if (this.formNuevo.operacion === "EXONERADA") return; // sin IGV = exonerado (se maneja desde conIgv)
-    if (this.precioFocus === "sin") {
-      const n = this.num(v);
-      this.formNuevo.conIgv = n ? (n * (1 + this.igv / 100)).toFixed(4) : "";
-    }
-  },
-  "formNuevo.conIgv"(v) {
-    if (this.formNuevo.operacion === "EXONERADA") {
-      // En exonerada, ambos equivalen
-      this.formNuevo.sinIgv = v;
-      return;
-    }
-    if (this.precioFocus === "con") {
-      const n = this.num(v);
-      this.formNuevo.sinIgv = n ? (n / (1 + this.igv / 100)).toFixed(4) : "";
-    }
-  },
-},
-
+    watch: {
+        "formNuevo.sinIgv"(v) {
+            if (this.formNuevo.operacion === "EXONERADA") return; // sin IGV = exonerado (se maneja desde conIgv)
+            if (this.precioFocus === "sin") {
+                const n = this.num(v);
+                this.formNuevo.conIgv = n ? (n * (1 + this.igv / 100)).toFixed(4) : "";
+            }
+        },
+        "formNuevo.conIgv"(v) {
+            if (this.formNuevo.operacion === "EXONERADA") {
+                // En exonerada, ambos equivalen
+                this.formNuevo.sinIgv = v;
+                return;
+            }
+            if (this.precioFocus === "con") {
+                const n = this.num(v);
+                this.formNuevo.sinIgv = n ? (n / (1 + this.igv / 100)).toFixed(4) : "";
+            }
+        },
+    },
+    created() {
+        console.log('moneda compra', this.data);
+        this.moneda = this.data.moneda || 'S/'
+    },
     methods: {
         // ---------- Utilitarios ----------
         docCode(tipo) {
@@ -389,6 +407,7 @@ watch: {
                 operacion: d.operacion || "COMPRA",                 // NUEVO
                 periodo: d.periodo || "",                           // NUEVO
                 sreferencia: d.sreferencia || "",
+                moneda: d.moneda || "S/",
                 creferencia: d.creferencia || "",
                 modo_pago: d.modo_pago || "CONTADO",
                 num_doc: d.num_doc || "",

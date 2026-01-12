@@ -1,213 +1,346 @@
 <template>
-    <div class="pa-3">
-        <v-card class="mb-2 pa-2">
-            <v-row dense>
+    <v-container fluid class="pa-0 mb-12">
+        <!-- DESKTOP: toolbar clásica -->
+        <v-toolbar v-if="!isMobile" flat color="white" class="mb-3 rounded-lg elevation-2">
+            <v-toolbar-title class="font-weight-bold grey--text text--darken-2">
+                🚚 Gestión de Repartos
+            </v-toolbar-title>
 
-                <v-col cols="6" md="4" sm="6">
-                    <v-text-field outlined dense type="date" label="Hasta" v-model="date1" />
+            <v-spacer></v-spacer>
+
+            <v-text-field outlined dense type="date" label="Desde" v-model="date1" hide-details
+                prepend-inner-icon="mdi-calendar-start" class="mr-2" />
+
+            <v-text-field outlined dense type="date" label="Hasta" v-model="date2" hide-details
+                prepend-inner-icon="mdi-calendar-end" />
+
+            <v-menu v-model="menuOpc" offset-y close-on-content-click transition="scale-transition">
+                <template v-slot:activator="{ on, attrs }">
+                    <v-btn color="success" dark depressed rounded v-bind="attrs" v-on="on" class="ml-2" small>
+                        <v-icon left>mdi-plus-circle</v-icon>
+                        Acciones
+                        <v-icon right class="ml-1">mdi-menu-down</v-icon>
+                    </v-btn>
+                </template>
+
+                <v-list dense nav class="py-0">
+                    <v-subheader class="font-weight-bold success--text text--lighten-1">OPERACIONES</v-subheader>
+
+                    <v-list-item @click="nuevo_rep = true">
+                        <v-list-item-icon><v-icon color="blue">mdi-file-edit</v-icon></v-list-item-icon>
+                        <v-list-item-title>Crear Reparto</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item @click="dial_sube_excel = true">
+                        <v-list-item-icon><v-icon color="green">mdi-upload</v-icon></v-list-item-icon>
+                        <v-list-item-title>Subir Excel Ruta</v-list-item-title>
+                    </v-list-item>
+
+                    <v-divider class="my-1"></v-divider>
+
+                    <v-list-item @click="dial_rep_consolidado = true">
+                        <v-list-item-icon><v-icon color="info">mdi-chart-bar</v-icon></v-list-item-icon>
+                        <v-list-item-title>Reporte Consolidado</v-list-item-title>
+                    </v-list-item>
+                </v-list>
+            </v-menu>
+        </v-toolbar>
+
+        <!-- MOBILE: solo CARD con filtros y acciones -->
+        <v-card v-else class="mb-3 mx-1 pa-2 rounded-lg elevation-2">
+            <div class="font-weight-bold grey--text text--darken-2 mb-2">
+                🚚 Gestión de Repartos
+            </div>
+
+            <v-row dense>
+                <v-col cols="6">
+                    <v-text-field outlined dense type="date" v-model="date1" label="Desde" hide-details
+                        prepend-inner-icon="mdi-calendar-start" />
                 </v-col>
-                <v-col cols="6" md="4" sm="6">
-                    <v-text-field outlined dense type="date" label="Hasta" v-model="date2" />
+                <v-col cols="6">
+                    <v-text-field outlined dense type="date" v-model="date2" label="Hasta" hide-details
+                        prepend-inner-icon="mdi-calendar-end" />
                 </v-col>
-                <v-col cols="6" md="4" sm="6" class="d-flex align-center mt-n6">
-                    <!-- ACTIVADOR + MENÚ -->
-                    <v-menu v-model="menuOpc" bottom offset-y close-on-content-click transition="scale-transition"
-                        max-width="260">
+
+                <v-col cols="12" class="mt-1">
+                    <v-menu v-model="menuOpc" offset-y close-on-content-click transition="scale-transition">
                         <template v-slot:activator="{ on, attrs }">
-                            <v-btn small color="success" dark rounded depressed block class="px-3" v-bind="attrs"
-                                v-on="on">
-                                <v-icon left>mdi-tune</v-icon>
+                            <v-btn block color="success" dark depressed rounded v-bind="attrs" v-on="on" x-small>
+                                <v-icon left>mdi-plus-circle</v-icon>
                                 Acciones
                                 <v-icon right class="ml-1">mdi-menu-down</v-icon>
                             </v-btn>
                         </template>
 
                         <v-list dense nav class="py-0">
-                            <v-subheader class="grey--text text--darken-1">Opciones</v-subheader>
+                            <v-subheader
+                                class="font-weight-bold success--text text--lighten-1">OPERACIONES</v-subheader>
 
-                            <v-list-item @click="filtrar">
-                                <v-list-item-icon><v-icon>mdi-magnify</v-icon></v-list-item-icon>
-                                <v-list-item-content>
-                                    <v-list-item-title>Filtrar</v-list-item-title>
-                                    <v-list-item-subtitle>Aplicar rango y criterios</v-list-item-subtitle>
-                                </v-list-item-content>
-                                <v-chip v-if="false" x-small label class="ml-2" outlined>Ctrl + F</v-chip>
+                            <v-list-item @click="nuevo_rep = true">
+                                <v-list-item-title>Crear Reparto</v-list-item-title>
+                            </v-list-item>
+
+                            <v-list-item @click="dial_sube_excel = true">
+                                <v-list-item-title>Subir Excel Ruta</v-list-item-title>
                             </v-list-item>
 
                             <v-divider class="my-1"></v-divider>
 
-                            <v-list-item @click="nuevo_rep = !nuevo_rep">
-                                <v-list-item-icon><v-icon>mdi-truck-delivery</v-icon></v-list-item-icon>
-                                <v-list-item-content>
-                                    <v-list-item-title>Crear reparto</v-list-item-title>
-                                    <v-list-item-subtitle>Generar hoja de ruta</v-list-item-subtitle>
-                                </v-list-item-content>
-                            </v-list-item>
-
-                            <v-divider class="my-1"></v-divider>
-
-                            <v-list-item @click="dial_sube_excel = !dial_sube_excel">
-                                <v-list-item-icon><v-icon>mdi-truck-delivery</v-icon></v-list-item-icon>
-                                <v-list-item-content>
-                                    <v-list-item-title>Sube Excel Ruta</v-list-item-title>
-                                    <v-list-item-subtitle>Generar hoja de ruta</v-list-item-subtitle>
-                                </v-list-item-content>
-                            </v-list-item>
-                            <v-list-item @click="dial_rep_consolidado = !dial_rep_consolidado">
-                                <v-list-item-icon><v-icon color="info">mdi-chart-bar</v-icon></v-list-item-icon>
-                                <v-list-item-content>
-                                    <v-list-item-title>Reportes Consolidados</v-list-item-title>
-                                    <v-list-item-subtitle>Reporte</v-list-item-subtitle>
-                                </v-list-item-content>
+                            <v-list-item @click="dial_rep_consolidado = true">
+                                <v-list-item-title>Reporte Consolidado</v-list-item-title>
                             </v-list-item>
                         </v-list>
                     </v-menu>
-
                 </v-col>
             </v-row>
         </v-card>
 
-        <v-card>
-            <v-simple-table dense fixed-header height="65vh">
-                <thead>
-                    <tr>
-                        <th>Id</th>
-                        <th>Fecha</th>
-                        <th>Estado</th>
-                        <th>N°Pedidos</th>
-                        <th>Total S/.</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="pedido in repartosarray" :key="pedido.id">
-                        <td style="font-size:75%;">{{ pedido.id }}</td>
-                        <td style="font-size:75%;">{{ pedido.fecha }}</td>
-                        <td>
-                            <v-chip x-small :color="chipColor(pedido.estado)" dark>
-                            </v-chip>
-                        </td>
-                        <td style="font-size:75%;">{{ pedido.resumen.total_pedidos }}</td>
-                        <td style="font-size:75%;">S/.{{ Number(pedido.resumen.total_general).toFixed(2) }}</td>
+        <v-card v-if="!isMobile" class="rounded-lg elevation-2">
+            <v-simple-table fixed-header height="65vh" dense>
+                <template v-slot:default>
+                    <thead>
+                        <tr>
+                            <th class="text-left"># ID</th>
+                            <th class="text-left">📅 Fecha Emision</th>
+                            <th class="text-left">🟢 Estado Sunat</th>
+                            <th class="text-left">📦 N° Pedidos</th>
+                            <th class="text-left">💰 Total (S/.)</th>
+                            <th class="text-center">🛠️ Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="pedido in repartosarray" :key="pedido.id">
+                            <td class="text-caption font-weight-bold">{{ pedido.id }}</td>
+                            <td class="text-caption">{{ pedido.fecha }}</td>
 
-                        <td>
-                            <v-row>
-                                <v-col cols="6" xs="6">
-                                    <v-btn icon small @click="ir_reparto(pedido)">
-                                        <v-icon color="blue">mdi-eye</v-icon>
+                            <td>
+                                <v-chip x-small :color="chipColor(pedido.estado)" dark>
+                                    {{ pedido.estado | capitalize }}
+                                </v-chip>
+                            </td>
+
+                            <td class="text-caption">{{ pedido.resumen.total_pedidos }}</td>
+
+                            <td class="text-caption font-weight-medium">
+                                S/.{{ number2(pedido.resumen.total_general) }}
+                            </td>
+
+                            <td>
+                                <div class="d-flex justify-center flex-wrap">
+                                    <v-btn x-small color="orange-grey lighten-5" class="mx-1 my-1" depressed rounded
+                                        elevation="1" @click="ir_reparto(pedido)">
+                                        <v-icon left small color="blue-grey darken-1">mdi-clipboard-list</v-icon>
+                                        <span class="blue-grey--text text--darken-1 font-weight-medium">Detalle</span>
                                     </v-btn>
-                                </v-col>
-                                <v-col cols="6" xs="6">
-                                    <v-menu>
+
+                                    <v-btn x-small color="indigo lighten-5" class="mx-1 my-1" depressed rounded
+                                        elevation="1" @click="reparto_transporte(pedido)">
+                                        <v-icon left small color="indigo darken-1">mdi-truck-delivery</v-icon>
+                                        <span class="indigo--text text--darken-1 font-weight-medium">Mapa</span>
+                                    </v-btn>
+
+                                    <v-menu offset-y left>
                                         <template v-slot:activator="{ on, attrs }">
-                                            <v-btn icon small color="success" v-bind="attrs" v-on="on">       
-                                                <v-icon>mdi-cash-register</v-icon>
+                                            <v-btn x-small color="green lighten-5" class="mx-1 my-1" depressed rounded
+                                                elevation="1" v-bind="attrs" v-on="on">
+                                                <v-icon left small color="green darken-1">mdi-cash-multiple</v-icon>
+                                                <span class="green--text text--darken-1">Opciones</span>
                                             </v-btn>
                                         </template>
+
                                         <v-list dense>
-                                            <v-list-item @click='repartoActual = pedido.id; dial_cobranza = !dial_cobranza'>
+                                            <v-list-item
+                                                @click="repartoActual = pedido.id; dial_cobranza = !dial_cobranza">
                                                 <v-list-item-icon>
-                                                    <v-icon color="success">mdi-cash-register</v-icon>
+                                                    <v-icon color="success">mdi-monitor-dashboard</v-icon>
                                                 </v-list-item-icon>
-                                                <v-list-item-title>Liquidacion Electronica</v-list-item-title>
+                                                <v-list-item-title>Liquidación Electrónica</v-list-item-title>
                                             </v-list-item>
-                                            <v-list-item @click='formato_liq(pedido)'>
+
+                                            <v-list-item @click="formato_liq(pedido)">
                                                 <v-list-item-icon>
-                                                    <v-icon color="error"> mdi-printer</v-icon>
+                                                    <v-icon color="error">mdi-printer</v-icon>
                                                 </v-list-item-icon>
-                                                <v-list-item-title>Liquidacion Manual</v-list-item-title>
+                                                <v-list-item-title>Liquidación Manual PDF</v-list-item-title>
                                             </v-list-item>
                                         </v-list>
                                     </v-menu>
-                                </v-col>
-                            </v-row>
-
-                        </td>
-                    </tr>
-                </tbody>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </template>
             </v-simple-table>
         </v-card>
+
+        <!-- 📱 CELULAR: CARDS POR REPARTO -->
+        <v-col v-else cols="12" v-for="pedido in repartosarray" :key="pedido.id" class="">
+            <v-card outlined class="mb-n5 rounded-lg elevation-1">
+
+                <v-card-title class="py-2 px-3 pb-0" style="min-height: 40px;">
+                    <div class="d-flex justify-space-between align-start" style="width: 100%;">
+
+                        <div class="d-flex flex-column align-start">
+                            <div class="font-weight-bold text-subtitle-2"># {{ pedido.id }}</div>
+                            <div class="caption grey--text text--darken-1 mt-n1">
+                                {{ pedido.fecha }}
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-column align-end">
+                            <v-chip x-small :color="chipColor(pedido.estado)" dark class="mb-2">
+                                {{ pedido.estado | capitalize }}
+                            </v-chip>
+                        </div>
+                    </div>
+                </v-card-title>
+
+                <v-card-text class="py-1 px-3 d-flex justify-space-between align-center mt-n2">
+
+                    <div class="d-flex flex-column align-start">
+                        <div class="caption grey--text">📦 N° Pedidos</div>
+                        <div class="font-weight-bold text-subtitle-2 indigo--text text--darken-2">
+                            {{ pedido.resumen.total_pedidos }}
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column align-end">
+                        <div class="caption grey--text">💰 Total (S/.)</div>
+                        <div class="font-weight-bold text-subtitle-2 green--text text--darken-2">
+                            S/. {{ number2(pedido.resumen.total_general) }}
+                        </div>
+                    </div>
+                </v-card-text>
+
+                <v-divider class="mx-3"></v-divider>
+
+                <v-card-actions class="py-1 px-2 d-flex justify-end align-center">
+
+                    <v-btn x-small text color="blue-grey darken-1" @click="ir_reparto(pedido)">
+                        <v-icon left x-small>mdi-clipboard-list</v-icon>
+                        Detalle
+                    </v-btn>
+
+                    <v-btn x-small text color="indigo darken-1" class="ml-1" @click="reparto_transporte(pedido)">
+                        <v-icon left x-small>mdi-truck-delivery</v-icon>
+                        Mapa
+                    </v-btn>
+
+                    <v-menu offset-y left>
+                        <template v-slot:activator="{ on, attrs }">
+                            <v-btn x-small text color="green darken-1" class="ml-1" v-bind="attrs" v-on="on">
+                                <v-icon left x-small>mdi-cash-multiple</v-icon>
+                                Opciones
+                            </v-btn>
+                        </template>
+
+                        <v-list dense>
+                            <v-list-item @click="repartoActual = pedido.id; dial_cobranza = !dial_cobranza">
+                                <v-list-item-icon>
+                                    <v-icon color="success">mdi-monitor-dashboard</v-icon>
+                                </v-list-item-icon>
+                                <v-list-item-title>Liquidación Electrónica</v-list-item-title>
+                            </v-list-item>
+
+                            <v-list-item @click="formato_liq(pedido)">
+                                <v-list-item-icon>
+                                    <v-icon color="error">mdi-printer</v-icon>
+                                </v-list-item-icon>
+                                <v-list-item-title>Liquidación Manual PDF</v-list-item-title>
+                            </v-list-item>
+                        </v-list>
+                    </v-menu>
+                </v-card-actions>
+            </v-card>
+        </v-col>
+
+
         <v-dialog v-model="dial_rep_consolidado" max-width="650">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon large color="red" @click="dial_rep_consolidado = false">mdi-close</v-icon>
+            <v-card class="rounded-lg">
+                <v-toolbar dense color="info" dark>
+                    <v-icon left>mdi-chart-bar</v-icon>
+                    <v-toolbar-title>Reportes Consolidados</v-toolbar-title>
                     <v-spacer></v-spacer>
                     <span class="caption mr-2">Seleccionados: {{ selectedIds.length }}</span>
-                    <v-menu>
+                    <v-menu offset-y left>
                         <template v-slot:activator="{ on, attrs }">
-                            <v-btn small color="info" v-bind="attrs" v-on="on">
-                                REPORTES
-                                <v-icon>mdi-dots-vertical</v-icon>
+                            <v-btn small text v-bind="attrs" v-on="on">
+                                <v-icon left>mdi-file-pdf-box</v-icon>
+                                Generar
                             </v-btn>
                         </template>
                         <v-list dense>
                             <v-list-item @click='imprimirSeleccionados'>
                                 <v-list-item-icon>
-                                    <v-icon color="success"> mdi-printer</v-icon>
+                                    <v-icon color="success">mdi-file-chart</v-icon>
                                 </v-list-item-icon>
-                                <v-list-item-title>Producto/Cliente</v-list-item-title>
+                                <v-list-item-title>Reporte Producto/Cliente</v-list-item-title>
                             </v-list-item>
                         </v-list>
                     </v-menu>
-                </v-system-bar>
-            </div>
+                    <v-btn icon @click="dial_rep_consolidado = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-toolbar>
 
-            <v-card class="pa-1">
-                <v-simple-table dense fixed-header height="65vh">
-                    <thead>
-                        <tr>
-                            <th style="width:36px;">
-                                <!-- seleccionar todos -->
-                                <v-checkbox hide-details dense class="mt-0" :input-value="allChecked"
-                                    :indeterminate="isIndeterminate" @change="toggleAll($event)" />
-                            </th>
-                            <th>Id</th>
-                            <th>Fecha</th>
-                            <th>N°Pedidos</th>
-                            <th>Total S/.</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="pedido in repartosarray" :key="pedido.id">
-                            <td>
-                                <v-checkbox hide-details dense class="mt-0" :value="pedido.id" v-model="selectedIds" />
-                            </td>
-                            <td style="font-size:75%;">{{ pedido.id }}</td>
-                            <td style="font-size:75%;">{{ pedido.fecha }}</td>
-                            <td style="font-size:75%;">{{ pedido.resumen.total_pedidos }}</td>
-                            <td style="font-size:75%;">S/.{{ pedido.resumen.total_general }}</td>
-                        </tr>
-                    </tbody>
-                </v-simple-table>
+                <v-card-text class="pa-0">
+                    <v-simple-table dense fixed-header height="60vh">
+                        <thead>
+                            <tr>
+                                <th style="width:36px;">
+                                    <v-checkbox hide-details dense class="mt-0" :input-value="allChecked"
+                                        :indeterminate="isIndeterminate" @change="toggleAll($event)" color="info" />
+                                </th>
+                                <th class="text-left"># ID</th>
+                                <th class="text-left">Fecha</th>
+                                <th class="text-left">N°Pedidos</th>
+                                <th class="text-left">Total S/.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="pedido in repartosarray" :key="pedido.id">
+                                <td>
+                                    <v-checkbox hide-details dense class="mt-0" :value="pedido.id" v-model="selectedIds"
+                                        color="info" />
+                                </td>
+                                <td class="text-caption">{{ pedido.id }}</td>
+                                <td class="text-caption">{{ pedido.fecha }}</td>
+                                <td class="text-caption">{{ pedido.resumen.total_pedidos }}</td>
+                                <td class="text-caption">S/.{{ Number(pedido.resumen.total_general).toFixed(2) }}</td>
+                            </tr>
+                        </tbody>
+                    </v-simple-table>
+                </v-card-text>
             </v-card>
         </v-dialog>
+
         <v-dialog v-model="dial_reporte_liq" max-width="400">
-            <v-card class="pa-5">
+            <v-card class="pa-5 rounded-lg">
+                <h4 class="text-center mb-4">Seleccione Orientación del Reporte Manual</h4>
                 <v-row dense>
                     <v-col cols="6">
-                        <v-card @click.prevent="doc('H')">
-                            <v-container>
-                                <v-img class="mx-auto" height="30" width="30" src="/horizontal.png"></v-img>
-                                <h5 block class="text-center pa-1">Horizontal</h5>
-                            </v-container>
+                        <v-card outlined class="pa-3 text-center transition-all hover-shadow" @click.prevent="doc('H')">
+                            <v-icon size="40" color="grey darken-2">mdi-file-pdf-box</v-icon>
+                            <h5 class="pa-1 mt-2">Horizontal</h5>
+                            <span class="text-caption grey--text">Más detalles por fila</span>
                         </v-card>
                     </v-col>
                     <v-col cols="6">
-                        <v-card @click.prevent="doc('V')">
-                            <v-container>
-                                <v-img class="mx-auto" height="30" width="30" src="/vertical.png"></v-img>
-                                <h5 block class="text-center pa-1">Vertical</h5>
-                            </v-container>
+                        <v-card outlined class="pa-3 text-center transition-all hover-shadow" @click.prevent="doc('V')">
+                            <v-icon size="40" color="grey darken-2">mdi-file-pdf-box</v-icon>
+                            <h5 class="pa-1 mt-2">Vertical</h5>
+                            <span class="text-caption grey--text">Formato A4 estándar</span>
                         </v-card>
                     </v-col>
                 </v-row>
-
             </v-card>
         </v-dialog>
+
+
         <dial_nuevo_rep v-if="nuevo_rep" @cierra="nuevo_rep = false" />
         <dial_sube_rep v-if="dial_sube_excel" @cerrar="dial_sube_excel = false, filtrar" />
         <cobranza_reparto v-if="dial_cobranza" :pedidos="null" :grupo="repartoActual" @cerrar="dial_cobranza = false" />
-    </div>
+    </v-container>
 </template>
 
 <script>
@@ -257,6 +390,13 @@ export default {
     beforeDestroy() {
         this._detach();
     },
+    filters: {
+        capitalize(value) {
+            if (!value) return ''
+            value = value.toString()
+            return value.charAt(0).toUpperCase() + value.slice(1)
+        }
+    },
     computed: {
         allChecked() {
             return this.selectedIds.length && this.selectedIds.length === this.repartosarray.length;
@@ -264,6 +404,9 @@ export default {
         isIndeterminate() {
             return this.selectedIds.length > 0 && this.selectedIds.length < this.repartosarray.length;
         },
+        isMobile() {
+            return this.$vuetify.breakpoint.smAndDown;
+        }
     },
 
     watch: {
@@ -271,6 +414,11 @@ export default {
         date2() { this.filtrar(); },
     },
     methods: {
+        reparto_transporte(data) {
+            this.$router.push({
+                path: "/reparto_transporte/" + data.grupo
+            });
+        },
         ir_reparto(data) {
             if (data.subido) {
                 this.$router.push({
@@ -285,8 +433,9 @@ export default {
         chipColor(estado) {
             const s = (estado || '').toString().toLowerCase();
             if (s === 'anulado') return 'red';
-            if (s === 'enviado') return 'blue';
-            return 'orange'; // pendiente y otros
+            if (s === 'enviado') return 'light-blue darken-1'; // Color mejorado
+            if (s === 'liquidado') return 'green lighten-1'; // Añadir color si existe estado 'liquidado'
+            return 'orange lighten-1'; // pendiente y otros (color más suave)
         },
         filtrar() {
             // normaliza rango
@@ -466,3 +615,26 @@ export default {
     },
 };
 </script>
+<style scoped>
+/* Añadir estilos para mejorar el efecto visual en la tarjeta de orientación */
+.hover-shadow:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    transform: translateY(-2px);
+    cursor: pointer;
+}
+
+.transition-all {
+    transition: all 0.3s ease;
+}
+
+/* Estilo para que la tabla se vea un poco más grande y limpia */
+.v-simple-table th {
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    color: #424242 !important;
+}
+
+.v-simple-table td {
+    font-size: 0.75rem !important;
+}
+</style>

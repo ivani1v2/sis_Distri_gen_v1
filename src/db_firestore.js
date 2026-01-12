@@ -3,7 +3,9 @@ import firebase from "firebase/app";
 import "firebase/database";
 import "firebase/firestore";
 import store from "@/store/index";
-const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
+import { db } from "./db.js";
+const app = db;
+
 
 // Firestore (nuevo para usuarios)
 export const fs = app.firestore();

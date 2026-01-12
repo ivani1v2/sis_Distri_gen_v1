@@ -2,7 +2,6 @@ import Vue from "vue";
 import Vuex from "vuex";
 import store from "@/store/index";
 import axios from "axios";
-import { nuevoCliente } from "@/db";
 import moment from "moment";
 Vue.use(Vuex);
 import createPersistedState from "vuex-persistedstate";
@@ -393,18 +392,7 @@ export default new Vuex.Store({
         codigo: "13",
       },
     ],
-    motivos: [
-      "Anulación de la operación",
-      "Anulación por error en el RUC",
-      "Corrección por error en la descripción",
-      "Descuento global",
-      "Descuento por ítem",
-      "Devolución total",
-      "Devolución por ítem",
-      "Bonificación",
-      "Disminución en el valor",
-      "Otros Conceptos",
-    ],
+
     motivosSunat: [
       {
         nombre: "Anulación de la operación",
@@ -759,7 +747,7 @@ export default new Vuex.Store({
                 .replace(/\./g, '')                                           // quita el punto final
                 .toLowerCase()
             };
-            nuevoCliente(array.id, array);
+    
           }
 
           return {
@@ -850,7 +838,6 @@ export default new Vuex.Store({
         "categorias",
         "zona",
         "cliente_selecto",
-        "clientessearch",
         "array_sedes",
         "lista_productos"
       ],

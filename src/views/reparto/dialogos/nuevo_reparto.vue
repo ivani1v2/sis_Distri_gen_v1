@@ -115,13 +115,13 @@
                 <v-toolbar flat color="black" dark dense>
                     <v-toolbar-title>{{ pedidoSeleccionado ? pedidoSeleccionado.id : '' }}</v-toolbar-title>
                     <v-toolbar-title class="ml-12"> S/ {{ pedidoSeleccionado ? pedidoSeleccionado.total : ''
-                    }}</v-toolbar-title>
+                        }}</v-toolbar-title>
                     <v-spacer></v-spacer>
                     <v-btn icon @click="dialogDetalle = false"><v-icon>mdi-close</v-icon></v-btn>
                 </v-toolbar>
                 <div v-if="pedidoSeleccionado" class="pa-2">
                     <h5>Cliente: <span>{{ pedidoSeleccionado.doc_numero }} - {{ pedidoSeleccionado.cliente_nombre
-                    }}</span></h5>
+                            }}</span></h5>
                     <h5>Direcion: <span>{{ pedidoSeleccionado.cliente_direccion }}</span></h5>
                     <h5>Modo : {{ pedidoSeleccionado.condicion_pago }}</h5>
                     <h5>Comprobante : {{ pedidoSeleccionado.tipo_comprobante }}</h5>
@@ -197,6 +197,7 @@
                     <div class="mt-4 title">T. GENERAL:
                         <span class="red--text font-weight-bold">S/. {{ number2(totalGeneralSel) }}</span>
                     </div>
+                    <v-textarea dense outlined v-model="obs" auto-grow filled label="Observacion" rows="1"></v-textarea>
                 </v-card-text>
 
                 <v-card-actions class="px-4 pb-4">
@@ -228,6 +229,7 @@ import { all_pedidos, detalle_pedido, modifica_pedidos } from "../../../db";
 import dial_consolidado from "../../pedidos/dialogos/dialogo_rep_consolidado.vue";
 import store from '@/store/index'
 import axios from "axios";
+import CryptoJS from "crypto-js";
 export default {
     components: {
         dial_consolidado
@@ -256,6 +258,7 @@ export default {
                 { label: 'BOLETA', value: 'B' },
                 { label: 'FACTURA', value: 'F' },
             ],
+            obs: '',
         };
     },
     computed: {
@@ -409,7 +412,7 @@ export default {
                 return;
             }
             // precarga fechas (si quieres sincronizarlas con filtros)
-            this.fechaTraslado = this.date1;
+            this.fechaTraslado = this.date2;
             this.fechaEmision = this.date2;
             this.dialogCrear = true;
         },
@@ -435,6 +438,7 @@ export default {
                     fecha_comprobantes: unixEmision,
                     vendedor: this.vendedor,
                     pedidos: this.selectedIds,  // IDs seleccionados
+                    obs: this.obs,
                     resumen: {
                         total_contado: this.totalContadoSel.toFixed(2),
                         total_credito: this.totalCreditoSel.toFixed(2),
@@ -468,11 +472,17 @@ export default {
         },
         async api_rest(data, metodo) {
             console.log(data)
+            var idem = this.buildIdemKeyPedido({
+                bd: store.state.baseDatos.bd,
+                payload: data, // 👈 ahora sí, con lo que realmente envías
+            });
             var a = axios({
                 method: 'POST',
                 url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
                 //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
-                headers: {},
+                headers: {
+                    'X-Idempotency-Key': idem,    // <-- el server debe ignorar duplicados con la misma clave
+                },
                 data: {
                     "bd": store.state.baseDatos.bd,
                     "data": data,
@@ -484,6 +494,35 @@ export default {
             })
             return a
         },
+        buildIdemKeyPedido({ bd, payload = {} }) {
+            // usa fecha_emision del payload si existe (unix segundos)
+            const day = payload.fecha_emision
+                ? moment.unix(Number(payload.fecha_emision)).format("YYYY-MM-DD")
+                : moment().format("YYYY-MM-DD");
+
+            const base = {
+                day,
+                ft: Number(payload.fecha_traslado || 0),
+                fe: Number(payload.fecha_emision || 0),
+                fc: Number(payload.fecha_comprobantes || 0),
+                vend: String(payload.vendedor || ""),
+                pedidos: (payload.pedidos || []).map(String).sort().join("|"),
+                obs: String(payload.obs || ""),
+                resumen: {
+                    tc: String(payload?.resumen?.total_contado || ""),
+                    tcr: String(payload?.resumen?.total_credito || ""),
+                    p: String(payload?.resumen?.peso_total || ""),
+                    tp: String(payload?.resumen?.total_pedidos || ""),
+                    tg: String(payload?.resumen?.total_general || ""),
+                }
+            };
+
+            const raw = JSON.stringify(base);
+            const hash10 = CryptoJS.SHA256(raw).toString().substring(0, 10);
+
+            return `${bd}-${hash10}`;
+        },
+
         async agregar_a_reparto_existente() {
             try {
                 // Evitar doble clic

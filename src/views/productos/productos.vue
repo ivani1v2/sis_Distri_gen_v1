@@ -125,10 +125,17 @@
                                     <v-list-item-title>Bono Global</v-list-item-title>
                                 </v-list-item>
                             </v-list>
+                            
                             <v-list dense>
                                 <v-list-item @click="print_codbarra()">
                                     <v-list-item-icon><v-icon color="warning">mdi-barcode</v-icon></v-list-item-icon>
                                     <v-list-item-title>CodBarra</v-list-item-title>
+                                </v-list-item>
+                            </v-list>
+                            <v-list dense>
+                                <v-list-item @click="dial_adicional=!dial_adicional">
+                                    <v-list-item-icon><v-icon color="success">mdi-plus</v-icon></v-list-item-icon>
+                                    <v-list-item-title>Campos Adicionales</v-list-item-title>
                                 </v-list-item>
                             </v-list>
                             <v-list dense>
@@ -154,7 +161,7 @@
                             v-model="operacion"></v-select>
                     </v-col>
                     <v-col cols="6" sm="6" md="6">
-                        <v-text-field outlined dense disabled v-model="id" label="ID"></v-text-field>
+                        <v-text-field outlined dense :disabled="!$store.state.permisos.productos_edita_id" v-model="id" label="ID"></v-text-field>
                     </v-col>
                 </v-row>
 
@@ -465,6 +472,23 @@
             </v-card>
 
         </v-dialog>
+         <v-dialog v-model="dial_adicional" max-width="490" persistent>
+            <div>
+                <v-system-bar window dark>
+                    <v-icon @click="dial_adicional = false">mdi-close</v-icon>
+                    <v-spacer></v-spacer>
+                 <v-icon color="green" large @click="save(false)">mdi-content-save</v-icon>
+                </v-system-bar>
+            </div>
+            <v-card class="pa-2">
+                 <v-row class="" dense>
+           
+
+                </v-row>
+
+            </v-card>
+
+        </v-dialog>
         <dial_categorias v-if="dial_categorias" @cierra="cerrarYActualizarCategorias" :tipo='tipo_tabla' />
     </div>
 </template>
@@ -493,6 +517,7 @@ export default {
         dial_categorias
     },
     data: () => ({
+        dial_adicional: false,
         dialogostock: false,
         dial_categorias: false,
         headers: [{
@@ -812,6 +837,7 @@ export default {
                 this.precio_may1 = 0
                 this.escala_may2 = 0
                 this.precio_may2 = 0
+                this.proveedor = 0
                 this.peso = 0
                 this.factor = 1
                 this.item_selecto = ''
@@ -835,6 +861,7 @@ export default {
             this.activo = data.activo;
             this.codbarra = data.codbarra;
             this.categoria = data.categoria;
+            this.proveedor = data.proveedor || '';
             this.nombre = data.nombre;
             this.medida = data.medida;
             this.stock = Number(data.stock);
@@ -884,6 +911,7 @@ export default {
                 codbarra: this.codbarra,
                 nombre: this.nombre.trim(),
                 categoria: this.categoria,
+                proveedor: this.proveedor || null,
                 medida: this.medida,
                 stock: this.stock,
                 factor: this.factor,

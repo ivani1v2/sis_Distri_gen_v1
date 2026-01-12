@@ -80,10 +80,20 @@
                 <v-col cols="12">
                     <div class="d-flex align-center justify-space-between mb-1">
                         <h3 class="subtitle-2 mb-0">Direcciones</h3>
-                        <v-btn x-small color="primary" @click="abrirDialogDireccion()">
-                            <v-icon left>mdi-plus</v-icon> Agregar
-                        </v-btn>
+                        <div>
+                            <v-btn x-small color="primary" class="mr-1" @click="abrirDialogDireccion()">
+                                <v-icon left>mdi-plus</v-icon> Agregar
+                            </v-btn>
+
+                            <!-- 👇 Solo se muestra para RUC que empieza en 20 -->
+                            <v-btn v-if="puedeConsultarAnexos" x-small color="indigo" dark
+                                @click="consultarDireccionesAnexas">
+                                <v-icon left>mdi-map-search</v-icon>
+                                Anexos
+                            </v-btn>
+                        </div>
                     </div>
+
 
                     <template v-if="!$vuetify.breakpoint.xsOnly">
                         <v-simple-table dense class="tabla-dir">
@@ -141,7 +151,7 @@
 
                                 <v-list-item-content>
                                     <v-list-item-title class="font-weight-medium wrap">{{ dir.direccion
-                                    }}</v-list-item-title>
+                                        }}</v-list-item-title>
                                     <v-list-item-subtitle class="wrap">
                                         <span v-if="dir.referencia">{{ dir.referencia }} • </span>
                                         {{ nombreDep(dir) }} / {{ nombreProv(dir) }} / {{ nombreDist(dir) }}
@@ -419,6 +429,13 @@ export default {
         }
     },
     computed: {
+        puedeConsultarAnexos() {
+            const doc = String(this.clienteForm.documento || '').trim();
+            const tipo = (this.clienteForm.tipodoc || '').toUpperCase();
+            // 11 dígitos, tipo RUC y empieza en 20
+            return doc.length === 11 && doc.startsWith('20') && tipo === 'RUC';
+        },
+
         zonasOpc() {
             const base = this.$store.state.zonas || []
             return base.map(z => (typeof z === 'string' ? { nombre: z } : z))
@@ -540,8 +557,13 @@ export default {
             this.arrayDists2 = prov ? (distrito(prov.ubigeo || prov.ubigeo_sunat) || []) : []
         },
         onDistChange(dist) {
-            this.direccionForm.ubigeo = dist ? (dist.ubigeo_sunat || dist.ubigeo || '') : ''
+            this.direccionForm.ubigeo = this.generarUbigeo(
+                this.direccionForm.departamento,
+                this.direccionForm.provincia,
+                dist
+            );
         },
+
         guardarDireccion() {
             // Validaciones mínimas
             if (!this.direccionForm.direccion) {
@@ -629,7 +651,8 @@ export default {
                     departamento: depObj || null,
                     provincia: provObj || null,
                     distrito: distObj || null,
-                    ubigeo: ubigeoApi || (distObj ? (distObj.ubigeo_sunat || distObj.ubigeo) : ''),
+                    ubigeo: this.generarUbigeo(depObj, provObj, distObj),
+
                     latitud: null,
                     longitud: null,
                     principal: false,
@@ -649,6 +672,14 @@ export default {
             } finally {
                 this.cargando = false
             }
+        },
+        generarUbigeo(depObj, provObj, distObj) {
+            const dep = depObj ? (depObj.ubigeo_sunat || depObj.ubigeo || '').padStart(2, '0') : '';
+            const prov = provObj ? (provObj.ubigeo_sunat || provObj.ubigeo || '').padStart(2, '0') : '';
+            const dist = distObj ? (distObj.ubigeo_sunat || distObj.ubigeo || '').padStart(2, '0') : '';
+
+            if (dep && prov && dist) return `${dep}${prov}${dist}`;
+            return ''; // incompleto
         },
 
         // ----- Guardado -----
@@ -822,6 +853,130 @@ export default {
             }
 
         },
+        async consultarDireccionesAnexas() {
+            try {
+                const ruc = String(this.clienteForm.documento || '').trim();
+
+                if (ruc.length !== 11 || !ruc.startsWith('20')) {
+                    this.$toast?.error?.('Debe ingresar un RUC válido que empiece con 20.')
+                        || alert('Debe ingresar un RUC válido que empiece con 20.');
+                    return;
+                }
+
+                // Token para API Perú: ajústalo según dónde lo guardes
+                const token = '80a4a1c5f2e97c2d78fcd5074cd64ff0a29007ef91880ad2c214af67a084433d';
+                if (!token) {
+                    this.$toast?.error?.('Falta configurar el token de ApiPeru.')
+                        || alert('Falta configurar el token de ApiPeru.');
+                    return;
+                }
+
+                this.cargando = true;
+
+                const resp = await fetch('https://apiperu.dev/api/ruc-establecimientos-anexos', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ ruc })
+                });
+
+                if (!resp.ok) {
+                    throw new Error(`HTTP ${resp.status}`);
+                }
+
+                const json = await resp.json();
+                if (!json.success || !Array.isArray(json.data)) {
+                    throw new Error('Respuesta inválida de ApiPeru.');
+                }
+
+                const anexos = json.data || [];
+                if (!anexos.length) {
+                    this.$toast?.info?.('No se encontraron establecimientos anexos.')
+                        || alert('No se encontraron establecimientos anexos.');
+                    return;
+                }
+
+                // Aseguramos tener la lista de departamentos cargada
+                const depas = this.arrayDepas.length ? this.arrayDepas : (departamento() || []);
+                const _norm = this._norm; // reutilizamos tu normalizador
+
+                const existentes = this.clienteForm.direcciones || [];
+                let agregados = 0;
+
+                anexos.forEach(a => {
+                    const dirTexto = a.direccion_completa || a.direccion || '';
+                    if (!dirTexto) return;
+
+                    // Evitar duplicados (por dirección)
+                    const yaExiste = existentes.some(d => _norm(d.direccion) === _norm(dirTexto));
+                    if (yaExiste) return;
+
+                    // Buscar objetos de dep/prov/dist por nombre
+                    let depObj = null, provObj = null, distObj = null;
+
+                    const depName = _norm(a.departamento);
+                    const provName = _norm(a.provincia);
+                    const distName = _norm(a.distrito);
+
+                    if (depName) {
+                        depObj = depas.find(d => _norm(d.nombre) === depName) || null;
+                    }
+
+                    if (depObj) {
+                        const provs = provincia(depObj.ubigeo || depObj.ubigeo_sunat) || [];
+                        if (provName) {
+                            provObj = provs.find(p => _norm(p.nombre) === provName) || null;
+                        }
+                        if (provObj) {
+                            const dists = distrito(provObj.ubigeo || provObj.ubigeo_sunat) || [];
+                            if (distName) {
+                                distObj = dists.find(d => _norm(d.nombre) === distName) || null;
+                            }
+                        }
+                    }
+
+                    const dirObj = {
+                        direccion: dirTexto,
+                        referencia: a.actividad_economica || a.tipo_de_establecimiento || '',
+                        departamento: depObj,
+                        provincia: provObj,
+                        distrito: distObj,
+                        ubigeo: this.generarUbigeo(depObj, provObj, distObj),
+                        latitud: null,
+                        longitud: null,
+                        principal: false,
+                    };
+
+                    this.clienteForm.direcciones.push(dirObj);
+                    agregados++;
+                });
+
+                // Si antes no había direcciones y ahora sí, marca la primera como principal
+                if (this.clienteForm.direcciones.length && this.indicePrincipal == null) {
+                    this.indicePrincipal = 0;
+                }
+                this.onChangePrincipal();
+
+                if (agregados > 0) {
+                    this.$toast?.success?.(`Se agregaron ${agregados} direcciones anexas.`)
+                        || alert(`Se agregaron ${agregados} direcciones anexas.`);
+                } else {
+                    this.$toast?.info?.('No se agregaron nuevas direcciones (ya existían en la ficha).')
+                        || alert('No se agregaron nuevas direcciones (ya existían en la ficha).');
+                }
+
+            } catch (e) {
+                console.error('Error al consultar direcciones anexas:', e);
+                this.$toast?.error?.('No se pudo consultar las direcciones anexas.')
+                    || alert('No se encontro direcciones anexas.');
+            } finally {
+                this.cargando = false;
+            }
+        },
+
     }
 }
 </script>

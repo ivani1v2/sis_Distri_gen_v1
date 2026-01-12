@@ -152,9 +152,9 @@ export default {
             medida_comprobante: store.state.configImpresora.tamano
         }
     },
-
     async created() {
         this.seleccionado = this.data
+        this.dial = true
         if (this.seleccionado.dni != "00000000") {
             const doc = await colClientes().doc(String(this.seleccionado.dni)).get()
             console.log('cleinte', doc.data())
@@ -171,9 +171,6 @@ export default {
                 id: '00000000'
             }
         }
-
-
-        this.dial = true
     },
     mounted() {
         window.addEventListener("keydown", this.detectarTecla);
@@ -222,8 +219,8 @@ export default {
                     if (this.numero != '' && String(this.numero).length == 9) {
                         console.log(this.datos_cliente.id, 'telefono', this.numero)
                         if (this.seleccionado.dni != "00000000") {
-                         //   edita_campo_Cliente(this.datos_cliente.id, 'telefono', this.numero)
-                             await this.setCampoCliente(this.datos_cliente.id, 'telefono', this.numero)
+                            //   edita_campo_Cliente(this.datos_cliente.id, 'telefono', this.numero)
+                            await this.setCampoCliente(this.datos_cliente.id, 'telefono', this.numero)
                         }
                         var message = 'Puede ver su comprobante en el siguiente link \n' +
                             'https://sis-distribucion.web.app/comprobantes_clientes/' + store.state.baseDatos.bd + '/' + store.state.baseDatos.ruc + '/' + item.cod_comprobante + '/' + item.serie + '/' + item.correlativoDocEmitido + '/' + item.dni
@@ -242,7 +239,7 @@ export default {
 
                     if (this.datos_cliente != '' && this.datos_cliente.id != '00000000') {
                         await this.setCampoCliente(this.datos_cliente.id, 'correo', this.correo)
-                        
+
                     }
                     this.progress = true
                     axios({
@@ -297,7 +294,6 @@ export default {
             //this.imprime(resp)
             this.progress = false
             this.cierra()
-
         },
         imprime(datas) {
             // pc_print(data)

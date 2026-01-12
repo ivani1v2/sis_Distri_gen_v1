@@ -42,7 +42,7 @@
                         <v-divider class="my-2" />
 
                         <v-list dense>
-                                   <v-list-item @click="dial_cobranza = !dial_cobranza">
+                            <v-list-item @click="dial_cobranza = !dial_cobranza">
                                 <v-list-item-icon><v-icon color="info">mdi-cash-register</v-icon></v-list-item-icon>
                                 <v-list-item-title>Ver Cobranza</v-list-item-title>
                             </v-list-item>
@@ -222,7 +222,8 @@
         </div>
         <acepta_pedido v-if="dial_aceptado" :item_selecto="item_selecto" @cerrar="dial_aceptado = false"
             @guardado=" dial_aceptado = false" :grupo="repartoActual" />
-        <cobranza_reparto v-if="dial_cobranza" :pedidos="pedidosFiltrados" :grupo="repartoActual" @cerrar="dial_cobranza = false" />
+        <cobranza_reparto v-if="dial_cobranza" :pedidos="pedidosFiltrados" :grupo="repartoActual"
+            @cerrar="dial_cobranza = false" />
     </div>
 </template>
 
@@ -261,10 +262,20 @@ export default {
         };
     },
     created() {
-        // Si hay datos guardados en sessionStorage, recupéralos
+        // 1️⃣ Primero intentamos leer el id de la ruta
+        const routeGrupo = this.$route.params.id;
+
+        if (routeGrupo) {
+            console.log("🟢 Reparto desde ruta:", routeGrupo);
+            this.ver_reparto({ grupo: routeGrupo });
+            sessionStorage.setItem("num_reparto", String(routeGrupo));
+            return;
+        }
+
+        // 2️⃣ Si no hay id en la ruta, usamos lo guardado en sessionStorage
         const saved = sessionStorage.getItem("num_reparto");
         if (saved) {
-            this.ver_reparto({ grupo: saved })
+            this.ver_reparto({ grupo: saved });
             console.log("🟢 Reparto restaurado desde sessionStorage:", saved);
         }
     },
@@ -302,6 +313,13 @@ export default {
         pedidosFiltrados() { this.page = 1; },
         busqueda() { this.page = 1; },
         estadoFiltro() { this.page = 1; },
+        "$route.params.id"(nuevo, viejo) {
+            if (nuevo && nuevo !== viejo) {
+                console.log("🔁 Cambio de reparto por ruta:", nuevo);
+                this.ver_reparto({ grupo: nuevo });
+                sessionStorage.setItem("num_reparto", String(nuevo));
+            }
+        },
     },
 
     beforeDestroy() {
@@ -319,7 +337,12 @@ export default {
             console.log("Seleccionando reparto:", reparto);
 
             const grupoId = reparto.grupo;
-
+            if (String(this.$route.params.id || "") !== String(grupoId)) {
+                this.$router.replace({
+                    name: "reparto_transporte",
+                    params: { id: String(grupoId) },
+                });
+            }
             // guarda en sessionStorage para persistencia
             sessionStorage.setItem("num_reparto", String(grupoId));
 
@@ -341,15 +364,15 @@ export default {
             // definimos el callback y lo guardamos para poder hacer off luego
             const listener = async (snap) => {
                 const cabecera = snap.val() || {};
-                  console.log('cabn',cabecera)
+                console.log('cabn', cabecera)
                 // armamos array de pedidos
-        
+
                 const pedidos = Object.keys(cabecera).map(key => {
                     const p = cabecera[key] || {};
                     p.id = key;
                     p.estado_entrega = p.estado_entrega || "pendiente";
                     return p;
-                })  .filter(p => p.estado !== "ANULADO"); ;
+                }).filter(p => p.estado !== "ANULADO");;
 
                 // seteamos en data
                 this.lista_pedidos = pedidos;
