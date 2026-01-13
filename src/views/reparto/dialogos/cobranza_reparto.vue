@@ -83,9 +83,9 @@
                     </v-btn>
                 </v-col>
                 <v-col cols="12" sm="6">
-                    <v-btn color="primary" dark block  @click="generarPdf" class="font-weight-bold">
+                    <v-btn color="primary" dark block @click="dialogPdfOpciones = true" class="font-weight-bold">
                         <v-icon left>mdi-file-pdf-box</v-icon>
-                        Descargar PDF liquidación
+                        Descargar
                     </v-btn>
                 </v-col>
             </v-row>
@@ -121,11 +121,34 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <!-- Diálogo de opciones de PDF -->
+        <v-dialog v-model="dialogPdfOpciones" max-width="350">
+            <v-card class="rounded-lg pa-4">
+                <v-card-title class="text-h6 font-weight-bold justify-center">
+                    <v-icon left color="primary">mdi-file-pdf-box</v-icon>
+                    Seleccione tipo de PDF
+                </v-card-title>
+                <v-card-text class="text-center pt-4">
+                    <v-btn color="blue darken-2" dark block class="mb-3" @click="generarPdf(); dialogPdfOpciones = false">
+                        <v-icon left>mdi-file-chart</v-icon>
+                        PDF Liquidación
+                    </v-btn>
+                    <v-btn color="teal darken-1" dark block @click="generarPdfDetalle(); dialogPdfOpciones = false">
+                        <v-icon left>mdi-file-table-outline</v-icon>
+                        PDF Detalle
+                    </v-btn>
+                </v-card-text>
+                <v-card-actions class="pt-0 justify-center">
+                    <v-btn text color="grey" @click="dialogPdfOpciones = false">Cancelar</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </v-dialog>
 </template>
 <script>
 import { all_detalle_entrega, all_Cabecera_p } from "../../../db";
-import { pdfGenera } from "../../reparto/formatos/formato_liquida";
+import { pdfGenera, pdfGeneraDetalle } from "../../reparto/formatos/formato_liquida";
 export default {
     name: "cobranza_reparto",
     props: {
@@ -138,10 +161,11 @@ export default {
             dataEntrega: {},
             rechazos: [],
             dialog: false,
+            dialogPdfOpciones: false,
             moneda: "S/ ",
             headers: [
                 { text: "Producto", value: "nombre" },
-                { text: "Cantidad", value: "cantidad", align: "center", width: "80px" }, // Renombrado y alineado
+                { text: "Cantidad", value: "cantidad", align: "center", width: "80px" },
                 { text: "P. Unit", value: "precio_unit", align: "right" },
                 { text: "Total", value: "total_linea", align: "right" }
             ]
@@ -199,9 +223,11 @@ export default {
         },
 
         generarPdf() {
-            // Se asume que cabeceraGrupo ya contiene los datos necesarios de la cabecera
-            // Y dataEntrega contiene todos los detalles de entrega/cobranza por pedido
             pdfGenera(this.cabeceraGrupo, this.dataEntrega, this.grupo);
+        },
+
+        generarPdfDetalle() {
+            pdfGeneraDetalle(this.cabeceraGrupo, this.dataEntrega, this.grupo);
         }
     }
 

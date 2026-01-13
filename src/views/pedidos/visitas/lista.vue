@@ -309,8 +309,6 @@
         <busca_clis v-if="busca_clientes" @cerrar="busca_clientes = false"
             @agregar="busca_clientes = false, _refreshClientesYFiltrado()" :dia="dia" :sede='sede_actual'></busca_clis>
         <dial_histo_cliente v-if="dial_histo_" @cerrar="dial_histo_ = false" :cliente="cliente_selecto" />
-
-        <!-- Diálogo de deudas pendientes -->
         <dial_deudas_cliente v-model="dialog_deudas" :cliente="cliente_deuda" :accion-pendiente="accion_pendiente"
             @cerrar="cerrarDialogDeudas" @continuar="onContinuarDeudas" />
     </div>

@@ -14,7 +14,7 @@ export const pdfGenera = (cabecera, arraydatos, medida = "80", modo = "abre") =>
   switch (medida) {
     case "A4":
       return impresionA4_ordenPedido(cabecera, arraydatos);
-    case "58":                                     // 👈 nuevo
+    case "58":                                     
       return impresion58_ordenPedido(cabecera, arraydatos);
     case "80":
     default:
@@ -25,6 +25,8 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
   const emp = store.state.baseDatos || {};
   const cfg = store.state.configImpresora || {};
   const imagen = store.state.logoempresa || "";
+  
+  const mostrarLogo = cfg.mostrar_logo_pedido !== false;
 
   const lMargin = 14;      // márgenes cómodos para A4
   const rMargin = 14;
@@ -69,21 +71,18 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
     doc.roundedRect(x, y - 5, w, h - 5, r, r, stroke ? "S" : (fill ? "F" : "N"));
   }
 
-  // columnas del header
-  const colW_logo = imagen ? 28 : 0;                   // 28mm para logo si existe
-  const colW_right = 60;                                // recuadro RUC/documento
-  const colW_center = contentWidth - colW_logo - colW_right - 6; // 6mm separación
+  const colW_logo = (imagen && mostrarLogo) ? 28 : 0; 
+  const colW_right = 75;
+  const colW_center = contentWidth - colW_logo - colW_right - (colW_logo ? 6 : 0);
 
   const xLogo = lMargin;
-  const xCenter = xLogo + colW_logo + 6;
+  const xCenter = colW_logo ? (xLogo + colW_logo + 6) : lMargin;
   const xRight = lMargin + contentWidth - colW_right;
 
-  // ——— logo
-  if (imagen) {
+  if (imagen && mostrarLogo) {
     doc.addImage("data:image/png;base64," + imagen, "png", xLogo, y, colW_logo, colW_logo);
   }
 
-  // ——— bloque empresa (centro)
   doc.setFont("Helvetica", "bold");
   doc.setFontSize(12);
   const empName = doc.splitTextToSize((emp.name || "").toUpperCase(), colW_center);
@@ -100,12 +99,11 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
   const empInfo = doc.splitTextToSize(infoEmpresa, colW_center);
   doc.text(empInfo, xCenter, y + 13);
 
-  // calcula alto ocupado por bloque central/logo
-  const usedH = Math.max(colW_logo, 13 + (empInfo.length ? (empInfo.length * 4.6) : 0));
+  const logoHeight = (imagen && mostrarLogo) ? colW_logo : 0;
+  const usedH = Math.max(logoHeight, 13 + (empInfo.length ? (empInfo.length * 4.6) : 0));
 
-  // ——— recuadro derecha: RUC + título + número
   const boxH = Math.max(usedH, 30);
-  doc.setDrawColor(60);         // gris suave
+  doc.setDrawColor(60); 
   doc.setLineWidth(0.3);
   roundedRect({ x: xRight, y, w: colW_right, h: boxH, r: 3, stroke: true });
 
@@ -116,7 +114,7 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
 
   yBox += 6
   doc.setFontSize(12);
-  doc.setTextColor(0, 90, 180); // azul
+  doc.setTextColor(0, 90, 180); 
   const tituloDoc = (cabecera?.tipo_doc_titulo || "ORDEN DE PEDIDO").toUpperCase();
   doc.text(tituloDoc, xRight + colW_right / 2, yBox, { align: "center" });
   doc.setTextColor(0);

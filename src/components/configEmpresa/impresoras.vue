@@ -43,11 +43,14 @@
                 <v-col cols="6">
                     <v-text-field type="number" dense v-model="minferior" label="Margen logo inferior"></v-text-field>
                 </v-col>
-                <v-col cols="6">
+                <v-col cols="12">
                     <v-text-field dense v-model="telefono" label="Telefono"></v-text-field>
                 </v-col>
                 <v-col cols="6">
                     <v-checkbox dense v-model="log_largo" label="Logo largo A4"></v-checkbox>
+                </v-col>
+                <v-col cols="6">
+                    <v-checkbox dense v-model="mostrar_logo_pedido" label="Logo en Orden Pedido A4"></v-checkbox>
                 </v-col>
                 <v-col cols="12" class="mt-n4">
                     <v-textarea dense outlined auto-grow filled v-model="cabecera" label="Cabecera"
@@ -94,6 +97,7 @@ export default {
             vendedor: false,
             nom_comercial: false,
             log_largo: false,
+            mostrar_logo_pedido: true,
             mensaje_final_proforma: '',
             impresora_auto: false,
 
@@ -123,6 +127,7 @@ export default {
                     this.nom_comercial = snapshot.val().nom_comercial
                     this.mensaje_final_proforma = snapshot.val().mensaje_final_proforma || ''
                     this.log_largo = snapshot.val().log_largo || false
+                    this.mostrar_logo_pedido = snapshot.val().mostrar_logo_pedido !== false
                     this.impresora_auto = snapshot.val().impresora_auto || false
                 } else {
                     this.ip_cocina = "192.168.1.5"
@@ -139,6 +144,7 @@ export default {
                     this.minferiorgeneral = '10'
                     this.vendedor = false
                     this.log_largo = false
+                    this.mostrar_logo_pedido = true
                     this.impresora_auto = false
                     this.mensaje_final_proforma = ''
                 }
@@ -162,8 +168,9 @@ export default {
                 vendedor: this.vendedor,
                 nom_comercial: this.nom_comercial,
                 impresora_auto: this.impresora_auto || false,
-                log_largo: this.log_largo || false
-                , mensaje_final_proforma: this.mensaje_final_proforma || ''
+                log_largo: this.log_largo || false,
+                mostrar_logo_pedido: this.mostrar_logo_pedido !== false,
+                mensaje_final_proforma: this.mensaje_final_proforma || ''
 
             }
             store.commit("configImpresora", array)
@@ -182,6 +189,7 @@ export default {
             actualizaImpresoras('vendedor', this.vendedor || false)
             actualizaImpresoras('nom_comercial', this.nom_comercial || false)
             actualizaImpresoras('log_largo', this.log_largo || false)
+            actualizaImpresoras('mostrar_logo_pedido', this.mostrar_logo_pedido !== false)
             actualizaImpresoras('mensaje_final_proforma', this.mensaje_final_proforma || '')
             actualizaImpresoras('impresora_auto', this.impresora_auto || false)
             store.commit("dialogoImpresora")

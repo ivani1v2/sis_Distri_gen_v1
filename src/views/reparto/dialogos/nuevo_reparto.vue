@@ -9,18 +9,46 @@
             </v-system-bar>
         </div>
 
-        <v-card class="mb-2 pa-12 mt-2">
-            <v-row dense class="">
-                <v-col cols="6" md="3" sm="6">
-                    <v-text-field outlined dense type="date" label="Inicio" v-model="date1" @change="filtrar" />
+
+        <v-card class="mb-2 pa-4 pa-md-6 mt-2" :class="{ 'pb-16': isMobile }">
+            <v-row dense align="center">
+                <v-col cols="6" md="3">
+                    <v-text-field outlined dense type="date" label="Inicio" v-model="date1" @change="filtrar"
+                        hide-details />
                 </v-col>
-                <v-col cols="6" md="3" sm="6">
-                    <v-text-field outlined dense type="date" label="Fin" v-model="date2" @change="filtrar" />
+                <v-col cols="6" md="3">
+                    <v-text-field outlined dense type="date" label="Fin" v-model="date2" @change="filtrar"
+                        hide-details />
                 </v-col>
-                <v-col cols="6" md="3" sm="6">
-                    <v-text-field outlined dense label="Vendedor" v-model="vendedor" @change="filtrar" />
+
+                <v-col cols="6" md="3" v-if="!$vuetify.breakpoint.xsOnly">
+                    <v-select outlined dense label="Vendedor" v-model="vendedoresSeleccionados" :items="vendedoresItems"
+                        item-text="nombre" item-value="codigo" multiple hide-details style="max-width: 200px"
+                        small-chips @change="onVendedorChange">
+                        <template v-slot:prepend-item>
+                            <v-list-item ripple @click="toggleTodosVendedores">
+                                <v-list-item-action>
+                                    <v-icon :color="esTodosSeleccionado ? 'primary' : ''">
+                                        {{ esTodosSeleccionado ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline' }}
+                                    </v-icon>
+                                </v-list-item-action>
+                                <v-list-item-content>
+                                    <v-list-item-title>Todos</v-list-item-title>
+                                </v-list-item-content>
+                            </v-list-item>
+                            <v-divider class="mt-2"></v-divider>
+                        </template>
+                    </v-select>
                 </v-col>
-                <v-col cols="6" md="3" sm="6" class="d-flex align-center mt-n6">
+
+                <v-col cols="6" md="3" class="d-flex align-center">
+                    <!-- Botón para móvil con icono y texto -->
+                    <v-btn v-if="$vuetify.breakpoint.xsOnly" color="info" class="mr-2" @click="dialFiltroMovil = true"
+                        small>
+                        <v-icon left small>mdi-filter</v-icon>
+                        Vendedor
+                    </v-btn>
+
                     <v-menu bottom offset-y>
                         <template v-slot:activator="{ on, attrs }">
                             <v-btn color="success" block small v-bind="attrs" v-on="on">
@@ -40,7 +68,6 @@
                                     <v-icon left>mdi-cash</v-icon> Agregar a Reparto Existente
                                 </v-list-item-title>
                             </v-list-item>
-                            <!-- NUEVO: Ver consolidado -->
                             <v-list-item @click="verConsolidado">
                                 <v-list-item-title>
                                     <v-icon left>mdi-clipboard-text</v-icon> Ver consolidado
@@ -51,15 +78,59 @@
                 </v-col>
             </v-row>
 
-            <v-row class="mb-2 mt-n6">
-                <v-col cols="12" class="d-flex align-center">
-                    <small class="grey--text">
-                        {{ selectedIds.length }} seleccionado(s) de {{ pedidosArray.length }} visibles
-                    </small>
-                </v-col>
-            </v-row>
+            <!-- Bottom sheet para móvil -->
+            <v-bottom-sheet v-model="dialFiltroMovil" inset>
+                <v-card class="pa-3">
+                    <div class="d-flex align-center">
+                        <div class="text-subtitle-1 font-weight-bold">Filtrar vendedor</div>
+                        <v-spacer />
+                        <v-btn icon @click="dialFiltroMovil = false">
+                            <v-icon>mdi-close</v-icon>
+                        </v-btn>
+                    </div>
 
-            <v-simple-table dense fixed-header height="65vh">
+                    <v-select class="mt-3" v-model="vendedoresSeleccionados" :items="vendedoresItems" item-text="nombre"
+                        item-value="codigo" label="Vendedor" multiple chips small-chips deletable-chips clearable
+                        :menu-props="{ maxHeight: '400' }" outlined dense>
+                        <template v-slot:prepend-item>
+                            <v-list-item ripple @click="toggleTodosVendedores">
+                                <v-list-item-action>
+                                    <v-icon :color="esTodosSeleccionado ? 'primary' : ''">
+                                        {{ esTodosSeleccionado ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline' }}
+                                    </v-icon>
+                                </v-list-item-action>
+                                <v-list-item-content>
+                                    <v-list-item-title>Todos</v-list-item-title>
+                                </v-list-item-content>
+                            </v-list-item>
+                            <v-divider class="mt-2"></v-divider>
+                        </template>
+                    </v-select>
+
+                    <v-row dense class="mt-2">
+                        <v-col cols="6">
+                            <v-btn block outlined color="grey" @click="vendedoresSeleccionados = []">
+                                Limpiar
+                            </v-btn>
+                        </v-col>
+                        <v-col cols="6">
+                            <v-btn block color="primary" @click="aplicarFiltroMovil">
+                                Aplicar
+                            </v-btn>
+                        </v-col>
+                    </v-row>
+                </v-card>
+            </v-bottom-sheet>
+
+            <!-- Info selección -->
+            <div class="my-3">
+                <small class="grey--text">
+                    {{ selectedIds.length }} seleccionado(s) de {{ pedidosArray.length }} visibles
+                </small>
+            </div>
+
+            <!-- Tabla -->
+            <v-simple-table dense fixed-header height="60vh">
                 <thead>
                     <tr>
                         <th style="width:36px">
@@ -71,7 +142,7 @@
                         <th>Fecha</th>
                         <th>Estado</th>
                         <th>Total</th>
-                        <th>Comprobante</th> <!-- NUEVO -->
+                        <th>Comprobante</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -95,9 +166,6 @@
                                 <v-chip x-small value="F">Fact</v-chip>
                             </v-chip-group>
                         </td>
-
-
-
                         <td>
                             <v-btn icon small @click="verDetalle(pedido)">
                                 <v-icon color="blue">mdi-eye</v-icon>
@@ -105,11 +173,8 @@
                         </td>
                     </tr>
                 </tbody>
-
             </v-simple-table>
         </v-card>
-
-        <!-- Detalle (por pedido) -->
         <v-dialog v-model="dialogDetalle" max-width="650">
             <v-card>
                 <v-toolbar flat color="black" dark dense>
@@ -151,11 +216,8 @@
             </v-card>
         </v-dialog>
 
-        <!-- NUEVO: Consolidado de seleccionados -->
-        <!-- Consolidado de seleccionados -->
-
         <!-- Diálogo CREAR REPARTO -->
-        <v-dialog v-model="dialogCrear" max-width="520">
+        <v-dialog v-model="dialogCrear" max-width="750">
             <v-card>
                 <v-toolbar flat dark color="black" dense>
                     <v-btn icon @click="dialogCrear = false"><v-icon>mdi-close</v-icon></v-btn>
@@ -175,27 +237,64 @@
                         </v-col>
                     </v-row>
 
-                    <v-row dense>
-                        <v-col cols="12" sm="6">
-                            <div class="subtitle-2">T. CONTADO:
-                                <span class="red--text font-weight-bold">S/. {{ number2(totalContadoSel) }}</span>
-                            </div>
-                            <div class="subtitle-2">T. CRÉDITO:
-                                <span class="red--text font-weight-bold">S/. {{ number2(totalCreditoSel) }}</span>
-                            </div>
-                        </v-col>
-                        <v-col cols="12" sm="6">
-                            <div class="subtitle-2">T. PESO:
-                                <span class="red--text font-weight-bold">{{ number2(pesoTotalSel) }} KG</span>
-                            </div>
-                            <div class="subtitle-2">T. PEDIDOS:
-                                <span class="red--text font-weight-bold">{{ totalPedidosSel }}</span>
-                            </div>
+                    <v-row class="mb-4" :class="isMobile ? 'flex-column' : ''">
+                        <v-col v-for="(resumen, moneda) in resumenPorMoneda" :key="moneda" cols="12" :md="getCardCols"
+                            :sm="getCardCols" class="d-flex">
+                            <v-card outlined class="flex-grow-1 overflow-hidden" elevation="2" :style="{
+                                borderRadius: '12px',
+                                borderTop: `3px solid ${getBorderColor(moneda)}`
+                            }">
+                                <div class="pa-3 d-flex align-center" :class="getCardColor(moneda)">
+                                    <v-avatar size="36" :color="getIconColor(moneda)" class="mr-2">
+                                        <v-icon small dark>mdi-cash-fast</v-icon>
+                                    </v-avatar>
+                                    <div>
+                                        <div class="subtitle-2 font-weight-bold">
+                                            {{ resumen.nombre || moneda }}
+                                        </div>
+                                        <div class="caption grey--text text--darken-1">
+                                            {{ resumen.pedidos }} pedido(s)
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="pa-3">
+                                    <div class="d-flex justify-space-between mb-2">
+                                        <span class="caption grey--text">Contado</span>
+                                        <span class="body-2 font-weight-medium success--text">
+                                            {{ resumen.simbolo }} {{ number2(resumen.contado) }}
+                                        </span>
+                                    </div>
+
+                                    <div class="d-flex justify-space-between mb-2">
+                                        <span class="caption grey--text">Crédito</span>
+                                        <span class="body-2 font-weight-medium warning--text text--darken-2">
+                                            {{ resumen.simbolo }} {{ number2(resumen.credito) }}
+                                        </span>
+                                    </div>
+
+                                    <div class="d-flex justify-space-between mb-2">
+                                        <span class="caption grey--text">Peso</span>
+                                        <span class="body-2 font-weight-medium grey--text text--darken-2">
+                                            {{ number2(resumen.peso) }} KG
+                                        </span>
+                                    </div>
+
+                                    <v-divider class="my-2"></v-divider>
+
+                                    <div class="d-flex justify-space-between align-center">
+                                        <span class="subtitle-2 font-weight-bold">TOTAL</span>
+                                        <span class="subtitle-1 font-weight-bold"
+                                            :style="{ color: getBorderColor(moneda) }">
+                                            {{ resumen.simbolo }} {{ number2(resumen.total) }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </v-card>
                         </v-col>
                     </v-row>
 
-                    <div class="mt-4 title">T. GENERAL:
-                        <span class="red--text font-weight-bold">S/. {{ number2(totalGeneralSel) }}</span>
+                    <div class="mt-2 font-weight-bold">T. GENERAL:
+                        <span class="black--text">{{ totalPedidosSel }} pedidos</span>
                     </div>
                     <v-textarea dense outlined v-model="obs" auto-grow filled label="Observacion" rows="1"></v-textarea>
                 </v-card-text>
@@ -208,7 +307,7 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
-        <!-- BLOQUEADOR GLOBAL -->
+
         <v-dialog v-model="blocking" persistent max-width="320">
             <v-card class="pa-6 d-flex align-center justify-center" elevation="8">
                 <div class="text-center">
@@ -218,6 +317,7 @@
                 </div>
             </v-card>
         </v-dialog>
+
         <dial_consolidado v-if="dialogConsolidado" :selected-ids="selectedIds"
             :consolidado-seleccionados="consolidadoSeleccionados" @cierra="dialogConsolidado = false" />
     </v-dialog>
@@ -230,6 +330,7 @@ import dial_consolidado from "../../pedidos/dialogos/dialogo_rep_consolidado.vue
 import store from '@/store/index'
 import axios from "axios";
 import CryptoJS from "crypto-js";
+
 export default {
     components: {
         dial_consolidado
@@ -237,11 +338,11 @@ export default {
     data() {
         return {
             dial: false,
-            vendedor: 'todos',
+            dialFiltroMovil: false,
+            vendedoresSeleccionados: [],
             dialogDetalle: false,
             pedidoSeleccionado: null,
             detalleSeleccionado: [],
-            // NUEVO: consolidado
             dialogConsolidado: false,
             consolidadoSeleccionados: [],
             date1: moment().format("YYYY-MM-DD"),
@@ -250,8 +351,8 @@ export default {
             refOrden: null,
             selectedIds: [],
             dialogCrear: false,
-            fechaTraslado: this.date1, // o moment().format("YYYY-MM-DD")
-            fechaEmision: this.date2,  // o moment().add(1,'day').format("YYYY-MM-DD")
+            fechaTraslado: moment().format("YYYY-MM-DD"),
+            fechaEmision: moment().format("YYYY-MM-DD"),
             blocking: false,
             opcionesComprobante: [
                 { label: 'TICKET', value: 'T' },
@@ -259,9 +360,102 @@ export default {
                 { label: 'FACTURA', value: 'F' },
             ],
             obs: '',
+            cardColors: {
+                'S/': {
+                    bg: 'blue-grey lighten-5',
+                    border: '#1976D2',
+                    icon: 'blue darken-2'
+                },
+                'PEN': {
+                    bg: 'blue-grey lighten-5',
+                    border: '#1976D2',
+                    icon: 'blue darken-2'
+                },
+                'USD': {
+                    bg: 'green lighten-5',
+                    border: '#388E3C',
+                    icon: 'green darken-2'
+                },
+                '$': {
+                    bg: 'green lighten-5',
+                    border: '#388E3C',
+                    icon: 'green darken-2'
+                },
+                'EUR': {
+                    bg: 'amber lighten-5',
+                    border: '#F57C00',
+                    icon: 'orange darken-2'
+                },
+                '€': {
+                    bg: 'amber lighten-5',
+                    border: '#F57C00',
+                    icon: 'orange darken-2'
+                },
+                'default': {
+                    bg: 'grey lighten-4',
+                    border: '#546E7A',
+                    icon: 'blue-grey darken-1'
+                }
+            }
         };
     },
     computed: {
+        isMobile() {
+            return this.$vuetify?.breakpoint?.smAndDown || false;
+        },
+        vendedoresItems() {
+            return this.$store.state.array_sedes || [];
+        },
+        esTodosSeleccionado() {
+            return this.vendedoresSeleccionados.length === 0;
+        },
+        getCardCols() {
+            const count = Object.keys(this.resumenPorMoneda).length;
+            if (this.isMobile) return 12;
+            if (count === 1) return 12;
+            if (count === 2) return 6;
+            if (count === 3) return 4;
+            return 3;
+        },
+        resumenPorMoneda() {
+            const resumen = {};
+            const monedas = this.$store.state.moneda || [];
+
+            this.seleccionados.forEach(p => {
+                const monedaRaw = p.moneda || p.cod_moneda || 'S/';
+                let monedaInfo = monedas.find(m => m.codigo === monedaRaw || m.simbolo === monedaRaw);
+                if (!monedaInfo) monedaInfo = { simbolo: monedaRaw, moneda: monedaRaw, codigo: monedaRaw };
+                const codMoneda = monedaInfo.codigo || monedaRaw;
+
+                if (!resumen[codMoneda]) {
+                    resumen[codMoneda] = {
+                        simbolo: monedaInfo.simbolo,
+                        nombre: monedaInfo.moneda,
+                        contado: 0,
+                        credito: 0,
+                        peso: 0,
+                        pedidos: 0,
+                        total: 0
+                    };
+                }
+
+                const condicion = String(p.condicion_pago || '').toUpperCase();
+                const total = Number(p.total || 0);
+                const peso = Number(p.peso_total || 0);
+
+                if (condicion.includes('CONTADO')) {
+                    resumen[codMoneda].contado += total;
+                } else if (condicion.includes('CREDITO') || condicion.includes('CRÉDITO')) {
+                    resumen[codMoneda].credito += total;
+                }
+
+                resumen[codMoneda].peso += peso;
+                resumen[codMoneda].pedidos += 1;
+                resumen[codMoneda].total += total;
+            });
+
+            return resumen;
+        },
         visibleIds() {
             return this.pedidosArray.map(p => String(p.id));
         },
@@ -295,7 +489,6 @@ export default {
             return this.seleccionados.reduce((a, b) => a + Number(b.total || 0), 0);
         },
         pesoTotalSel() {
-            // si viene peso_total en cabecera, úsalo; si no, 0
             return this.seleccionados.reduce((a, b) => a + Number(b.peso_total || 0), 0);
         },
     },
@@ -309,37 +502,56 @@ export default {
     watch: {
         date1() { this.filtrar(); },
         date2() { this.filtrar(); },
-        vendedor() { this.filtrar(); },
+        vendedoresSeleccionados() { this.filtrar(); },
     },
     methods: {
+        getCardColor(moneda) {
+            return this.cardColors[moneda]?.bg || this.cardColors.default.bg;
+        },
+
+        getBorderColor(moneda) {
+            return this.cardColors[moneda]?.border || this.cardColors.default.border;
+        },
+
+        getIconColor(moneda) {
+            return this.cardColors[moneda]?.icon || this.cardColors.default.icon;
+        },
+
+        toggleTodosVendedores() {
+            if (this.esTodosSeleccionado) return;
+            this.vendedoresSeleccionados = [];
+        },
+
+        onVendedorChange(val) {
+            if (val && val.length > 0) {
+            }
+        },
+
+        aplicarFiltroMovil() {
+            this.dialFiltroMovil = false;
+            this.filtrar();
+        },
+
         async cambiar_comprobante(pedido) {
             try {
-                // abre loader global si lo usas en la app
                 store.commit("dialogoprogress");
 
-                // seguridad básica
                 if (!pedido || !pedido.id) {
                     console.warn("Pedido sin id, no puedo actualizar");
                     return;
                 }
 
-                // valor seleccionado (T, B o F)
                 const nuevoTipo = pedido.tipo_comprobante;
-
-                // acá asumimos que modifica_pedidos(ruta, valor)
-                // ej: modifica_pedidos("V00-000020/tipo_comprobante", "B")
                 await modifica_pedidos(
                     pedido.id + '/tipo_comprobante',
                     nuevoTipo
                 );
 
-                // opcional: feedback visual
                 store.commit('dialogosnackbar', 'Comprobante actualizado');
             } catch (e) {
                 console.error("Error actualizando comprobante:", e);
                 alert("No se pudo actualizar el comprobante");
             } finally {
-                // cierra loader
                 store.commit("dialogoprogress");
             }
         },
@@ -352,12 +564,10 @@ export default {
                 return;
             }
 
-            // Mapa rápido id -> pedido para leer datos de cabecera (cliente)
             const byId = new Map(this.pedidosArray.map(p => [String(p.id), p]));
             const acumulado = [];
 
             try {
-                // (opcional) muestra spinner global si usas Vuex
                 store.commit && store.commit("dialogoprogress");
 
                 await Promise.all(
@@ -381,7 +591,6 @@ export default {
                     })
                 );
 
-                // ordenar opcionalmente por pedido y luego por producto
                 acumulado.sort((a, b) => {
                     if (a.pedidoId === b.pedidoId) return String(a.nombre).localeCompare(String(b.nombre));
                     return String(a.pedidoId).localeCompare(String(b.pedidoId));
@@ -411,77 +620,71 @@ export default {
                     : alert("Selecciona al menos un documento.");
                 return;
             }
-            // precarga fechas (si quieres sincronizarlas con filtros)
             this.fechaTraslado = this.date2;
             this.fechaEmision = this.date2;
             this.dialogCrear = true;
         },
+
         async confirmarCrearReparto() {
             try {
                 if (this.blocking) return;
                 this.blocking = true;
 
-                // 🔁 convertir a unix (segundos)
-                const unixTraslado = moment(String(this.fechaTraslado)) / 1000;
-                const unixEmision = moment(String(this.fechaEmision)) / 1000;
+                const unixTraslado = moment(String(this.fechaTraslado)).unix();
+                const unixEmision = moment(String(this.fechaEmision)).unix();
 
-                if (unixTraslado == null || unixEmision == null) {
+                if (!unixTraslado || !unixEmision) {
                     this.$toast?.error
                         ? this.$toast.error("Fechas inválidas. Revisa traslado/emisión.")
                         : alert("Fechas inválidas. Revisa traslado/emisión.");
                     return;
                 }
 
+                const vendedoresStr = this.vendedoresSeleccionados.length > 0
+                    ? this.vendedoresSeleccionados.join(',')
+                    : 'todos';
+
                 const payload = {
                     fecha_traslado: unixTraslado,
                     fecha_emision: moment().unix(),
                     fecha_comprobantes: unixEmision,
-                    vendedor: this.vendedor,
-                    pedidos: this.selectedIds,  // IDs seleccionados
+                    vendedor: vendedoresStr,
+                    pedidos: this.selectedIds,
                     obs: this.obs,
                     resumen: {
                         total_contado: this.totalContadoSel.toFixed(2),
                         total_credito: this.totalCreditoSel.toFixed(2),
                         peso_total: this.pesoTotalSel.toFixed(2),
-                        total_pedidos: this.totalPedidosSel.toFixed(2),
+                        total_pedidos: String(this.totalPedidosSel),
                         total_general: this.totalGeneralSel.toFixed(2),
                     },
+                    resumen_monedas: this.resumenPorMoneda
                 };
 
-                console.log("Payload reparto:", payload); // verás los UNIX (ej. 1757472000)
-
                 var resp = await this.api_rest(payload, "crea_reparto");
-                console.log('res', resp.data.data.grupo)
                 this.$router.push({
                     path: "/liquida_reparto/" + resp.data.data.grupo
-                })
-                /* this.$toast?.success
-                     ? this.$toast.success("Reparto creado correctamente.")
-                     : alert("Reparto creado correctamente.");
- 
-                 this.dialogCrear = false;*/
+                });
             } catch (e) {
                 console.error(e);
                 this.$toast?.error
                     ? this.$toast.error("Error creando el reparto.")
                     : alert("Error creando el reparto.");
-            }
-            finally {
-                this.blocking = false; // <-- cierra el bloqueo siempre
+            } finally {
+                this.blocking = false;
             }
         },
+
         async api_rest(data, metodo) {
-            console.log(data)
             var idem = this.buildIdemKeyPedido({
                 bd: store.state.baseDatos.bd,
-                payload: data, // 👈 ahora sí, con lo que realmente envías
+                payload: data,
             });
             var a = axios({
                 method: 'POST',
                 url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
-                //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
                 headers: {
-                    'X-Idempotency-Key': idem,    // <-- el server debe ignorar duplicados con la misma clave
+                    'X-Idempotency-Key': idem,
                 },
                 data: {
                     "bd": store.state.baseDatos.bd,
@@ -489,13 +692,12 @@ export default {
                     "metodo": metodo
                 }
             }).then(response => {
-
                 return response
             })
             return a
         },
+
         buildIdemKeyPedido({ bd, payload = {} }) {
-            // usa fecha_emision del payload si existe (unix segundos)
             const day = payload.fecha_emision
                 ? moment.unix(Number(payload.fecha_emision)).format("YYYY-MM-DD")
                 : moment().format("YYYY-MM-DD");
@@ -525,10 +727,8 @@ export default {
 
         async agregar_a_reparto_existente() {
             try {
-                // Evitar doble clic
                 if (this.blocking) return;
 
-                // Validar que haya seleccionados
                 if (this.selectedIds.length === 0) {
                     this.$toast && this.$toast.info
                         ? this.$toast.info("Selecciona al menos un documento.")
@@ -536,13 +736,12 @@ export default {
                     return;
                 }
 
-                // Pedir el grupo de reparto existente
                 const grupoInput = prompt(
                     "Ingresa el número de grupo de reparto al que deseas agregar (ej: 0005):"
                 );
 
                 if (!grupoInput) {
-                    return; // cancelado
+                    return;
                 }
 
                 const grupo = String(grupoInput).trim();
@@ -555,13 +754,11 @@ export default {
 
                 this.blocking = true;
 
-                // Tomamos la fecha de emisión de comprobantes igual que en crear reparto
                 const fechaEmiStr =
                     this.fechaEmision ||
                     this.date2 ||
                     moment().format("YYYY-MM-DD");
 
-                // a unix (segundos)
                 const unixEmision = moment(String(fechaEmiStr)).unix();
 
                 if (!unixEmision) {
@@ -572,9 +769,9 @@ export default {
                 }
 
                 const payload = {
-                    grupo,                      // 👈 grupo EXISTENTE
+                    grupo,
                     fecha_comprobantes: unixEmision,
-                    pedidos: this.selectedIds,  // IDs seleccionados para adicionar
+                    pedidos: this.selectedIds,
                     resumen: {
                         total_contado: this.totalContadoSel.toFixed(2),
                         total_credito: this.totalCreditoSel.toFixed(2),
@@ -584,24 +781,12 @@ export default {
                     },
                 };
 
-                console.log("Payload adiciona_reparto:", payload);
-
                 const resp = await this.api_rest(payload, "adiciona_reparto");
+                const grupoResp = resp?.data?.data?.grupo || grupo;
 
-                // si la función de backend devuelve { ok: true, grupo: '0005' }
-                const grupoResp =
-                    resp?.data?.data?.grupo || grupo;
-
-                // Ir directamente a liquida_reparto del grupo
                 this.$router.push({
                     path: "/liquida_reparto/" + grupoResp,
                 });
-
-                /* Si quieres solo mensaje:
-                this.$toast?.success
-                    ? this.$toast.success("Pedidos agregados al reparto " + grupoResp)
-                    : alert("Pedidos agregados al reparto " + grupoResp);
-                */
             } catch (e) {
                 console.error("Error agregando a reparto existente:", e);
                 this.$toast?.error
@@ -618,10 +803,12 @@ export default {
             if (s === 'procesado' || s === 'atendido') return 'blue';
             return 'orange';
         },
+
         number2(n) {
             const x = Number(n || 0);
             return x.toFixed(2);
         },
+
         _detach() {
             if (this.refOrden) {
                 this.refOrden.off("value", this.onDataChange);
@@ -649,21 +836,26 @@ export default {
 
         onDataChange(snap) {
             const arr = [];
+            const vendedoresFiltro = this.vendedoresSeleccionados || [];
+            const filtrarPorVendedor = vendedoresFiltro.length > 0;
+
             snap.forEach(item => {
                 const data = item.val() || {};
                 if (data?.estado !== 'pendiente' || !(Number(data?.total) > 0)) return;
                 data.id = item.key;
                 data.fecha = this.formatFecha(data.fecha_emision);
-                console.log('data', data)
-                if (this.vendedor && this.vendedor.toString().toLowerCase() !== 'todos') {
+
+                if (filtrarPorVendedor) {
                     const cod = (data.cod_vendedor || '').toString().toLowerCase();
-                    if (cod !== this.vendedor.toString().toLowerCase()) return;
+                    const match = vendedoresFiltro.some(v =>
+                        String(v).toLowerCase() === cod
+                    );
+                    if (!match) return;
                 }
                 arr.push(data);
             });
             this.pedidosArray = arr;
 
-            // mantener seleccionados solo los visibles
             const visible = new Set(arr.map(p => String(p.id)));
             this.selectedIds = this.selectedIds.filter(id => visible.has(id));
         },
@@ -673,7 +865,6 @@ export default {
         },
 
         async verDetalle(pedido) {
-            console.log('pedido', pedido)
             this.pedidoSeleccionado = pedido;
             store.commit("dialogoprogress");
             const snap = await detalle_pedido(pedido.id).once("value")

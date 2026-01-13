@@ -301,6 +301,7 @@ export default {
             dialogoCronograma: false,
             fechaVencimiento: '',
             cronogramaData: null,
+            menuFecha: false,
 
             docTiposItems: [
                 { text: 'Sin documento', value: 'SIN DOCUMENTO' },
@@ -314,7 +315,12 @@ export default {
     watch: {
         value(v) {
             this.internalOpen = v
-            if (v) this._cargarDesdeProps()
+            if (v) {
+                if (this.cabecera && this.cabecera.moneda) {
+                    this.moneda = this.cabecera.moneda
+                }
+                this._cargarDesdeProps()
+            }
         },
         internalOpen(v) {
             this.$emit('input', v)
@@ -361,7 +367,11 @@ export default {
         }
     },
     created() {
-        this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
+        if (this.cabecera && this.cabecera.moneda) {
+            this.moneda = this.cabecera.moneda
+        } else {
+            this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
+        }
         if (this.internalOpen) this._cargarDesdeProps()
         if (this.cabecera.fecha_vencimiento) {
             this.fechaVencimiento = this.cabecera.fecha_vencimiento

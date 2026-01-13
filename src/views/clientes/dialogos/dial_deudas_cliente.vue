@@ -1,6 +1,6 @@
 <template>
-    <v-dialog :value="value" max-width="600px" persistent @input="$emit('input', $event)">
-        <v-card class="rounded-lg">
+    <v-dialog :value="value" max-width="750px" persistent scrollable @input="$emit('input', $event)">
+        <v-card class="rounded-lg" style="max-height: 85vh;">
             <v-toolbar :color="cuentas_pendientes.length > 0 ? 'red darken-2' : 'green'" dark dense>
                 <v-icon left>{{ cuentas_pendientes.length > 0 ? 'mdi-alert-circle' : 'mdi-check-circle' }}</v-icon>
                 <v-toolbar-title>
@@ -23,7 +23,11 @@
 
                 <template v-if="cuentas_pendientes.length > 0">
                     <v-alert type="warning" border="left" colored-border icon="mdi-cash-remove" class="mb-4">
-                        <div class="">Deuda Total: <span class="red--text"> S/ {{ total_deuda }}</span></div>
+                        <div class="">Deuda Total: 
+                            <span v-for="(monto, simbolo) in totalesPorMoneda" :key="simbolo" class="red--text mr-3">
+                                {{ simbolo }} {{ monto.toFixed(2) }}
+                            </span>
+                        </div>
                     </v-alert>
 
                     <div class="cuentas-lista">
@@ -171,13 +175,28 @@ export default {
                 tieneDeuda: this.cuentas_pendientes.length > 0
             })
         }
+    },
+    computed: {
+        totalesPorMoneda() {
+            const totales = {}
+            this.cuentas_pendientes.forEach(cuenta => {
+                const simbolo = cuenta.moneda || 'S/'
+                const monto = parseFloat(cuenta.monto_pendiente || 0)
+                if (!totales[simbolo]) {
+                    totales[simbolo] = 0
+                }
+                totales[simbolo] += monto
+            })
+            return totales
+        }
     }
 }
 </script>
 
 <style scoped>
 .cuentas-lista {
-    max-height: 180px;
+    max-height: 300px;
     overflow-y: auto;
+    overflow-x: hidden;
 }
 </style>
