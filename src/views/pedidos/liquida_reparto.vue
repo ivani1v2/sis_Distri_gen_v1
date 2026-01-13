@@ -97,9 +97,9 @@
                     </v-col>
                     <v-col cols="12" sm="4">
                         <h4 class="text-subtitle-1">
-                            TOTAL VENTA: <span class="green--text text--darken-2">S/.{{ t_general }}</span>
+                            TOTAL VENTA: <span class="green--text text--darken-2">{{moneda}} {{ t_general }}</span>
                         </h4>
-                        <span class="caption">Contado: S/.{{ t_contado }} | Crédito: S/.{{ t_credito }}</span>
+                        <span class="caption">Contado: {{moneda}}  {{ t_contado }} | Crédito: {{moneda}} {{ t_credito }}</span>
                     </v-col>
                 </v-row>
             </v-card-text>
@@ -500,10 +500,11 @@ export default {
             observacion_reporte: '',
             observacion_reporte: '',
             formato_descarga: 'F1', // 👈 NUEVO: formato por defecto
+            moneda: 'S/'
         }
     },
     created() {
-
+this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         this.router_grupo = this.$route.params.id
         this.inicio()
 

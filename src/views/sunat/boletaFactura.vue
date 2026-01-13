@@ -17,14 +17,14 @@
         <v-btn color="success" v-if="false" @click='modificafechas()'>text</v-btn>
         <v-row class="mt-n8">
             <v-col cols="5" v-if="$store.state.esmovil">
-                <h4 class="text-center"> Boletas: S/.{{ sumaventas().boleta }}</h4>
-                <h4 class="text-center"> Facturas: S/.{{ sumaventas().factura }}</h4>
+                <h4 class="text-center"> Boletas:  {{moneda}} {{ sumaventas().boleta }}</h4>
+                <h4 class="text-center"> Facturas: {{moneda}} {{ sumaventas().factura }}</h4>
             </v-col>
             <v-col cols="5" v-if="!$store.state.esmovil">
-                <h4 class="text-center"> Boletas: S/.{{ sumaventas().boleta }}</h4>
+                <h4 class="text-center"> Boletas: {{moneda}} {{ sumaventas().boleta }}</h4>
             </v-col>
             <v-col cols="5" v-if="!$store.state.esmovil">
-                <h4 class="text-center"> Facturas: S/.{{ sumaventas().factura }}</h4>
+                <h4 class="text-center"> Facturas:  {{moneda}} {{ sumaventas().factura }}</h4>
             </v-col>
             <v-col cols="6" sm="2" md="2">
                 <v-menu offset-y block>
@@ -140,7 +140,7 @@
                         </thead>
                         <tbody>
                             <tr v-for="item in arrayConsolidar" :key="item.id" class="">
-                                <td>{{ item.nombre }} - S/.{{ item.precioedita }} x {{ item.medida }}</td>
+                                <td>{{ item.nombre }} - {{moneda}}{{ item.precioedita }} x {{ item.medida }}</td>
                                 <td>{{ item.cantidad }}</td>
                                 <td v-if="item.operacion == 'GRATUITA'" class="red--text">{{ seleccionado.moneda }}0.00
                                 </td>
@@ -297,8 +297,8 @@ export default {
         seleccionado: '',
         num_doc: '',
         tipo_doc: 'B',
-        items_convertir: []
-
+        items_convertir: [],
+        moneda: 'S/'
     }),
 
     computed: {
@@ -316,6 +316,7 @@ export default {
         },
     },
     created() {
+          this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         this.busca()
     },
     methods: {

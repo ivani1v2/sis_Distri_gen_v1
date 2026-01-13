@@ -109,7 +109,7 @@
 
                 <v-col cols="4" class="mt-n4">
                     <div class="body-2">
-                        <strong class="red--text">Total:</strong> S/{{ number2(resumen.totalSoles) }}
+                        <strong class="red--text">Total:</strong> {{moneda}} {{ number2(resumen.totalSoles) }}
                     </div>
                 </v-col>
             </v-row>
@@ -397,9 +397,11 @@ export default {
             loadingMore: false,
             observer: null,
             dialFiltroMovil: false,
+            moneda:'S/'
         };
     },
     created() {
+        this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         this.filtrar(); // carga inicial (hoy)
         if (!store.state.permisos.es_admin) {
             this.vendedoresSeleccionados = [store.state.sedeActual.codigo];

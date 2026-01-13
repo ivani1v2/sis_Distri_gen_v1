@@ -3,7 +3,7 @@
         <v-card>
             <v-btn v-if="false" color="success" block @click.prevent="elimina()" small>Consolida</v-btn>
             <v-btn v-if="false" color="success" block @click.prevent="router('consolidaSunat')" small>Consolida</v-btn>
-                    <v-btn color="success" v-if="false" @click='modificafechas()'>text</v-btn>
+            <v-btn color="success" v-if="false" @click='modificafechas()'>text</v-btn>
             <v-row dense>
                 <v-col cols="6" sm="4">
                     <v-text-field class="mx-1" outlined dense type="date" v-model="date" label="Inicio"></v-text-field>
@@ -19,10 +19,10 @@
             </v-row>
             <v-row class="mt-n8">
                 <v-col cols="6">
-                    <h4 class="text-center"> Aprobados: S/.{{ sumaventas().ticket }}</h4>
+                    <h4 class="text-center"> Aprobados: {{ moneda }} {{ sumaventas().ticket }}</h4>
                 </v-col>
                 <v-col cols="6">
-                    <h4 class="text-center red--text"> Anulados: S/.{{ sumaventas().rechazados }}</h4>
+                    <h4 class="text-center red--text"> Anulados: {{ moneda }} {{ sumaventas().rechazados }}</h4>
                 </v-col>
             </v-row>
 
@@ -54,18 +54,18 @@
                         <tr v-for="item in listafiltrada" :key="item.id">
                             <td style="font-size:75%;">{{ item.numeracion }}</td>
                             <td style="font-size:75%;" v-if="!$store.state.esmovil">{{ item.dni + ' - ' + item.cliente
-                                }}
+                            }}
                             </td>
                             <td>{{ conviertefecha(item.fecha) }}</td>
                             <td>
                                 <v-icon @click="consultaApisunat(item)" :color="item.color">mdi-circle</v-icon>
                             </td>
-                            <td style="font-size:75%;">S/.{{ item.total }}</td>
+                            <td style="font-size:75%;">{{ item.moneda}}{{ item.total }}</td>
                             <td width="100">
                                 <v-row>
                                     <v-col cols="6">
                                         <v-icon color="green"
-                                            @click.prevent="ejecutaConsolida(item.numeracion), dialog = true">mdi-eye</v-icon>
+                                            @click.prevent="ejecutaConsolida(item), dialog = true">mdi-eye</v-icon>
                                     </v-col>
                                     <v-col cols="6">
                                         <v-icon color="red"
@@ -126,9 +126,9 @@
                                 <td>{{ item.nombre }}</td>
                                 <td>{{ item.medida }}</td>
                                 <td>{{ item.cantidad }}</td>
-                                <td>S/.{{ item.precioedita }}</td>
-                                <td class="red--text">S/.{{ item.preciodescuento }}</td>
-                                <td>S/.{{ redondear(item.precioedita * item.cantidad) }}</td>
+                                <td>{{ seleccionado.moneda }}{{ item.precioedita }}</td>
+                                <td class="red--text">{{ seleccionado.moneda }}{{ item.preciodescuento }}</td>
+                                <td>{{ seleccionado.moneda }}{{ redondear(item.precioedita * item.cantidad) }}</td>
                             </tr>
                         </tbody>
                     </template>
@@ -232,7 +232,8 @@ export default {
         documentoanula: '',
         genera_pdf: false,
         num_doc: '',
-        items_convertir: []
+        items_convertir: [],
+        moneda: 'S/'
     }),
 
     computed: {
@@ -241,6 +242,7 @@ export default {
         }
     },
     created() {
+        this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         this.busca()
     },
     methods: {
@@ -468,30 +470,25 @@ export default {
             return array
         },
         ejecutaConsolida(value) {
-            this.cargaData(value)
-        },
-        cargaData(value) {
+            console.log(value)
+            this.seleccionado = value
             this.arrayConsolidar = []
-            for (var i = 0; i < this.desserts.length; i++) {
-                if (this.desserts[i].numeracion == value) {
-                    consultaDetalle(this.desserts[i].numeracion).once("value").then((snapshot) => {
-                        snapshot.forEach((item) => {
-                            this.arrayConsolidar.push(item.val())
-                        })
-
-                    })
-                }
-            }
+            consultaDetalle(value.numeracion).once("value").then((snapshot) => {
+                snapshot.forEach((item) => {
+                    this.arrayConsolidar.push(item.val())
+                })
+            })
         },
+
         redondear(valor) {
             return parseFloat(valor).toFixed(store.state.configuracion.decimal)
         },
-         async modificafechas() {
+        async modificafechas() {
             for (var i = 0; i < this.desserts.length; i++) {
                 console.log(this.desserts[i].numeracion)
                 grabaDatoC(this.desserts[i].numeracion, "estado", 'aprobado')
-            //    await grabaDatoC(this.desserts[i].numeracion, "fecha", 1766190081)
-              //  grabaDatoC(this.desserts[i].numeracion, "vencimientoDoc", 1766190081)
+                //    await grabaDatoC(this.desserts[i].numeracion, "fecha", 1766190081)
+                //  grabaDatoC(this.desserts[i].numeracion, "vencimientoDoc", 1766190081)
                 // if (this.desserts[i].estado == 'RECHAZADO') {
                 //console.log("rechazado")
                 // if (this.desserts[i].tipocomprobante == 'F') {

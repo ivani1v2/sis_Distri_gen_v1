@@ -18,7 +18,7 @@
 
             <v-row class="mt-n8">
                 <v-col cols="12">
-                    <h4 class="text-center">Total General: S/.{{ sumaventas() }} </h4>
+                    <h4 class="text-center">Total General: {{moneda}} {{ sumaventas() }} </h4>
                 </v-col>
             </v-row>
 
@@ -90,6 +90,7 @@
                     <v-col cols="12">
                     </v-col>
                 </v-row>
+                
                 <v-simple-table dark fixed-header max-width="70vh" dense>
                     <template v-slot:default>
 
@@ -110,10 +111,10 @@
                     
                         <tbody>
                             <tr v-for="item in arrayConsolidar" :key="item.id" class="">
-                                <td>{{item.id}} - {{ item.nombre }} - S/.{{ item.precioedita }} x {{ item.medida }}</td>
+                                <td>{{item.id}} - {{ item.nombre }} - {{seleccionado.moneda}}{{ item.precioedita }} x {{ item.medida }}</td>
                                 <td>{{ item.cantidad }}</td>
-                                <td v-if="item.operacion == 'GRATUITA'" class="red--text">S/.0.00</td>
-                                <td v-else>S/.{{ redondear(item.precioedita * item.cantidad) }}</td>
+                                <td v-if="item.operacion == 'GRATUITA'" class="red--text">{{seleccionado.moneda}} 0.00</td>
+                                <td v-else> {{seleccionado.moneda}} {{ redondear(item.precioedita * item.cantidad) }}</td>
                             </tr>
                         </tbody>
                         
@@ -155,7 +156,8 @@ export default {
         num_doc: '',
         tipo_doc: 'T',
         numero: '',
-        correo: ''
+        correo: '',
+        moneda: 'S/'
     }),
 
     computed: {
@@ -166,6 +168,7 @@ export default {
         }
     },
     created() {
+         this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         this.busca()
     },
     methods: {
@@ -189,6 +192,7 @@ export default {
         },
         ejecutaConsolida(value) {
             store.commit("dialogoprogress")
+            this.seleccionado = value
             this.arrayConsolidar = []
             consultaDetalle(value.numeracion).once("value").then((snapshot) => {
                 snapshot.forEach((item) => {
