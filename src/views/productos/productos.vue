@@ -894,12 +894,20 @@ export default {
             if (this.stock == '') {
                 this.stock = 0
             }
-            if (this.categoria == 1 || this.categoria == '') {
-                alert("DEBE CONSIDERAR UNA CATEGORIA VALIDA")
+            if (!this.proveedor || this.proveedor.trim() === '') {
+                alert("Debe seleccionar un proveedor")
+                return
+            }
+            if (!this.marca || this.marca.trim() === '') {
+                alert("Debe seleccionar una marca")
+                return
+            }
+            if (this.categoria == 1 || this.categoria == '' || !this.categoria) {
+                alert("Debe considerar una categoria válida")
                 return
             }
             if (this.precio == 0) {
-                alert("EL PRECIO NO PUEDE SER IGUAL A 0")
+                alert("El precio no puede ser igual a 0")
                 return
             }
             const factorNum = Number(this.factor) || 0

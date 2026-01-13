@@ -5,7 +5,7 @@
             <v-toolbar flat color="black" dark dense>
                 <v-btn icon @click="cerrar"><v-icon>mdi-close</v-icon></v-btn>
                 <v-spacer />
-                <span class="title font-weight-bold">{{moneda}} {{ number2(totalDetalle) }}</span>
+                <span class="title font-weight-bold">{{ moneda }} {{ number2(totalDetalle) }}</span>
                 <v-spacer />
                 <v-btn color="success" icon @click="emitirGuardar"><v-icon>mdi-content-save</v-icon></v-btn>
             </v-toolbar>
@@ -34,6 +34,29 @@
                             item-value="value" :menu-props="{ closeOnContentClick: true, maxHeight: 300 }" />
                     </v-col>
                 </v-row>
+
+                <!-- Crédito -->
+                <v-row dense v-if="cabecera.condicion_pago === 'CREDITO'">
+                    <v-col cols="6">
+                        <v-menu v-model="menuFecha" :close-on-content-click="false" transition="scale-transition"
+                            offset-y min-width="auto">
+                            <template v-slot:activator="{ on, attrs }">
+                                <v-text-field outlined dense v-model="fechaVencimiento" label="Vence el"
+                                    prepend-inner-icon="mdi-calendar" hide-details readonly v-bind="attrs" v-on="on" />
+                            </template>
+
+                            <v-date-picker v-model="fechaVencimiento" @input="menuFecha = false" />
+                        </v-menu>
+                    </v-col>
+
+                    <v-col cols="6">
+                        <v-btn small elevation="3" rounded color="indigo" dark @click="abrirCronograma">
+                            Cronograma
+                            <v-icon color="white" class="ml-2" small>mdi-calendar-clock</v-icon>
+                        </v-btn>
+                    </v-col>
+                </v-row>
+
             </v-card-text>
 
 
@@ -53,92 +76,86 @@
                         </v-btn>
                     </v-col>
                 </v-row>
-            </v-card-text>   <v-card class="mt-5">
-                    <div class="tabla-scroll">
-                        <v-simple-table class="elevation-0" dense>
-                            <!-- Sin encabezado: usamos tarjetas -->
-                            <thead class="d-none">
-                                <tr>
-                                    <th>Ítems</th>
-                                </tr>
-                            </thead>
+            </v-card-text> <v-card class="mt-5">
+                <div class="tabla-scroll">
+                    <v-simple-table class="elevation-0" dense>
+                        <!-- Sin encabezado: usamos tarjetas -->
+                        <thead class="d-none">
+                            <tr>
+                                <th>Ítems</th>
+                            </tr>
+                        </thead>
 
-                            <tbody>
-                                <tr v-for="item in lineas" :key="item.uuid || item.id"
-                                    @click.prevent="editaProducto(item)">
-                                    <td class="pa-0 mt-n1 mb-n1">
-                                        <v-card class="ma-1 pa-2 " outlined :elevation="0" ripple>
-                                            <div class="d-flex align-center mt-n2 mb-n2">
-                                                <!-- Contenido -->
-                                                <div class="flex-grow-1 mr-2">
-                                                    <div class="text-caption grey--text text--darken-1">
-                                                        <!-- Precio + chips -->
-                                                        <span>
-                                                            Precio: {{ moneda }}
-                                                            {{ redondear(item.precio) }}
-                                                        </span>
-                                                        <v-chip v-if="Number(item.preciodescuento) > 0" x-small
-                                                            class="ml-1" color="deep-orange" text-color="white" label>
-                                                            −{{ moneda }} {{ redondear(item.preciodescuento) }}
-                                                        </v-chip>
-                                                        <v-chip v-if="Number(item.precio_base) !== Number(item.precio)"
-                                                            x-small class="ml-1" color="deep-orange" text-color="white"
-                                                            label>
-                                                            {{ moneda }} {{ redondear(item.precio_base) }}
-                                                        </v-chip>
-                                                        <v-chip v-if="item.medida" x-small class="ml-1" label>
-                                                            {{ item.medida }}
-                                                        </v-chip>
-                                                        <v-chip v-if="item.operacion === 'GRATUITA'" x-small
-                                                            class="ml-1" color="pink" text-color="white" label>
-                                                            Gratuita
-                                                        </v-chip>
-                                                    </div>
-
-                                                    <div class="mt-1 text-subtitle-2 text-truncate"
-                                                        style="max-width: 70vw;">
-                                                        <span class="font-weight-bold red--text">{{
-                                                            Number(item.cantidad)
-                                                        }}×</span>
-                                                        {{ item.nombre }}
-                                                    </div>
+                        <tbody>
+                            <tr v-for="item in lineas" :key="item.uuid || item.id" @click.prevent="editaProducto(item)">
+                                <td class="pa-0 mt-n1 mb-n1">
+                                    <v-card class="ma-1 pa-2 " outlined :elevation="0" ripple>
+                                        <div class="d-flex align-center mt-n2 mb-n2">
+                                            <!-- Contenido -->
+                                            <div class="flex-grow-1 mr-2">
+                                                <div class="text-caption grey--text text--darken-1">
+                                                    <!-- Precio + chips -->
+                                                    <span>
+                                                        Precio: {{ moneda }}
+                                                        {{ redondear(item.precio) }}
+                                                    </span>
+                                                    <v-chip v-if="Number(item.preciodescuento) > 0" x-small class="ml-1"
+                                                        color="deep-orange" text-color="white" label>
+                                                        −{{ moneda }} {{ redondear(item.preciodescuento) }}
+                                                    </v-chip>
+                                                    <v-chip v-if="Number(item.precio_base) !== Number(item.precio)"
+                                                        x-small class="ml-1" color="deep-orange" text-color="white"
+                                                        label>
+                                                        {{ moneda }} {{ redondear(item.precio_base) }}
+                                                    </v-chip>
+                                                    <v-chip v-if="item.medida" x-small class="ml-1" label>
+                                                        {{ item.medida }}
+                                                    </v-chip>
+                                                    <v-chip v-if="item.operacion === 'GRATUITA'" x-small class="ml-1"
+                                                        color="pink" text-color="white" label>
+                                                        Gratuita
+                                                    </v-chip>
                                                 </div>
 
-                                                <!-- Total -->
-                                                <div class="text-right mr-1">
-                                                    <div class="subtitle-2 font-weight-bold">
-                                                        {{ moneda }}
-                                                        {{ item.totalLinea
-                                                        }}
-                                                    </div>
-                                                    <div class="caption grey--text">Total</div>
+                                                <div class="mt-1 text-subtitle-2 text-truncate"
+                                                    style="max-width: 70vw;">
+                                                    <span class="font-weight-bold red--text">{{
+                                                        Number(item.cantidad)
+                                                        }}×</span>
+                                                    {{ item.nombre }}
                                                 </div>
                                             </div>
-                                        </v-card>
-                                    </td>
-                                </tr>
 
-                                <!-- Vacío -->
-                                <tr v-if="!lineas || lineas.length === 0">
-                                    <td class="py-6 text-center grey--text">
-                                        No hay productos en la lista
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </v-simple-table>
-                    </div>
+                                            <!-- Total -->
+                                            <div class="text-right mr-1">
+                                                <div class="subtitle-2 font-weight-bold">
+                                                    {{ moneda }}
+                                                    {{ item.totalLinea
+                                                    }}
+                                                </div>
+                                                <div class="caption grey--text">Total</div>
+                                            </div>
+                                        </div>
+                                    </v-card>
+                                </td>
+                            </tr>
 
-                </v-card>
-          
+                            <!-- Vacío -->
+                            <tr v-if="!lineas || lineas.length === 0">
+                                <td class="py-6 text-center grey--text">
+                                    No hay productos en la lista
+                                </td>
+                            </tr>
+                        </tbody>
+                    </v-simple-table>
+                </div>
+
+            </v-card>
+
         </v-card>
         <!-- Componente edita_producto -->
-        <edita_producto 
-            v-if="dialogoProducto" 
-            :item_selecto="item_selecto"
-            @editaProducto="onEditaProducto($event)"
-            @eliminaedita="eliminaedita()"
-            @cierra="dialogoProducto = false" 
-        />
+        <edita_producto v-if="dialogoProducto" :item_selecto="item_selecto" @editaProducto="onEditaProducto($event)"
+            @eliminaedita="eliminaedita()" @cierra="dialogoProducto = false" />
         <v-dialog v-model="dial_catalogo" max-width="550">
             <div>
                 <v-system-bar window dark>
@@ -222,12 +239,18 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <cronograma v-if="dialogoCronograma" :totalCredito="Number(totalDetalle)" @cierra="dialogoCronograma = false"
+            @emite_cronograma="guarda_cronograma($event)" :pagoInicial="0" :moneda="moneda"
+            :planExistente="planExistenteFormateado" />
     </v-dialog>
 </template>
 
 <script>
 import cat_fijo from '@/components/catalogo_fijo'
 import edita_producto from '@/views/ventas/edita_producto'
+import cronograma from '../../ventas/dialogos/cronograma_creditos.vue'
+import moment from 'moment'
 import axios from "axios"
 import store from '@/store/index'
 import { colClientes } from '../../../db_firestore'
@@ -236,7 +259,8 @@ export default {
     name: 'EditorDetallePedido',
     components: {
         cat_fijo,
-        edita_producto
+        edita_producto,
+        cronograma
     },
     props: {
         /* Control del diálogo desde el padre con v-model */
@@ -251,7 +275,7 @@ export default {
     data() {
         return {
             internalOpen: this.value,
-            lineas: [], 
+            lineas: [],
             dial_catalogo: false,
             moneda: 'S/',
             condicionesItems: [
@@ -274,6 +298,9 @@ export default {
             cabClienteDireccion: '',
 
             clienteSele: null,
+            dialogoCronograma: false,
+            fechaVencimiento: '',
+            cronogramaData: null,
 
             docTiposItems: [
                 { text: 'Sin documento', value: 'SIN DOCUMENTO' },
@@ -297,12 +324,20 @@ export default {
                 if (this.internalOpen) this._cargarDesdeProps()
             },
             deep: true
+        },
+        'cabecera.condicion_pago'(nv) {
+            if (nv === 'CREDITO') {
+                if (!this.fechaVencimiento) {
+                    this.fechaVencimiento = moment().add(7, 'days').format('YYYY-MM-DD')
+                }
+            } else {
+                this.fechaVencimiento = ''
+                this.cronogramaData = null
+                this.cabecera.cronograma = null
+            }
         }
     },
     computed: {
-        totalDetalle() {
-            return (this.lineas || []).reduce((acc, it) => acc + Number(it.totalLinea || 0), 0)
-        },
         totalDetalle() {
             return (this.lineas || []).reduce((acc, it) => acc + Number(it.totalLinea || 0), 0)
         },
@@ -312,13 +347,44 @@ export default {
                 ...c,
                 display: `${(c.nombre || '').trim()} — ${(c.tipodoc || 'SIN DOCUMENTO')} ${c.id || ''}`
             }));
+        },
+        planExistenteFormateado() {
+            const cronograma = this.cabecera.cronograma
+            if (!cronograma) return null
+            if (cronograma && typeof cronograma === 'object' && !Array.isArray(cronograma)) {
+                return cronograma
+            }
+            if (Array.isArray(cronograma)) {
+                return { cuotas: cronograma }
+            }
+            return null
         }
     },
     created() {
- this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
+        this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         if (this.internalOpen) this._cargarDesdeProps()
+        if (this.cabecera.fecha_vencimiento) {
+            this.fechaVencimiento = this.cabecera.fecha_vencimiento
+        } else {
+            this.fechaVencimiento = moment().add(7, 'days').format('YYYY-MM-DD')
+        }
     },
     methods: {
+        abrirCronograma() {
+            if (this.cabecera.condicion_pago !== 'CREDITO') return
+            this.dialogoCronograma = true
+        },
+
+        guarda_cronograma(cronograma) {
+            this.cronogramaData = cronograma
+            this.cabecera.cronograma = cronograma.cuotas || cronograma
+            if (cronograma.fecha_ultima_cuota) {
+                this.fechaVencimiento = cronograma.fecha_ultima_cuota
+                this.cabecera.fecha_vencimiento = cronograma.fecha_ultima_cuota
+            }
+            this.dialogoCronograma = false
+        },
+
         editaProducto(val) {
             console.log(val)
             this.item_selecto = {
@@ -390,7 +456,7 @@ export default {
             const descUnit = Math.max(0, Number(it.preciodescuento || 0))
             const esGratuita = String(it.operacion || '').toUpperCase() === 'GRATUITA'
             it.cantidad = cant
-            it.totalLinea = esGratuita ? 0 : Math.max(0, cant * (precio - descUnit))
+            it.totalLinea = esGratuita ? 0 : this.fix2(Math.max(0, cant * (precio - descUnit)))
         },
         eliminar(idx) {
             this.lineas.splice(idx, 1)
@@ -450,7 +516,7 @@ export default {
                 const precio = Number(val.precio || 0)
                 const descUnit = Number(val.preciodescuento || 0)
                 const esGratuita = String(val.operacion || '').toUpperCase() === 'GRATUITA'
-                const total = esGratuita ? 0 : Math.max(0, cant * (precio - descUnit))
+                const total = esGratuita ? 0 : this.fix2(Math.max(0, cant * (precio - descUnit)))
 
                 this.lineas.push({
                     uuid: (val.uuid || '').toString() || `${val.id}-${Date.now()}`,
@@ -500,8 +566,8 @@ export default {
                 const precio = Math.max(0, Number(it.precio || 0));
                 const desc = Math.max(0, Number(it.preciodescuento || 0));
                 const esGrat = String(it.operacion || '').toUpperCase() === 'GRATUITA';
-                const totalLinea = esGrat ? 0 : Math.max(0, cant * (precio - desc));
-                return { ...it, cantidad: cant, precio, preciodescuento: desc, totalLinea: totalLinea };
+                const totalLinea = esGrat ? 0 : this.fix2(Math.max(0, cant * (precio - desc)));
+                return { ...it, cantidad: cant, precio, preciodescuento: desc, totalLinea };
             });
         },
         async emitirGuardar() {
@@ -514,8 +580,21 @@ export default {
                 const subtotal = detalleNorm.reduce((a, it) => a + Number(it.totalLinea || 0), 0);
                 const total = subtotal; // ajusta si aplicas IGV/desc. globales
                 const total_items = detalleNorm.length;
-
-                // 3) Cabecera completa: clona y actualiza SOLO los campos necesarios
+                let cronogramaCabecera = this.cabecera.cronograma || null;
+                if (this.cabecera.condicion_pago === 'CREDITO') {
+                    if (this.cronogramaData && Array.isArray(this.cronogramaData.cuotas) && this.cronogramaData.cuotas.length > 0) {
+                        cronogramaCabecera = this.cronogramaData.cuotas;
+                    } else if (Array.isArray(this.cabecera.cronograma) && this.cabecera.cronograma.length > 0) {
+                        cronogramaCabecera = this.cabecera.cronograma;
+                    } else {
+                        cronogramaCabecera = [{
+                            numero: '001',
+                            vencimiento: this.fechaVencimiento || moment().add(7, 'days').format('YYYY-MM-DD'),
+                            importe: this.fix2(total),
+                            estado: 'pendiente'
+                        }];
+                    }
+                }
                 const cabeceraFull = {
                     ...this.cabecera,
                     subtotal: this.fix2(subtotal),
@@ -524,13 +603,13 @@ export default {
                     total_items,
                     editado: true,
                     updated_at: Date.now(),
+                    cronograma: cronogramaCabecera,
+                    fecha_vencimiento: this.cabecera.condicion_pago === 'CREDITO' ? this.fechaVencimiento : null,
                 };
-
-                // 4) Payload completo (cabecera completa + detalle normalizado)
                 const payload = {
                     cabecera: cabeceraFull,
                     detalle: detalleNorm,
-                    detalle_original: this.detalle, // <<—— agrega esto
+                    detalle_original: this.detalle,
                     control_stock: true
                 };
 

@@ -134,12 +134,16 @@ export default {
       this.dialogoNuevo = true
     },
     async grabar() {
+      if (!this.nombre || this.nombre.trim() === '') {
+        alert("DEBE INGRESAR UN NOMBRE")
+        return
+      }
       store.commit("dialogoprogress")
       if (this.editar) {
         await this.modificar()
       } else {
         var array = ({
-          nombre: this.nombre,
+          nombre: this.nombre.trim(),
         })
         await nuevoCategoria(this.tipo,array)
       }
