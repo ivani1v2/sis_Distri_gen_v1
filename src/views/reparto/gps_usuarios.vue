@@ -155,6 +155,7 @@ export default {
             infoUsuarioPos: null,
             usuarioSeleccionado: null,
             mapLoaded: false,
+            cargaInicial: true,
 
             infoOptions: {
                 disableAutoPan: true,
@@ -260,7 +261,11 @@ export default {
                         }
                     })
                     this.usuariosUbicados = usuarios
-                    this.recalcularCentro()
+                                        
+                    if (this.cargaInicial && usuarios.length > 0) {
+                        this.recalcularCentro()
+                        this.cargaInicial = false
+                    }
                 })
         },
 
@@ -304,7 +309,6 @@ export default {
             return Number.isFinite(a) && Number.isFinite(b) && (Math.abs(a) > 0.0001 || Math.abs(b) > 0.0001)
         },
 
-        // icono del marcador según índice
         iconoPorIndex(idx = 0) {
             const url = this.iconPalette[idx % this.iconPalette.length]
             if (!this.google || !window.google) {
