@@ -5,7 +5,7 @@
             <v-toolbar flat color="black" dark dense>
                 <v-btn icon @click="cerrar"><v-icon>mdi-close</v-icon></v-btn>
                 <v-spacer />
-                <span class="title font-weight-bold">S/ {{ number2(totalDetalle) }}</span>
+                <span class="title font-weight-bold">{{moneda}} {{ number2(totalDetalle) }}</span>
                 <v-spacer />
                 <v-btn color="success" icon @click="emitirGuardar"><v-icon>mdi-content-save</v-icon></v-btn>
             </v-toolbar>
@@ -53,78 +53,83 @@
                         </v-btn>
                     </v-col>
                 </v-row>
-            </v-card-text>
-            <v-card class="pa-2 mt-n6">
-                <v-simple-table class="elevation-0" dense>
-                    <!-- Sin encabezado: usamos tarjetas -->
-                    <thead class="d-none">
-                        <tr>
-                            <th>Ítems</th>
-                        </tr>
-                    </thead>
+            </v-card-text>   <v-card class="mt-5">
+                    <div class="tabla-scroll">
+                        <v-simple-table class="elevation-0" dense>
+                            <!-- Sin encabezado: usamos tarjetas -->
+                            <thead class="d-none">
+                                <tr>
+                                    <th>Ítems</th>
+                                </tr>
+                            </thead>
 
-                    <tbody>
-                        <tr v-for="item in lineas" :key="item.uuid || item.id" @click.prevent="editaProducto(item)">
-                            <td class="pa-0 mt-n1 mb-n1">
-                                <v-card class="ma-1 pa-2 " outlined :elevation="0" ripple>
-                                    <div class="d-flex align-center mt-n2 mb-n2">
-                                        <!-- Contenido -->
-                                        <div class="flex-grow-1 mr-2">
-                                            <div class="text-caption grey--text text--darken-1">
-                                                <!-- Precio + chips -->
-                                                <span>
-                                                    Precio: {{ moneda }}
-                                                    {{ item.operacion === 'GRATUITA' ? '0.00' :
-                                                        redondear(item.precio) }}
-                                                </span>
-                                                <v-chip v-if="Number(item.preciodescuento) > 0" x-small class="ml-1"
-                                                    color="deep-orange" text-color="white" label>
-                                                    −{{ moneda }} {{ redondear(item.preciodescuento) }}
-                                                </v-chip>
-                                                <v-chip v-if="item.medida" x-small class="ml-1" label>
-                                                    {{ item.medida }}
-                                                </v-chip>
-                                                <v-chip v-if="item.operacion === 'GRATUITA'" x-small class="ml-1"
-                                                    color="pink" text-color="white" label>
-                                                    Gratuita
-                                                </v-chip>
+                            <tbody>
+                                <tr v-for="item in lineas" :key="item.uuid || item.id"
+                                    @click.prevent="editaProducto(item)">
+                                    <td class="pa-0 mt-n1 mb-n1">
+                                        <v-card class="ma-1 pa-2 " outlined :elevation="0" ripple>
+                                            <div class="d-flex align-center mt-n2 mb-n2">
+                                                <!-- Contenido -->
+                                                <div class="flex-grow-1 mr-2">
+                                                    <div class="text-caption grey--text text--darken-1">
+                                                        <!-- Precio + chips -->
+                                                        <span>
+                                                            Precio: {{ moneda }}
+                                                            {{ redondear(item.precio) }}
+                                                        </span>
+                                                        <v-chip v-if="Number(item.preciodescuento) > 0" x-small
+                                                            class="ml-1" color="deep-orange" text-color="white" label>
+                                                            −{{ moneda }} {{ redondear(item.preciodescuento) }}
+                                                        </v-chip>
+                                                        <v-chip v-if="Number(item.precio_base) !== Number(item.precio)"
+                                                            x-small class="ml-1" color="deep-orange" text-color="white"
+                                                            label>
+                                                            {{ moneda }} {{ redondear(item.precio_base) }}
+                                                        </v-chip>
+                                                        <v-chip v-if="item.medida" x-small class="ml-1" label>
+                                                            {{ item.medida }}
+                                                        </v-chip>
+                                                        <v-chip v-if="item.operacion === 'GRATUITA'" x-small
+                                                            class="ml-1" color="pink" text-color="white" label>
+                                                            Gratuita
+                                                        </v-chip>
+                                                    </div>
+
+                                                    <div class="mt-1 text-subtitle-2 text-truncate"
+                                                        style="max-width: 70vw;">
+                                                        <span class="font-weight-bold red--text">{{
+                                                            Number(item.cantidad)
+                                                        }}×</span>
+                                                        {{ item.nombre }}
+                                                    </div>
+                                                </div>
+
+                                                <!-- Total -->
+                                                <div class="text-right mr-1">
+                                                    <div class="subtitle-2 font-weight-bold">
+                                                        {{ moneda }}
+                                                        {{ item.totalLinea
+                                                        }}
+                                                    </div>
+                                                    <div class="caption grey--text">Total</div>
+                                                </div>
                                             </div>
+                                        </v-card>
+                                    </td>
+                                </tr>
 
-                                            <div class="mt-1 text-subtitle-2 text-truncate" style="max-width: 70vw;">
-                                                <span class="font-weight-bold red--text">{{
-                                                    Number(item.cantidad)
-                                                    }}×</span>
-                                                {{ item.nombre }}
-                                            </div>
-                                        </div>
+                                <!-- Vacío -->
+                                <tr v-if="!lineas || lineas.length === 0">
+                                    <td class="py-6 text-center grey--text">
+                                        No hay productos en la lista
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </v-simple-table>
+                    </div>
 
-                                        <!-- Total -->
-                                        <div class="text-right mr-1">
-                                            <div class="subtitle-2 font-weight-bold">
-                                                {{ moneda }}
-                                                {{
-                                                    item.operacion === 'GRATUITA'
-                                                        ? '0.00'
-                                                        : redondear((Number(item.precio) * Number(item.cantidad)) -
-                                                            Number(item.preciodescuento || 0))
-                                                }}
-                                            </div>
-                                            <div class="caption grey--text">Total</div>
-                                        </div>
-                                    </div>
-                                </v-card>
-                            </td>
-                        </tr>
-
-                        <!-- Vacío -->
-                        <tr v-if="!lineas || lineas.length === 0">
-                            <td class="py-6 text-center grey--text">
-                                No hay productos en la lista
-                            </td>
-                        </tr>
-                    </tbody>
-                </v-simple-table>
-            </v-card>
+                </v-card>
+          
         </v-card>
         <!-- Componente edita_producto -->
         <edita_producto 
@@ -310,11 +315,12 @@ export default {
         }
     },
     created() {
-
+ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         if (this.internalOpen) this._cargarDesdeProps()
     },
     methods: {
         editaProducto(val) {
+            console.log(val)
             this.item_selecto = {
                 ...val,
                 precio_base: Number(val.precio_base || val.precio || 0),
@@ -453,6 +459,7 @@ export default {
                     medida: medidaLinea,
                     cantidad: cant,
                     precio,
+                    precio_base: precio,
                     preciodescuento: descUnit,
                     operacion: val.operacion,
                     factor: val.factor,
