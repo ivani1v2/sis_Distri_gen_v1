@@ -95,12 +95,12 @@
                                     <div class="caption grey--text">{{ it.id }} ({{ it.operacion }})</div>
                                 </td>
                                 <td>{{ it.medida }}</td>
-                                <td class="text-right">{{ moneda }} {{ fmtDec(it.costo_nuevo) }}</td>
+                                <td class="text-right">{{ monedaSimbolo }} {{ fmtDec(it.costo_nuevo) }}</td>
                                 <td class="text-center">{{ it.cantidad }}</td>
                                 <td class="text-right font-weight-bold">
                                     <span v-if="it.operacion === 'GRATUITA'"
                                         class="caption orange--text">GRATUITO</span>
-                                    <span v-else>{{ moneda }} {{ fmtDec(it.cantidad * it.costo_nuevo) }}</span>
+                                    <span v-else>{{ monedaSimbolo }} {{ fmtDec(it.cantidad * it.costo_nuevo) }}</span>
                                 </td>
                             </tr>
                         </tbody>
@@ -111,15 +111,15 @@
                     <v-col cols="6"></v-col>
                     <v-col cols="6" class="text-right">
                         <v-divider></v-divider>
-                        <h5 class="mt-1"> Op. Gravada (Base): <span class="red--text">{{ moneda }} {{
+                        <h5 class="mt-1"> Op. Gravada (Base): <span class="red--text">{{ monedaSimbolo }} {{
                                 totales.baseGravada }}</span></h5>
-                        <h5> Op. Exonerada: <span class="red--text">{{ moneda }} {{ totales.exonerada }}</span></h5>
-                        <h5> Op. Gratuita (Base): <span class="red--text">{{ moneda }} {{ totales.gratuita }}</span>
+                        <h5> Op. Exonerada: <span class="red--text">{{ monedaSimbolo }} {{ totales.exonerada }}</span></h5>
+                        <h5> Op. Gratuita (Base): <span class="red--text">{{ monedaSimbolo }} {{ totales.gratuita }}</span>
                         </h5>
-                        <h5 class="font-weight-bold"> IGV {{ igv }}%: <span class="red--text">{{ moneda }} {{
+                        <h5 class="font-weight-bold"> IGV {{ igv }}%: <span class="red--text">{{ monedaSimbolo }} {{
                                 totales.igv }}</span></h5>
                         <v-divider class="my-1"></v-divider>
-                        <h4 class="text-h5 font-weight-black success--text"> TOTAL: <span class="red--text">{{ moneda }}
+                        <h4 class="text-h5 font-weight-black success--text"> TOTAL: <span class="red--text">{{ monedaSimbolo }}
                                 {{
                                 totales.total }}</span></h4>
                     </v-col>
@@ -360,6 +360,9 @@ export default {
                 total: this.fmtDec(t.total),
             }
         },
+        monedaSimbolo(){
+            return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
+        }
     },
 
     watch: {

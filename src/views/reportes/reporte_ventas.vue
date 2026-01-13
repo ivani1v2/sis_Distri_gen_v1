@@ -105,7 +105,7 @@
                         <td class="text-right">
                             <span v-if="criterioAgrupacion !== 'Vendedor' && criterioAgrupacion !== 'Proveedor'">{{ totalCantidad }}</span>
                         </td>
-                        <td class="text-right">S/ {{ totalVentas }}</td>
+                        <td class="text-right">{{ monedaSimbolo }} {{ totalVentas }}</td>
                     </tr>
                 </template>
 
@@ -144,7 +144,7 @@
                                 <v-list-item-title class="font-weight-bold">Total General</v-list-item-title>
                             </v-list-item-content>
                             <v-list-item-action>
-                                <span class="text-h6 font-weight-black primary--text">S/ {{ totalVentas }}</span>
+                                <span class="text-h6 font-weight-black primary--text">{{ monedaSimbolo }} {{ totalVentas }}</span>
                             </v-list-item-action>
                         </v-list-item>
                          <v-list-item v-if="criterioAgrupacion === 'Vendedor'">
@@ -179,7 +179,7 @@
                             
                             <v-list-item-action>
                                 <span class="text-h6 font-weight-bold">{{ item.total }}</span>
-                                <span class="caption grey--text mt-n1">S/</span>
+                                <span class="caption grey--text mt-n1">{{ monedaSimbolo }}</span>
                             </v-list-item-action>
                         </v-list-item>
                         
@@ -291,6 +291,9 @@ export default {
                 ...producto,
                 displayProducto: `${producto.id} - ${producto.nombre}`
             }));
+        },
+        monedaSimbolo(){
+            return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/';
         }
     },
     created() {
@@ -516,7 +519,7 @@ export default {
                             { text: "Vendedor", value: "vendedor" },
                             { text: "Cobertura", value: "puntos_cobertura", align: "right" },
                             { text: "Cantidad", value: "cantidad", align: "right" },
-                            { text: "Total (S/)", value: "total", align: "right" }
+                            { text: `Total (${this.monedaSimbolo})`, value: "total", align: "right" }
                         ];
                         break;
 
@@ -531,7 +534,7 @@ export default {
                         this.headers = [
                             { text: "Cliente", value: "cliente" },
                             { text: "Cantidad", value: "cantidad", align: "right" },
-                            { text: "Total (S/)", value: "total", align: "right" },
+                            { text: `Total (${this.monedaSimbolo})`, value: "total", align: "right" },
                         ];
                         break;
 
@@ -546,7 +549,7 @@ export default {
                         this.headers = [
                             { text: "Producto", value: "producto" },
                             { text: "Cantidad", value: "cantidad", align: "right" },
-                            { text: "Total (S/)", value: "total", align: "right" }
+                            { text: `Total (${this.monedaSimbolo})`, value: "total", align: "right" }
                         ];
                         break;
 
@@ -561,7 +564,7 @@ export default {
                         this.headers = [
                             { text: "Marca", value: "marca" },
                             { text: "Cantidad", value: "cantidad", align: "right" },
-                            { text: "Total (S/)", value: "total", align: "right" }
+                            { text: `Total (${this.monedaSimbolo})`, value: "total", align: "right" }
                         ];
                         break;
 
@@ -576,7 +579,7 @@ export default {
                         this.headers = [
                             { text: "Categoría", value: "categoria" },
                             { text: "Cantidad", value: "cantidad", align: "right" },
-                            { text: "Total (S/)", value: "total", align: "right" }
+                            { text: `Total (${this.monedaSimbolo})`, value: "total", align: "right" }
                         ];
                         break;
 
@@ -596,7 +599,7 @@ export default {
                         this.headers = [
                             { text: "Día", value: "dia" },
                             { text: "Cantidad", value: "cantidad", align: "right" },
-                            { text: "Total (S/)", value: "total", align: "right" },
+                            { text: `Total (${this.monedaSimbolo})`, value: "total", align: "right" },
                         ];
                         break;
 
@@ -613,7 +616,7 @@ export default {
                             { text: "Fecha", value: "fecha" },
                             { text: "Día", value: "dia" },
                             { text: "Cantidad", value: "cantidad", align: "right" },
-                            { text: "Total (S/)", value: "total", align: "right" },
+                            { text: `Total (${this.monedaSimbolo})`, value: "total", align: "right" },
                         ];
                         break;
 
@@ -625,7 +628,7 @@ export default {
                             { text: "Vendedor", value: "vendedor" },
                             { text: "Producto", value: "producto" },
                             { text: "Cantidad", value: "cantidad", align: "right" },
-                            { text: "Total (S/)", value: "total", align: "right" }
+                            { text: `Total (${this.monedaSimbolo})`, value: "total", align: "right" }
                         ];
                         break;
                 }

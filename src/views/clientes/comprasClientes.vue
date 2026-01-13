@@ -35,7 +35,7 @@
                                         <div>
                                             <div class="caption grey--text">Total general</div>
                                             <div class="subtitle-2 font-weight-bold primary--text">
-                                                S/. {{ resumenVentas.totalGeneral }}
+                                                {{monedaSimbolo}} {{ resumenVentas.totalGeneral }}
                                             </div>
                                         </div>
                                     </div>
@@ -52,7 +52,7 @@
                                         <div>
                                             <div class="caption grey--text">Aprobados</div>
                                             <div class="subtitle-2 font-weight-bold green--text text--darken-2">
-                                                S/. {{ resumenVentas.totalAprobado }}
+                                                {{monedaSimbolo}} {{ resumenVentas.totalAprobado }}
                                             </div>
                                         </div>
                                     </div>
@@ -69,7 +69,7 @@
                                         <div>
                                             <div class="caption grey--text">Pendientes</div>
                                             <div class="subtitle-2 font-weight-bold orange--text text--darken-2">
-                                                S/. {{ resumenVentas.totalPendiente }}
+                                                {{monedaSimbolo}} {{ resumenVentas.totalPendiente }}
                                             </div>
                                         </div>
                                     </div>
@@ -86,7 +86,7 @@
                                         <div>
                                             <div class="caption grey--text">Anulados</div>
                                             <div class="subtitle-2 font-weight-bold red--text text--darken-2">
-                                                S/. {{ resumenVentas.totalAnulado }}
+                                                {{monedaSimbolo}} {{ resumenVentas.totalAnulado }}
                                             </div>
                                         </div>
                                     </div>
@@ -338,6 +338,9 @@ export default {
                 totalAnulado: f(totalAnulado),
             };
         },
+        monedaSimbolo() {
+            return this.$store.state.moneda.find(m => m.codigo == this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/ ';
+        }
     },
 
     watch: {

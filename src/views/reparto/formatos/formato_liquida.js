@@ -262,14 +262,12 @@ export const pdfGenera = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "") => {
         });
     }
 
-    // ======================
-    // 7) GUARDAR PDF
-    // ======================
     doc.save(`liquidacion_reparto_${grupo || "sin_grupo"}.pdf`);
 };
 
 export const pdfGeneraDetalle = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "") => {
     const doc = new jsPDF();
+    
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
     doc.text(`Detalle de Reparto ${grupo}`, 14, 18);
@@ -290,6 +288,7 @@ export const pdfGeneraDetalle = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "
         doc.save(`detalle_reparto_${grupo || "sin_grupo"}.pdf`);
         return;
     }
+
     const resumenPorMoneda = {};
     let totalRechazadoMercGlobal = 0;
 
@@ -344,6 +343,7 @@ export const pdfGeneraDetalle = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "
     });
 
     let y = 32;
+    
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
     doc.text("Resumen general", 14, y);
@@ -363,7 +363,6 @@ export const pdfGeneraDetalle = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "
 
         bodyResumen.push(
             ["Total pedido", `${simbolo} ${res.total.toFixed(2)}`, res.pedidos],
-            ["Contado", `${simbolo} ${res.contado.toFixed(2)}`, ""],
             ["Crédito", `${simbolo} ${res.credito.toFixed(2)}`, ""],
             ["Entregado", `${simbolo} ${res.entregado.toFixed(2)}`, res.docsEntregado],
             ["Rechazado (doc)", `${simbolo} ${res.rechazado.toFixed(2)}`, res.docsRechazado],
@@ -378,14 +377,16 @@ export const pdfGeneraDetalle = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "
         theme: "grid",
         styles: { fontSize: 8 },
         headStyles: { fillColor: [52, 73, 94] },
+        tableWidth: 'auto',
+        margin: { left: 14, right: 14 },
         columnStyles: {
-            0: { cellWidth: 50 },
-            1: { cellWidth: 40 },
-            2: { cellWidth: 25 }
+            0: { cellWidth: 'auto' },
+            1: { cellWidth: 'auto' },
+            2: { cellWidth: 'auto' }
         }
     });
 
-    let finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 6 : y + 40;
+    let finalY = doc.lastAutoTable.finalY + 6;
 
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
@@ -399,35 +400,45 @@ export const pdfGeneraDetalle = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "
         const totalPedido = cab.total != null ? Number(cab.total) : Number(ent.total_pedido || 0);
         const direccion = cab.direccion || cab.cliente_direccion || "";
         const codVendedor = cab.cod_vendedor || cab.vendedor || cab.vend_code || "";
+        const observacion = cab.observacion || ent.observacion || "";
 
         return [
             num,
             codVendedor,
             (cab.cliente || "").substring(0, 30),
-            direccion.substring(0, 35),
+            { 
+                content: direccion, 
+                styles: { fontSize: 6 }
+            },
             `${monedaSimbolo} ${(isNaN(totalPedido) ? 0 : totalPedido).toFixed(2)}`,
-            ""
+            observacion
         ];
     });
 
     doc.autoTable({
         startY: finalY + 3,
-        head: [["Comprobante", "Vendedor", "Cliente", "Dirección", "Total Pedido", "Observación"]],
+        head: [["Comprobante", "Vend", "Cliente", "Dirección", "Total", "Observación"]],
         body: bodyDetalle,
         theme: "grid",
-        styles: { fontSize: 7, cellPadding: 2 },
+        styles: { 
+            fontSize: 7, 
+            cellPadding: 2,
+            overflow: 'linebreak'
+        },
         headStyles: { fillColor: [39, 174, 96] },
+        tableWidth: 182,
+        margin: { left: 14 },
         columnStyles: {
             0: { cellWidth: 22 },
-            1: { cellWidth: 15 },
-            2: { cellWidth: 40 },
-            3: { cellWidth: 40 },
+            1: { cellWidth: 12 },
+            2: { cellWidth: 28 },
+            3: { cellWidth: 30, fontSize: 6 },
             4: { cellWidth: 22 },
-            5: { cellWidth: 40 }
+            5: { cellWidth: 68 }
         }
     });
 
-    finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : finalY + 20;
+    finalY = doc.lastAutoTable.finalY + 6;
 
     const bodyRechazos = [];
     let totalItemsRechazados = 0;
@@ -454,7 +465,6 @@ export const pdfGeneraDetalle = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "
     });
 
     if (bodyRechazos.length > 0) {
-        finalY += 6;
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.text(
@@ -468,10 +478,25 @@ export const pdfGeneraDetalle = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "
             head: [["Comprobante", "Producto", "Medida", "Cant", "Precio", "Total"]],
             body: bodyRechazos,
             theme: "grid",
-            styles: { fontSize: 7 },
-            headStyles: { fillColor: [192, 57, 43] }
+            styles: { 
+                fontSize: 7,
+                overflow: 'linebreak'
+            },
+            headStyles: { fillColor: [192, 57, 43] },
+            // ANCHO COMPLETO
+            tableWidth: 'auto',
+            margin: { left: 14, right: 14 },
+            columnStyles: {
+                0: { cellWidth: 'auto' },
+                1: { cellWidth: 'auto' },
+                2: { cellWidth: 'auto' },
+                3: { cellWidth: 'auto' },
+                4: { cellWidth: 'auto' },
+                5: { cellWidth: 'auto' }
+            }
         });
     }
 
+    // Guardar PDF
     doc.save(`detalle_reparto_${grupo || "sin_grupo"}.pdf`);
 };

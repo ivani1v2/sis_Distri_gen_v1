@@ -37,7 +37,7 @@
       <v-card-text class="py-4">
         <v-row align="center">
           <h4 class="text-h6">
-            Total Pendiente: <span class="red--text text--darken-3">S/.{{ suma_total().toFixed(2) }}</span>
+            Total Pendiente: <span class="red--text text--darken-3">{{monedaSimbolo}} {{ suma_total().toFixed(2) }}</span>
           </h4>
         </v-row>
       </v-card-text>
@@ -72,15 +72,15 @@
         </template>
 
         <template v-slot:item.monto_total="{ item }">
-          <span class="font-weight-bold">{{ item.moneda || 'S/' }}{{ redondear(item.monto_total) }}</span>
+          <span class="font-weight-bold">{{ monedaSimbolo }} {{ redondear(item.monto_total) }}</span>
         </template>
 
         <template v-slot:item.monto_pendiente="{ item }">
-          <span class="red--text font-weight-bold">{{ item.moneda || 'S/' }}{{ redondear(item.monto_pendiente) }}</span>
+          <span class="red--text font-weight-bold">{{ monedaSimbolo }} {{ redondear(item.monto_pendiente) }}</span>
         </template>
 
         <template v-slot:item.pagado="{ item }">
-          <span class="green--text font-weight-bold">{{ item.moneda || 'S/' }}{{ redondear(item.monto_total -
+          <span class="green--text font-weight-bold">{{ monedaSimbolo }}{{ redondear(item.monto_total -
             item.monto_pendiente) }}</span>
         </template>
 
@@ -129,16 +129,16 @@
                 <v-list-item-content>
                   <v-list-item-title class="font-weight-medium" v-text="item.nombre"></v-list-item-title>
                   <v-list-item-subtitle class="caption"
-                    v-text="`S/.${item.precio} x ${item.medida}`"></v-list-item-subtitle>
+                    v-text="`${monedaSimbolo}${item.precio} x ${item.medida}`"></v-list-item-subtitle>
                   <v-list-item-subtitle v-if="item.preciodescuento != 0" class="red--text caption font-weight-bold">
-                    Descuento (S/.{{ redondear(item.preciodescuento) }})
+                    Descuento ({{monedaSimbolo}}{{ redondear(item.preciodescuento) }})
                   </v-list-item-subtitle>
                 </v-list-item-content>
                 <v-list-item-action>
                   <v-chip color="blue-grey lighten-5" small>{{ item.cantidad }} Uds.</v-chip>
                 </v-list-item-action>
                 <v-list-item-action>
-                  <span class="font-weight-bold primary--text">S/.{{ redondear((item.precioedita * item.cantidad) -
+                  <span class="font-weight-bold primary--text">{{ monedaSimbolo }}{{ redondear((item.precioedita * item.cantidad) -
                     item.preciodescuento) }}</span>
                 </v-list-item-action>
               </v-list-item>
@@ -171,7 +171,7 @@
             </v-col>
           </v-row>
           <h4 class="mb-2">Cliente: <span class="blue-grey--text text--darken-2">{{ item_selecto.nombre }}</span></h4>
-          <h4 class="mb-4">Total Pendiente: <span class="red--text text--darken-2">S/.{{
+          <h4 class="mb-4">Total Pendiente: <span class="red--text text--darken-2">{{ monedaSimbolo }}{{
             redondear(item_selecto.monto_pendiente) }}</span></h4>
 
           <v-card outlined class="pa-2 mb-4">
@@ -216,7 +216,7 @@
                         {{ item.estado }}
                       </v-chip>
                     </td>
-                    <td class="font-weight-bold">{{ item_selecto.moneda || 'S/' }}{{ redondear(item.monto) }}</td>
+                    <td class="font-weight-bold">{{ monedaSimbolo }}{{ redondear(item.monto) }}</td>
                     <td>
                       <v-chip small color="grey lighten-4" class="font-weight-bold">
                         {{ conviertefecha(item.fecha_vence) }}
@@ -283,7 +283,7 @@
         <v-card-text class="pa-4">
           <h4>Modificado: {{ conviertefecha(detalle.fecha_modificacion) || 'N/A' }} </h4>
           <h4>Responsable: {{ detalle.vendedor || 'N/A' }} </h4>
-          <h4 v-if="detalle.amortizado != undefined">Monto Amortiza: S/.{{ redondear(detalle.amortizado) }} </h4>
+          <h4 v-if="detalle.amortizado != undefined">Monto Amortiza: {{ monedaSimbolo }}{{ redondear(detalle.amortizado) }} </h4>
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -421,6 +421,9 @@ export default {
       const totalCredito = parseFloat(this.item_selecto.monto_total) || 0
       return Math.abs(totalCredito - this.sumaCuotas) > 0.01
     },
+    monedaSimbolo() {
+      return this.$store.state.moneda.find(m => m.codigo == this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/ ';
+    }
 
   },
   watch: {
@@ -494,7 +497,7 @@ export default {
       console.log("Eliminar", item, index)
       if (!this.item_selecto || !Array.isArray(this.item_selecto.datos)) return
 
-      const confirmado = confirm(`¿Eliminar esta cuota de S/.${this.redondear(item.monto)}?`)
+      const confirmado = confirm(`¿Eliminar esta cuota de ${this.monedaSimbolo}${this.redondear(item.monto)}?`)
       if (!confirmado) return
 
       const datos = [...this.item_selecto.datos]

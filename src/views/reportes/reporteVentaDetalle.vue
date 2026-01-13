@@ -61,13 +61,13 @@
         <v-col cols="6" md="3">
           <v-card class="pa-3 kpi-card">
             <div class="caption">Total Venta</div>
-            <div class="headline">S/. {{ suma_venta }}</div>
+            <div class="headline">{{ monedaSimbolo }} {{ suma_venta }}</div>
           </v-card>
         </v-col>
         <v-col cols="6" md="3">
           <v-card class="pa-3 kpi-card">
             <div class="caption">Total Utilidad</div>
-            <div class="headline">S/. {{ suma_utilidad }}</div>
+            <div class="headline">{{ monedaSimbolo }} {{ suma_utilidad }}</div>
           </v-card>
         </v-col>
         <v-col cols="6" md="3">
@@ -91,14 +91,14 @@
             <v-chip class="ma-1" small color="green" text-color="white">
               GRAVADA: {{ resumenOperacion.gravada.productos }} prod / {{ resumenOperacion.gravada.unidades }} und —
               Venta:
-              S/. {{ format2(resumenOperacion.gravada.venta) }} — Utilidad: S/. {{
+              {{ monedaSimbolo }} {{ format2(resumenOperacion.gravada.venta) }} — Utilidad: {{ monedaSimbolo }} {{
                 format2(resumenOperacion.gravada.utilidad)
               }}
             </v-chip>
             <v-chip class="ma-1" small color="orange" text-color="white">
               GRATUITA: {{ resumenOperacion.gratuita.productos }} prod / {{ resumenOperacion.gratuita.unidades }} und —
               Venta:
-              S/. 0.00 — Costo: S/. {{ format2(resumenOperacion.gratuita.costo) }}
+              {{ monedaSimbolo }} 0.00 — Costo: {{ monedaSimbolo }} {{ format2(resumenOperacion.gratuita.costo) }}
             </v-chip>
             <v-chip class="ma-1" small outlined>
               Considerar costo catálogo: <strong>{{ costo_catalogo ? 'Sí' : 'No' }}</strong>
@@ -134,20 +134,20 @@
           </template>
 
           <template v-slot:item.costo="{ item }">
-            <span>S/. {{ format2(item.costo) }}</span>
+            <span>{{ monedaSimbolo }} {{ format2(item.costo) }}</span>
           </template>
 
           <template v-slot:item.precio_prom="{ item }">
-            <span>S/. {{ format2(item.precio_prom) }}</span>
+            <span>{{ monedaSimbolo }} {{ format2(item.precio_prom) }}</span>
           </template>
 
           <template v-slot:item.total="{ item }">
-            <span>S/. {{ format2(item.total) }}</span>
+            <span>{{ monedaSimbolo }} {{ format2(item.total) }}</span>
           </template>
 
           <template v-slot:item.utilidad="{ item }">
             <span :class="{ 'text--success': item.utilidad >= 0, 'red--text': item.utilidad < 0 }">
-              S/. {{ format2(item.utilidad) }}
+              {{ monedaSimbolo }} {{ format2(item.utilidad) }}
             </span>
           </template>
 
@@ -183,7 +183,7 @@
               <v-list-item-content>
                 <v-list-item-title class="d-flex justify-space-between">
                   <span>{{ i + 1 }}. {{ p.nombre }}</span>
-                  <span>S/. {{ format2(p.utilidad) }}</span>
+                  <span>{{ monedaSimbolo }} {{ format2(p.utilidad) }}</span>
                 </v-list-item-title>
               </v-list-item-content>
             </v-list-item>
@@ -389,6 +389,9 @@ export default {
     topMayorUtilidad() {
       return [...this.itemsFiltrados].sort((a, b) => (b.utilidad || 0) - (a.utilidad || 0)).slice(0, 5)
     },
+    monedaSimbolo() {
+      return this.$store.state.moneda.find( m => m.codigo == this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/ ';
+    }
   },
 
   methods: {

@@ -102,7 +102,7 @@
                             </td>
 
                             <td class="font-weight-bold">
-                                {{ item.moneda || 'S/.' }}{{ redondear(item.total) }}
+                                {{ monedaSimbolo }}{{ redondear(item.total) }}
                                 <div class="caption grey--text">{{ item.modo_pago }}</div>
                             </td>
 
@@ -381,7 +381,10 @@ export default {
     },
     computed: {
         listafiltrada() {
-            return this.desserts; // o aplica filtros locales
+            return this.desserts;
+        },
+        monedaSimbolo(){
+            return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         }
     },
     watch: {

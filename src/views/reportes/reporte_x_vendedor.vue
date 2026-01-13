@@ -31,7 +31,7 @@
 
                 <v-col cols="12" sm="6" class="text-right">
                     <v-chip v-if="!cargando" outlined>
-                        Total General: <strong class="ml-1">{{ moneda }} {{ totalGeneral }}</strong>
+                        Total General: <strong class="ml-1">{{ monedaSimbolo }} {{ totalGeneral }}</strong>
                     </v-chip>
                 </v-col>
             </v-row>
@@ -53,12 +53,12 @@
                 </template>
 
                 <template v-if="!agrupado" v-slot:item.precio="{ item }">
-                    {{ moneda }} {{ n2(item.precio) }}
+                    {{ monedaSimbolo }} {{ n2(item.precio) }}
                 </template>
 
                 <template v-if="!agrupado" v-slot:item.total="{ item }">
                     <span :class="item.esGratuita ? 'grey--text' : ''">
-                        {{ moneda }} {{ n2(item.total) }}
+                        {{ monedaSimbolo }} {{ n2(item.total) }}
                     </span>
                 </template>
 
@@ -67,7 +67,7 @@
                         <td :colspan="headersTabla.length - 1" class="text-right">
                             Total General:
                         </td>
-                        <td class="text-right">{{ moneda }} {{ totalGeneralVista }}</td>
+                        <td class="text-right">{{ monedaSimbolo }} {{ totalGeneralVista }}</td>
                     </tr>
                 </template>
             </v-data-table>
@@ -164,6 +164,9 @@ export default {
                 .map(x => ({ ...x, docs: x.docsSet.size })) // convertir Set a número
                 .sort((a, b) => b.total - a.total)
         },
+        monedaSimbolo(){
+            return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
+        }
     },
     methods: {
         n2(n) {

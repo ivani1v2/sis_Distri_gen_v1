@@ -29,7 +29,7 @@
                     <v-sheet class="pa-3 rounded-lg elevation-2 text-center" color="blue lighten-5">
                         <div class="caption font-weight-bold blue--text">TOTAL PEDIDO</div>
                         <div class="text-h6 font-weight-black blue--text text--darken-2">
-                            {{ moneda }} {{ totalPedido.toFixed(2) }}
+                            {{ monedaSimbolo }} {{ totalPedido.toFixed(2) }}
                         </div>
                     </v-sheet>
                 </v-col>
@@ -38,7 +38,7 @@
                     <v-sheet class="pa-3 rounded-lg elevation-2 text-center" color="green lighten-5">
                         <div class="caption font-weight-bold green--text text--darken-3">TOTAL COBRADO</div>
                         <div class="text-h6 font-weight-black green--text text--darken-4">
-                            {{ moneda }} {{ totalCobrado.toFixed(2) }}
+                            {{ monedaSimbolo }} {{ totalCobrado.toFixed(2) }}
                         </div>
                     </v-sheet>
                 </v-col>
@@ -47,7 +47,7 @@
                     <v-sheet class="pa-3 rounded-lg elevation-2 text-center" color="red lighten-5">
                         <div class="caption font-weight-bold red--text text--darken-2">VALOR RECHAZADO</div>
                         <div class="text-h6 font-weight-black red--text text--darken-4">
-                            {{ moneda }} {{ totalRechazado.toFixed(2) }}
+                            {{ monedaSimbolo }} {{ totalRechazado.toFixed(2) }}
                         </div>
                     </v-sheet>
                 </v-col>
@@ -69,7 +69,7 @@
             <v-row dense>
                 <v-col v-for="(m, key) in totalesPorPago" :key="key" cols="6" sm="4" md="3">
                     <v-chip outlined class="ma-1 font-weight-medium" color="primary" block>
-                        <span class="text-truncate">{{ key }}</span>: {{ moneda }} {{ m.toFixed(2) }}
+                        <span class="text-truncate">{{ key }}</span>: {{ monedaSimbolo }} {{ m.toFixed(2) }}
                     </v-chip>
                 </v-col>
             </v-row>
@@ -105,11 +105,11 @@
                     <v-data-table v-else :headers="headers" :items="rechazos" dense disable-pagination
                         mobile-breakpoint="1" hide-default-footer class="elevation-1">
                         <template v-slot:item.precio_unit="{ item }">
-                            {{ moneda }} {{ item.precio_unit.toFixed(2) }}
+                            {{ monedaSimbolo }} {{ item.precio_unit.toFixed(2) }}
                         </template>
                         <template v-slot:item.total_linea="{ item }">
                             <span class="font-weight-bold red--text">
-                                {{ moneda }} {{ item.total_linea.toFixed(2) }}
+                                {{ monedaSimbolo }} {{ item.total_linea.toFixed(2) }}
                             </span>
                         </template>
                     </v-data-table>
@@ -196,6 +196,9 @@ export default {
                 });
             });
             return tot;
+        },
+        monedaSimbolo() {
+            return this.$store.state.moneda.find( m => m.codigo == this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/ ';
         }
     },
     created() {

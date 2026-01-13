@@ -104,7 +104,7 @@
                             <th class="text-left">📅 Fecha Emision</th>
                             <th class="text-left">🟢 Estado Sunat</th>
                             <th class="text-left">📦 N° Pedidos</th>
-                            <th class="text-left">💰 Total (S/.)</th>
+                            <th class="text-left">💰 Total ({{ monedaSimbolo }})</th>
                             <th class="text-center">🛠️ Acciones</th>
                         </tr>
                     </thead>
@@ -122,7 +122,7 @@
                             <td class="text-caption">{{ pedido.resumen.total_pedidos }}</td>
 
                             <td class="text-caption font-weight-medium">
-                                S/.{{ number2(pedido.resumen.total_general) }}
+                                {{ monedaSimbolo }} {{ number2(pedido.resumen.total_general) }}
                             </td>
 
                             <td>
@@ -205,9 +205,9 @@
                     </div>
 
                     <div class="d-flex flex-column align-end">
-                        <div class="caption grey--text">💰 Total (S/.)</div>
+                        <div class="caption grey--text">💰 Total ({{ monedaSimbolo }})</div>
                         <div class="font-weight-bold text-subtitle-2 green--text text--darken-2">
-                            S/. {{ number2(pedido.resumen.total_general) }}
+                            {{ monedaSimbolo }} {{ number2(pedido.resumen.total_general) }}
                         </div>
                     </div>
                 </v-card-text>
@@ -406,6 +406,9 @@ export default {
         },
         isMobile() {
             return this.$vuetify.breakpoint.smAndDown;
+        },
+        monedaSimbolo() {
+            return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/';
         }
     },
 
@@ -414,7 +417,7 @@ export default {
         date2() { this.filtrar(); },
     },
     methods: {
-        reparto_transporte(data) {
+        reparto_transporte(data) {-
             this.$router.push({
                 path: "/reparto_transporte/" + data.grupo
             });
