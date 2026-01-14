@@ -29,7 +29,7 @@
         <v-card outlined class="pa-3 d-flex align-center justify-space-between">
           <div>
             <div class="caption grey--text text--darken-1">Suma total de costo</div>
-            <div class="text-h6">S/ {{ formatMoney(kpi.sumaTotalCosto) }}</div>
+            <div class="text-h6">{{ monedaSimbolo }} {{ formatMoney(kpi.sumaTotalCosto) }}</div>
           </div>
           <v-icon large>mdi-cash-multiple</v-icon>
         </v-card>
@@ -39,16 +39,15 @@
         <v-card outlined class="pa-3 d-flex align-center justify-space-between">
           <div>
             <div class="caption grey--text text--darken-1">Suma total de venta</div>
-            <div class="text-h6">S/ {{ formatMoney(kpi.sumaTotalVenta) }}</div>
+            <div class="text-h6">{{ monedaSimbolo }} {{ formatMoney(kpi.sumaTotalVenta) }}</div>
           </div>
           <v-icon large>mdi-sale</v-icon>
         </v-card>
       </v-col>
     </v-row>
 
-    <!-- Tabla -->
     <v-card class="pa-2">
-      <v-data-table dense class="elevation-1" :headers="headers" :items="listafiltrada" :items-per-page="50"
+      <v-data-table dense class="elevation-1" :headers="headersConMoneda" :items="listafiltrada" :items-per-page="50"
         mobile-breakpoint="1">
         <template v-slot:top>
           <v-toolbar flat dense>
@@ -67,17 +66,16 @@
           </v-toolbar>
         </template>
 
-        <!-- Fila personalizada -->
         <template v-slot:item="{ item }">
           <tr>
             <td style="font-size:80%;">{{ item.id }}</td>
             <td style="font-size:80%;">{{ item.categoria }}</td>
             <td style="font-size:80%;">{{ item.nombre }}</td>
-            <td style="font-size:80%;">S/ {{ formatMoney(item.costo) }}</td>
+            <td style="font-size:80%;">{{ monedaSimbolo }} {{ formatMoney(item.costo) }}</td>
             <td style="font-size:80%;">{{ convierte_stock(item.stock, item.factor) }}</td>
-            <td style="font-size:80%;">S/ {{ formatMoney(item.precio) }}</td>
-            <td style="font-size:80%;">S/ {{ formatMoney(calcTotalCosto(item)) }}</td>
-            <td style="font-size:80%;">S/ {{ formatMoney(calcTotalVenta(item)) }}</td>
+            <td style="font-size:80%;">{{ monedaSimbolo }} {{ formatMoney(item.precio) }}</td>
+            <td style="font-size:80%;">{{ monedaSimbolo }} {{ formatMoney(calcTotalCosto(item)) }}</td>
+            <td style="font-size:80%;">{{ monedaSimbolo }} {{ formatMoney(calcTotalVenta(item)) }}</td>
           </tr>
         </template>
 
@@ -92,7 +90,6 @@
 </template>
 
 <script>
-// Vue 2 + Vuetify 2
 import { allCategorias } from '../../db'
 import store from '@/store/index'
 
@@ -102,32 +99,32 @@ export default {
       { text: 'ID', value: 'id', align: 'start' },
       { text: 'Categoría', value: 'categoria' },
       { text: 'Nombre', value: 'nombre' },
-      { text: 'Costo (S/)', value: 'costo' },
+      { text: 'Costo', value: 'costo' },
       { text: 'Stock', value: 'stock' },
-      { text: 'Precio V (S/)', value: 'precio' },
-      { text: 'Total Costo (S/)', value: 'total_costo' },
-      { text: 'Total Venta (S/)', value: 'total_venta' },
+      { text: 'Precio V', value: 'precio' },
+      { text: 'Total Costo', value: 'total_costo' },
+      { text: 'Total Venta', value: 'total_venta' },
     ],
     filtro_categoria: 'TODOS',
     arraycategoria_f: ['TODOS'],
     buscar: '',
   }),
 
-  async created() {
-    try {
-      const snapshot = await allCategorias('categorias').once('value')
-      const setCats = new Set(this.arraycategoria_f)
-      snapshot.forEach((it) => {
-        const nom = (it.val() && it.val().nombre) ? String(it.val().nombre) : ''
-        if (nom) setCats.add(nom)
-      })
-      this.arraycategoria_f = Array.from(setCats)
-    } catch (e) {
-      console.error('Error cargando categorías', e)
-    }
-  },
-
   computed: {
+    headersConMoneda() {
+      const simbolo = this.monedaSimbolo;
+      return [
+        { text: 'ID', value: 'id', align: 'start' },
+        { text: 'Categoría', value: 'categoria' },
+        { text: 'Nombre', value: 'nombre' },
+        { text: `Costo (${simbolo})`, value: 'costo' },
+        { text: 'Stock', value: 'stock' },
+        { text: `Precio V (${simbolo})`, value: 'precio' },
+        { text: `Total Costo (${simbolo})`, value: 'total_costo' },
+        { text: `Total Venta (${simbolo})`, value: 'total_venta' },
+      ];
+    },
+
     productosBase() {
       const arr = Array.isArray(store.state.productos) ? store.state.productos : []
       return arr
@@ -167,10 +164,31 @@ export default {
 
       return res
     },
+
+    monedaSimbolo() {
+      const moneda = this.$store.state.moneda || []
+      const codigoDefecto = this.$store.state.configuracion?.moneda_defecto
+      const monedaEncontrada = moneda.find(m => m.codigo == codigoDefecto)
+      return monedaEncontrada?.simbolo || 'S/ '
+    }
+  },
+
+  async created() {
+    try {
+      const snapshot = await allCategorias('categorias').once('value')
+      const setCats = new Set(this.arraycategoria_f) 
+      snapshot.forEach((it) => {
+        const nom = (it.val() && it.val().nombre) ? String(it.val().nombre) : ''
+        if (nom) setCats.add(nom)
+      })
+      this.arraycategoria_f = Array.from(setCats)
+      console.log('Categorías cargadas:', this.arraycategoria_f)
+    } catch (e) {
+      console.error('Error cargando categorías', e)
+    }
   },
 
   methods: {
-    // ——— Utilidades numéricas ———
     toNumber(v) {
       const n = Number(v)
       return Number.isFinite(n) ? n : 0
@@ -259,34 +277,31 @@ export default {
 
         const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'A4' })
 
-        // Título
         doc.setFontSize(14)
         doc.text('Reporte de Productos', 40, 32)
         doc.setFontSize(10)
         doc.text(`Fecha: ${new Date().toLocaleString('es-PE')}`, 40, 48)
 
-        // KPIs
         doc.setFontSize(10)
         const k1 = `Suma Stock: ${this.formatNumber(this.kpi.sumaStock)}`
-        const k2 = `Suma Total Costo: S/ ${this.formatMoney(this.kpi.sumaTotalCosto)}`
-        const k3 = `Suma Total Venta: S/ ${this.formatMoney(this.kpi.sumaTotalVenta)}`
+        const k2 = `Suma Total Costo: ${this.monedaSimbolo} ${this.formatMoney(this.kpi.sumaTotalCosto)}`
+        const k3 = `Suma Total Venta: ${this.monedaSimbolo} ${this.formatMoney(this.kpi.sumaTotalVenta)}`
         doc.text(`${k1}   |   ${k2}   |   ${k3}`, 40, 64)
 
-        // Tabla
         const rows = this.filasExport().map(r => ([
           r.ID,
           r.Categoria,
           r.Nombre,
-          `S/ ${this.formatMoney(r.Costo)}`,
+          `${this.monedaSimbolo} ${this.formatMoney(r.Costo)}`,
           this.formatNumber(r.Stock),
-          `S/ ${this.formatMoney(r.PrecioVenta)}`,
-          `S/ ${this.formatMoney(r.TotalCosto)}`,
-          `S/ ${this.formatMoney(r.TotalVenta)}`
+          `${this.monedaSimbolo} ${this.formatMoney(r.PrecioVenta)}`,
+          `${this.monedaSimbolo} ${this.formatMoney(r.TotalCosto)}`,
+          `${this.monedaSimbolo} ${this.formatMoney(r.TotalVenta)}`
         ]))
 
         const head = [[
-          'ID', 'Categoría', 'Nombre', 'Costo (S/)', 'Stock',
-          'Precio V (S/)', 'Total Costo (S/)', 'Total Venta (S/)'
+          'ID', 'Categoría', 'Nombre', `Costo (${this.monedaSimbolo})`, 'Stock',
+          `Precio V (${this.monedaSimbolo})`, `Total Costo (${this.monedaSimbolo})`, `Total Venta (${this.monedaSimbolo})`
         ]]
 
         doc.autoTable({
@@ -294,11 +309,11 @@ export default {
           body: rows,
           startY: 80,
           styles: { fontSize: 8, cellPadding: 4 },
-          headStyles: { fillColor: [33, 150, 243] }, // azul suave
+          headStyles: { fillColor: [33, 150, 243] },
           columnStyles: {
             0: { cellWidth: 70 },
             1: { cellWidth: 100 },
-            2: { cellWidth: 220 }, // nombre más ancho
+            2: { cellWidth: 220 },
             3: { halign: 'right', cellWidth: 70 },
             4: { halign: 'right', cellWidth: 70 },
             5: { halign: 'right', cellWidth: 70 },

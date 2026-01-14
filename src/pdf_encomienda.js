@@ -403,7 +403,7 @@ function impresion58(arraydatos, qr, cabecera) {
     var texto = doc.splitTextToSize(
       "Representación Impresa de la " +
         documento +
-        " Consultar su validez en https://factura-peru.web.app/buscardocumentos",
+        " Consultar su validez en https://domo.pe/buscardocumentos",
       pdfInMM - lMargin - rMargin
     );
     doc.text(texto, pageCenter, linea, "center");
@@ -875,7 +875,7 @@ function impresion80(arraydatos, qr, cabecera) {
     var texto = doc.splitTextToSize(
       "Representación Impresa de la " +
         documento +
-        " Consultar su validez en https://factura-peru.web.app/buscardocumentos",
+        " Consultar su validez en https://domo.pe/buscardocumentos",
       pdfInMM - lMargin - rMargin
     );
     doc.text(texto, pageCenter, linea, "center");
@@ -1419,7 +1419,7 @@ function impresionA4(array, qr, arraycabecera) {
       var texto = doc.splitTextToSize(
         "Representación Impresa de la " +
           documento +
-          " Consultar su validez en https://factura-peru.web.app/buscardocumentos",
+          " Consultar su validez en https://domo.pe/buscardocumentos",
         90
       );
       doc.text(texto, 35, lineaqr, "left");

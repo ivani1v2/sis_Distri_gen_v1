@@ -446,7 +446,7 @@ export const impresion58 = (arrays, qr) => {
   doc.setFontSize(8);
   var texto = doc.splitTextToSize(
     "Representación Impresa de la GUIA DE REMISION ELECTRONICA" +
-      " Consultar su validez en https://factura-peru.web.app//buscardocumentos",
+      " Consultar su validez en https://domo.pe/buscardocumentos",
     pdfInMM - lMargin - rMargin
   );
   doc.text(texto, pageCenter, linea, "center");
@@ -882,7 +882,7 @@ export const impresion80 = (arrays, qr) => {
   doc.setFontSize(8);
   var texto = doc.splitTextToSize(
     "Representación Impresa de la GUIA DE REMISION ELECTRONICA" +
-      " Consultar su validez en https://factura-peru.web.app//buscardocumentos",
+      " Consultar su validez en https://domo.pe/buscardocumentos",
     pdfInMM - lMargin - rMargin
   );
   doc.text(texto, pageCenter, linea, "center");

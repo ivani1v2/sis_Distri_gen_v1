@@ -18,6 +18,9 @@
                        <v-col cols="6">
                         <v-checkbox dense v-model="precio_minimo" label="Precio minimo"></v-checkbox>
                     </v-col>
+                    <v-col cols="12">
+                        <v-checkbox dense v-model="desc_porcentaje_catalogo" label="Mostrar descuento % en catálogo"></v-checkbox>
+                    </v-col>
                 </v-row>
             </div>
 
@@ -38,6 +41,7 @@ export default {
         return {
             mostrar_codigo: false,
             precio_minimo: false,
+            desc_porcentaje_catalogo: false,
         }
     },
     created() {
@@ -49,6 +53,7 @@ export default {
                 if (snapshot.val() != null) {
                     this.mostrar_codigo = snapshot.val().mostrar_codigo || false
                     this.precio_minimo = snapshot.val().precio_minimo || false
+                    this.desc_porcentaje_catalogo = snapshot.val().desc_porcentaje_catalogo || false
                 }
 
             })
@@ -56,6 +61,7 @@ export default {
         async graba() {
             await grabaConfigura("mostrar_codigo", this.mostrar_codigo || false)
             await grabaConfigura("precio_minimo", this.precio_minimo || false)
+            await grabaConfigura("desc_porcentaje_catalogo", this.desc_porcentaje_catalogo || false)
             store.commit('dialogo_configcatalogo')
         }
     }

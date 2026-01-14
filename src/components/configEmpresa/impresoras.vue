@@ -26,7 +26,7 @@
                     <v-checkbox dense v-model="impresora_auto" label="Imp. Automatica"></v-checkbox>
                 </v-col>
                 <v-col cols="6">
-                    <v-text-field dense v-model="tamano" label="Impresora Caja"></v-text-field>
+                    <v-select dense v-model="tamano" :items="tamanos" label="Impresora Caja" outlined></v-select>
                 </v-col>
                 <v-col cols="6">
                     <v-text-field type="number" dense v-model="mizquierdo" label="Margen Izquierdo"></v-text-field>
@@ -86,6 +86,7 @@ export default {
             guardadocumento: false,
             impresoracocina: false,
             tamano: '58',
+            tamanos: ['58', '80', 'A5', 'A4'],
             mizquierdo: '5',
             mderecho: '3',
             piepagina: '',

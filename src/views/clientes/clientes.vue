@@ -330,22 +330,18 @@ export default {
             return this.$vuetify && this.$vuetify.breakpoint.smAndDown;
         },
 
-        // Filtro por texto (documento/nombre/distrito/telefono/nota/id)
         listaFiltrada() {
             const q = (this.buscar || '').toLowerCase().trim();
             const zonaSel = (this.zona || 'TODAS').toString().toLowerCase();
             const diaSel = (this.dia || 'TODOS').toString().toLowerCase();
+            let base = this.clientes;
 
-            // 1️⃣ filtro por zona
-            let base = this.clientes.filter(c => {
+            base = base.filter(c => {
                 if (zonaSel === 'todas') return true;
-
-                // el cliente puede tener zona o sede
                 const zCliente = (c.zona || c.sede || '').toString().toLowerCase();
                 return zCliente === zonaSel;
             });
 
-            // 2️⃣ filtro por día
             base = base.filter(c => {
                 if (diaSel === 'todos') return true;
 
@@ -456,12 +452,23 @@ export default {
 
         async filtra() {
             try {
-                const snap = await colClientes().get()  // o más si quieres
-                this.clientes = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-                console.log('Clientes cargados:', this.clientes.length)
-            } catch (e) {
-                console.error('Error cargando clientes:', e)
-            }
+                const { permisos, sedeActual } = this.$store.state
+                const debeFiltrar = permisos?.filtrar_cliente_sede &&
+                    !permisos?.es_admin &&
+                    !permisos?.es_master &&
+                    sedeActual?.codigo
+
+                const query = debeFiltrar
+                    ? colClientes().where('sede', '==', sedeActual.codigo)
+                    : colClientes()
+
+                const snap = await query.get()
+                this.clientes = snap.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }))
+
+            } catch (e) { console.error('Error:', e) }
         },
 
         initialize() {

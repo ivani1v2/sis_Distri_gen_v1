@@ -21,7 +21,15 @@
             <v-card-title class="mt-n6">{{ seccion.titulo }}</v-card-title>
             <v-row dense v-for="(item, idx) in seccion.items" :key="idx" class="mt-n8">
                 <v-col cols="6" v-for="(permiso, pIdx) in item" :key="pIdx">
-                    <v-checkbox dense v-model="permisosususario[permiso.value]" :label="permiso.label" />
+                    <div class="d-flex align-center">
+                        <v-checkbox dense v-model="permisosususario[permiso.value]" :label="permiso.label" />
+                        <v-tooltip v-if="permiso.tooltip" top>
+                            <template v-slot:activator="{ on, attrs }">
+                                <v-icon small class="ml-1" color="red" v-bind="attrs" v-on="on">mdi-information-outline</v-icon>
+                            </template>
+                            <span>{{ permiso.tooltip }}</span>
+                        </v-tooltip>
+                    </div>
                 </v-col>
             </v-row>
         </v-card>
@@ -172,6 +180,9 @@ export default {
                         [
                             { label: 'Eliminar Clientes', value: 'clientes_elimina' },
                             { label: 'Crear Clientes', value: 'clientes_crea' },
+                        ],
+                        [
+                            { label: 'Filtrar por Vendedor', value: 'filtrar_cliente_sede', tooltip: 'Si está activo, el usuario solo verá los clientes asignados a su sede en la vista de Clientes. Si está inactivo o es Admin/Master, verá todos.' },
                         ],
                     ],
                 },

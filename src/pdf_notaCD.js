@@ -208,7 +208,7 @@ export const pdfGeneraFinal = (arraydatos, qr, cabecera) => {
   linea = linea + (3.5 * texto.length)
 
   var texto = doc.splitTextToSize("Representación Impresa de la NOTA DE CREDITO ELECTRONICA" +
-    " Consultar su validez en http://domo.pe/buscardocumentos", (pdfInMM - lMargin - rMargin));
+    " Consultar su validez en http://https://domo.pe/buscardocumentos", (pdfInMM - lMargin - rMargin));
   doc.text(texto, pageCenter, linea, 'center');
   linea = linea + (3 * texto.length)
 
@@ -493,7 +493,7 @@ function impresionA4(arraydatos, qr, arraycabecera) {
   doc.setFont('Helvetica', '');
   doc.setFontSize(7)
   var texto = doc.splitTextToSize("Representación Impresa de la NOTA DE CREDITO ELECTRONICA" +
-    " Consultar su validez en http://domo.pe/buscardocumentos", 90);
+    " Consultar su validez en http://https://domo.pe/buscardocumentos", 90);
   doc.text(texto, 35, lineaqr, 'left');
 
   linea = linea + 15

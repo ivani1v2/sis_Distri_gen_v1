@@ -18,7 +18,7 @@
                             class="grey--text text--darken-1">
                             ({{ item.id }})
                         </small>
-                        — <strong class="red--text">              {{ moneda }} {{ Number(item.precio || 0).toFixed(2) }}</strong>
+                        — <strong class="red--text"> {{ moneda }} {{ Number(item.precio || 0).toFixed(2) }}</strong>
                     </v-list-item-title>
                     <v-list-item-subtitle class="mt-n1 mb-n2">
                         <span class="text-caption"
@@ -27,7 +27,7 @@
                         </span>
                     </v-list-item-subtitle>
                 </v-list-item-content>
-          </template>
+            </template>
 
         </v-autocomplete>
         <v-card class="elevation-6" v-show="muestra_tabla" v-if="x_categoria">
@@ -124,7 +124,7 @@
                     <div class="text-caption grey--text text--darken-1" v-if="getFactor(producto_selecto) > 1">
                         Stock:
                         <strong>{{ Math.floor(Number(producto_selecto.stock || 0) / getFactor(producto_selecto))
-                        }}</strong>
+                            }}</strong>
                         cajas
                         + <strong>{{ Number(producto_selecto.stock || 0) % getFactor(producto_selecto) }}</strong> und
                         (total <strong>{{ producto_selecto.stock }}</strong> und) — Factor: {{
@@ -228,8 +228,15 @@
         </v-col>
     </v-row>
 
+    <descuentos-porcentaje ref="descuentosRef" :precio-base="precioBaseParaDescuento" :es-bono="es_bono"
+        :decimales="$store.state.configuracion.decimal || 2" @cambio="onDescuentoCambio" />
+
     <div class="text-caption mt-1">
         Total a vender: <strong>{{ totalUnidades }}</strong> und
+        <span v-if="descuentoAplicado.precioFinal && descuentoAplicado.precioFinal !== precioBaseParaDescuento"
+            class="ml-2 green--text">
+            | Precio final: S/ {{ descuentoAplicado.precioFinal }}
+        </span>
     </div>
 </div>
 <v-text-field ref="cantidadRef" v-if="false" type="number" autofocus outlined dense v-model="cantidad" label="CANTIDAD"
@@ -252,8 +259,12 @@
 
 <script>
 import store from '@/store/index'
+import DescuentosPorcentaje from '@/components/descuentos_porcentaje.vue'
 export default {
     name: 'catalogo_fijo',
+    components: {
+        DescuentosPorcentaje
+    },
 
     props: {
         data: [],
@@ -286,15 +297,23 @@ export default {
             snackAgregar: false,
             snackMsg: 'Producto agregado',
             es_bono: false,
-            moneda: 'S/ '
+            moneda: 'S/ ',
+            descuentoAplicado: { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 }
         }
     },
     computed: {
+        precioBaseParaDescuento() {
+            if (!this.producto_selecto) return 0;
+            const tier = this.precioSeleccionado ?? this.sugerirTier(this.producto_selecto, this.totalUnidades);
+            const precioUnidad = this.precioPorTier(this.producto_selecto, tier);
+            const factor = this.getFactor(this.producto_selecto);
+            return this.modoVenta === 'entero' ? precioUnidad * factor : precioUnidad;
+        },
         totalUnidades() {
             if (!this.producto_selecto) return 0;
             const f = this.getFactor(this.producto_selecto);
             const q = Number(this.cantidadInput || 0);
-            return this.modoVenta === 'entero' ? q * f : q; // entero=cajas→unidades, fraccion=unidades directas
+            return this.modoVenta === 'entero' ? q * f : q;
         },
         listafiltrada() {
             var invent = store.state.productos
@@ -309,10 +328,10 @@ export default {
         productosFiltrados() {
             if (store.state.configuracion.mostrar_codigo) {
                 return store.state.productos
-                    .filter(item => item.activo) // Solo productos activos
+                    .filter(item => item.activo)
                     .map(item => ({
                         ...item,
-                        displayText: `${item.id} ${item.nombre} (${item.codbarra})` // Concatenamos nombre y código de barras
+                        displayText: `${item.id} ${item.nombre} (${item.codbarra})`
                     }));
             } else {
                 return store.state.productos
@@ -331,7 +350,7 @@ export default {
         },
     },
     mounted() {
-            this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
+        this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         window.addEventListener("keydown", this.detectarTecla);
     },
     beforeDestroy() {
@@ -456,20 +475,19 @@ export default {
 
             this.dialo_cantidad = false;
 
-            // Tier: respeta manual; si no, por unidades totales
             const tier = (this.precioSeleccionado ?? this.sugerirTier(this.producto_selecto, unidadesTotal));
             const precioUnidad = this.precioPorTier(this.producto_selecto, tier);
-
             const esCaja = (this.modoVenta === 'entero');
+            let precioEmitido = esCaja ? (precioUnidad * factor) : precioUnidad;
 
-            // 🔴 Precio a emitir:
-            // - CAJA  : precio por caja = precioUnidad * factor
-            // - UNIDAD: precio por unidad
-            const precioEmitido = esCaja ? (precioUnidad * factor) : precioUnidad;
+            const tieneDescuentos = this.descuentoAplicado.desc_1 > 0 ||
+                this.descuentoAplicado.desc_2 > 0 ||
+                this.descuentoAplicado.desc_3 > 0;
 
-            // Cantidad a emitir (para visual / total de línea):
-            // - CAJA  : cantidad = número de cajas (q)
-            // - UNIDAD: cantidad = unidades (q)
+            if (tieneDescuentos && !this.es_bono) {
+                precioEmitido = this.descuentoAplicado.precioFinal;
+            }
+
             const cantidadEmitida = q;
             const medidaEmitida = (factor === 1)
                 ? (this.producto_selecto.medida || 'UNIDAD')
@@ -482,17 +500,26 @@ export default {
             const linea = {
                 ...this.producto_selecto,
                 operacion: ope,
-                cantidad: cantidadEmitida,                       // cajas o unidades, según modo
-                precio: Number(precioEmitido.toFixed(4)),        // precio por caja o por unidad
+                cantidad: cantidadEmitida,
+                precio: Number(precioEmitido.toFixed(4)),
+                precio_base: Number((esCaja ? (precioUnidad * factor) : precioUnidad).toFixed(4)),
                 medida: medidaEmitida,
                 factor: factor,
                 _precio_tier: tier,
-                _unidades: unidadesTotal, // opcional: unidades reales para auditoría/stock
+                _unidades: unidadesTotal,
+                desc_1: this.descuentoAplicado.desc_1 || 0,
+                desc_2: this.descuentoAplicado.desc_2 || 0,
+                desc_3: this.descuentoAplicado.desc_3 || 0,
             };
 
             this.$emit('agrega_lista', linea);
             this.avisarAgregado();
-            // Bonos calculados una sola vez sobre UNIDADES TOTALES
+
+            this.descuentoAplicado = { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 };
+            if (this.$refs.descuentosRef) {
+                this.$refs.descuentosRef.reset();
+            }
+
             if (this.producto_selecto.tiene_bono && Array.isArray(this.producto_selecto.lista_bono)) {
                 const bonosOrdenados = [...this.producto_selecto.lista_bono]
                     .map(b => ({ ...b, apartir_de: this.toNum(b.apartir_de, 0), cantidad: this.toNum(b.cantidad, 0) }))
@@ -521,8 +548,6 @@ export default {
                 });
             }
 
-            // reset UI
-
             this.$nextTick(() => {
                 this.observacionesSeleccionadas = [];
                 this.observacion_can = '';
@@ -533,15 +558,11 @@ export default {
 
 
         prod_selecto(valor) {
-            //  console.log(this.esCodigoDeBarras + `🔎 prod_selecto ejecutado con valor: ${valor}`);
-
-            if (!valor) return; // Si no hay valor seleccionado, no hacer nada
+            if (!valor) return;
             this.$nextTick(() => {
                 this.producto_sele = "";
             });
-            // Buscar el producto seleccionado en la lista del store
             const producto = store.state.productos.find(p => p.id === valor);
-            //console.log(producto)
             if (producto.controstock && producto.stock <= 0) {
                 store.commit("dialogosnackbar", 'sin stock');
                 return;
@@ -551,7 +572,6 @@ export default {
                     producto.cantidad = 1
                     this.buscar = ''
                     this.$emit('agrega_lista', producto)
-
                     this.$nextTick(() => {
                         this.observacionesSeleccionadas = [];
                         this.observacion_can = ''
@@ -561,36 +581,40 @@ export default {
                 }
                 this.cantidadInput = 1;
                 this.producto_selecto = producto;
-                this.es_bono = false
+                this.es_bono = false;
+                this.descuentoAplicado = { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 };
                 this.dialo_cantidad = true;
                 this.cantCajas = 0;
-                this.cantUnd = 1; // por defecto 1 und para no quedar en 0
+                this.cantUnd = 1;
                 this.precioSeleccionado = null;
                 this._tierSugerido = this.sugerirTier(this.producto_selecto, this.totalUnidades);
+                this.$nextTick(() => {
+                    if (this.$refs.descuentosRef) this.$refs.descuentosRef.reset();
+                });
             }
         },
         prod_selecto2(valor) {
-            //console.log(valor)
             if (valor.controstock && valor.stock <= 0) {
                 store.commit("dialogosnackbar", 'sin stock');
                 return;
             }
-            if (!valor) return; // Si no hay valor seleccionado, no hacer nada
+            if (!valor) return;
             this.$nextTick(() => {
                 this.producto_sele = "";
             });
-            // Buscar el producto seleccionado en la lista del store
             if (valor) {
-                // Filtrar las observaciones disponibles
                 this.cantidadInput = 1;
                 this.producto_selecto = valor;
                 this.precioSeleccionado = null;
-                this.es_bono = false
+                this.es_bono = false;
+                this.descuentoAplicado = { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 };
                 this.dialo_cantidad = true;
                 this.cantCajas = 0;
-                this.cantUnd = 1; // por defecto 1 und para no quedar en 0
-                this.precioSeleccionado = null;
+                this.cantUnd = 1;
                 this._tierSugerido = this.sugerirTier(this.producto_selecto, this.totalUnidades);
+                this.$nextTick(() => {
+                    if (this.$refs.descuentosRef) this.$refs.descuentosRef.reset();
+                });
             }
         },
         iraproductos(item) {
@@ -698,7 +722,6 @@ export default {
                         overlay.style.height = '100vh';
                     }
 
-                    // centra el input en el viewport (por si hay scroll interno)
                     const input = this.$refs.cantidadRef && (this.$refs.cantidadRef.$el.querySelector('input'));
                     if (input && input.scrollIntoView) {
                         input.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -714,9 +737,11 @@ export default {
             console.log(this.muestra_tabla)
             if (this.muestra_tabla) {
                 this.snackMsg = msg;
-                // Reinicia el snackbar para que vuelva a mostrarse si se agrega otra vez rápido
                 this.$nextTick(() => { this.snackAgregar = true; });
             }
+        },
+        onDescuentoCambio(data) {
+            this.descuentoAplicado = data;
         },
 
     },

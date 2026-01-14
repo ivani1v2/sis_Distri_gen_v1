@@ -575,7 +575,6 @@ export default {
 
                     store.commit('array_sedes', empresa.sedes);
                     const emp = empresa.sedes.filter(e => e.tipo == 'sede')
-                    // Buscar la sede actual por coincidencia de base de datos
                     this.array_sedes = emp
                     const sedeActual = empresa.sedes.find(e => e.codigo === store.state.permisos.codigo);
                     store.commit('sedeActual', sedeActual);
@@ -622,7 +621,6 @@ export default {
             })
             obtenerImpresoras().once("value").then((snapshot) => {
                 if (snapshot.exists()) {
-                    //console.log(snapshot.val())
                     store.commit("configImpresora", snapshot.val())
                 }
             })

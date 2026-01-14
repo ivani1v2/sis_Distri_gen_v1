@@ -141,8 +141,17 @@
                         <v-text-field dense outlined type="number" v-model="cantidadSinCodigo"
                             label="Cantidad"></v-text-field>
                     </v-col> <v-col cols="6" xs="6"> <v-text-field dense outlined type="number"
-                            v-model="precioSinCodigo" label="Precio"></v-text-field> </v-col> </v-row> <v-select dense
-                    outlined class="mt-n6" v-model="medidasincodigo" :items="$store.state.medidas" menu-props="auto"
+                            v-model="precioSinCodigo" label="Precio"></v-text-field> </v-col> </v-row>
+                <descuentos-porcentaje
+                    ref="descSinCodigoRef"
+                    :precio-base="Number(precioSinCodigo) || 0"
+                    :es-bono="tipooperacion === 'GRATUITA'"
+                    :decimales="$store.state.configuracion.decimal || 2"
+                    @cambio="descSinCodigo = $event"
+                    class="my-3"
+                />
+                <v-select dense
+                    outlined v-model="medidasincodigo" :items="$store.state.medidas" menu-props="auto"
                     hide-details label="Medida"></v-select> <v-textarea class="mt-4" @keyup.enter="agregaSinCatalogo()"
                     dense outlined auto-grow filled v-model="nombreSincodigo" label="Descripcion" rows="1"></v-textarea>
                 <v-card-actions>
@@ -161,12 +170,21 @@
                             label="Cantidad"></v-text-field> </v-col> <v-col cols="6" xs="6"> <v-text-field dense
                             outlined type="number" v-model="selecto.precioedita" label="Precio"></v-text-field> </v-col>
                 </v-row>
-                <v-select dense outlined class="mt-n6" v-model="selecto.medida" :items="$store.state.medidas"
+                <descuentos-porcentaje
+                    ref="descEditaRef"
+                    :precio-base="Number(selecto.precio_base || selecto.precioedita) || 0"
+                    :descuentos-iniciales="{ desc_1: selecto.desc_1 || 0, desc_2: selecto.desc_2 || 0, desc_3: selecto.desc_3 || 0 }"
+                    :es-bono="selecto.operacion === 'GRATUITA'"
+                    :decimales="$store.state.configuracion.decimal || 2"
+                    @cambio="onDescEditaCambio"
+                    class="my-3"
+                />
+                <v-select dense outlined v-model="selecto.medida" :items="$store.state.medidas"
                     menu-props="auto" hide-details label="Medida"></v-select> <v-textarea class="mt-4"
-                    @keyup.enter="agregaSinCatalogo()" dense outlined auto-grow filled v-model="selecto.nombre"
+                    @keyup.enter="guardarEdicion()" dense outlined auto-grow filled v-model="selecto.nombre"
                     label="Descripcion" rows="1"></v-textarea>
-                <v-card-actions> <v-spacer></v-spacer> <v-btn color="green darken-1" text @click="dial_edita = false">
-                        Agregar
+                <v-card-actions> <v-spacer></v-spacer> <v-btn color="green darken-1" text @click="guardarEdicion()">
+                        Guardar
                     </v-btn> </v-card-actions> </v-card>
         </v-dialog>
         <catalogo v-if="dial_catalogo" @array="agregar_lista($event)" @cierra="dial_catalogo = false" />
@@ -189,12 +207,14 @@ import {
     generaproforma
 } from '../../pdf_proforma'
 import axios from "axios"
+import DescuentosPorcentaje from '@/components/descuentos_porcentaje.vue'
 export default {
     name: 'caja',
 
     components: {
         catalogo,
-        busca_clis
+        busca_clis,
+        DescuentosPorcentaje
     },
     props: {
         data: '',
@@ -230,6 +250,8 @@ export default {
             selecto: '',
             dial_cliente: false,
             moneda: store.state.moneda.find(m => m.codigo === 'PEN'),
+            descSinCodigo: { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 },
+            descEdita: { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 },
         }
     },
     computed: {
@@ -262,7 +284,6 @@ export default {
         eliminar(item) {
             if (!item) return;
 
-            // Mensaje de confirmación más claro
             const precio = this.redondear(item.precioedita != null
                 ? item.precioedita
                 : (item.precio || 0)
@@ -271,7 +292,6 @@ export default {
 
             if (!confirm(msg)) return;
 
-            // Clave única: primero uuid, si no existe usa id
             const clave = item.uuid || item.id;
             if (!clave) return;
 
@@ -386,6 +406,14 @@ export default {
                 this.precioSinCodigo == '' || this.cantidadSinCodigo == '') {
                 store.commit('dialogosnackbar', 'REVISE PRODUCTO')
             } else {
+                const tieneDescuentos = this.descSinCodigo.desc_1 > 0 || 
+                                        this.descSinCodigo.desc_2 > 0 || 
+                                        this.descSinCodigo.desc_3 > 0;
+                
+                const precioFinal = tieneDescuentos && this.tipooperacion !== 'GRATUITA'
+                    ? this.descSinCodigo.precioFinal
+                    : Number(this.precioSinCodigo);
+
                 this.listaproductos.push({
                     id: this.create_UUID().substring(29),
                     codbarra: this.create_UUID().substring(29),
@@ -393,22 +421,45 @@ export default {
                     nombre: this.nombreSincodigo,
                     medida: this.medidasincodigo,
                     categoria: 'varios',
-                    precio: this.redondear(this.precioSinCodigo.toString().trim()),
+                    precio: this.redondear(precioFinal),
+                    precio_base: this.redondear(this.precioSinCodigo),
                     stock: 9090909,
-                    precioedita: this.redondear(this.precioSinCodigo.toString().trim()),
+                    precioedita: this.redondear(precioFinal),
                     preciodescuento: 0,
                     costo: 0,
                     tipoproducto: this.tipoproducto,
                     operacion: this.tipooperacion,
                     icbper: 'false',
                     controstock: false,
+                    // Guardar descuentos
+                    desc_1: this.descSinCodigo.desc_1 || 0,
+                    desc_2: this.descSinCodigo.desc_2 || 0,
+                    desc_3: this.descSinCodigo.desc_3 || 0,
                 })
                 this.dialogAgrega = false
                 this.nombreSincodigo = ''
                 this.medidasincodigo = ''
                 this.precioSinCodigo = ''
+                // Resetear descuentos
+                this.descSinCodigo = { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 };
+                if (this.$refs.descSinCodigoRef) {
+                    this.$refs.descSinCodigoRef.reset();
+                }
             }
 
+        },
+        onDescEditaCambio(data) {
+            this.descEdita = data;
+            if (this.selecto && data.precioFinal) {
+                this.selecto.precioedita = data.precioFinal;
+                this.selecto.desc_1 = data.desc_1 || 0;
+                this.selecto.desc_2 = data.desc_2 || 0;
+                this.selecto.desc_3 = data.desc_3 || 0;
+            }
+        },
+        guardarEdicion() {
+            this.dial_edita = false;
+            this.descEdita = { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 };
         },
         create_UUID() {
             var dt = new Date().getTime();
