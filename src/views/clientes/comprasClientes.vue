@@ -117,14 +117,14 @@
 
             <v-simple-table fixed-header height="70vh" dense class="elevation-0">
                 <template v-slot:default>
-                    <thead class="grey darken-3 white--text">
+                    <thead class="grey darken-3">
                         <tr>
-                            <th class="text-left white--text">Correlativo</th>
-                            <th class="text-left white--text">Cliente</th>
-                            <th class="text-left white--text">Fecha</th>
-                            <th class="text-center white--text">Estado</th>
-                            <th class="text-right white--text">Total</th>
-                            <th class="text-center white--text">Acción</th>
+                            <th class="text-left">Correlativo</th>
+                            <th class="text-left">Cliente</th>
+                            <th class="text-left">Fecha</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-right">Total</th>
+                            <th class="text-center">Acción</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -143,7 +143,7 @@
                                 </v-chip>
                             </td>
                             <td class="text-right font-weight-bold">
-                                {{ item.moneda }}{{ redondear(item.total - item.descuentos) }}
+                                {{ monedaSimbolo }}{{ redondear(item.total - item.descuentos) }}
                             </td>
                             <td class="text-center" width="200">
                                 <v-menu offset-y>
@@ -201,10 +201,10 @@
                                     <td class="caption">{{ item.id }} - {{ item.nombre }}</td>
                                     <td class="caption">{{ item.medida }}</td>
                                     <td class="text-center caption">{{ item.cantidad }}</td>
-                                    <td class="text-right caption">S/.{{ redondear(item.precioedita) }}</td>
-                                    <td class="text-right caption red--text">S/.{{ redondear(item.preciodescuento) }}
+                                    <td class="text-right caption">{{monedaSimbolo}}{{ redondear(item.precioedita) }}</td>
+                                    <td class="text-right caption red--text">{{monedaSimbolo}}{{ redondear(item.preciodescuento) }}
                                     </td>
-                                    <td class="text-right caption font-weight-bold">S/.{{ redondear(item.precioedita *
+                                    <td class="text-right caption font-weight-bold">{{monedaSimbolo}}{{ redondear(item.precioedita *
                                         item.cantidad - item.preciodescuento) }}</td>
                                 </tr>
                             </tbody>
@@ -230,8 +230,8 @@
                                     <th class="text-left font-weight-bold">Descripción</th>
                                     <th class="text-left font-weight-bold">Medida</th>
                                     <th class="text-right font-weight-bold">Cantidad total</th>
-                                    <th class="text-right font-weight-bold">Desc. total (S/.)</th>
-                                    <th class="text-right font-weight-bold">Total Neto (S/.)</th>
+                                    <th class="text-right font-weight-bold">Desc. total ({{monedaSimbolo}})</th>
+                                    <th class="text-right font-weight-bold">Total Neto ({{monedaSimbolo}})</th>
                                 </tr>
                             </thead>
                             <tbody>
