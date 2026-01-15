@@ -480,7 +480,7 @@ export default {
 
         nombreSede(base) {
             if (!base) return '-'
-            const sede = (store.state.array_sedes || []).find((s) => s.base == base)
+            const sede = (store.state.array_sedes || []).find((s) => s.codigo == base)
             return sede ? sede.nombre : base
         },
 

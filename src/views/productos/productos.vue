@@ -61,6 +61,7 @@
                         <td style="font-size:80%;">{{ item.id }}</td>
                         <td style="font-size:80%;">{{ item.categoria }}</td>
                         <td style="font-size:80%;">{{ item.nombre }}</td>
+                        <td style="font-size:80%;">{{ item.medida }}</td>
                         <td style="font-size:80%;">{{ convierte_stock(item.stock, item.factor) }}</td>
                         <td style="font-size:80%;">{{ Number(item.precio).toFixed(2) }}</td>
                         <td style="font-size:80%;">
@@ -84,7 +85,7 @@
                         <div class="item-card">
                             <div class="item-main">
                                 <div class="item-title">{{ item.nombre }}</div>
-                                <div class="item-sub">#{{ item.id }} · {{ item.categoria }}</div>
+                                <div class="item-sub">#{{ item.id }} · {{ item.categoria }} · {{ item.medida }}</div>
                                 <div class="item-meta">
                                     Stock: {{ convierte_stock(item.stock, item.factor) }} · S/{{ redondear(item.precio)
                                     }}
@@ -489,7 +490,14 @@
                 <v-row class="mt-1" dense>
                 </v-row>
                 <v-text-field outlined dense v-model="obs1" label="Observacion 1"></v-text-field>
-                <v-text-field outlined dense type="number" v-model="stock_minimo" label="Stock mínimo"></v-text-field>
+                <v-text-field outlined dense type="number" v-model="stock_minimo" label="Stock mínimo">
+                    <template v-slot:append>
+                        <span class="text-caption grey--text">{{ medida }}</span>
+                    </template>
+                </v-text-field>
+                <div v-if="factor > 1" class="text-caption grey--text mt-n4 mb-2 ml-1">
+                    Equivale a: <strong>{{ stockMinimoConvertido }}</strong>
+                </div>
 
             </v-card>
 
@@ -544,6 +552,10 @@ export default {
         {
             text: 'Nombre',
             value: 'nombre',
+        },
+        {
+            text: 'Medida',
+            value: 'medida',
         },
         {
             text: 'Stock',
@@ -660,6 +672,18 @@ export default {
     computed: {
         permisoAlertaStockActivo() {
             return Boolean(this.$store.state.configuracion?.alerta_stock_minimo);
+        },
+        stockMinimoConvertido() {
+            const s = Number(this.stock_minimo) || 0;
+            const f = Number(this.factor) || 1;
+            if (f <= 1) return `${s} ${this.medida || 'UND'}`;
+            const cajas = Math.floor(s / f);
+            const und = s - (cajas * f);
+            const medidaBase = (this.medida || 'CAJA').toUpperCase();
+            if (und > 0) {
+                return `${cajas} ${medidaBase}(s) y ${und} UND`;
+            }
+            return `${cajas} ${medidaBase}(s)`;
         },
         itemsMedidasNombre() {
             const arr = (this.$store.state.medidassunat || []);

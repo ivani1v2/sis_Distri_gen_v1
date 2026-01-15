@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="dialogoAlerta" max-width="850px" persistent :fullscreen="false">
+    <v-dialog v-model="dialogoAlerta" max-width="1000px" persistent :fullscreen="false">
         <v-card>
             <v-system-bar dark color="grey darken-3" class="px-2">
                 <v-icon small class="mr-1">mdi-alert-circle-outline</v-icon>
@@ -76,11 +76,18 @@
                             <div class="text-body-2 mb-2 text-truncate">
                                 {{ producto.nombre }}
                             </div>
+                            
 
                             <div class="d-flex justify-space-between align-center">
                                 <div class="text-center">
-                                    <div class="text-caption grey--text">Stock</div>
+                                    <div class="text-caption grey--text">Medida</div>
                                     <div class="font-weight-bold" :class="getStockClass(producto)">
+                                        {{ producto.medida }}
+                                    </div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-caption grey--text">Stock</div>
+                                    <div class="font-weight-bold " :class="getStockClass(producto)">
                                         {{ formatoStockMobile(producto.stock, producto.factor) }}
                                     </div>
                                 </div>
@@ -88,14 +95,14 @@
                                 <div class="text-center">
                                     <div class="text-caption grey--text">Mínimo</div>
                                     <div class="font-weight-medium">
-                                        {{ producto.stock_minimo || 0 }}
+                                        {{ formatoStockMobile(producto.stock_minimo, producto.factor) }}
                                     </div>
                                 </div>
                                 
                                 <div class="text-center">
                                     <div class="text-caption grey--text">Difer.</div>
                                     <div class="font-weight-bold" :class="getDiferenciaClass(producto)">
-                                        {{ calcularDiferencia(producto) }}
+                                        {{ formatoDiferencia(producto) }}
                                     </div>
                                 </div>
                             </div>
@@ -117,15 +124,16 @@
                                 <td class="text-caption">{{ item.id }}</td>
                                 <td class="text-caption">{{ item.categoria }}</td>
                                 <td class="text-body-2">{{ item.nombre }}</td>
+                                <td class="text-body-2">{{ item.medida }}</td>
                                 <td class="text-center">
                                     <span :class="getStockClass(item)">
                                         {{ formatoStock(item.stock, item.factor) }}
                                     </span>
                                 </td>
-                                <td class="text-center">{{ item.stock_minimo }}</td>
+                                <td class="text-center">{{ formatoStock(item.stock_minimo, item.factor) }}</td>
                                 <td class="text-center">
                                     <span :class="getDiferenciaClass(item)">
-                                        {{ calcularDiferencia(item) }}
+                                        {{ formatoDiferencia(item) }}
                                     </span>
                                 </td>
                             </tr>
@@ -180,9 +188,10 @@ export default {
         categoriaFiltro: null,
         productos: [],
         headers: [
-            { text: 'ID', value: 'id', width: 70 },
-            { text: 'Categoría', value: 'categoria', width: 100 },
-            { text: 'Producto', value: 'nombre' },
+            { text: 'ID', value: 'id', width: 60 },
+            { text: 'Categoría', value: 'categoria', width: 90 },
+            { text: 'Producto', value: 'nombre'},
+            { text: 'Medida', value: 'medida', align: 'center', width: 80 },
             { text: 'Stock', value: 'stock', align: 'center', width: 80 },
             { text: 'Mínimo', value: 'stock_minimo', align: 'center', width: 80 },
             { text: 'Difer.', value: 'diferencia', align: 'center', width: 70 }
@@ -306,6 +315,17 @@ export default {
             return (Number(item.stock) || 0) - (Number(item.stock_minimo) || 0)
         },
         
+        formatoDiferencia(item) {
+            const dif = this.calcularDiferencia(item);
+            const f = Number(item.factor) || 1;
+            if (f <= 1) return dif.toString();
+            const signo = dif < 0 ? '-' : '';
+            const difAbs = Math.abs(dif);
+            const cajas = Math.floor(difAbs / f);
+            const und = difAbs - (cajas * f);
+            return und > 0 ? `${signo}${cajas}c ${und}u` : `${signo}${cajas}c`;
+        },
+        
         getCardClass(producto) {
             const stock = Number(producto.stock) || 0
             if (stock === 0) return 'red lighten-5'
@@ -346,9 +366,10 @@ export default {
                 ID: p.id,
                 Categoría: p.categoria,
                 Producto: p.nombre,
-                'Stock Actual': p.stock,
-                'Stock Mínimo': p.stock_minimo || 0,
-                Diferencia: this.calcularDiferencia(p)
+                Medida: p.medida || '',
+                'Stock Actual': this.formatoStock(p.stock, p.factor),
+                'Stock Mínimo': this.formatoStock(p.stock_minimo, p.factor),
+                Diferencia: this.formatoDiferencia(p)
             }))
             const wb = XLSX.utils.book_new()
             const ws = XLSX.utils.json_to_sheet(data)
@@ -367,13 +388,15 @@ export default {
                 doc.text(`Total: ${this.productosFiltrados.length} productos`, 15, 28)
                 
                 const datos = this.productosFiltrados.map(p => [
-                    p.id, p.categoria, p.nombre.substring(0, 35),
-                    p.stock, p.stock_minimo || 0, this.calcularDiferencia(p)
+                    p.id, p.categoria, p.nombre.substring(0, 35), p.medida || '',
+                    this.formatoStock(p.stock, p.factor), 
+                    this.formatoStock(p.stock_minimo, p.factor), 
+                    this.formatoDiferencia(p)
                 ])
                 
                 doc.autoTable({
                     startY: 35,
-                    head: [['ID', 'Categoría', 'Producto', 'Stock', 'Mínimo', 'Diferencia']],
+                    head: [['ID', 'Categoría', 'Producto', 'Medida', 'Stock', 'Mínimo', 'Diferencia']],
                     body: datos,
                     theme: 'striped',
                     headStyles: { fillColor: [80, 80, 80] },

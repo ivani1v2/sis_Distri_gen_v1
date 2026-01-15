@@ -81,6 +81,7 @@
             <td style="font-size:80%;">{{ item.id }}</td>
             <td style="font-size:80%;">{{ item.categoria }}</td>
             <td style="font-size:80%;">{{ item.nombre }}</td>
+            <td style="font-size:80%;">{{ item.medida }}</td>
             <td style="font-size:80%;">{{ monedaSimbolo }} {{ formatMoney(item.costo) }}</td>
             <td style="font-size:80%;">{{ convierte_stock(item.stock, item.factor) }}</td>
             <td style="font-size:80%;">{{ monedaSimbolo }} {{ formatMoney(item.precio) }}</td>
@@ -110,6 +111,7 @@ export default {
       { text: 'ID', value: 'id', align: 'start' },
       { text: 'Categoría', value: 'categoria' },
       { text: 'Nombre', value: 'nombre' },
+      { text: 'Medida', value: 'medida' },
       { text: 'Costo', value: 'costo' },
       { text: 'Stock', value: 'stock' },
       { text: 'Precio V', value: 'precio' },
@@ -328,8 +330,9 @@ export default {
           ID: it.id || '',
           Categoria: it.categoria || '',
           Nombre: it.nombre || '',
+          Medida: it.medida || '',
           Costo: costoN,
-          Stock: stockN,
+          Stock: this.convierte_stock(it.stock, it.factor),
           PrecioVenta: precioN,
           TotalCosto: costoN * stockN,
           TotalVenta: precioN * stockN,
@@ -348,7 +351,7 @@ export default {
 
         const hoja = XLSX.utils.json_to_sheet(data, {
           header: [
-            'ID', 'Categoria', 'Nombre', 'Costo', 'Stock', 'PrecioVenta',
+            'ID', 'Categoria', 'Nombre', 'Medida', 'Costo', 'Stock', 'PrecioVenta',
             'TotalCosto', 'TotalVenta', 'Observacion', 'Sede'
           ]
         })
@@ -357,8 +360,9 @@ export default {
           { wch: 8 },
           { wch: 15 },
           { wch: 30 },
+          { wch: 10 },
           { wch: 12 },
-          { wch: 8 },
+          { wch: 10 },
           { wch: 12 },
           { wch: 12 },
           { wch: 12 },
@@ -459,15 +463,16 @@ export default {
           r.ID,
           r.Categoria,
           r.Nombre,
+          r.Medida,
           `${this.monedaSimbolo} ${this.formatMoney(r.Costo)}`,
-          this.formatNumber(r.Stock),
+          r.Stock,
           `${this.monedaSimbolo} ${this.formatMoney(r.PrecioVenta)}`,
           `${this.monedaSimbolo} ${this.formatMoney(r.TotalCosto)}`,
           `${this.monedaSimbolo} ${this.formatMoney(r.TotalVenta)}`
         ]))
 
         const head = [[
-          'ID', 'Categoría', 'Nombre', `Costo (${this.monedaSimbolo})`, 'Stock',
+          'ID', 'Categoría', 'Nombre', 'Medida', `Costo (${this.monedaSimbolo})`, 'Stock',
           `Precio V (${this.monedaSimbolo})`, `Total Costo (${this.monedaSimbolo})`, `Total Venta (${this.monedaSimbolo})`
         ]]
 
@@ -480,14 +485,15 @@ export default {
           styles: { fontSize: 8, cellPadding: 4 },
           headStyles: { fillColor: [33, 150, 243] },
           columnStyles: {
-            0: { cellWidth: 70 },
-            1: { cellWidth: 100 },
-            2: { cellWidth: 220 },
-            3: { halign: 'right', cellWidth: 70 },
+            0: { cellWidth: 50 },
+            1: { cellWidth: 80 },
+            2: { cellWidth: 180 },
+            3: { cellWidth: 60 },
             4: { halign: 'right', cellWidth: 70 },
-            5: { halign: 'right', cellWidth: 70 },
+            5: { halign: 'right', cellWidth: 60 },
             6: { halign: 'right', cellWidth: 70 },
             7: { halign: 'right', cellWidth: 70 },
+            8: { halign: 'right', cellWidth: 70 },
           },
           didDrawPage: (data) => {
             const footerText = `Página ${doc.internal.getNumberOfPages()} - ${this.nombreSedeActual}`

@@ -248,7 +248,8 @@ import {
     allUsuarios,
     borra_usuario,
     nuevoCampoUsuario,
-
+    lee_multiEmpresas,
+    nueva_multiEmpresa,
 } from '../db'
 import axios from "axios";
 import store from '@/store/index'
@@ -414,6 +415,9 @@ export default {
                     nuevoCampoUsuario(u.token, 'codigo', u.codigo || '')
                 ]);
 
+                // Actualizar también en multi_empresas
+                await this.actualizarNombreEnMultiEmpresas(u);
+
                 this.$store?.commit?.('dialogosnackbar', 'Datos guardados correctamente');
                 this.dial_sett = false;
             } catch (e) {
@@ -421,6 +425,27 @@ export default {
                 this.$store?.commit?.('dialogosnackbar', 'Error al guardar cambios');
             } finally {
                 store.commit("dialogoprogress");
+            }
+        },
+        async actualizarNombreEnMultiEmpresas(usuario) {
+            if (!usuario || !usuario.codigo || !usuario.nombre) return;
+            
+            const ruc = usuario.ruc || store.state.baseDatos?.ruc_asociado;
+            if (!ruc) return;
+
+            try {
+                const snapshot = await lee_multiEmpresas(ruc).once('value');
+                const empresa = snapshot.val();
+
+                if (!empresa || !Array.isArray(empresa.sedes)) return;
+                const index = empresa.sedes.findIndex(s => s.codigo === usuario.codigo);
+                if (index === -1) return;
+                empresa.sedes[index].nombre = usuario.nombre;
+
+                await nueva_multiEmpresa(ruc, empresa);
+                console.log('Nombre actualizado en multi_empresas para códigoOOO:', usuario.codigo);
+            } catch (error) {
+                console.error('Error al actualizar multi_empreSaaas:', error);
             }
         },
 
