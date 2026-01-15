@@ -102,6 +102,19 @@
 
                     <v-text-field type="number" autofocus outlined dense v-model="cantidad" label="CANTIDAD"
                         @focus="$event.target.select()" @keydown.enter="agrega_con_cantidad()"></v-text-field>
+                    
+                    <descuentos-porcentaje 
+                        ref="descuentosRef" 
+                        :precio-base="precioBaseParaDescuento" 
+                        :es-bono="false"
+                        :decimales="$store.state.configuracion.decimal || 2" 
+                        @cambio="onDescuentoCambio"
+                        class="my-2"
+                    />
+                    
+                    <div class="text-caption mt-1" v-if="descuentoAplicado.precioFinal && descuentoAplicado.precioFinal !== precioBaseParaDescuento">
+                        Precio final: <strong class="green--text">S/ {{ descuentoAplicado.precioFinal }}</strong>
+                    </div>
                 </v-card-text>
 
                 <v-btn class="mt-n6" color="red" @click="agrega_con_cantidad()" block>OK</v-btn>
@@ -121,9 +134,12 @@
 
 <script>
 import store from '@/store/index'
+import DescuentosPorcentaje from '@/components/descuentos_porcentaje.vue'
 
 export default {
-
+    components: {
+        DescuentosPorcentaje
+    },
     data() {
         return {
             dial: false,
@@ -141,6 +157,7 @@ export default {
             observacion_can: '',
             producto_sele: '',
             precioSeleccionado: 1,
+            descuentoAplicado: { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 },
         }
     },
     created() {
@@ -184,14 +201,21 @@ export default {
             }
         },
         abre_cantidad(valor) {
-
             if (valor) {
                 // Filtrar las observaciones disponibles
-
                 this.cantidad = 1;
                 this.producto_selecto = valor;
+                this.precioSeleccionado = 1;
+                // Resetear descuentos
+                this.descuentoAplicado = { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 };
+                if (this.$refs.descuentosRef) {
+                    this.$refs.descuentosRef.reset();
+                }
                 this.dialo_cantidad = true;
             }
+        },
+        onDescuentoCambio(data) {
+            this.descuentoAplicado = data;
         },
         agrega_con_cantidad() {
             if (this.cantidad == '' || this.cantidad == 0) {
@@ -202,15 +226,31 @@ export default {
             this.producto_selecto.cantidad = cant
 
             this.dialo_cantidad = false
+            
+            // Determinar precio base según selección
+            let precioBase = Number(this.producto_selecto.precio) || 0;
+            if (this.precioSeleccionado === 2 && this.producto_selecto.precio2) {
+                precioBase = Number(this.producto_selecto.precio2);
+            }
+            
+            // Verificar si hay descuentos aplicados
+            const tieneDescuentos = this.descuentoAplicado.desc_1 > 0 ||
+                this.descuentoAplicado.desc_2 > 0 ||
+                this.descuentoAplicado.desc_3 > 0;
+            
+            // Precio final considerando descuentos
+            const precioFinal = tieneDescuentos ? this.descuentoAplicado.precioFinal : precioBase;
+            
             const productoClonad = {
                 ...this.producto_selecto,
                 cantidad: this.cantidad,
+                precio: precioFinal,
+                precio_base: precioBase,
+                desc_1: this.descuentoAplicado.desc_1 || 0,
+                desc_2: this.descuentoAplicado.desc_2 || 0,
+                desc_3: this.descuentoAplicado.desc_3 || 0,
             };
 
-            // Asignar el precio correcto según selección
-            if (this.precioSeleccionado === 2 && this.producto_selecto.precio2) {
-                productoClonad.precio = this.producto_selecto.precio2;
-            }
             this.$emit('array', productoClonad)
             if (this.producto_selecto.tiene_bono && Array.isArray(this.producto_selecto.lista_bono)) {
                 const bonosOrdenados = [...this.producto_selecto.lista_bono]
@@ -279,6 +319,13 @@ export default {
 
                 return dentroCategoria && coincidePalabras;
             });
+        },
+        precioBaseParaDescuento() {
+            if (!this.producto_selecto) return 0;
+            if (this.precioSeleccionado === 2 && this.producto_selecto.precio2) {
+                return Number(this.producto_selecto.precio2) || 0;
+            }
+            return Number(this.producto_selecto.precio) || 0;
         }
     }
 

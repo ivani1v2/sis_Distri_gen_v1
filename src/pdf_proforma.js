@@ -165,24 +165,38 @@ function impresion58(arrays) {
   doc.text(separacion, pageCenter, linea, "center");
 
   //-----------------productos-----------------------
+  // Detectar si existe algún descuento y si el permiso está activo
+  const permisoDescuento = store.state.configuracion && store.state.configuracion.desc_porcentaje_catalogo;
+  const existeDescuento = permisoDescuento && array.some(
+    (it) =>
+      (Number(it.desc_1) > 0 || Number(it.desc_2) > 0 || Number(it.desc_3) > 0)
+  );
+  
   var operacionexonerada = 0;
   var operaciongravada = 0;
-  var nuevoArray = new Array(array.length);
+  var nuevoArray = [];
+  
   for (var i = 0; i < array.length; i++) {
-    //console.log(array[i])
-    var descuento = parseFloat(array[i].preciodescuento);
-    nuevoArray[i] = new Array(4);
-    nuevoArray[i][0] = array[i].cantidad;
-    nuevoArray[i][1] =
-      array[i].nombre +
-      "\n" +
-      "- moneda." +
-      array[i].precioedita +
-      " X " +
-      array[i].medida;
-    nuevoArray[i][2] = parseFloat(
-      array[i].precioedita * array[i].cantidad
-    ).toFixed(store.state.configuracion.decimal);
+    var descuento = parseFloat(array[i].preciodescuento || 0);
+    var textoDescuento = existeDescuento
+      ? `${array[i].desc_1 || 0} / ${array[i].desc_2 || 0} / ${array[i].desc_3 || 0}`
+      : null;
+    
+    if (!existeDescuento) {
+      nuevoArray.push([
+        array[i].cantidad,
+        array[i].nombre + "\n" + "- " + moneda + array[i].precioedita + " X " + array[i].medida,
+        parseFloat(array[i].precioedita * array[i].cantidad).toFixed(store.state.configuracion.decimal)
+      ]);
+    } else {
+      nuevoArray.push([
+        array[i].cantidad,
+        array[i].nombre + "\n" + "- " + moneda + array[i].precioedita + " X " + array[i].medida,
+        textoDescuento,
+        parseFloat(array[i].precioedita * array[i].cantidad).toFixed(store.state.configuracion.decimal)
+      ]);
+    }
+    
     if (array[i].operacion == "EXONERADA") {
       operacionexonerada =
         parseFloat(operacionexonerada) +
@@ -196,6 +210,23 @@ function impresion58(arrays) {
         descuento;
     }
   }
+  
+  // Cabeceras y estilos según si hay descuentos
+  const headSinDesc = [["Cant", "Descripcion", "P.T"]];
+  const headConDesc = [["Cant", "Descripcion", "%Desc", "P.T"]];
+  
+  const columnStylesSinDesc = {
+    0: { columnWidth: 8, halign: "center" },
+    1: { columnWidth: 30, halign: "left" },
+    2: { columnWidth: 11, halign: "right" },
+  };
+  
+  const columnStylesConDesc = {
+    0: { columnWidth: 7, halign: "center" },
+    1: { columnWidth: 23, halign: "left" },
+    2: { columnWidth: 12, halign: "center" },
+    3: { columnWidth: 9, halign: "right" },
+  };
 
   doc.autoTable({
     margin: { top: linea - 9, left: 0 },
@@ -206,13 +237,9 @@ function impresion58(arrays) {
       halign: "center",
     },
     headStyles: { lineWidth: 0, minCellHeight: 9 },
-    columnStyles: {
-      0: { columnWidth: 8, halign: "center" },
-      1: { columnWidth: 30, halign: "left" },
-      2: { columnWidth: 11, halign: "right" },
-    },
+    columnStyles: existeDescuento ? columnStylesConDesc : columnStylesSinDesc,
     theme: ["plain"],
-    head: [["Cant", "Descripcion", "P.T"]],
+    head: existeDescuento ? headConDesc : headSinDesc,
     body: nuevoArray,
   });
 
@@ -414,11 +441,18 @@ function impresion80(arrays) {
   doc.text(separacion, pageCenter, linea, "center");
 
   //-----------------productos-----------------------
+  // Detectar si existe algún descuento y si el permiso está activo
+  const permisoDescuento = store.state.configuracion && store.state.configuracion.desc_porcentaje_catalogo;
+  const existeDescuento = permisoDescuento && array.some(
+    (it) =>
+      (Number(it.desc_1) > 0 || Number(it.desc_2) > 0 || Number(it.desc_3) > 0)
+  );
+  
   var operacionexonerada = 0;
   var operaciongravada = 0;
-  var nuevoArray = new Array(array.length);
+  var nuevoArray = [];
+  
   for (var i = 0; i < array.length; i++) {
-    //console.log(array[i])
     var tg = "";
     var obs = "";
     if (array[i].operacion == "GRATUITA") {
@@ -426,14 +460,29 @@ function impresion80(arrays) {
       tg = " / TG: " + moneda + array[i].valor_total;
       array[i].precioedita = "0.00";
     }
-    var descuento = parseFloat(array[i].preciodescuento);
-    nuevoArray[i] = new Array(4);
-    nuevoArray[i][0] = array[i].cantidad;
-    nuevoArray[i][1] = array[i].nombre + "\n" + "-" + array[i].medida;
-    nuevoArray[i][2] = array[i].precioedita;
-    nuevoArray[i][3] = parseFloat(
-      array[i].precioedita * array[i].cantidad
-    ).toFixed(store.state.configuracion.decimal);
+    var descuento = parseFloat(array[i].preciodescuento || 0);
+    
+    var textoDescuento = existeDescuento
+      ? `${array[i].desc_1 || 0} / ${array[i].desc_2 || 0} / ${array[i].desc_3 || 0}`
+      : null;
+    
+    if (!existeDescuento) {
+      nuevoArray.push([
+        array[i].cantidad,
+        array[i].nombre + "\n" + "-" + array[i].medida,
+        array[i].precioedita,
+        parseFloat(array[i].precioedita * array[i].cantidad).toFixed(store.state.configuracion.decimal)
+      ]);
+    } else {
+      nuevoArray.push([
+        array[i].cantidad,
+        array[i].nombre + "\n" + "-" + array[i].medida,
+        array[i].precioedita,
+        textoDescuento,
+        parseFloat(array[i].precioedita * array[i].cantidad).toFixed(store.state.configuracion.decimal)
+      ]);
+    }
+    
     if (array[i].operacion == "EXONERADA") {
       operacionexonerada =
         parseFloat(operacionexonerada) +
@@ -447,6 +496,25 @@ function impresion80(arrays) {
         descuento;
     }
   }
+  
+  // Cabeceras y estilos según si hay descuentos
+  const headSinDesc = [["Cant", "Descripcion", "P.U", "P.T"]];
+  const headConDesc = [["Cant", "Descripcion", "P.U", "%Desc", "P.T"]];
+  
+  const columnStylesSinDesc = {
+    0: { columnWidth: 8, halign: "center" },
+    1: { columnWidth: 35, halign: "left" },
+    2: { columnWidth: 12, halign: "right" },
+    3: { columnWidth: 12, halign: "right" },
+  };
+  
+  const columnStylesConDesc = {
+    0: { columnWidth: 8, halign: "center" },
+    1: { columnWidth: 27, halign: "left" },
+    2: { columnWidth: 10, halign: "right" },
+    3: { columnWidth: 14, halign: "center" },
+    4: { columnWidth: 10, halign: "right" },
+  };
 
   doc.autoTable({
     margin: { top: linea - 9, left: 1 },
@@ -457,14 +525,9 @@ function impresion80(arrays) {
       halign: "center",
     },
     headStyles: { lineWidth: 0, minCellHeight: 9 },
-    columnStyles: {
-      0: { columnWidth: 8, halign: "center" },
-      1: { columnWidth: 35, halign: "left" },
-      2: { columnWidth: 12, halign: "right" },
-      3: { columnWidth: 12, halign: "right" },
-    },
+    columnStyles: existeDescuento ? columnStylesConDesc : columnStylesSinDesc,
     theme: ["plain"],
-    head: [["Cant", "Descripcion", "P.U", "P.T"]],
+    head: existeDescuento ? headConDesc : headSinDesc,
     body: nuevoArray,
   });
 
@@ -746,24 +809,45 @@ function impresionA4(arrays) {
   );
   doc.text(texto, 10, linea, "left"); //direccion
   linea = linea + 3.5 * texto.length;
-
-  //-----------------productos-----------------------
+  const permisoDescuento = store.state.configuracion && store.state.configuracion.desc_porcentaje_catalogo;
+  const existeDescuento = permisoDescuento && array.some(
+    (it) =>
+      (Number(it.desc_1) > 0 || Number(it.desc_2) > 0 || Number(it.desc_3) > 0)
+  );
+  
   var operacionexonerada = 0;
   var operaciongravada = 0;
-  var nuevoArray = new Array(array.length);
+  var nuevoArray = [];
+  
   for (var i = 0; i < array.length; i++) {
     if (array[i].operacion == "GRATUITA") {
       array[i].precioedita = "0.00";
     }
-    var descuento = parseFloat(array[i].preciodescuento);
-    nuevoArray[i] = new Array(4);
-    nuevoArray[i][0] = array[i].cantidad;
-    nuevoArray[i][1] = array[i].nombre;
-    nuevoArray[i][2] = array[i].medida;
-    nuevoArray[i][3] = array[i].precioedita;
-    nuevoArray[i][4] = parseFloat(
-      array[i].precioedita * array[i].cantidad
-    ).toFixed(2);
+    var descuento = parseFloat(array[i].preciodescuento || 0);
+    
+    var textoDescuento = existeDescuento
+      ? `${array[i].desc_1 || 0} / ${array[i].desc_2 || 0} / ${array[i].desc_3 || 0}`
+      : null;
+    
+    if (!existeDescuento) {
+      nuevoArray.push([
+        array[i].cantidad,
+        array[i].nombre,
+        array[i].medida,
+        array[i].precioedita,
+        parseFloat(array[i].precioedita * array[i].cantidad).toFixed(2)
+      ]);
+    } else {
+      nuevoArray.push([
+        array[i].cantidad,
+        array[i].nombre,
+        array[i].medida,
+        array[i].precioedita,
+        textoDescuento,
+        parseFloat(array[i].precioedita * array[i].cantidad).toFixed(2)
+      ]);
+    }
+    
     if (array[i].operacion == "EXONERADA") {
       operacionexonerada =
         parseFloat(operacionexonerada) +
@@ -777,6 +861,26 @@ function impresionA4(arrays) {
         descuento;
     }
   }
+  
+  const headSinDesc = [["Cantidad", "Descripcion", "Medida", "P.Unitario", "P.Total"]];
+  const headConDesc = [["Cant", "Descripcion", "Medida", "P.Unitario", "%Desc", "P.Total"]];
+  
+  const columnStylesSinDesc = {
+    0: { columnWidth: 20, halign: "center", fontStyle: "bold" },
+    1: { columnWidth: 110, halign: "left" },
+    2: { columnWidth: 20, halign: "center" },
+    3: { columnWidth: 20, halign: "center" },
+    4: { columnWidth: 20, halign: "center", fontStyle: "bold" },
+  };
+  
+  const columnStylesConDesc = {
+    0: { columnWidth: 15, halign: "center", fontStyle: "bold" },
+    1: { columnWidth: 90, halign: "left" },
+    2: { columnWidth: 18, halign: "center" },
+    3: { columnWidth: 20, halign: "center" },
+    4: { columnWidth: 22, halign: "center" },
+    5: { columnWidth: 20, halign: "center", fontStyle: "bold" },
+  };
 
   doc.autoTable({
     margin: { top: linea, left: 10 },
@@ -789,15 +893,9 @@ function impresionA4(arrays) {
       lineColor: 1,
     },
     headStyles: { lineWidth: 0.2, lineColor: 1 },
-    columnStyles: {
-      0: { columnWidth: 20, halign: "center", fontStyle: "bold" },
-      1: { columnWidth: 110, halign: "left" },
-      2: { columnWidth: 20, halign: "center" },
-      3: { columnWidth: 20, halign: "center" },
-      4: { columnWidth: 20, halign: "center", fontStyle: "bold" },
-    },
+    columnStyles: existeDescuento ? columnStylesConDesc : columnStylesSinDesc,
     theme: ["plain"],
-    head: [["Cantidad", "Descripcion", "Medida", "P.Unitario", "P.Total"]],
+    head: existeDescuento ? headConDesc : headSinDesc,
     body: nuevoArray,
   });
 

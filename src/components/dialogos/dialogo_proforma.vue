@@ -19,84 +19,63 @@
                 </v-col>
             </v-row>
 
-            <v-simple-table dark fixed-header height="50vh" dense>
-                <template v-slot:default>
-                    <thead>
-                        <tr>
-                            <th class="text-left"></th>
-                            <th class="text-left">Descripción</th>
-                            <th class="text-left">Medida</th>
-                            <th class="text-left">Und.</th>
-                            <th class="text-left">Precio</th>
-                            <th class="text-left">Tot.</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        <tr v-for="item in listaproductos" :key="item.uuid || item.id">
-                            <td width="5">
-                                <v-menu>
-                                    <template v-slot:activator="{ on, attrs }">
-                                        <v-btn icon v-bind="attrs" v-on="on">
-                                            <v-icon>mdi-dots-vertical</v-icon>
-                                        </v-btn>
-                                    </template>
-                                    <v-list dense>
-                                        <v-list-item @click.prevent="editar(item)">
-                                            <v-list-item-icon>
-                                                <v-icon color="yellow">mdi-pencil</v-icon>
-                                            </v-list-item-icon>
-                                            <v-list-item-title>Editar</v-list-item-title>
-                                        </v-list-item>
-                                        <v-list-item @click.prevent="eliminar(item)">
-                                            <v-list-item-icon>
-                                                <v-icon color="red">mdi-delete</v-icon>
-                                            </v-list-item-icon>
-                                            <v-list-item-title>Borrar</v-list-item-title>
-                                        </v-list-item>
-                                    </v-list>
-                                </v-menu>
-                            </td>
-
-                            <td style="font-family:verdana;font-size:75%;">
+            <div style="max-height: 50vh; overflow-y: auto;">
+                <v-card 
+                    v-for="item in listaproductos" 
+                    :key="item.uuid || item.id"
+                    class="mb-2 pa-2"
+                    outlined
+                >
+                    <v-row dense align="center">
+                        <v-col cols="12" sm="6">
+                            <div style="font-size: 13px; font-weight: 500;">
                                 {{ item.id }} - {{ item.nombre }}
-                                <strong class="red--text" v-if="item.operacion === 'GRATUITA'">
-                                    - Gratuita
-                                </strong>
-                            </td>
-
-                            <td style="font-family:verdana;font-size:75%;">
+                                <v-chip x-small color="red" dark v-if="item.operacion === 'GRATUITA'" class="ml-1">
+                                    Gratuita
+                                </v-chip>
+                            </div>
+                            <div style="font-size: 11px; color: grey;">
                                 {{ item.medida }}
-                            </td>
+                            </div>
+                        </v-col>
+                        <v-col cols="12" sm="4">
+                            <v-row dense>
+                                <v-col cols="3" class="text-center">
+                                    <div style="font-size: 12px; color: grey;">Cant.</div>
+                                    <div style="font-size: 12px; font-weight: 500;">{{ item.cantidad }}</div>
+                                </v-col>
+                                <v-col cols="3" class="text-center" v-if="item.operacion !== 'GRATUITA'">
+                                    <div style="font-size: 12px; color: grey;">Precio</div>
+                                    <div style="font-size: 12px; font-weight: 500;">{{ redondear(item.precio) }}</div>
+                                </v-col>
+                                <v-col cols="3" class="text-center" v-if="$store.state.configuracion.desc_porcentaje_catalogo && item.operacion !== 'GRATUITA'">
+                                    <div style="font-size: 12px; color: grey;">%Desc</div>
+                                    <div style="font-size: 12px;">{{ item.desc_1 || 0 }}/{{ item.desc_2 || 0 }}/{{ item.desc_3 || 0 }}</div>
+                                </v-col>
+                                <v-col cols="3" class="text-center" v-if="item.operacion !== 'GRATUITA'">
+                                    <div style="font-size: 12px; color: grey;">Total</div>
+                                    <div style="font-size: 12px; font-weight: 600; color: #4CAF50;">
+                                        {{ redondear(item.cantidad * item.precio) }}
+                                    </div>
+                                </v-col>
+                            </v-row>
+                        </v-col>
+                       <v-col cols="12" sm="2" class="text-right">
+                            <v-btn icon small color="warning" @click="editar(item)" title="Editar">
+                                <v-icon small>mdi-pencil</v-icon>
+                            </v-btn>
+                            <v-btn icon small color="error" @click="eliminar(item)" title="Eliminar">
+                                <v-icon small>mdi-delete</v-icon>
+                            </v-btn>
+                        </v-col>
+                    </v-row>
+                </v-card>
 
-                            <!-- Cantidad -->
-                            <td width="100">
-                                <v-row class="mt-n4 mb-n6">
-                                    <v-col cols="12">
-                                        <v-text-field type="number" dense v-model.number="item.cantidad"></v-text-field>
-                                    </v-col>
-                                </v-row>
-                            </td>
-
-                            <!-- Precio (solo si no es gratuita) -->
-                            <td width="100" v-if="item.operacion !== 'GRATUITA'">
-                                <v-row class="mt-n4 mb-n6">
-                                    <v-col cols="12">
-                                        <v-text-field type="number" dense v-model.number="item.precio"></v-text-field>
-                                    </v-col>
-                                </v-row>
-                            </td>
-
-                            <!-- Total (solo si no es gratuita) -->
-                            <td width="100" v-if="item.operacion !== 'GRATUITA'">
-                                {{ redondear(item.cantidad * item.precio) }}
-                            </td>
-                        </tr>
-                    </tbody>
-
-                    <v-card-text></v-card-text>
-                </template>
-            </v-simple-table>
+                <v-card v-if="listaproductos.length === 0" class="pa-4 text-center" outlined>
+                    <v-icon large color="grey">mdi-package-variant</v-icon>
+                    <div class="grey--text mt-2">No hay productos agregados</div>
+                </v-card>
+            </div>
 
             <v-spacer></v-spacer>
             <v-row class="mt-1">
@@ -161,19 +140,26 @@
         </v-dialog> <v-dialog v-model="dial_edita" max-width="390">
             <div> <v-system-bar window dark> <v-icon @click="dial_edita = false">mdi-close</v-icon> </v-system-bar>
             </div>
-            <v-card class="pa-3"> <v-row class="mb-n12"> <v-col cols="6" sm="6" md="6"> <v-select
+            <v-card class="pa-3" :key="editKey"> <v-row class="mb-n12"> <v-col cols="6" sm="6" md="6"> <v-select
                             :items="arraytipoProducto" label="Tipo" dense outlined
                             v-model="selecto.tipoproducto"></v-select> </v-col> <v-col cols="6" sm="6" md="6"> <v-select
                             :items="arrayOperacion" label="Operacion" dense outlined
                             v-model="selecto.operacion"></v-select> </v-col> </v-row> <v-row class="mt-4"> <v-col
-                        cols="6" xs="6"> <v-text-field dense outlined type="number" v-model="selecto.cantidad"
+                        cols="6" xs="6"> <v-text-field dense outlined type="number" v-model.number="selecto.cantidad"
                             label="Cantidad"></v-text-field> </v-col> <v-col cols="6" xs="6"> <v-text-field dense
-                            outlined type="number" v-model="selecto.precioedita" label="Precio"></v-text-field> </v-col>
+                            outlined type="number" v-model.number="selecto.precioedita" label="Precio" @input="onPrecioEditaChange"></v-text-field> </v-col>
                 </v-row>
+                
+               <!-- Bandera 123 -->
+                <v-alert v-if="precioCambiado" type="warning" dense text class="mt-2 mb-0" style="font-size: 11px;">
+                    El precio fue modificado. Ajuste los descuentos si es necesario.
+                </v-alert>
                 <descuentos-porcentaje
+                    v-if="dial_edita"
+                    :key="'desc-edit-' + editKey"
                     ref="descEditaRef"
-                    :precio-base="Number(selecto.precio_base || selecto.precioedita) || 0"
-                    :descuentos-iniciales="{ desc_1: selecto.desc_1 || 0, desc_2: selecto.desc_2 || 0, desc_3: selecto.desc_3 || 0 }"
+                    :precio-base="precioBaseEdita"
+                    :descuentos-iniciales="descuentosInicialesEdita"
                     :es-bono="selecto.operacion === 'GRATUITA'"
                     :decimales="$store.state.configuracion.decimal || 2"
                     @cambio="onDescEditaCambio"
@@ -247,7 +233,10 @@ export default {
             nombreSincodigo: '',
             array_modo: ['CONTADO', 'CREDITO'],
             modo_pago: 'CONTADO',
-            selecto: '',
+            selecto: {},
+            editKey: 0,
+            precioCambiado: false,
+            precioOriginalEdita: 0,
             dial_cliente: false,
             moneda: store.state.moneda.find(m => m.codigo === 'PEN'),
             descSinCodigo: { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 },
@@ -255,7 +244,16 @@ export default {
         }
     },
     computed: {
-
+        precioBaseEdita() {
+            return Number(this.selecto.precio_base) || Number(this.selecto.precioedita) || 0;
+        },
+        descuentosInicialesEdita() {
+            return {
+                desc_1: Number(this.selecto.desc_1) || 0,
+                desc_2: Number(this.selecto.desc_2) || 0,
+                desc_3: Number(this.selecto.desc_3) || 0
+            };
+        }
     },
     created() {
         if (this.data != '') {
@@ -274,9 +272,24 @@ export default {
 
     methods: {
         editar(data) {
-            console.log(data)
-            this.selecto = data
-            this.dial_edita = true
+            this.editKey++;
+            this.precioCambiado = false;
+            const precio = Number(data.precioedita) || Number(data.precio) || 0;
+            this.precioOriginalEdita = precio;
+            this.selecto = { 
+                ...data,
+                cantidad: Number(data.cantidad) || 1,
+                precioedita: precio,
+                precio_base: Number(data.precio_base) || precio,
+                desc_1: Number(data.desc_1) || 0,
+                desc_2: Number(data.desc_2) || 0,
+                desc_3: Number(data.desc_3) || 0
+            };
+            this.dial_edita = true;
+        },
+        onPrecioEditaChange() {
+            const precioActual = Number(this.selecto.precioedita) || 0;
+            this.precioCambiado = precioActual !== this.precioOriginalEdita;
         },
         cierra() {
             this.$emit('cierra', false)
@@ -458,6 +471,22 @@ export default {
             }
         },
         guardarEdicion() {
+            if (!this.selecto) {
+                this.dial_edita = false;
+                return;
+            }
+            const clave = this.selecto.uuid || this.selecto.id;
+            const index = this.listaproductos.findIndex(p => (p.uuid || p.id) === clave);
+            
+            if (index !== -1) {
+                this.selecto.precio = parseFloat(this.selecto.precioedita) || 0;
+                
+                if ((this.selecto.desc_1 > 0 || this.selecto.desc_2 > 0 || this.selecto.desc_3 > 0) && !this.selecto.precio_base) {
+                    this.selecto.precio_base = this.selecto.precio;
+                }
+                this.$set(this.listaproductos, index, { ...this.selecto });
+            }
+            
             this.dial_edita = false;
             this.descEdita = { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 };
         },

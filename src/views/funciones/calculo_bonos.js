@@ -594,7 +594,7 @@ export function agregarLista({ listaActual, nuevosItems, createUUID, redondear }
       uuid: createUUID().substring(29),
       medida: medidaLinea,
       precio: precioNum,
-      // ✅ respeta precio_base si viene (ej: sin descuento)
+      precioedita: precioNum,
       precio_base: val.precio_base != null ? Number(val.precio_base) : precioNum,
       preciodescuento: val.preciodescuento != null ? Number(val.preciodescuento) : 0,
       peso: pesoLinea,

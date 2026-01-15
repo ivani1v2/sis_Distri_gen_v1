@@ -176,7 +176,7 @@ export default {
   async created() {
     try {
       const snapshot = await allCategorias('categorias').once('value')
-      const setCats = new Set(this.arraycategoria_f) 
+      const setCats = new Set(this.arraycategoria_f)
       snapshot.forEach((it) => {
         const nom = (it.val() && it.val().nombre) ? String(it.val().nombre) : ''
         if (nom) setCats.add(nom)
@@ -240,6 +240,7 @@ export default {
           PrecioVenta: precioN,
           TotalCosto: costoN * stockN,
           TotalVenta: precioN * stockN,
+          Observacion: it.obs1 || '',
         }
       })
     },
@@ -253,10 +254,16 @@ export default {
 
         const hoja = XLSX.utils.json_to_sheet(data, {
           header: [
-            'ID', 'Categoria', 'Nombre', 'Costo', 'Stock', 'PrecioVenta', 'TotalCosto', 'TotalVenta'
+            'ID', 'Categoria', 'Nombre', 'Costo', 'Stock', 'PrecioVenta',
+            'TotalCosto', 'TotalVenta', 'Observacion'
           ]
         })
 
+        hoja['!cols'] = []
+        hoja['!cols'][0] = { wch: 8 }
+        hoja['!cols'][1] = { wch: 15 }
+        hoja['!cols'][2] = { wch: 40 }
+        hoja['!cols'][8] = { wch: 20 }
 
         const libro = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(libro, hoja, 'Productos')
@@ -268,7 +275,6 @@ export default {
         alert('No se pudo exportar a Excel.')
       }
     },
-
     // ——— Exportar a PDF ———
     async exportarPDF() {
       try {
