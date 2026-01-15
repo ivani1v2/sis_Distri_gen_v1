@@ -277,6 +277,7 @@ export const obtenContador = () => {
   return db.database().ref(store.state.baseDatos.bd).child("contadores");
 };
 export const sumaContador = (contador, orden) => {
+  console.log(contador, orden)
   return db
     .database()
     .ref(store.state.baseDatos.bd)

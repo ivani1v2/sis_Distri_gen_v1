@@ -15,16 +15,17 @@
             </v-col>
         </v-row>
         <v-btn color="success" v-if="false" @click='modificafechas()'>text</v-btn>
+
         <v-row class="mt-n8">
             <v-col cols="5" v-if="$store.state.esmovil">
-                <h4 class="text-center"> Boletas:  {{moneda}} {{ sumaventas().boleta }}</h4>
-                <h4 class="text-center"> Facturas: {{moneda}} {{ sumaventas().factura }}</h4>
+                <h4 class="text-center"> Boletas: {{ moneda }} {{ sumaventas().boleta }}</h4>
+                <h4 class="text-center"> Facturas: {{ moneda }} {{ sumaventas().factura }}</h4>
             </v-col>
             <v-col cols="5" v-if="!$store.state.esmovil">
-                <h4 class="text-center"> Boletas: {{moneda}} {{ sumaventas().boleta }}</h4>
+                <h4 class="text-center"> Boletas: {{ moneda }} {{ sumaventas().boleta }}</h4>
             </v-col>
             <v-col cols="5" v-if="!$store.state.esmovil">
-                <h4 class="text-center"> Facturas:  {{moneda}} {{ sumaventas().factura }}</h4>
+                <h4 class="text-center"> Facturas: {{ moneda }} {{ sumaventas().factura }}</h4>
             </v-col>
             <v-col cols="6" sm="2" md="2">
                 <v-menu offset-y block>
@@ -106,6 +107,8 @@
                 </v-system-bar>
             </div>
             <v-card class="pa-3">
+                <v-btn color="warning" small @click="normalizaGratuitas" v-if="false">
+                </v-btn>
                 <v-row dense>
                     <v-col cols="8">
                         <p style="font-size:80%;"> Doc. N° : {{ seleccionado.numeracion }}</p>
@@ -140,7 +143,7 @@
                         </thead>
                         <tbody>
                             <tr v-for="item in arrayConsolidar" :key="item.id" class="">
-                                <td>{{ item.nombre }} - {{moneda}}{{ item.precioedita }} x {{ item.medida }}</td>
+                                <td>{{ item.nombre }} - {{ moneda }}{{ item.precioedita }} x {{ item.medida }}</td>
                                 <td>{{ item.cantidad }}</td>
                                 <td v-if="item.operacion == 'GRATUITA'" class="red--text">{{ seleccionado.moneda }}0.00
                                 </td>
@@ -250,7 +253,8 @@ import {
     grabaconsultacomprobante,
     grabaDatoC,
     consulta_Cabecera,
-    editaMontura
+    editaMontura,
+    grabaDetalle
 } from '../../db'
 import store from '@/store/index'
 import imprime from '@/components/dialogos/dialog_imprime'
@@ -316,7 +320,7 @@ export default {
         },
     },
     created() {
-          this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
+        this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         this.busca()
     },
     methods: {
@@ -542,8 +546,8 @@ export default {
             for (var i = 0; i < this.desserts.length; i++) {
                 console.log(this.desserts[i].numeracion)
                 grabaDatoC(this.desserts[i].numeracion, "automata", '')
-         //         await grabaDatoC(this.desserts[i].numeracion, "fecha", 1766442165)
-           //     grabaDatoC(this.desserts[i].numeracion, "vencimientoDoc", 1766442165)
+                //         await grabaDatoC(this.desserts[i].numeracion, "fecha", 1766442165)
+                //     grabaDatoC(this.desserts[i].numeracion, "vencimientoDoc", 1766442165)
                 // if (this.desserts[i].estado == 'RECHAZADO') {
                 //console.log("rechazado")
                 // if (this.desserts[i].tipocomprobante == 'F') {
@@ -635,7 +639,40 @@ export default {
             this.data_nota_items = snapshot.val();
             this.dial_nota = true;
             store.commit("dialogoprogress", 1)
-        }
+        },
+        normalizaGratuitas() {
+            if (!Array.isArray(this.arrayConsolidar) || !this.seleccionado?.numeracion) return;
+            this.arrayConsolidar = this.arrayConsolidar.map(it => {
+                const esGrat = String(it.operacion || '').toUpperCase() === 'GRATUITA';
+                if (!esGrat) return it;
+
+                return {
+                    ...it,
+                    precio: 1,
+                    precioVentaUnitario: "1.00",
+                    precioedita: 1,
+                    total_antes_impuestos: "1.00",
+                    valor_total: "1.00",
+                    total_impuestos: "0.00",
+                    igv: "0.00",
+                    valor_unitario: "0.00000",
+                };
+            });
+
+            // 2) Calcula total_op_gratuitas desde detalle
+            const totalGrat = this.arrayConsolidar
+                .filter(it => String(it.operacion || '').toUpperCase() === 'GRATUITA')
+                .reduce((acc, it) => acc + (Number(it.total_antes_impuestos) || 0), 0);
+
+            const totalGratStr = totalGrat.toFixed(2);
+            console.log("NORMALIZA", this.seleccionado.numeracion, totalGratStr);
+            grabaDetalle(this.seleccionado.numeracion, this.arrayConsolidar);
+            grabaDatoC(this.seleccionado.numeracion, "total_op_gratuitas", totalGratStr);
+            grabaDatoC(this.seleccionado.numeracion, "totalIGV_GRATUITA", "0.00");
+            this.seleccionado.total_op_gratuitas = totalGratStr;
+            this.seleccionado.totalIGV_GRATUITA = "0.00";
+            store.commit('dialogosnackbar', `Gratuitas normalizadas: S/ ${totalGratStr}`);
+        },
 
     }
 }

@@ -333,11 +333,11 @@ export default {
                 const contadorKey = esBoleta ? "ordenboleta" : "ordenfactura";
 
                 const correlActivo = String(contadores[contadorKey] || "00000000").padStart(8, "0");
-                const correlNuevo = (parseInt(correlActivo, 10) + 1).toString().padStart(8, "0");
+
 
                 // --- 3) ARMAR NUEVA CABECERA ---
                 const ts = moment().unix();
-                const numeracionNueva = `${this.tipocomprobante_edita}${correlNuevo}`;
+                const numeracionNueva = serie + '-' + correlActivo;
 
                 const nuevaCabecera = {
                     ...this.info_cabecera,
@@ -345,7 +345,7 @@ export default {
                     tipocomprobante: this.tipocomprobante_edita, // "B" o "F"
                     cod_comprobante,                              // "03" o "01"
                     serie,                                        // serie según tipo
-                    correlativoDocEmitido: correlNuevo,           // 8 dígitos
+                    correlativoDocEmitido: correlActivo,           // 8 dígitos
                     numeracion: numeracionNueva,
                     fecha: ts,
                     // contado => vence mismo día; crédito => conserva o fija si no existe
@@ -354,12 +354,11 @@ export default {
                             ? ts
                             : (Number(this.info_cabecera?.vencimientoDoc) || ts),
                 };
-
+                const correlNuevo = (parseInt(correlActivo, 10) + 1).toString().padStart(8, "0");
                 // --- 4) PERSISTIR NUEVO DOC + DETALLE + ACTUALIZAR CONTADOR ---
                 await Promise.all([
                     graba_cabecera_p(oldGrupo, numeracionNueva, nuevaCabecera),
                     graba_detalle_p(oldGrupo, numeracionNueva, this.listaproductos),
-                    // Actualiza el contador con el correlativo nuevo calculado
                     sumaContador(contadorKey, correlNuevo),
                 ]);
 
