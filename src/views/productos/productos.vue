@@ -894,12 +894,8 @@ export default {
             if (this.stock == '') {
                 this.stock = 0
             }
-            if (!this.proveedor || this.proveedor.trim() === '') {
-                alert("Debe seleccionar un proveedor")
-                return
-            }
-            if (!this.marca || this.marca.trim() === '') {
-                alert("Debe seleccionar una marca")
+            if (!this.nombre || this.nombre.trim() === '') {
+                alert("Debe seleccionar un nombre")
                 return
             }
             if (this.categoria == 1 || this.categoria == '' || !this.categoria) {

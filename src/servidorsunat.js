@@ -138,7 +138,7 @@ export const enviaDocumentoApiSunat = (arrayCabecera, array) => {
     forma_pago: pago, //Contado/Credito
     monto_credito: credito,
   };
-  console.log(arrayCabecerasunat,arrayItems);
+  //console.log(arrayCabecerasunat,arrayItems);
   //la sumatoria debe dar el monto del credito.
 
   var bodyFormData = new FormData();
@@ -156,7 +156,7 @@ export const enviaDocumentoApiSunat = (arrayCabecera, array) => {
   // url: 'https://mitienda-f5ef8.uc.r.appspot.com/',
   // url: 'https://silken-bastion-326020.appspot.com/',
   //'https://factura-peru.uc.r.appspot.com/'
-  console.log(arrayEmisor);
+  //console.log(arrayEmisor);
   var resp = axios({
     method: "POST",
     url: "https://silken-bastion-326020.uc.r.appspot.com/",
@@ -352,7 +352,7 @@ export const guia_remision = (arrayCabecera, array) => {
   cabe.fecha_emisions = moment.unix(cabe.fecha_emision).format("YYYY-MM-DD");
   cabe.fecha_traslados = moment.unix(cabe.fecha_traslado).format("YYYY-MM-DD");
 
-  console.log(cabe, arrayItems, arrayEmisor);
+  //console.log(cabe, arrayItems, arrayEmisor);
   var bodyFormData = new FormData();
   bodyFormData.append("entorno", "mitienda-f5ef8.appspot.com");
   bodyFormData.append("funcion", "guia");
@@ -363,7 +363,7 @@ export const guia_remision = (arrayCabecera, array) => {
   bodyFormData.append("emisor", JSON.stringify(arrayEmisor));
   bodyFormData.append("cabecera", JSON.stringify(cabe));
   bodyFormData.append("items", JSON.stringify(arrayItems));
-  console.log(arrayCabecera);
+  //console.log(arrayCabecera);
   var resp = axios({
     method: "POST",
     url: "https://factura-peru.uc.r.appspot.com/",
@@ -374,7 +374,7 @@ export const guia_remision = (arrayCabecera, array) => {
       console.log(response.data);
       var resp = JSON.parse(response.data.data);
       if (response.data.status_message == "aceptado") {
-        console.log(arrayCabecera.id, resp.numTicket);
+        //console.log(arrayCabecera.id, resp.numTicket);
         nuevo_ticket_guia(arrayCabecera.id, resp.numTicket);
         editaGuiaremision(arrayCabecera.id, "estado", "aceptado");
         editaGuiaremision(arrayCabecera.id, "num_ticket", resp.numTicket);
@@ -498,8 +498,7 @@ export const envioNCredito = (arrayCabecera, array) => {
     razon_social: arrayCabecera.cliente,
     direccion: arrayCabecera.direccion,
   };
-  console.log(arrayCabecera);
-  console.log(arrayCliente);
+  
   var arrayCabecerasunat = {
     tipo_comprobante: "07",
     moneda: obtenerCodigoMoneda(arrayCabecera.moneda),

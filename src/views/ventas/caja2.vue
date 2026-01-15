@@ -503,6 +503,7 @@ export default {
         },
 
         agregar_lista(value) {
+            console.log(value)
             // 1) Usamos tu helper para fusionar / sumar cantidades / etc.
             let nuevaLista = agregarLista({
                 listaActual: this.listaproductos,

@@ -420,6 +420,7 @@ export default {
             this.arrayConsolidar = []
             this.seleccionado = value
             consultaDetalle(value.numeracion).once("value").then((snapshot) => {
+                console.log(snapshot.val())
                 snapshot.forEach((item) => {
                     this.arrayConsolidar.push(item.val())
                 })

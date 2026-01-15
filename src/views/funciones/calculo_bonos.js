@@ -364,8 +364,8 @@ export function analizaGrupos({
       medida: "UNIDAD",
       factor: Number(prodBono.factor || 1),
       cantidad: Number(qtyFree),
-      precio: 0,
-      precio_base: 0,
+      precio: Number(prodBono.precio || 0),
+      precio_base: Number(prodBono.precio || 0),
       preciodescuento: 0,
       costo: Number(prodBono.costo || 0),
       tipoproducto: prodBono.tipoproducto,
@@ -436,8 +436,8 @@ export function analizaGrupos({
         medida: "UNIDAD",
         factor: Number(prodBono.factor || 1),
         cantidad: Number(qtyFree),
-        precio: 0,
-        precio_base: 0,
+        precio: Number(prodBono.precio || 0),
+        precio_base: Number(prodBono.precio || 0),
         preciodescuento: 0,
         costo: Number(prodBono.costo || 0),
         tipoproducto: prodBono.tipoproducto,
@@ -501,34 +501,34 @@ export function aplicaPreciosYBonos({
  * @returns {Array} Nueva lista de productos actualizada
  */
 
-export function agregarLista({
-  listaActual,
-  nuevosItems,
-  createUUID,
-  redondear,
-}) {
+export function agregarLista({ listaActual, nuevosItems, createUUID, redondear }) {
   const lista = Array.isArray(listaActual) ? [...listaActual] : [];
   const items = Array.isArray(nuevosItems) ? nuevosItems : [nuevosItems];
 
+  const pickExtras = (val) => ({
+    // ✅ descuentos
+    desc_1: Number(val.desc_1 || 0),
+    desc_2: Number(val.desc_2 || 0),
+    desc_3: Number(val.desc_3 || 0),
+
+    // ✅ opcionales que también sueles usar
+    _precio_tier: val._precio_tier,
+    _unidades: val._unidades,
+    observacion: val.observacion,
+  });
+
   items.forEach((val) => {
     const medidaLinea = (val.medida || "").toString().trim().toUpperCase();
-    const esGratuitaNueva =
-      String(val.operacion || "").toUpperCase() === "GRATUITA";
+    const esGratuitaNueva = String(val.operacion || "").toUpperCase() === "GRATUITA";
     const cantidad = Number(val.cantidad || 0);
     const basePeso = Number(val.peso || 0);
     const factor = Number(val.factor || 1);
 
-    // 👉 Cálculo del peso total de la línea
     let pesoLinea = 0;
-    if (factor > 1 && medidaLinea !== "UNIDAD") {
-      // Ej: CAJA x 12 UNDS → peso * factor * cantidad
-      pesoLinea = basePeso * factor * cantidad;
-    } else {
-      // UNIDAD o factor 1 → peso * cantidad
-      pesoLinea = basePeso * cantidad;
-    }
+    if (factor > 1 && medidaLinea !== "UNIDAD") pesoLinea = basePeso * factor * cantidad;
+    else pesoLinea = basePeso * cantidad;
 
-    // ---------- CASO GRATUITA: acumula cantidad por (id + medida)
+    // ================= GRATUITA =================
     if (esGratuitaNueva) {
       const existenteGrat = lista.find(
         (item) =>
@@ -540,32 +540,25 @@ export function agregarLista({
       if (existenteGrat) {
         existenteGrat.cantidad = Number(existenteGrat.cantidad || 0) + cantidad;
         existenteGrat.peso = Number(existenteGrat.peso || 0) + pesoLinea;
-        existenteGrat.totalLinea = "0.00"; // siempre 0 en gratuita
-        return; // ya sumamos; no insertamos nuevo
+        existenteGrat.totalLinea = "0.00";
+        // ✅ si quieres conservar descuentos en gratuitas, mantenlos también:
+        // existenteGrat.desc_1 = existenteGrat.desc_1 || Number(val.desc_1 || 0);
+        return;
       }
 
-      // No existía: insertar línea gratuita
       lista.push({
+        ...val, // ✅ copia todo (incluye desc_*, etc.)
         uuid: createUUID().substring(29),
-        factor: val.factor,
-        id: val.id,
-        cantidad,
-        nombre: val.nombre,
         medida: medidaLinea,
-        precio: Number(val.precio || 0),
-        precio_base: Number(val.precio || 0),
-        preciodescuento: 0,
-        costo: val.costo,
-        tipoproducto: val.tipoproducto,
         operacion: "GRATUITA",
+        preciodescuento: 0,
         peso: pesoLinea,
-        controstock: val.controstock,
         totalLinea: "0.00",
       });
       return;
     }
 
-    // ---------- CASO NO GRATUITA: PERMITIR DUPLICADOS, PERO SUMAR SI (id + medida) COINCIDEN
+    // ================= NO GRATUITA =================
     const existente = lista.find(
       (item) =>
         item.id === val.id &&
@@ -574,39 +567,41 @@ export function agregarLista({
     );
 
     if (existente) {
-      // Acumular cantidad y peso
       const nuevaCantidad = Number(existente.cantidad || 0) + cantidad;
       existente.cantidad = nuevaCantidad;
       existente.peso = Number(existente.peso || 0) + pesoLinea;
 
-      // Mantén el precio de la línea existente
+      // ✅ Mínimo: si el nuevo trae descuentos, los respetas (si no, mantienes los actuales)
+      const ex = pickExtras(existente);
+      const nx = pickExtras(val);
+
+      existente.desc_1 = nx.desc_1 || ex.desc_1 || 0;
+      existente.desc_2 = nx.desc_2 || ex.desc_2 || 0;
+      existente.desc_3 = nx.desc_3 || ex.desc_3 || 0;
+
+      // ⚠️ OJO: precio unitario ya puede venir con descuento aplicado.
+      // Si tu "precio" en la línea YA ES el precio final con descuento, esto está bien:
       const precioUnit = Number(existente.precio || 0);
       existente.totalLinea = redondear(precioUnit * nuevaCantidad);
-      // Mantén preciodescuento tal cual (se suman aparte en sumaDescuentos)
-      return; // no inserta nueva línea
+
+      return;
     }
 
-    // No había línea equivalente -> insertar una nueva
     const precioNum = Number(val.precio || 0);
 
     lista.push({
+      ...val, // ✅ copia todo para no perder desc_*, _precio_tier, etc.
       uuid: createUUID().substring(29),
-      factor: val.factor,
-      id: val.id,
-      cantidad,
-      nombre: val.nombre,
       medida: medidaLinea,
       precio: precioNum,
-      precio_base: precioNum,
-      preciodescuento: 0,
-      costo: val.costo,
-      tipoproducto: val.tipoproducto,
-      operacion: val.operacion, // 'GRAVADA', etc.
+      // ✅ respeta precio_base si viene (ej: sin descuento)
+      precio_base: val.precio_base != null ? Number(val.precio_base) : precioNum,
+      preciodescuento: val.preciodescuento != null ? Number(val.preciodescuento) : 0,
       peso: pesoLinea,
-      controstock: val.controstock,
       totalLinea: redondear(precioNum * cantidad),
     });
   });
 
   return lista;
 }
+

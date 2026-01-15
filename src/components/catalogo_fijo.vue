@@ -124,7 +124,7 @@
                     <div class="text-caption grey--text text--darken-1" v-if="getFactor(producto_selecto) > 1">
                         Stock:
                         <strong>{{ Math.floor(Number(producto_selecto.stock || 0) / getFactor(producto_selecto))
-                            }}</strong>
+                        }}</strong>
                         cajas
                         + <strong>{{ Number(producto_selecto.stock || 0) % getFactor(producto_selecto) }}</strong> und
                         (total <strong>{{ producto_selecto.stock }}</strong> und) — Factor: {{
@@ -515,10 +515,7 @@ export default {
             this.$emit('agrega_lista', linea);
             this.avisarAgregado();
 
-            this.descuentoAplicado = { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 };
-            if (this.$refs.descuentosRef) {
-                this.$refs.descuentosRef.reset();
-            }
+
 
             if (this.producto_selecto.tiene_bono && Array.isArray(this.producto_selecto.lista_bono)) {
                 const bonosOrdenados = [...this.producto_selecto.lista_bono]
@@ -540,6 +537,7 @@ export default {
                                 factor: factor,
                                 cantidad: veces * bono.cantidad, // en unidades
                                 precio: precioUnidad,
+                                precio_base: precioUnidad,
                                 observacion: ''
                             });
                             cantidadRestante -= veces * bono.apartir_de;
@@ -582,15 +580,15 @@ export default {
                 this.cantidadInput = 1;
                 this.producto_selecto = producto;
                 this.es_bono = false;
-                this.descuentoAplicado = { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 };
+                if (this.$refs.descuentosRef) {
+                    this.$refs.descuentosRef.reset();
+                }
                 this.dialo_cantidad = true;
                 this.cantCajas = 0;
                 this.cantUnd = 1;
                 this.precioSeleccionado = null;
                 this._tierSugerido = this.sugerirTier(this.producto_selecto, this.totalUnidades);
-                this.$nextTick(() => {
-                    if (this.$refs.descuentosRef) this.$refs.descuentosRef.reset();
-                });
+
             }
         },
         prod_selecto2(valor) {
@@ -607,14 +605,14 @@ export default {
                 this.producto_selecto = valor;
                 this.precioSeleccionado = null;
                 this.es_bono = false;
-                this.descuentoAplicado = { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 };
+                if (this.$refs.descuentosRef) {
+                    this.$refs.descuentosRef.reset();
+                }
                 this.dialo_cantidad = true;
                 this.cantCajas = 0;
                 this.cantUnd = 1;
                 this._tierSugerido = this.sugerirTier(this.producto_selecto, this.totalUnidades);
-                this.$nextTick(() => {
-                    if (this.$refs.descuentosRef) this.$refs.descuentosRef.reset();
-                });
+
             }
         },
         iraproductos(item) {
@@ -741,6 +739,7 @@ export default {
             }
         },
         onDescuentoCambio(data) {
+            console.log(data)
             this.descuentoAplicado = data;
         },
 

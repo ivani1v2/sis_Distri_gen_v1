@@ -1,43 +1,16 @@
 <template>
-    <v-row class="mx-auto text-center" dense v-if="visible">
+    <v-row class="mx-auto text-center" dense v-show="visible">
         <v-col cols="4">
-            <v-text-field 
-                dense 
-                outlined 
-                type="number" 
-                label="% Desc 1" 
-                v-model.number="desc_1"
-                @input="calculaDescuentos()" 
-                hide-details
-                min="0"
-                max="100"
-            />
+            <v-text-field dense outlined type="number" label="% Desc 1" v-model.number="desc_1"
+                @input="calculaDescuentos()" hide-details min="0" max="100" />
         </v-col>
         <v-col cols="4">
-            <v-text-field 
-                dense 
-                outlined 
-                type="number" 
-                label="% Desc 2" 
-                v-model.number="desc_2"
-                @input="calculaDescuentos()" 
-                hide-details
-                min="0"
-                max="100"
-            />
+            <v-text-field dense outlined type="number" label="% Desc 2" v-model.number="desc_2"
+                @input="calculaDescuentos()" hide-details min="0" max="100" />
         </v-col>
         <v-col cols="4">
-            <v-text-field 
-                dense 
-                outlined 
-                type="number" 
-                label="% Desc 3" 
-                v-model.number="desc_3"
-                @input="calculaDescuentos()" 
-                hide-details
-                min="0"
-                max="100"
-            />
+            <v-text-field dense outlined type="number" label="% Desc 3" v-model.number="desc_3"
+                @input="calculaDescuentos()" hide-details min="0" max="100" />
         </v-col>
     </v-row>
 </template>
@@ -91,14 +64,7 @@ export default {
         precioBase() {
             this.calculaDescuentos();
         },
-        esBono(nuevo) {
-            if (nuevo) {
-                this.desc_1 = 0;
-                this.desc_2 = 0;
-                this.desc_3 = 0;
-                this.emitirCambio();
-            }
-        }
+
     },
     methods: {
         calculaDescuentos() {
@@ -133,14 +99,9 @@ export default {
         redondear(valor) {
             return parseFloat(Number(valor).toFixed(this.decimales));
         },
-        getDescuentos() {
-            return {
-                desc_1: this.desc_1 || 0,
-                desc_2: this.desc_2 || 0,
-                desc_3: this.desc_3 || 0
-            };
-        },
+
         reset() {
+            console.log('sse')
             this.desc_1 = 0;
             this.desc_2 = 0;
             this.desc_3 = 0;
