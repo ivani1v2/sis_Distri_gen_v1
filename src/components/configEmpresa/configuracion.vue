@@ -116,6 +116,18 @@
             </v-checkbox>
 
           </v-col>
+          <v-col cols="6">
+            <v-checkbox dense v-model="alerta_stock_minimo" label="Alerta Stock Mínimo">
+              <template v-slot:append>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-icon small color="blue" v-bind="attrs" v-on="on">mdi-help-circle</v-icon>
+                  </template>
+                  <span>Muestra una alerta en PRODUCTOS con stock por debajo del mínimo registrado.</span>
+                </v-tooltip>
+              </template>
+            </v-checkbox>
+          </v-col>
             <v-col cols="6">
             <v-checkbox dense v-model="desc_porcentaje" label="Descuento x %">
               <template v-slot:append>
@@ -162,6 +174,7 @@ export default {
       empresa: "",
       sincroniza_tipo_cambio: false,
       desc_porcentaje: false,
+      alerta_stock_minimo: false,
       // NUEVO: moneda por defecto (simbolo)
       moneda_defecto: "PEN",
     };
@@ -208,7 +221,7 @@ export default {
             distancia_visita = this.distancia_visita,
             sincroniza_tipo_cambio = this.sincroniza_tipo_cambio,
             desc_porcentaje = this.desc_porcentaje,
-            // NUEVO: si no existe en la BD, usa el valor actual
+            alerta_stock_minimo = this.alerta_stock_minimo,
             moneda_defecto = this.moneda_defecto,
           } = config;
 
@@ -231,6 +244,7 @@ export default {
             moneda_defecto,
             sincroniza_tipo_cambio,
             desc_porcentaje,
+            alerta_stock_minimo,
           });
         });
     },
@@ -253,7 +267,7 @@ export default {
       grabaConfigura("distancia_visita", this.distancia_visita);
       grabaConfigura("sincroniza_tipo_cambio", this.sincroniza_tipo_cambio);
       grabaConfigura("desc_porcentaje", this.desc_porcentaje);
-      // NUEVO: guarda la moneda por defecto
+      grabaConfigura("alerta_stock_minimo", this.alerta_stock_minimo);
       grabaConfigura("moneda_defecto", this.moneda_defecto);
       store.commit("dialogoConfiguracion");
     },

@@ -35,7 +35,11 @@
                                 <v-icon left>mdi-microsoft-excel</v-icon> Exportar Excel
                             </v-btn>
                         </v-list-item>
-
+                        <v-list-item>
+                            <v-btn dark small color="warning" block @click="dialogoAlertaStockManual = true">
+                                <v-icon left>mdi-alert</v-icon> Alerta Stock Mínimo
+                            </v-btn>
+                        </v-list-item>
                     </v-list>
                 </v-menu>
             </v-col>
@@ -483,19 +487,22 @@
             </div>
             <v-card class="pa-2">
                 <v-row class="mt-1" dense>
-                    <v-text-field outlined dense v-model="obs1"
-                        label="Observacion 1"></v-text-field>
                 </v-row>
+                <v-text-field outlined dense v-model="obs1" label="Observacion 1"></v-text-field>
+                <v-text-field outlined dense type="number" v-model="stock_minimo" label="Stock mínimo"></v-text-field>
 
             </v-card>
 
         </v-dialog>
         <dial_categorias v-if="dial_categorias" @cierra="cerrarYActualizarCategorias" :tipo='tipo_tabla' />
+        <dial_alerta_stock_minimo v-if="permisoAlertaStockActivo" v-model="dialogoAlertaStock" />
+        <dial_alerta_stock_minimo v-model="dialogoAlertaStockManual" />
     </div>
 </template>
 
 <script>
-import dial_categorias from '@/views/productos/dialogos/categorias.vue'
+import dial_categorias from '@/views/productos/dialogos/categorias.vue';
+import dial_alerta_stock_minimo from './dialogos/dial_alerta_stock_minimo.vue';
 import lector from "@/components/lector";
 import moment from 'moment'
 import { imprime_codbarra } from './imprime_cod_barra'
@@ -515,12 +522,15 @@ export default {
     },
     components: {
         lector,
-        dial_categorias
+        dial_categorias,
+        dial_alerta_stock_minimo
     },
     data: () => ({
         dial_adicional: false,
         dialogostock: false,
         dial_categorias: false,
+        dialogoAlertaStock: false,
+        dialogoAlertaStockManual: false,
         headers: [{
             text: 'id',
             align: 'start',
@@ -579,7 +589,7 @@ export default {
         arrayfiltroStock: ['incluir 0', 'excluir 0'],
         filtrostock: 'incluir 0',
         arrayfiltroestado: ['TODOS', 'ACTIVO', 'INACTIVO'],
-        filtroestado: 'ACTIVO',
+        filtroestado: 'TODOS',
         tipoproducto: "BIEN",
         arrayOperacion: [
             'GRAVADA',
@@ -616,7 +626,8 @@ export default {
         grupoBonoItems: [],
         grupoPrecioSelect: null,
         grupoBonoSelect: null,
-        obs1:''
+        obs1: '',
+        stock_minimo: 0,
     }),
 
     async beforeCreate() {
@@ -630,24 +641,37 @@ export default {
             this.array_marca.push(item.val().nombre)
         })
     },
+    
     created() {
         console.log(store.state.sedeActual.principal)
         this.arraycategoria_f.push('TODOS')
     },
+    
+    mounted() {
+        this.mostrarAlertaStock();
+    },
+    
+    watch: {
+        dial_bono_global(val) {
+            if (val) this.cargarGruposBonos();
+        },
+    },
 
     computed: {
+        permisoAlertaStockActivo() {
+            return Boolean(this.$store.state.configuracion?.alerta_stock_minimo);
+        },
         itemsMedidasNombre() {
             const arr = (this.$store.state.medidassunat || []);
             return arr.map(m => ({
                 text: `${String(m.nombre || '').toUpperCase()}`,
-                value: String(m.nombre || '').toUpperCase()   // ↩ lo que devuelve (solo nombre)
+                value: String(m.nombre || '').toUpperCase()
             }));
         },
         esMovil() {
             return this.$vuetify && this.$vuetify.breakpoint ? this.$vuetify.breakpoint.smAndDown : false
         },
         isMobile() {
-            // Considera móvil si es XS/SM según Vuetify o si tu flag global lo indica
             return this.$vuetify.breakpoint.smAndDown;
         },
         listafiltrada() {
@@ -677,29 +701,28 @@ export default {
                 return lista.filter(item => item.categoria == this.filtro_categoria && (item.id + item.nombre)
                     .toLowerCase().includes(this.buscar.toLowerCase()))
             }
-
-        }
-    },
-    watch: {
-        dial_bono_global(val) {
-            if (val) this.cargarGruposBonos();
         },
     },
+    
     methods: {
+        mostrarAlertaStock() {
+            this.dialogoAlertaStock = true;
+        },
+        
         async cargarGruposBonos() {
             const snap = await allBono().once("value");
             const val = typeof snap.val === "function" ? snap.val() : null;
 
             let arr = [];
-            if (Array.isArray(val)) arr = val.filter(Boolean);   // tu formato habitual (array con nulls)
+            if (Array.isArray(val)) arr = val.filter(Boolean);
             else if (val && typeof val === "object") arr = Object.values(val);
 
             const precios = arr.filter(x => x?.tipo === "precio");
             const bonos = arr.filter(x => x?.tipo === "bono");
 
             this.grupoPrecioItems = precios.map(x => ({
-                text: `${x.codigo} — ${x.nombre}`, // lo que ves
-                value: x.codigo,                       // lo que guardas
+                text: `${x.codigo} — ${x.nombre}`,
+                value: x.codigo,
                 raw: x
             }));
 
@@ -740,10 +763,8 @@ export default {
         },
         async guardar_bono() {
             try {
-                // Validar que se haya seleccionado un producto y se haya ingresado la cantidad y precio
                 if (!this.validaCamposBono()) return;
 
-                // Buscar el producto en el estado global y añadirlo a la lista
                 const producto = store.state.productos.find(e => e.id == this.producto_sele);
                 if (!producto) {
                     alert("El producto seleccionado no existe.");
@@ -758,7 +779,6 @@ export default {
                     precio: 1,
                 });
 
-                // Resetear los campos después de guardar
                 this.cantidad_bono = null;
                 this.producto_sele = null;
                 this.dial_adiciona = false;
@@ -770,9 +790,7 @@ export default {
 
         elimina_bono(item) {
             try {
-                // Filtrar la lista para excluir el elemento que se desea eliminar
                 this.lista_bono = this.lista_bono.filter(combo => combo !== item);
-
             } catch (error) {
                 console.error("Error al eliminar el producto del combo:", error);
             }
@@ -804,19 +822,16 @@ export default {
 
                 const idNuevo = snapshot.val().ordenproducto
 
-                // 🔍 Validar si el ID ya existe en productos
                 const productos = store.state.productos || []
                 const existe = productos.some(p => String(p.id) === String(idNuevo))
 
                 if (existe) {
-                    // ⚠️ ID en conflicto → no abrimos el diálogo
                     store.commit("dialogoprogress")
                     this.sumacon = false
                     alert('Error con ID, comunicarse con soporte')
                     return
                 }
 
-                // ✅ Si no existe, seguimos como siempre
                 this.id = idNuevo
                 this.codbarra = ''
                 this.categoria = '1'
@@ -847,6 +862,7 @@ export default {
                 this.grupoBonoSelect = null
                 this.marca = ''
                 this.obs1 = ''
+                this.stock_minimo = 0
 
                 if (Boolean(store.state.configuracion.operacion)) {
                     this.operacion = store.state.configuracion.operacion
@@ -885,7 +901,8 @@ export default {
             this.marca = data.marca || ''
             this.grupoPrecioSelect = data.grupo_precio || null;
             this.grupoBonoSelect = data.grupo_bono || null;
-            this.obs1 = data.obs1 || ''
+            this.obs1 = data.obs1 || '';
+            this.stock_minimo = Number(data.stock_minimo) || 0;
 
             this.dialogo = true;
         },
@@ -912,6 +929,11 @@ export default {
             if (factorNum > 1 && medidaStr === 'UNIDAD') {
                 alert("Si el factor es mayor a 1, la medida no puede ser UNIDAD. Cambia la medida o el factor.")
                 return
+            }
+            const stockMinimoNum = Number(this.stock_minimo) || 0;
+            if (stockMinimoNum < 0) {
+                alert("El stock mínimo no puede ser negativo");
+                return;
             }
             store.commit("dialogoprogress")
             var array = {
@@ -942,14 +964,15 @@ export default {
                 marca: this.marca,
                 grupo_precio: this.grupoPrecioSelect,
                 grupo_bono: this.grupoBonoSelect,
-                obs1:this.obs1
+                obs1: this.obs1,
+                stock_minimo: Number(this.stock_minimo) || 0
             }
             await nuevoProducto(this.id, array)
             if (this.sumacon == true) {
                 this.sumacontador()
             }
             this.dialogo = cerrar
-            
+
             store.commit("dialogoprogress")
         },
         async eliminar() {
@@ -975,7 +998,7 @@ export default {
         },
         cerrarYActualizarCategorias() {
             this.dial_categorias = false;
-            this.actualizaCategorias(); // actualiza categorías luego de cerrar
+            this.actualizaCategorias();
         },
         actualizaCategorias() {
             this.arraycategoria = [];
@@ -1069,10 +1092,9 @@ export default {
             const s = Number(stock);
             const f = Number(factor);
 
-            // Si factor es 1, null, undefined, NaN o <= 1 → devuelve el stock tal cual
             if (!Number.isFinite(f) || f <= 1) return String(stock);
 
-            if (!Number.isFinite(s)) return String(stock); // por si viene algo no numérico
+            if (!Number.isFinite(s)) return String(stock);
 
             const cajas = Math.floor(s / f);
             const und = s - cajas * f;
@@ -1090,18 +1112,13 @@ export default {
                     marca: this.marca,
                 };
 
-            // Ejemplo: 4 copias, 58x40mm, sin nombre visible
             imprime_codbarra(producto, {
                 formato: "58x30",
                 copias: 1,
-                mostrarNombre: false,  // en 30x20 casi siempre conviene ocultarlo
-                mostrarPrecio: false,   // o false si no cabe
-                barWidth: 1         // ajusta entre 1.0 y 1.4 si tu impresora lo requiere
+                mostrarNombre: false,
+                mostrarPrecio: false,
+                barWidth: 1
             });
-
-            // Otros ejemplos:
-            // imprime_codbarra(producto, { formato: "58x30", barWidth: 1.6 });
-            // imprime_codbarra({ copias: 2, mostrarPrecio: false }, producto); // firma alternativa
         },
 
     },
@@ -1111,27 +1128,20 @@ export default {
 <style scoped>
 .mobile-list .scroller {
     height: calc(100vh - 320px);
-    /* ajusta según tu layout */
     overflow: auto;
 }
 
-/* “Card” sin usar v-card para máximo performance */
 .item-card {
     display: flex;
     align-items: center;
     justify-content: space-between;
-
-    /* look de card */
     background: #fff;
     border: 1px solid rgba(0, 0, 0, .08);
     border-radius: 10px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
-
     padding: 8px 12px;
     margin: 5px 8px;
-    /* separa visualmente cada item */
     min-height: 68px;
-    /* ayuda a mantener altura estable */
 }
 
 .item-title {
@@ -1153,13 +1163,10 @@ export default {
 
 .mobile-list .scroller {
     height: 65dvh;
-    /* antes 320px; +40px aprox por el footer */
     overflow: auto;
 }
 
 .mobile-card {
-
-    /* mejor en móviles modernos (evita barra de dirección): */
     height: 70dvh;
 }
 </style>

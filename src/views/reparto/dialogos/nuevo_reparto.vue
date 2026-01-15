@@ -9,7 +9,6 @@
             </v-system-bar>
         </div>
 
-
         <v-card class="mb-2 pa-4 pa-md-6 mt-2" :class="{ 'pb-16': isMobile }">
             <v-row dense align="center">
                 <v-col cols="6" md="3">
@@ -21,34 +20,25 @@
                         hide-details />
                 </v-col>
 
-                <v-col cols="6" md="3" v-if="!$vuetify.breakpoint.xsOnly">
-                    <v-select outlined dense label="Vendedor" v-model="vendedoresSeleccionados" :items="vendedoresItems"
-                        item-text="nombre" item-value="codigo" multiple hide-details style="max-width: 200px"
-                        small-chips @change="onVendedorChange">
-                        <template v-slot:prepend-item>
-                            <v-list-item ripple @click="toggleTodosVendedores">
-                                <v-list-item-action>
-                                    <v-icon :color="esTodosSeleccionado ? 'primary' : ''">
-                                        {{ esTodosSeleccionado ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline' }}
-                                    </v-icon>
-                                </v-list-item-action>
-                                <v-list-item-content>
-                                    <v-list-item-title>Todos</v-list-item-title>
-                                </v-list-item-content>
-                            </v-list-item>
-                            <v-divider class="mt-2"></v-divider>
-                        </template>
-                    </v-select>
+                <v-col cols="6" md="3" v-if="!isMobile">
+                    <v-select outlined dense label="Vendedor" v-model="vendedoresSeleccionados"
+                        :items="vendedoresItemsConTodos" item-text="nombre" item-value="codigo" multiple small-chips
+                        deletable-chips hide-details :menu-props="{ maxHeight: '300', offsetY: true }"
+                        @change="filtrar"></v-select>
+                </v-col>
+
+                <v-col cols="6" v-if="isMobile">
+                    <v-btn color="info" block small @click="dialFiltroMovil = true">
+                        <v-icon left small>mdi-filter</v-icon>
+                        Vendedor
+                        <v-chip v-if="vendedoresSeleccionados.length > 0 && !vendedoresSeleccionados.includes('todos')"
+                            x-small class="ml-1" color="white" text-color="info">
+                            {{ vendedoresSeleccionados.length }}
+                        </v-chip>
+                    </v-btn>
                 </v-col>
 
                 <v-col cols="6" md="3" class="d-flex align-center">
-                    <!-- Botón para móvil con icono y texto -->
-                    <v-btn v-if="$vuetify.breakpoint.xsOnly" color="info" class="mr-2" @click="dialFiltroMovil = true"
-                        small>
-                        <v-icon left small>mdi-filter</v-icon>
-                        Vendedor
-                    </v-btn>
-
                     <v-menu bottom offset-y>
                         <template v-slot:activator="{ on, attrs }">
                             <v-btn color="success" block small v-bind="attrs" v-on="on">
@@ -78,39 +68,24 @@
                 </v-col>
             </v-row>
 
-            <!-- Bottom sheet para móvil -->
             <v-bottom-sheet v-model="dialFiltroMovil" inset>
                 <v-card class="pa-3">
-                    <div class="d-flex align-center">
-                        <div class="text-subtitle-1 font-weight-bold">Filtrar vendedor</div>
+                    <div class="d-flex align-center mb-2">
+                        <div class="text-subtitle-1 font-weight-bold">Filtrar por vendedor</div>
                         <v-spacer />
                         <v-btn icon @click="dialFiltroMovil = false">
                             <v-icon>mdi-close</v-icon>
                         </v-btn>
                     </div>
 
-                    <v-select class="mt-3" v-model="vendedoresSeleccionados" :items="vendedoresItems" item-text="nombre"
+                    <v-select v-model="vendedoresSeleccionados" :items="vendedoresItemsConTodos" item-text="nombre"
                         item-value="codigo" label="Vendedor" multiple chips small-chips deletable-chips clearable
-                        :menu-props="{ maxHeight: '400' }" outlined dense>
-                        <template v-slot:prepend-item>
-                            <v-list-item ripple @click="toggleTodosVendedores">
-                                <v-list-item-action>
-                                    <v-icon :color="esTodosSeleccionado ? 'primary' : ''">
-                                        {{ esTodosSeleccionado ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline' }}
-                                    </v-icon>
-                                </v-list-item-action>
-                                <v-list-item-content>
-                                    <v-list-item-title>Todos</v-list-item-title>
-                                </v-list-item-content>
-                            </v-list-item>
-                            <v-divider class="mt-2"></v-divider>
-                        </template>
-                    </v-select>
+                        :menu-props="{ maxHeight: '300' }" outlined dense></v-select>
 
                     <v-row dense class="mt-2">
                         <v-col cols="6">
-                            <v-btn block outlined color="grey" @click="vendedoresSeleccionados = []">
-                                Limpiar
+                            <v-btn block outlined color="grey" @click="vendedoresSeleccionados = ['todos']">
+                                Todos
                             </v-btn>
                         </v-col>
                         <v-col cols="6">
@@ -122,14 +97,12 @@
                 </v-card>
             </v-bottom-sheet>
 
-            <!-- Info selección -->
             <div class="my-3">
                 <small class="grey--text">
                     {{ selectedIds.length }} seleccionado(s) de {{ pedidosArray.length }} visibles
                 </small>
             </div>
 
-            <!-- Tabla -->
             <v-simple-table dense fixed-header height="60vh">
                 <thead>
                     <tr>
@@ -180,13 +153,13 @@
                 <v-toolbar flat color="black" dark dense>
                     <v-toolbar-title>{{ pedidoSeleccionado ? pedidoSeleccionado.id : '' }}</v-toolbar-title>
                     <v-toolbar-title class="ml-12"> S/ {{ pedidoSeleccionado ? pedidoSeleccionado.total : ''
-                        }}</v-toolbar-title>
+                    }}</v-toolbar-title>
                     <v-spacer></v-spacer>
                     <v-btn icon @click="dialogDetalle = false"><v-icon>mdi-close</v-icon></v-btn>
                 </v-toolbar>
                 <div v-if="pedidoSeleccionado" class="pa-2">
                     <h5>Cliente: <span>{{ pedidoSeleccionado.doc_numero }} - {{ pedidoSeleccionado.cliente_nombre
-                            }}</span></h5>
+                    }}</span></h5>
                     <h5>Direcion: <span>{{ pedidoSeleccionado.cliente_direccion }}</span></h5>
                     <h5>Modo : {{ pedidoSeleccionado.condicion_pago }}</h5>
                     <h5>Comprobante : {{ pedidoSeleccionado.tipo_comprobante }}</h5>
@@ -216,7 +189,6 @@
             </v-card>
         </v-dialog>
 
-        <!-- Diálogo CREAR REPARTO -->
         <v-dialog v-model="dialogCrear" max-width="750">
             <v-card>
                 <v-toolbar flat dark color="black" dense>
@@ -339,7 +311,7 @@ export default {
         return {
             dial: false,
             dialFiltroMovil: false,
-            vendedoresSeleccionados: [],
+            vendedoresSeleccionados: ['todos'],
             dialogDetalle: false,
             pedidoSeleccionado: null,
             detalleSeleccionado: [],
@@ -403,11 +375,20 @@ export default {
         isMobile() {
             return this.$vuetify?.breakpoint?.smAndDown || false;
         },
-        vendedoresItems() {
-            return this.$store.state.array_sedes || [];
-        },
-        esTodosSeleccionado() {
-            return this.vendedoresSeleccionados.length === 0;
+        vendedoresItemsConTodos() {
+            const sedes = this.$store.state.array_sedes || [];
+            const items = [{ codigo: 'todos', nombre: 'TODOS' }];
+            const codigosVistos = new Set(['todos']);
+            sedes.forEach(sede => {
+                if (sede.codigo && !codigosVistos.has(sede.codigo)) {
+                    items.push({
+                        codigo: sede.codigo,
+                        nombre: sede.nombre || sede.codigo
+                    });
+                    codigosVistos.add(sede.codigo);
+                }
+            });
+            return items;
         },
         getCardCols() {
             const count = Object.keys(this.resumenPorMoneda).length;
@@ -502,9 +483,13 @@ export default {
     watch: {
         date1() { this.filtrar(); },
         date2() { this.filtrar(); },
-        vendedoresSeleccionados() { this.filtrar(); },
     },
     methods: {
+        aplicarFiltroMovil() {
+            this.dialFiltroMovil = false;
+            this.filtrar();
+        },
+
         getCardColor(moneda) {
             return this.cardColors[moneda]?.bg || this.cardColors.default.bg;
         },
@@ -515,21 +500,6 @@ export default {
 
         getIconColor(moneda) {
             return this.cardColors[moneda]?.icon || this.cardColors.default.icon;
-        },
-
-        toggleTodosVendedores() {
-            if (this.esTodosSeleccionado) return;
-            this.vendedoresSeleccionados = [];
-        },
-
-        onVendedorChange(val) {
-            if (val && val.length > 0) {
-            }
-        },
-
-        aplicarFiltroMovil() {
-            this.dialFiltroMovil = false;
-            this.filtrar();
         },
 
         async cambiar_comprobante(pedido) {
@@ -640,15 +610,15 @@ export default {
                     return;
                 }
 
-                const vendedoresStr = this.vendedoresSeleccionados.length > 0
-                    ? this.vendedoresSeleccionados.join(',')
-                    : 'todos';
+                const vendedorStr = this.vendedoresSeleccionados.includes('todos')
+                    ? 'todos'
+                    : this.vendedoresSeleccionados.join(',');
 
                 const payload = {
                     fecha_traslado: unixTraslado,
                     fecha_emision: moment().unix(),
                     fecha_comprobantes: unixEmision,
-                    vendedor: vendedoresStr,
+                    vendedor: vendedorStr,
                     pedidos: this.selectedIds,
                     obs: this.obs,
                     resumen: {
@@ -836,8 +806,8 @@ export default {
 
         onDataChange(snap) {
             const arr = [];
-            const vendedoresFiltro = this.vendedoresSeleccionados || [];
-            const filtrarPorVendedor = vendedoresFiltro.length > 0;
+            const vendedores = this.vendedoresSeleccionados || ['todos'];
+            const filtrarPorVendedor = !vendedores.includes('todos') && vendedores.length > 0;
 
             snap.forEach(item => {
                 const data = item.val() || {};
@@ -847,9 +817,7 @@ export default {
 
                 if (filtrarPorVendedor) {
                     const cod = (data.cod_vendedor || '').toString().toLowerCase();
-                    const match = vendedoresFiltro.some(v =>
-                        String(v).toLowerCase() === cod
-                    );
+                    const match = vendedores.some(v => v.toLowerCase() === cod);
                     if (!match) return;
                 }
                 arr.push(data);

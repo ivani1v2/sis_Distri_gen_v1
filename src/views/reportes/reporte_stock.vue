@@ -1,6 +1,17 @@
 <template>
   <div class="mb-6 pa-3 mt-1">
-    <!-- Filtros -->
+    <v-row align="center" dense class="mb-4">
+      <v-col cols="12" sm="6" md="4">
+        <v-select v-model="sede_filtro" :items="sedesFiltro" item-text="nombre" item-value="base" outlined dense
+          hide-details label="Sede" prepend-inner-icon="mdi-store" />
+      </v-col>
+
+      <v-col cols="12" sm="6" md="4">
+        <v-switch v-model="soloConStock" color="primary" label="Mostrar solo productos con stock" hide-details
+          dense></v-switch>
+      </v-col>
+    </v-row>
+
     <v-row align="center" dense>
       <v-col cols="12" md="6">
         <v-text-field v-model="buscar" outlined dense clearable append-icon="mdi-magnify"
@@ -13,7 +24,6 @@
       </v-col>
     </v-row>
 
-    <!-- KPIs Superiores -->
     <v-row dense class="mb-2">
       <v-col cols="12" md="4">
         <v-card outlined class="pa-3 d-flex align-center justify-space-between">
@@ -52,7 +62,7 @@
         <template v-slot:top>
           <v-toolbar flat dense>
             <v-toolbar-title class="subtitle-2">
-              Productos ({{ listafiltrada.length }})
+              Productos ({{ listafiltrada.length }}) - {{ nombreSedeActual }}
             </v-toolbar-title>
             <v-spacer></v-spacer>
 
@@ -90,8 +100,9 @@
 </template>
 
 <script>
-import { allCategorias } from '../../db'
+import { allCategorias, allProductoOtraBase } from '../../db'
 import store from '@/store/index'
+import moment from 'moment'
 
 export default {
   data: () => ({
@@ -108,9 +119,31 @@ export default {
     filtro_categoria: 'TODOS',
     arraycategoria_f: ['TODOS'],
     buscar: '',
+    sede_filtro: null,
+    soloConStock: false,
+    productosPorSede: [],
   }),
 
   computed: {
+    sedesFiltro() {
+      const sedes = (store.state.array_sedes || []).filter(s => s.tipo === 'sede')
+      return sedes.map(s => ({
+        nombre: s.nombre,
+        base: s.base,
+        esPrincipal: s.base === store.state.sedeActual?.codigo
+      }))
+    },
+    
+    sedePrincipal() {
+      return store.state.sedeActual?.codigo || null
+    },
+
+    nombreSedeActual() {
+      if (!this.sede_filtro) return 'Seleccione sede'
+      const sede = this.sedesFiltro.find(s => s.base === this.sede_filtro)
+      return sede ? sede.nombre : 'Sede'
+    },
+
     headersConMoneda() {
       const simbolo = this.monedaSimbolo;
       return [
@@ -126,8 +159,11 @@ export default {
     },
 
     productosBase() {
-      const arr = Array.isArray(store.state.productos) ? store.state.productos : []
-      return arr
+      if (!this.sede_filtro) {
+        return []
+      } else {
+        return this.productosPorSede
+      }
     },
 
     listafiltrada() {
@@ -139,7 +175,10 @@ export default {
           ? true
           : String(p.categoria || '').toLowerCase() === String(cat).toLowerCase()
         if (!pasaCat) return false
-
+        if (this.soloConStock) {
+          const stock = this.toNumber(p.stock)
+          if (stock < 1) return false
+        }
         if (!texto) return true
         const id = String(p.id || '').toLowerCase()
         const nombre = String(p.nombre || '').toLowerCase()
@@ -173,7 +212,26 @@ export default {
     }
   },
 
+  watch: {
+    sede_filtro: {
+      immediate: true,
+      async handler(nuevaSede) {
+        if (nuevaSede) {
+          await this.cargarProductosSede(nuevaSede)
+        } else {
+          this.productosPorSede = []
+        }
+      }
+    }
+  },
+
   async created() {
+    if (this.sedePrincipal) {
+      this.sede_filtro = this.sedePrincipal
+    } else if (this.sedesFiltro.length > 0) {
+      this.sede_filtro = this.sedesFiltro[0].base
+    }
+
     try {
       const snapshot = await allCategorias('categorias').once('value')
       const setCats = new Set(this.arraycategoria_f)
@@ -189,32 +247,69 @@ export default {
   },
 
   methods: {
+    async cargarProductosSede(baseSede) {
+      try {
+        store.commit('dialogoprogress')
+        const snapshot = await allProductoOtraBase(baseSede).once('value')
+        const productos = []
+
+        snapshot.forEach(item => {
+          const prod = item.val()
+          if (prod) {
+            productos.push({
+              ...prod,
+              id: prod.id || item.key,
+              categoria: prod.categoria || '',
+              nombre: prod.nombre || '',
+              costo: prod.costo || 0,
+              stock: prod.stock || 0,
+              precio: prod.precio || 0,
+              factor: prod.factor || 1,
+              obs1: prod.obs1 || '',
+            })
+          }
+        })
+
+        this.productosPorSede = productos
+        console.log(`Productos cargados de sede ${baseSede}:`, productos.length)
+      } catch (e) {
+        console.error('Error cargando productos de sede', baseSede, e)
+        this.productosPorSede = []
+      } finally {
+        store.commit('dialogoprogress')
+      }
+    },
+
     toNumber(v) {
       const n = Number(v)
       return Number.isFinite(n) ? n : 0
     },
+
     formatMoney(v) {
       const n = this.toNumber(v)
       const dec = (store?.state?.configuracion?.decimal ?? 2)
       return n.toFixed(dec)
     },
+
     formatNumber(v) {
       const n = this.toNumber(v)
       return n.toLocaleString('es-PE')
     },
+
     nowString() {
       const d = new Date()
       const pad = s => String(s).padStart(2, '0')
       return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`
     },
 
-    // ——— Cálculos por ítem ———
     calcTotalCosto(item) {
       return this.toNumber(item.costo) * this.toNumber(item.stock)
     },
+
     calcTotalVenta(item) {
       return this.toNumber(item.precio) * this.toNumber(item.stock)
     },
+
     convierte_stock(stock, factor) {
       const s = this.toNumber(stock)
       const f = this.toNumber(factor)
@@ -224,9 +319,7 @@ export default {
       return `${cajas}/${und}`
     },
 
-    // ——— Preparación de datos para exportaciones ———
     filasExport() {
-      // Estructura plana y numérica para Excel/PDF
       return this.listafiltrada.map(it => {
         const stockN = this.toNumber(it.stock)
         const costoN = this.toNumber(it.costo)
@@ -241,6 +334,7 @@ export default {
           TotalCosto: costoN * stockN,
           TotalVenta: precioN * stockN,
           Observacion: it.obs1 || '',
+          Sede: this.nombreSedeActual
         }
       })
     },
@@ -255,26 +349,79 @@ export default {
         const hoja = XLSX.utils.json_to_sheet(data, {
           header: [
             'ID', 'Categoria', 'Nombre', 'Costo', 'Stock', 'PrecioVenta',
-            'TotalCosto', 'TotalVenta', 'Observacion'
+            'TotalCosto', 'TotalVenta', 'Observacion', 'Sede'
           ]
         })
 
-        hoja['!cols'] = []
-        hoja['!cols'][0] = { wch: 8 }
-        hoja['!cols'][1] = { wch: 15 }
-        hoja['!cols'][2] = { wch: 40 }
-        hoja['!cols'][8] = { wch: 20 }
+        hoja['!cols'] = [
+          { wch: 8 },
+          { wch: 15 },
+          { wch: 30 },
+          { wch: 12 },
+          { wch: 8 },
+          { wch: 12 },
+          { wch: 12 },
+          { wch: 12 },
+          { wch: 25 },
+          { wch: 15 }
+        ]
+
+        const filtrosInfo = []
+        filtrosInfo.push(`Sede: ${this.nombreSedeActual}`)
+        
+        if (this.filtro_categoria && this.filtro_categoria !== 'TODOS') {
+          filtrosInfo.push(`Categoría: ${this.filtro_categoria}`)
+        }
+                
+        if (this.soloConStock) {
+          filtrosInfo.push('Solo con stock ≥ 1')
+        }
 
         const libro = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(libro, hoja, 'Productos')
+      
+        if (filtrosInfo.length > 0) {
+          const infoSheet = XLSX.utils.aoa_to_sheet([
+            ['REPORTE DE PRODUCTOS'],
+            [''],
+            ['Filtros aplicados:'],
+            ...filtrosInfo.map(f => [f]),
+            [''],
+            ['Fecha de exportación:', new Date().toLocaleString('es-PE')],
+            ['Total registros:', data.length]
+          ])
+          
+          XLSX.utils.book_append_sheet(libro, infoSheet, 'Información')
+        }
 
-        const nombre = `productos_${this.nowString()}.xlsx`
+        let nombreBase = 'productos'
+        
+        const sedeNombre = this.nombreSedeActual.replace(/\s+/g, '_')
+        nombreBase += `_${sedeNombre}`
+        
+        if (this.filtro_categoria && this.filtro_categoria !== 'TODOS') {
+          const catNombre = this.filtro_categoria.replace(/\s+/g, '_')
+          nombreBase += `_${catNombre}`
+        }
+        
+        if (this.soloConStock) {
+          nombreBase += '_con-stock'
+        }
+        
+        const nombre = `${nombreBase}_${this.nowString()}.xlsx`
         XLSX.writeFile(libro, nombre)
+        let msg = `Exportado: ${data.length} productos de ${this.nombreSedeActual}`
+        if (this.filtro_categoria !== 'TODOS') msg += `, categoría ${this.filtro_categoria}`
+        if (this.soloConStock) msg += ' (solo con stock)'
+        
+        console.log(msg)
+        
       } catch (e) {
         console.error('Error exportando a Excel', e)
         alert('No se pudo exportar a Excel.')
       }
     },
+
     // ——— Exportar a PDF ———
     async exportarPDF() {
       try {
@@ -284,15 +431,29 @@ export default {
         const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'A4' })
 
         doc.setFontSize(14)
-        doc.text('Reporte de Productos', 40, 32)
+        doc.text(`Reporte de Productos - ${this.nombreSedeActual}`, 40, 32)
+        
         doc.setFontSize(10)
         doc.text(`Fecha: ${new Date().toLocaleString('es-PE')}`, 40, 48)
+
+        let filtrosText = ''
+        if (this.filtro_categoria && this.filtro_categoria !== 'TODOS') {
+          filtrosText += `Categoría: ${this.filtro_categoria} | `
+        }
+        if (this.soloConStock) {
+          filtrosText += 'Solo con stock | '
+        }
+        filtrosText = filtrosText.replace(/\s\|\s$/, '')
+        
+        if (filtrosText) {
+          doc.text(filtrosText, 40, 64)
+        }
 
         doc.setFontSize(10)
         const k1 = `Suma Stock: ${this.formatNumber(this.kpi.sumaStock)}`
         const k2 = `Suma Total Costo: ${this.monedaSimbolo} ${this.formatMoney(this.kpi.sumaTotalCosto)}`
         const k3 = `Suma Total Venta: ${this.monedaSimbolo} ${this.formatMoney(this.kpi.sumaTotalVenta)}`
-        doc.text(`${k1}   |   ${k2}   |   ${k3}`, 40, 64)
+        doc.text(`${k1}   |   ${k2}   |   ${k3}`, 40, filtrosText ? 80 : 64)
 
         const rows = this.filasExport().map(r => ([
           r.ID,
@@ -310,10 +471,12 @@ export default {
           `Precio V (${this.monedaSimbolo})`, `Total Costo (${this.monedaSimbolo})`, `Total Venta (${this.monedaSimbolo})`
         ]]
 
+        const startY = filtrosText ? 96 : 80
+        
         doc.autoTable({
           head,
           body: rows,
-          startY: 80,
+          startY: startY,
           styles: { fontSize: 8, cellPadding: 4 },
           headStyles: { fillColor: [33, 150, 243] },
           columnStyles: {
@@ -327,15 +490,26 @@ export default {
             7: { halign: 'right', cellWidth: 70 },
           },
           didDrawPage: (data) => {
-            // Footer con paginación
-            const str = `Página ${doc.internal.getNumberOfPages()}`
+            const footerText = `Página ${doc.internal.getNumberOfPages()} - ${this.nombreSedeActual}`
             doc.setFontSize(8)
-            doc.text(str, doc.internal.pageSize.getWidth() - 60, doc.internal.pageSize.getHeight() - 10)
+            doc.text(footerText, doc.internal.pageSize.getWidth() - 60, doc.internal.pageSize.getHeight() - 10)
           }
         })
 
-        const nombre = `productos_${this.nowString()}.pdf`
+        let nombreBase = 'productos'
+        const sedeNombre = this.nombreSedeActual.replace(/\s+/g, '_')
+        nombreBase += `_${sedeNombre}`
+        
+        if (this.filtro_categoria && this.filtro_categoria !== 'TODOS') {
+          nombreBase += `_${this.filtro_categoria.replace(/\s+/g, '_')}`
+        }
+        if (this.soloConStock) {
+          nombreBase += '_con-stock'
+        }
+        
+        const nombre = `${nombreBase}_${this.nowString()}.pdf`
         doc.save(nombre)
+        
       } catch (e) {
         console.error('Error exportando a PDF', e)
         alert('No se pudo exportar a PDF.')

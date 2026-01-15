@@ -100,7 +100,7 @@
                         <td>{{ formateaDia(item.dia) }}</td>
                         <td>
                             <v-chip v-if="item.sede" small color="blue lighten-4" text-color="blue darken-2">
-                                {{ (item.sede) }}
+                                {{ nombreSede(item.sede) }}
                             </v-chip>
                             <span v-else>-</span>
                         </td>
@@ -135,7 +135,7 @@
                                     Doc: {{ item.documento || '-' }} · {{ item.telefono || '-' }}
                                 </div>
                                 <div class="item-meta">
-                                    Vend.: {{ item.sede || '-' }} · Día: {{ formateaDia(item.dia) }}
+                                    Vend.: {{ nombreSede(item.sede) }} · Día: {{ formateaDia(item.dia) }}
                                 </div>
                             </div>
                             <div class="actions">
