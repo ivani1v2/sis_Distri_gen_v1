@@ -7,10 +7,26 @@
                 <v-spacer />
                 <span class="title font-weight-bold">{{ moneda }} {{ number2(totalDetalle) }}</span>
                 <v-spacer />
-                <v-btn color="success" icon @click="emitirGuardar"><v-icon>mdi-content-save</v-icon></v-btn>
+                <v-btn color="success" icon @click="emitirGuardar" :disabled="excedeLineaCredito">
+                    <v-icon>mdi-content-save</v-icon>
+                </v-btn>
             </v-toolbar>
 
             <v-card-text>
+                <v-alert v-if="excedeLineaCredito" dense border="left" colored-border 
+                    type="error" class="mb-3 mt-5">
+                    <div class="d-flex justify-space-between flex-wrap caption">
+                        <span>Línea Crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2) }}</strong></span>
+                        <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2) }}</strong></span>
+                        <span>Disponible: <strong class="red--text">
+                            {{ moneda }} {{ saldoDisponible.toFixed(2) }}
+                        </strong></span>
+                    </div>
+                    <div class="mt-1 caption red--text">
+                        El total del pedido supera el saldo disponible. Ajuste el pedido para poder guardar.
+                    </div>
+                </v-alert>
+
                 <v-row dense>
                     <v-col cols="12">
                         <div class="subtitle-2 grey--text">Cliente</div>
@@ -23,7 +39,7 @@
                     <!-- Condición de pago como v-select -->
                     <v-col cols="6" sm="6" md="6">
                         <v-select dense outlined hide-details label="Condición de pago"
-                            v-model="cabecera.condicion_pago" :items="condicionesItems" item-text="text"
+                            v-model="cabecera.condicion_pago" :items="condicionesItemsFiltradas" item-text="text"
                             item-value="value" :menu-props="{ closeOnContentClick: true, maxHeight: 300 }" />
                     </v-col>
 
@@ -267,6 +283,7 @@ import moment from 'moment'
 import axios from "axios"
 import store from '@/store/index'
 import { colClientes } from '../../../db_firestore'
+import { allcuentaxcobrar } from '../../../db'
 
 export default {
     name: 'EditorDetallePedido',
@@ -276,13 +293,9 @@ export default {
         cronograma
     },
     props: {
-        /* Control del diálogo desde el padre con v-model */
         value: { type: Boolean, default: false },
-        /* Cabecera solo-lectura (tal como viene en tu ejemplo) */
         cabecera: { type: Object, required: true },
-        /* Detalle original (array) */
         detalle: { type: Array, default: () => [] },
-        /* Permitir editar precio por unidad (opcional) */
         editablePrecio: { type: Boolean, default: false }
     },
     data() {
@@ -309,13 +322,11 @@ export default {
             cabDocNumero: '',
             cabClienteNombre: '',
             cabClienteDireccion: '',
-
             clienteSele: null,
             dialogoCronograma: false,
             fechaVencimiento: '',
             cronogramaData: null,
             menuFecha: false,
-
             docTiposItems: [
                 { text: 'Sin documento', value: 'SIN DOCUMENTO' },
                 { text: 'DNI', value: 'DNI' },
@@ -324,6 +335,8 @@ export default {
                 { text: 'Pasaporte', value: 'PAS' },
             ],
             expansionObservacion: null,
+            clienteData: null,
+            deudaCliente: 0,
         }
     },
     watch: {
@@ -334,6 +347,7 @@ export default {
                     this.moneda = this.cabecera.moneda
                 }
                 this._cargarDesdeProps()
+                this.cargarDatosCredito()
             }
         },
         internalOpen(v) {
@@ -378,6 +392,32 @@ export default {
                 return { cuotas: cronograma }
             }
             return null
+        },
+        lineaCreditoActiva() {
+            return this.$store.state.configuracion?.linea_credito_activo === true
+        },
+        lineaCreditoCliente() {
+            return parseFloat(this.clienteData?.linea_credito || 0)
+        },
+        saldoDisponible() {
+            return this.lineaCreditoCliente - this.deudaCliente
+        },
+        mostrarInfoCredito() {
+            return this.lineaCreditoActiva && this.lineaCreditoCliente > 0
+        },
+        excedeLineaCredito() {
+            if (!this.lineaCreditoActiva) return false
+            if (this.lineaCreditoCliente <= 0) return false
+            return this.totalDetalle > this.saldoDisponible
+        },
+        condicionesItemsFiltradas() {
+            if (!this.lineaCreditoActiva) {
+                return [{ text: 'Contado', value: 'CONTADO' }]
+            }
+            if (this.lineaCreditoCliente <= 0) {
+                return [{ text: 'Contado', value: 'CONTADO' }]
+            }
+            return this.condicionesItems
         }
     },
     created() {
@@ -392,8 +432,39 @@ export default {
         } else {
             this.fechaVencimiento = moment().add(7, 'days').format('YYYY-MM-DD')
         }
+        this.cargarDatosCredito()
     },
     methods: {
+        async cargarDatosCredito() {
+            const doc = String(this.cabecera?.doc_numero || '').trim()
+            if (!doc) return
+            
+            try {
+                const docSnap = await colClientes().doc(doc).get()
+                if (docSnap.exists) {
+                    this.clienteData = docSnap.data()
+                } else {
+                    this.clienteData = null
+                }
+                const deudaSnap = await allcuentaxcobrar()
+                    .orderByChild('documento')
+                    .equalTo(doc)
+                    .once('value')
+                
+                let totalDeuda = 0
+                if (deudaSnap.exists()) {
+                    deudaSnap.forEach(item => {
+                        const data = item.val()
+                        if (data.estado === 'PENDIENTE') {
+                            totalDeuda += parseFloat(data.monto_pendiente || 0)
+                        }
+                    })
+                }
+                this.deudaCliente = totalDeuda
+            } catch (e) {
+                console.error('Error cargando datos crédito:', e)
+            }
+        },
         abrirCronograma() {
             if (this.cabecera.condicion_pago !== 'CREDITO') return
             this.dialogoCronograma = true

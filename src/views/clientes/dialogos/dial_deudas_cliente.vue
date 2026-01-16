@@ -21,9 +21,29 @@
                     </h5>
                 </div>
 
+                <template v-if="mostrarLineaCredito && lineaCreditoCliente > 0">
+                    <v-alert type="info" border="left" colored-border icon="mdi-credit-card" class="mb-4" dense>
+                        <div class="d-none d-md-flex justify-space-between">
+                            <span>Línea de Crédito: <strong>{{ monedaSimbolo }} {{ lineaCreditoCliente.toFixed(2)
+                                    }}</strong></span>
+                            <span>Disponible: <strong :class="saldoDisponible < 0 ? 'red--text' : 'green--text'">
+                                    {{ monedaSimbolo }} {{ saldoDisponible.toFixed(2) }}
+                                </strong></span>
+                        </div>
+                        <div class="d-flex d-md-none flex-column caption">
+                            <div>Línea de Crédito: <strong>{{ monedaSimbolo }} {{ lineaCreditoCliente.toFixed(2)
+                                    }}</strong></div>
+                            <div class="mt-1">Disponible: <strong
+                                    :class="saldoDisponible < 0 ? 'red--text' : 'green--text'">
+                                    {{ monedaSimbolo }} {{ saldoDisponible.toFixed(2) }}
+                                </strong></div>
+                        </div>
+                    </v-alert>
+                </template>
+
                 <template v-if="cuentas_pendientes.length > 0">
-                    <v-alert type="warning" border="left" colored-border icon="mdi-cash-remove" class="mb-4">
-                        <div class="">Deuda Total: 
+                    <v-alert type="warning" border="left" colored-border icon="mdi-cash-remove" class="mb-4 caption">
+                        <div class="">Deuda Total:
                             <span v-for="(monto, simbolo) in totalesPorMoneda" :key="simbolo" class="red--text mr-3">
                                 {{ simbolo }} {{ monto.toFixed(2) }}
                             </span>
@@ -31,18 +51,19 @@
                     </v-alert>
 
                     <div class="cuentas-lista">
-                        <v-card v-for="(cuenta, idx) in cuentas_pendientes" :key="idx" 
-                                outlined class="mb-2 pa-2" flat>
+                        <v-card v-for="(cuenta, idx) in cuentas_pendientes" :key="idx" outlined class="mb-2 pa-2" flat>
                             <div class="d-flex justify-space-between align-center">
                                 <div>
                                     <div class="caption font-weight-medium">DOC: {{ cuenta.doc_ref }}</div>
-                                    <v-chip x-small :color="esVencido(cuenta.fecha_vence) ? 'red' : 'orange'" dark class="mt-1"> Vence:
+                                    <v-chip x-small :color="esVencido(cuenta.fecha_vence) ? 'red' : 'orange'" dark
+                                        class="mt-1"> Vence:
                                         {{ conviertefecha(cuenta.fecha_vence) }}
                                     </v-chip>
                                 </div>
                                 <div class="text-right">
                                     <div class="font-weight-bold red--text">
-                                        {{ cuenta.moneda || 'S/' }}{{ parseFloat(cuenta.monto_pendiente || 0).toFixed(2) }}
+                                        {{ cuenta.moneda || monedaSimbolo }}{{ parseFloat(cuenta.monto_pendiente ||
+                                        0).toFixed(2) }}
                                     </div>
                                 </div>
                             </div>
@@ -50,7 +71,12 @@
                     </div>
                 </template>
 
-                <template v-else-if="!cargando">
+                <v-alert v-if="excedeLineaCredito && accionPendiente === 'pre_venta'" type="error" border="left"
+                    colored-border icon="mdi-alert-octagon" class="mb-4">
+                    <div>La deuda actual supera la línea de crédito asignada. No puede continuar con la pre-venta.</div>
+                </v-alert>
+
+                <template v-else-if="!cargando && cuentas_pendientes.length === 0">
                     <v-alert type="success" border="left" colored-border icon="mdi-check-decagram">
                         <div>¿Desea continuar con el pedido?</div>
                     </v-alert>
@@ -65,7 +91,8 @@
                     <v-icon left>mdi-check</v-icon>
                     Continuar
                 </v-btn>
-                <v-btn v-if="cuentas_pendientes.length > 0 && accionPendiente" color="error"  @click="continuar">
+                <v-btn v-if="cuentas_pendientes.length > 0 && accionPendiente && puedeContarConDeuda" color="error"
+                    @click="continuar">
                     <v-icon left>mdi-alert</v-icon>
                     Continuar de todos modos
                 </v-btn>
@@ -81,24 +108,15 @@ import { allcuentaxcobrar } from '../../../db'
 export default {
     name: 'DialDeudasCliente',
     props: {
-        value: {
-            type: Boolean,
-            default: false
-        },
-        cliente: {
-            type: Object,
-            default: null
-        },
-        accionPendiente: {
-            type: String,
-            default: null // 'vender', 'pre_venta' o null (solo consulta)
-        }
+        value: { type: Boolean, default: false },
+        cliente: { type: Object, default: null },
+        accionPendiente: { type: String, default: null }
     },
     data: () => ({
         cargando: false,
         cuentas_pendientes: [],
         total_deuda: 0,
-        consultaEnProceso: false 
+        consultaEnProceso: false
     }),
     watch: {
         value: {
@@ -114,11 +132,54 @@ export default {
             }
         }
     },
+    computed: {
+        lineaCreditoActiva() {
+            return this.$store.state.configuracion?.linea_credito_activo === true
+        },
+        lineaCreditoCliente() {
+            if (!this.cliente?.permite_credito) return 0
+            return parseFloat(this.cliente?.linea_credito || 0)
+        },
+        mostrarLineaCredito() {
+            return this.lineaCreditoActiva && this.accionPendiente === 'pre_venta'
+        },
+        saldoDisponible() {
+            return this.lineaCreditoCliente - this.total_deuda
+        },
+        excedeLineaCredito() {
+            if (!this.lineaCreditoActiva) return false
+            if (!this.cliente?.permite_credito) return false
+            if (this.lineaCreditoCliente <= 0) return false
+            return this.total_deuda > this.lineaCreditoCliente
+        },
+        puedeContarConDeuda() {
+            if (this.accionPendiente === 'vender') return true
+            if (this.accionPendiente === 'pre_venta') {
+                if (!this.lineaCreditoActiva) return true
+                if (!this.cliente?.permite_credito) return true
+                if (this.lineaCreditoCliente <= 0) return true
+                return !this.excedeLineaCredito
+            }
+            return true
+        },
+        totalesPorMoneda() {
+            const totales = {}
+            this.cuentas_pendientes.forEach(cuenta => {
+                const simbolo = cuenta.moneda || 'S/'
+                const monto = parseFloat(cuenta.monto_pendiente || 0)
+                if (!totales[simbolo]) totales[simbolo] = 0
+                totales[simbolo] += monto
+            })
+            return totales
+        },
+        monedaSimbolo() {
+            return this.$store.state.moneda.find(m => m.codigo == this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
+        }
+    },
     methods: {
         async consultarDeudas() {
             if (this.consultaEnProceso) return
             this.consultaEnProceso = true
-            
             this.cargando = true
             this.cuentas_pendientes = []
             this.total_deuda = 0
@@ -140,10 +201,7 @@ export default {
                     snap.forEach(item => {
                         const data = item.val()
                         if (data.estado === 'PENDIENTE') {
-                            this.cuentas_pendientes.push({
-                                ...data,
-                                key: item.key
-                            })
+                            this.cuentas_pendientes.push({ ...data, key: item.key })
                             this.total_deuda += parseFloat(data.monto_pendiente || 0)
                         }
                     })
@@ -174,20 +232,6 @@ export default {
                 cliente: this.cliente,
                 tieneDeuda: this.cuentas_pendientes.length > 0
             })
-        }
-    },
-    computed: {
-        totalesPorMoneda() {
-            const totales = {}
-            this.cuentas_pendientes.forEach(cuenta => {
-                const simbolo = cuenta.moneda || 'S/'
-                const monto = parseFloat(cuenta.monto_pendiente || 0)
-                if (!totales[simbolo]) {
-                    totales[simbolo] = 0
-                }
-                totales[simbolo] += monto
-            })
-            return totales
         }
     }
 }

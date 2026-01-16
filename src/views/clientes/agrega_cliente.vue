@@ -301,7 +301,7 @@
                     <v-btn color="primary" @click="guardarDireccion">Guardar</v-btn>
                 </div>
             </v-card>
-        </v-dialog>
+        </v-dialog>        
         <!-- Diálogo ADICIONAL -->
         <v-dialog v-model="dial_config" max-width="520">
             <v-card class="pa-3">
@@ -315,14 +315,23 @@
 
                 <v-row dense>
                     <v-col cols="12">
-                        <v-switch inset :disabled="permiso_edita" v-model="clienteForm.permite_credito"
+                        <v-switch inset :disabled="permiso_edita || !lineaCreditoHabilitado" 
+                            v-model="clienteForm.permite_credito"
                             label="Permite ventas al crédito" />
+                        <small v-if="!lineaCreditoHabilitado" class="grey--text">
+                            La línea de crédito está deshabilitada en configuración general.
+                        </small>
                     </v-col>
 
                     <v-col cols="12" sm="6">
-                        <v-text-field :disabled="permiso_edita || !clienteForm.permite_credito" type="number" min="0"
-                            outlined dense v-model.number="clienteForm.linea_credito" prefix="S/."
-                            label="Línea de crédito" />
+                        <v-text-field 
+                            :disabled="permiso_edita || !clienteForm.permite_credito || !lineaCreditoHabilitado" 
+                            type="number" min="0" outlined dense 
+                            v-model.number="clienteForm.linea_credito" prefix="S/."
+                            label="Línea de crédito" 
+                            :rules="clienteForm.permite_credito ? [v => v > 0 || 'Debe ser mayor a 0'] : []"
+                            :error="clienteForm.permite_credito && clienteForm.linea_credito <= 0"
+                            :error-messages="clienteForm.permite_credito && clienteForm.linea_credito <= 0 ? 'Requerido mayor a 0' : ''" />
                     </v-col>
 
                     <v-col cols="12" sm="6">
@@ -436,6 +445,9 @@ export default {
             return doc.length === 11 && doc.startsWith('20') && tipo === 'RUC';
         },
 
+        lineaCreditoHabilitado() {
+            return this.$store.state.configuracion?.linea_credito_activo === true
+        },
         zonasOpc() {
             const base = this.$store.state.zonas || []
             return base.map(z => (typeof z === 'string' ? { nombre: z } : z))
@@ -694,6 +706,14 @@ export default {
                 if (!this.clienteForm.direcciones.length) {
                     const cont = confirm('No has agregado ninguna dirección. ¿Guardar de todas formas?')
                     if (!cont) return
+                }
+                if (this.clienteForm.permite_credito && this.lineaCreditoHabilitado) {
+                    const credito = Number(this.clienteForm.linea_credito || 0)
+                    if(credito <= 0) {
+                        this.error = 'si habilita crédito, la línea de crédito debe ser mayor a 0'
+                        this.dial_config = true
+                        return
+                    }
                 }
 
                 store.commit('dialogoprogress')

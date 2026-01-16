@@ -31,6 +31,20 @@
                 <h4 class="mb-n5 mt-1 red--text" v-if="cliente_s != ''">
                     <div> Cliente : {{ cliente_s.nombre }}</div>
                 </h4>
+
+                <v-alert v-if="excedeLineaCredito"
+                    type="error" dense border="left" colored-border class="mt-8 mb-6"
+                    icon="mdi-alert-octagon">
+                    <div class="d-flex flex-wrap justify-space-between align-center text-caption">
+                        <span>Línea de crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2) }}</strong></span>
+                        <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2) }}</strong></span>
+                        <span>Disponible: <strong class="red--text">{{ moneda }} {{ saldoDisponible.toFixed(2) }}</strong></span>
+                    </div>
+                    <div class="mt-1 red--text text-caption font-weight-medium">
+                        El monto del pedido ({{ moneda }} {{ totalDetalle.toFixed(2) }}) supera el saldo disponible
+                    </div>
+                </v-alert>
+
                 <v-card class="mt-5">
                     <div class="tabla-scroll">
                         <v-simple-table class="elevation-0" dense>
@@ -136,7 +150,7 @@
                         </v-col>
                         <v-col cols="3">
                             <v-btn block elevation="15" rounded v-if="listaproductos != ''" color="error"
-                                @click="grabar()">
+                                @click="grabar()" :disabled="excedeLineaCredito">
                                 Grabar
                             </v-btn>
                         </v-col>
@@ -226,13 +240,12 @@
                     </v-col>
 
                     <v-col cols="12" sm="6" class="mt-n5">
-                        <!-- NUEVO: Forma de pago -->
-                        <v-select outlined dense v-model="formaPago" :items="['CONTADO', 'CREDITO']"
+                        <v-select outlined dense v-model="formaPago" 
+                            :items="opcionesFormaPago"
                             label="Forma de pago" prepend-inner-icon="mdi-cash-multiple" />
                     </v-col>
 
                     <v-col cols="6" class="mt-n5" v-if="formaPago === 'CREDITO'">
-                        <!-- NUEVO: Fecha de vencimiento (hoy + 7) -->
                         <v-text-field outlined dense type="date" v-model="fechaVencimiento" :min="hoyISO"
                             label="Vence el" prepend-inner-icon="mdi-calendar" />
                     </v-col>
@@ -315,6 +328,8 @@ import cronograma from '../ventas/dialogos/cronograma_creditos.vue'
 import dial_edita_prod from '../ventas/edita_producto.vue'
 import axios from "axios"
 import CryptoJS from "crypto-js";
+import { allcuentaxcobrar } from '@/db'
+import { colClientes } from '@/db_firestore'
 export default {
     name: 'caja',
 
@@ -354,6 +369,9 @@ export default {
             cronograma: null,
             modoOrdenProductos: 'push',
             cod_vendedor: store.state.sedeActual.codigo,
+            lineaCreditoCliente: 0,
+            deudaCliente: 0,
+            cargandoCredito: false,
         }
     },
     created() {
@@ -381,6 +399,10 @@ export default {
             // OPCIONAL: si tu componente tiene estas props/campos, completa coords
             if ('latitud' in this) this.latitud = (data.latitud ?? dirPri?.latitud ?? null);
             if ('longitud' in this) this.longitud = (data.longitud ?? dirPri?.longitud ?? null);
+
+            if (this.lineaCreditoActivo && data.documento) {
+                this.cargarDatosCredito(data.documento);
+            }
         }
         if ((!this.listaproductos || this.listaproductos.length === 0) &&
             Array.isArray(store.state.lista_productos) &&
@@ -405,6 +427,35 @@ export default {
         hoyISO() {
             return moment().format('YYYY-MM-DD');
         },
+        lineaCreditoActivo() {
+            return this.$store.state.configuracion?.linea_credito_activo === true;
+        },
+        totalDetalle() {
+            let suma = 0;
+            for (let i = 0; i < this.listaproductos.length; i++) {
+                if (this.listaproductos[i].operacion !== 'GRATUITA') {
+                    suma += (this.listaproductos[i].cantidad * this.listaproductos[i].precio) - parseFloat(this.listaproductos[i].preciodescuento || 0);
+                }
+            }
+            return suma;
+        },
+        saldoDisponible() {
+            return this.lineaCreditoCliente - this.deudaCliente;
+        },
+        excedeLineaCredito() {
+            if (!this.lineaCreditoActivo) return false;
+            if (this.lineaCreditoCliente <= 0) return false;
+            return this.totalDetalle > this.saldoDisponible;
+        },
+        opcionesFormaPago() {
+            if (!this.lineaCreditoActivo) {
+                return ['CONTADO'];
+            }
+            if (this.lineaCreditoCliente <= 0) {
+                return ['CONTADO'];
+            }
+            return ['CONTADO', 'CREDITO'];
+        }
     },
     watch: {
         formaPago(nv) {
@@ -441,6 +492,43 @@ export default {
     },
 
     methods: {
+        async cargarDatosCredito(documento) {
+            if (!documento || !this.lineaCreditoActivo) return;
+
+            this.cargandoCredito = true;
+            try {
+                const docSnap = await colClientes().doc(documento).get();
+                if (docSnap.exists) {
+                    const clienteData = docSnap.data();
+                    this.lineaCreditoCliente = parseFloat(clienteData.linea_credito || 0);
+                } else {
+                    this.lineaCreditoCliente = 0;
+                }
+
+                const snapshot = await allcuentaxcobrar()
+                    .orderByChild('documento')
+                    .equalTo(documento)
+                    .once('value');
+
+                let deudaTotal = 0;
+
+                if (snapshot.exists()) {
+                    snapshot.forEach(item => {
+                        const cuenta = item.val();
+                        if (cuenta.estado === 'PENDIENTE') {
+                            deudaTotal += parseFloat(cuenta.monto_pendiente || 0);
+                        }
+                    });
+                }
+                this.deudaCliente = deudaTotal;
+            } catch (error) {
+                console.error('Error cargando datos de crédito:', error);
+                this.lineaCreditoCliente = 0;
+                this.deudaCliente = 0;
+            } finally {
+                this.cargandoCredito = false;
+            }
+        },
         abrirCronograma() {
             // solo tiene sentido si es CREDITO
             if (this.formaPago !== 'CREDITO') return;
@@ -737,7 +825,6 @@ export default {
                 inPlace: true,
             });
             console.log(this.listaproductos)
-        
         },
 
         editaProducto(val) {
