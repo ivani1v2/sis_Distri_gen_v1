@@ -76,25 +76,18 @@
                         </v-btn>
                     </v-col>
                     <v-col cols="12" class="mt-n5">
-    <v-expansion-panels v-model="expansionObservacion">
-        <v-expansion-panel>
-            <v-expansion-panel-header>
-                Observación
-            </v-expansion-panel-header>
-            <v-expansion-panel-content>
-                <v-textarea 
-                    v-model="cabecera.observacion" 
-                    outlined 
-                    dense 
-                    hide-details 
-                    rows="3"
-                    placeholder="Escribe observaciones..." 
-                    auto-grow
-                ></v-textarea>
-            </v-expansion-panel-content>
-        </v-expansion-panel>
-    </v-expansion-panels>
-</v-col>
+                        <v-expansion-panels v-model="expansionObservacion">
+                            <v-expansion-panel>
+                                <v-expansion-panel-header>
+                                    Observación
+                                </v-expansion-panel-header>
+                                <v-expansion-panel-content>
+                                    <v-textarea v-model="cabecera.observacion" outlined dense hide-details rows="3"
+                                        placeholder="Escribe observaciones..." auto-grow></v-textarea>
+                                </v-expansion-panel-content>
+                            </v-expansion-panel>
+                        </v-expansion-panels>
+                    </v-col>
                 </v-row>
             </v-card-text> <v-card class="mt-3">
                 <div class="tabla-scroll">
@@ -141,7 +134,7 @@
                                                     style="max-width: 70vw;">
                                                     <span class="font-weight-bold red--text">{{
                                                         Number(item.cantidad)
-                                                        }}×</span>
+                                                    }}×</span>
                                                     {{ item.nombre }}
                                                 </div>
                                             </div>

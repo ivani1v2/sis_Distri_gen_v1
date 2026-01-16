@@ -9,7 +9,6 @@
                     <v-icon left small>mdi-account</v-icon>
                     <div v-if="clienteEnMapa && !verTodos">
                         <h4>{{ clienteEnMapa.nombre }}</h4>
-                        <!-- el resto del contenido -->
                     </div>
                 </v-chip>
             </v-card-title>
@@ -143,31 +142,32 @@ import { gmapApi } from 'vue2-google-maps'
 import store from '@/store/index'
 import { allUsuarios } from '../../db'
 import { crearOActualizarCliente as nuevoCliente } from '../../db_firestore'
+
 export default {
     name: "dial_mapa",
     props: {
-        value: Boolean,            // v-model
-        clienteEnMapa: Object,     // cliente único (opcional)
-        guardar_auto: Boolean,     // ya lo tenías
-        clientes: { type: Array, default: () => [] }, // << lista para “todos”
-        verTodos: { type: Boolean, default: false }   // << flag de modo
+        value: Boolean,
+        clienteEnMapa: Object,
+        guardar_auto: Boolean,
+        clientes: { type: Array, default: () => [] },
+        verTodos: { type: Boolean, default: false }
     },
     data() {
         return {
             infoClienteAbierto: false,
-            infoClientePos: null,          // {lat, lng}
-            clienteSeleccionado: null,     // objeto cliente clickeado
+            infoClientePos: null,
+            clienteSeleccionado: null,
             dialogoMapa: false,
-            ubicacionCliente: null, // {lat, lng}
-            centro: { lat: -12.0464, lng: -77.0428 }, // Default Lima
+            ubicacionCliente: null,
+            centro: { lat: -12.0464, lng: -77.0428 },
             usuariosUbicados: [],
             fullscreen: false,
             miPosicion: null,
             iconoMiPosicion: 'https://maps.gstatic.com/mapfiles/ms2/micons/blue-dot.png',
             infoMiPosicion: false,
-            infoOptions: {                // NUEVO: no hacer pan automático del mapa
+            ubicacionListener: null,
+            infoOptions: {
                 disableAutoPan: true,
-                // Si quieres elevar un poco la ventanita, puedes luego crear un Size:
                 pixelOffset: null
             },
             mapOptions: {
@@ -195,7 +195,6 @@ export default {
                     }
                 ]
             }
-
         }
     },
     watch: {
@@ -204,45 +203,51 @@ export default {
             if (val) {
                 this.fullscreen = false
                 this.inicializarUbicacion()
+                this.ver_ubicacion_usuarios()
+            } else {
+                this.detenerListenerUbicacion()
             }
         },
         dialogoMapa(val) {
             this.$emit('input', val)
         },
-        ubicacionActual(nueva) {                 // NUEVO
+        ubicacionActual(nueva) {
             if (nueva && nueva.lat && nueva.lng) {
                 this.miPosicion = { lat: nueva.lat, lng: nueva.lng };
-                // si aún no hay punto de cliente, centra el mapa en tu posición
-                //  if (!this.ubicacionCliente) this.centro = { ...this.miPosicion };
             }
         },
     },
     created() {
-        this.ver_ubicacion_usuarios()
         console.log(store.state.ubicacion_actual)
     },
-    computed: {
-        // ...lo que ya tienes...
-        ubicacionActual() {
-            return store.state.ubicacion_actual || null; // NUEVO
-        },
-    },
+    beforeDestroy() {
+    this.detenerListenerUbicacion()
+    window.removeEventListener('keydown', this.handleKeydown)
+    
+    this.usuariosUbicados = []
+    this.ubicacionListener = null
+    this.clienteSeleccionado = null
+    this.infoClientePos = null
+},
     mounted() {
         window.addEventListener('keydown', this.handleKeydown)
-        // Espera a que Google Maps API esté lista
         this.$gmapApiPromiseLazy().then(() => {
-            // Mueve la ventanita ~40px hacia arriba (ajusta a tu gusto: 35–60)
             const offset = new window.google.maps.Size(0, -40);
-            // Reasignar el objeto para gatillar reactividad
             this.infoOptions = { ...this.infoOptions, pixelOffset: offset };
         });
     },
-    beforeDestroy() {
-        window.removeEventListener('keydown', this.handleKeydown)
+    computed: {
+        ubicacionActual() {
+            return store.state.ubicacion_actual || null;
+        },
     },
     methods: {
         ver_ubicacion_usuarios() {
-            allUsuarios()
+            if (this.ubicacionListener) {
+                return
+            }
+            
+            this.ubicacionListener = allUsuarios()
                 .orderByChild('ruc')
                 .equalTo(Number(store.state.baseDatos.ruc_asociado))
                 .on("value", snapshot => {
@@ -250,39 +255,43 @@ export default {
                     snapshot.forEach(childSnapshot => {
                         const usuario = childSnapshot.val()
 
-                        // 👇 SOLO considerar usuarios con ubicacion válida
                         if (
                             usuario.ubicacion &&
                             Number.isFinite(Number(usuario.ubicacion.lat)) &&
                             Number.isFinite(Number(usuario.ubicacion.lng)) &&
                             usuario.ubicacion.lat !== 0 &&
                             usuario.ubicacion.lng !== 0
-                            // opcional: solo si tiene gps_activo
-                            // && usuario.gps_activo === true
                         ) {
                             usuarios.push(usuario)
                         }
                     })
 
-                    // Guarda la lista filtrada
                     this.usuariosUbicados = usuarios
-                    console.log('Usuarios con ubicación:', this.usuariosUbicados)
                 })
         },
+        
+        detenerListenerUbicacion() {
+            if (this.ubicacionListener) {
+                allUsuarios().off("value", this.ubicacionListener)
+                this.ubicacionListener = null
+            }
+            this.usuariosUbicados = []
+        },      
         isValidCoord(lat, lng) {
             const a = Number(lat), b = Number(lng)
             return Number.isFinite(a) && Number.isFinite(b) && a !== 0 && b !== 0
         },
+        
         abreInfoMiPosicion() {
             this.infoMiPosicion = true;
         },
+        
         inicializarUbicacion() {
             const fallback = { lat: -12.0464, lng: -77.0428 }
             const ua = store.state.ubicacion_actual
             this.miPosicion = (ua && ua.lat && ua.lng) ? { lat: ua.lat, lng: ua.lng } : { ...fallback }
 
             if (this.verTodos) {
-                // --- MODO “TODOS”: construir bounds con todos los clientes válidos + (opcional) tu posición ---
                 const coords = []
                 this.clientes.forEach(c => {
                     if (this.isValidCoord(c.latitud, c.longitud)) {
@@ -291,7 +300,6 @@ export default {
                 })
 
                 if (coords.length) {
-                    // centra por bounds
                     this.$nextTick(() => {
                         const map = this.$refs.gmap && this.$refs.gmap.$mapObject
                         if (!map) return
@@ -301,10 +309,9 @@ export default {
                         map.fitBounds(bounds)
                     })
                 }
-                this.ubicacionCliente = null  // edición desactivada en modo múltiple
+                this.ubicacionCliente = null
                 this.centro = coords[0] || this.miPosicion || fallback
             } else {
-                // --- MODO “UNO”: como lo tenías, centrado en el cliente o en miPosición ---
                 if (this.clienteEnMapa && this.isValidCoord(this.clienteEnMapa.latitud, this.clienteEnMapa.longitud)) {
                     this.ubicacionCliente = {
                         lat: Number(this.clienteEnMapa.latitud),
@@ -317,7 +324,6 @@ export default {
                 }
             }
 
-            // Refina mi posición con GPS del navegador (igual que ya tenías)
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
@@ -331,9 +337,8 @@ export default {
             }
         },
 
-
         mapClick(e) {
-            if (this.verTodos) return   // no se edita en modo múltiple
+            if (this.verTodos) return
             this.ubicacionCliente = { lat: e.latLng.lat(), lng: e.latLng.lng() }
         },
 
@@ -343,6 +348,7 @@ export default {
                 lng: event.latLng.lng()
             }
         },
+        
         guardarUbicacion() {
             if (this.clienteEnMapa && this.ubicacionCliente) {
                 if (this.guardar_auto) {
@@ -358,65 +364,67 @@ export default {
                         longitud: this.ubicacionCliente.lng
                     })
                 }
-
-
             }
             this.cierra()
         },
+        
         cierra() {
             this.$emit('cierra', false)
             this.dialogoMapa = false
         },
+        
         async ubicarme() {
             const perm = navigator.permissions?.query
                 ? await navigator.permissions.query({ name: 'geolocation' })
                 : null;
 
             if (perm && perm.state === 'denied') {
-                // Ya está bloqueado: mostrar UI con pasos para habilitar en el navegador
                 alert('Por favor, habilita los permisos de ubicación en tu navegador.');
                 return;
             }
-            const ua = this.ubicacionActual; // ya lo tienes en computed
+            const ua = this.ubicacionActual;
             if (ua && ua.lat && ua.lng) {
                 this.miPosicion = { lat: Number(ua.lat), lng: Number(ua.lng) };
-                this.centro = { ...this.miPosicion }; // por si quieres mantenerlo reactivo
+                this.centro = { ...this.miPosicion };
 
                 this.$nextTick(() => {
                     const map = this.$refs.gmap && this.$refs.gmap.$mapObject;
                     if (map) {
-                        map.panTo(this.miPosicion);   // 👈 mueve la vista
-                        // opcional: map.setZoom(15);
+                        map.panTo(this.miPosicion);
                     }
                 });
             }
         },
 
-
         toggleFullscreen() {
             this.fullscreen = !this.fullscreen
-            // scroll al top al entrar a fullscreen (en móvil a veces se queda abajo)
             if (this.fullscreen) setTimeout(() => window.scrollTo(0, 0), 100)
         },
+        
         handleKeydown(e) {
             if (this.fullscreen && e.key === 'Escape') {
                 this.fullscreen = false;
             }
         },
-        abreInfoCliente(cli) {
-            // posición del cliente
-            const lat = Number(cli.latitud), lng = Number(cli.longitud)
-            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+        
+        abreInfoCliente(cli, esUno = false) {
+            if (esUno) {
+                if (!this.ubicacionCliente) return;
+                this.clienteSeleccionado = cli || this.clienteEnMapa || {};
+                this.infoClientePos = { ...this.ubicacionCliente };
+            } else {
+                const lat = Number(cli?.latitud), lng = Number(cli?.longitud);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+                this.clienteSeleccionado = cli;
+                this.infoClientePos = { lat, lng };
+            }
 
-            this.clienteSeleccionado = cli
-            this.infoClientePos = { lat, lng }
-            this.infoClienteAbierto = true
+            this.infoClienteAbierto = true;
 
-            // centrar suavemente el mapa en el cliente seleccionado
             this.$nextTick(() => {
-                const map = this.$refs.gmap && this.$refs.gmap.$mapObject
-                if (map && this.infoClientePos) map.panTo(this.infoClientePos)
-            })
+                const map = this.$refs.gmap && this.$refs.gmap.$mapObject;
+                if (map && this.infoClientePos) map.panTo(this.infoClientePos);
+            });
         },
 
         cierraInfoCliente() {
@@ -441,30 +449,29 @@ export default {
         whatsappCliente() {
             const tel = (this.clienteSeleccionado?.telefono || '').toString().replace(/\D/g, '')
             if (!tel) return
-            // Perú por defecto (+51). Ajusta si guardas ya con código país.
             const numero = tel.startsWith('51') ? tel : `51${tel}`
             const texto = encodeURIComponent(`Hola ${this.clienteSeleccionado?.nombre || ''}`)
             window.open(`https://wa.me/${numero}?text=${texto}`, '_blank')
         },
+        
         estadoNormalizado(cli) {
             console.log(cli)
             const e = (cli && (cli.estado || cli.estatus || cli.situacion || ''))
                 .toString()
                 .toLowerCase()
                 .trim();
-            // Ajusta los sinónimos que uses en tu sistema:
             if (e === 'atendido' || e === 'completado' || e === 'ok' || e === 'hecho') return 'atendido';
             if (e === 'pendiente' || e === 'por atender' || e === 'en espera') return 'pendiente';
-            return e; // por si tienes otros estados
+            return e;
         },
+        
         iconoPorEstado(cli) {
             const estado = this.estadoNormalizado(cli);
-            // Íconos clásicos de Google (https)
             const ICONS = {
                 verde: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
                 rojo: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
                 naranja: 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png',
-                gris: 'https://maps.google.com/mapfiles/ms/icons/ltblue-dot.png' // fallback/otros
+                gris: 'https://maps.google.com/mapfiles/ms/icons/ltblue-dot.png'
             };
 
             let url = ICONS.gris;
@@ -472,36 +479,12 @@ export default {
             else if (estado === 'visita') url = ICONS.rojo;
             else if (estado === 'pendiente') url = ICONS.naranja;
 
-            // Opcional: define tamaño/ancle para nitidez en pantallas HiDPI
             return {
                 url,
-                scaledSize: new window.google.maps.Size(32, 32), // 32x32 se ve bien
-                anchor: new window.google.maps.Point(16, 32)     // ancla en la punta
+                scaledSize: new window.google.maps.Size(32, 32),
+                anchor: new window.google.maps.Point(16, 32)
             };
-        },
-        abreInfoCliente(cli, esUno = false) {
-            if (esUno) {
-                // modo por cliente: usa la posición del marcador editable
-                if (!this.ubicacionCliente) return;
-                this.clienteSeleccionado = cli || this.clienteEnMapa || {};
-                this.infoClientePos = { ...this.ubicacionCliente };
-            } else {
-                // modo verTodos: usa lat/lng del cliente de la lista
-                const lat = Number(cli?.latitud), lng = Number(cli?.longitud);
-                if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-                this.clienteSeleccionado = cli;
-                this.infoClientePos = { lat, lng };
-            }
-
-            this.infoClienteAbierto = true;
-
-            // centra suavemente el mapa
-            this.$nextTick(() => {
-                const map = this.$refs.gmap && this.$refs.gmap.$mapObject;
-                if (map && this.infoClientePos) map.panTo(this.infoClientePos);
-            });
-        },
-
+        }
     }
 }
 </script>

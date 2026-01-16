@@ -81,7 +81,7 @@
                             <div class="d-flex justify-space-between align-center">
                                 <div class="text-center">
                                     <div class="text-caption grey--text">Medida</div>
-                                    <div class="font-weight-bold" :class="getStockClass(producto)">
+                                    <div class="font-weight-medium">
                                         {{ producto.medida }}
                                     </div>
                                 </div>
@@ -299,7 +299,7 @@ export default {
             if (f <= 1) return s.toString()
             const cajas = Math.floor(s / f)
             const und = s - (cajas * f)
-            return und > 0 ? `${cajas}/${und}` : `${cajas}`
+            return und > 0 ? `${cajas}/${und}` : `${cajas}/0`
         },
         
         formatoStockMobile(stock, factor = 1) {
@@ -308,9 +308,9 @@ export default {
             if (f <= 1) return s.toString()
             const cajas = Math.floor(s / f)
             const und = s - (cajas * f)
-            return und > 0 ? `${cajas}/${und}` : `${cajas}`
+            return und > 0 ? `${cajas}/${und}` : `${cajas}/0`
         },
-        
+    
         calcularDiferencia(item) {
             return (Number(item.stock) || 0) - (Number(item.stock_minimo) || 0)
         },
@@ -323,7 +323,7 @@ export default {
             const difAbs = Math.abs(dif);
             const cajas = Math.floor(difAbs / f);
             const und = difAbs - (cajas * f);
-            return und > 0 ? `${signo}${cajas}/${und}` : `${signo}${cajas}`;
+            return und > 0 ? `${signo}${cajas}/${und}` : `${signo}${cajas}/0`;
         },
         
         getCardClass(producto) {
