@@ -13,6 +13,9 @@
           <v-btn small color="red" icon @click="exportPDF" :title="'Exportar A4 (PDF)'">
             <v-icon>mdi-file-pdf-box</v-icon>
           </v-btn>
+          <v-btn small color="green" icon @click="exportExcel" :title="'Exportar A4 (Excel)'">
+            <v-icon>mdi-file-excel-box</v-icon>
+          </v-btn>
           <v-btn small icon @click="cerrar"><v-icon>mdi-close</v-icon></v-btn>
         </v-toolbar>
 
@@ -189,6 +192,7 @@
 
 <script>
 import store from '@/store'
+import * as XLSX from "xlsx"
 import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, DoughnutController } from "chart.js"
 import { exportConsolidadoPDF } from "../formatos/rep_consolidado"
 ChartJS.register(Title, Tooltip, Legend, ArcElement, DoughnutController)
@@ -263,9 +267,12 @@ export default {
       const cat = Array.isArray(store?.state?.productos) ? store.state.productos : []
       for (const p of cat) {
         const id = String(p?.id ?? '').trim()
-        if (!id) continue
+        const codigo = String(p?.codigo ?? '').trim()
         const f = Number(p?.factor ?? p?.factor_unidad ?? 0)
-        if (Number.isFinite(f) && f > 0) idx[id] = f
+        if (Number.isFinite(f) && f > 0) {
+          if (id) idx[id] = f
+          if (codigo && codigo !== id) idx[codigo] = f
+        }
       }
       return idx
     },
@@ -297,6 +304,7 @@ export default {
         const tot = r2(r.total_linea ?? r.total ?? (Number(r.precio || 0) * cant))
         const medida = String(r.medida || '').trim()
         const codigo = String(r.codigo || '').trim()
+        const itemId = String(r.id || '').trim()
         const operacion = String(r.operacion || '').trim().toUpperCase()
         if (!map.has(key)) {
           map.set(key, { codigo, nombre: r.nombre || '', packs: 0, unds: 0, total: 0, eq: 0, factor: 1, gratuitas: 0 })
@@ -311,18 +319,16 @@ export default {
           return
         }
 
-        let factor = Number(this.factorIndex[codigo] ?? 0)
+        let factor = Number(this.factorIndex[codigo] ?? this.factorIndex[itemId] ?? 0)
         if (!Number.isFinite(factor) || factor <= 0) {
           const fInf = this.inferFactor(r.nombre, medida)
           factor = Number(fInf || 1)
         }
-
+        acc.packs += cant
         if (factor > 1) {
           acc.factor = factor
-          acc.packs += cant
           acc.eq += cant * factor
         } else {
-          acc.unds += cant
           acc.eq += cant
         }
         acc.total += tot
@@ -375,11 +381,101 @@ export default {
       const itemsAgrupados = this.agrupadoPorProducto.map(x => ({
         nombre: x.nombre,
         medida: x.factor > 1 ? 'Paq/Und' : 'Und',
-        cantidad: x.cantDisplay, // 👈 misma lógica en PDF
+        cantidad: `${this.int(x.packs)}/${this.int(x.unds)}`,
         precioUnitProm: x.precioUnitProm,
-        total: x.total
+        total: x.total,
+        paquetes: x.packs,
+        unidades: x.unds,
+        gratuitas: x.gratuitas || 0
       }))
-      exportConsolidadoPDF({ selectedIds: this.safeSelectedIds, itemsAgrupados, filename: "consolidado_pedidos.pdf" })
+
+      exportConsolidadoPDF({
+        selectedIds: this.safeSelectedIds,
+        itemsAgrupados,
+        totalSoles: this.totalSoles,
+        totalPedidos: this.safeSelectedIds.length,
+        filename: "consolidado_pedidos.pdf"
+      })
+    },
+    exportExcel() {
+      const lista = this.tab === 0 ? this.listaVendidos : this.listaValor
+
+      const data = lista.map(g => ({
+        'Producto': `${g.codigo} - ${g.nombre}`,
+        'Paq.': g.packs,
+        'Und.': g.unds,
+        'Bono': g.gratuitas || '',
+        'Precio': g.precioUnitProm,
+        'Total': g.total
+      }))
+
+      const totalPaq = lista.reduce((sum, g) => sum + g.packs, 0)
+      const totalUnd = lista.reduce((sum, g) => sum + g.unds, 0)
+      const totalBono = lista.reduce((sum, g) => sum + (g.gratuitas || 0), 0)
+      const totalMonto = lista.reduce((sum, g) => sum + g.total, 0)
+
+      const wb = XLSX.utils.book_new()
+      const ws = XLSX.utils.json_to_sheet([])
+
+      const titulo = this.tab === 0 ? 'MÁS VENDIDO' : 'MÁS VALOR'
+      XLSX.utils.sheet_add_aoa(ws, [
+        [`CONSOLIDADO DE PEDIDOS - ${titulo}`],
+        [`${this.safeSelectedIds.length} pedidos | Total: S/.${this.number2(totalMonto)}`],
+        ['Producto', 'Paq.', 'Und.', 'Bono', 'Precio Unit.', 'Total S/.'],
+        ...data.map(item => [item.Producto, item['Paq.'], item['Und.'], item.Bono, item.Precio, item.Total]),
+        [],
+        ['TOTALES', totalPaq, totalUnd, totalBono, '', totalMonto]
+      ], { origin: 'A1' })
+
+      ws['!cols'] = [
+        { wch: 50 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 12 }
+      ]
+
+      if (!ws['!merges']) ws['!merges'] = []
+      ws['!merges'].push(
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } }
+      )
+
+      const titleStyle = { font: { bold: true, size: 14 }, alignment: { horizontal: 'center' } }
+      const subtitleStyle = { font: { bold: true, size: 11 }, alignment: { horizontal: 'center' } }
+      const headerStyle = {
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "3F51B5" } },
+        alignment: { horizontal: 'center' }
+      }
+      const totalStyle = {
+        font: { bold: true },
+        fill: { fgColor: { rgb: "FFEB3B" } },
+        alignment: { horizontal: 'center' }
+      }
+
+      ws['A1'].s = titleStyle
+      ws['A2'].s = subtitleStyle
+
+      for (let col = 0; col < 6; col++) {
+        const cell = XLSX.utils.encode_cell({ r: 2, c: col })
+        ws[cell].s = headerStyle
+      }
+
+      const lastRow = 3 + data.length + 1
+      for (let col = 0; col < 6; col++) {
+        const cell = XLSX.utils.encode_cell({ r: lastRow, c: col })
+        ws[cell].s = totalStyle
+      }
+
+      const dataStartRow = 3
+      const dataEndRow = dataStartRow + data.length - 1
+      for (let row = dataStartRow; row <= dataEndRow; row++) {
+        for (let col = 4; col <= 5; col++) {
+          const cell = XLSX.utils.encode_cell({ r: row, c: col })
+          if (ws[cell]) ws[cell].z = '#,##0.00'
+        }
+      }
+
+      XLSX.utils.book_append_sheet(wb, ws, titulo)
+      const fecha = new Date().toISOString().split('T')[0]
+      XLSX.writeFile(wb, `consolidado_${titulo.toLowerCase().replace(' ', '_')}_${fecha}.xlsx`)
     },
     buildTop5(rows, metric) {
       const list = [...(rows || [])].sort((a, b) => Number(b[metric] || 0) - Number(a[metric] || 0))

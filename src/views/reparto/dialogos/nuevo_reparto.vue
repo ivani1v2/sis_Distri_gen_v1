@@ -551,9 +551,11 @@ export default {
                             acumulado.push({
                                 pedidoId: id,
                                 cliente: `${p.doc_numero || ''} - ${p.cliente_nombre || ''}`.trim(),
+                                codigo: d.codigo || d.id || '',
                                 nombre: d.nombre,
                                 cantidad: d.cantidad,
                                 medida: d.medida,
+                                operacion: d.operacion,
                                 precio: d.precio,
                                 total_linea: d.totalLinea
                             });
