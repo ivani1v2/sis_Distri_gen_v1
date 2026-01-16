@@ -126,9 +126,9 @@
                                 <td>{{ item.nombre }}</td>
                                 <td>{{ item.medida }}</td>
                                 <td>{{ item.cantidad }}</td>
-                                <td>{{ seleccionado.moneda }}{{ item.precioedita }}</td>
+                                <td>{{ seleccionado.moneda }}{{ item.precio }}</td>
                                 <td class="red--text">{{ seleccionado.moneda }}{{ item.preciodescuento }}</td>
-                                <td>{{ seleccionado.moneda }}{{ redondear(item.precioedita * item.cantidad) }}</td>
+                                <td>{{ seleccionado.moneda }}{{ redondear(item.precio * item.cantidad) }}</td>
                             </tr>
                         </tbody>
                     </template>
@@ -474,6 +474,8 @@ export default {
             this.seleccionado = value
             this.arrayConsolidar = []
             consultaDetalle(value.numeracion).once("value").then((snapshot) => {
+
+                console.log(snapshot.val())
                 snapshot.forEach((item) => {
                     this.arrayConsolidar.push(item.val())
                 })

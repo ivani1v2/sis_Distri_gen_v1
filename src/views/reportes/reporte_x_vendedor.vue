@@ -232,7 +232,7 @@ export default {
                     const dni = cab.dni || cab.documento || ''
                     dets.forEach((det, idx) => {
                         const esGratuita = String(det.operacion || '').toUpperCase() === 'GRATUITA'
-                        const precio = Number(det.precioedita ?? det.precio ?? 0)
+                        const precio = Number(det.precio ?? 0)
                         const cantidad = Number(det.cantidad || 0)
                         const total = esGratuita ? 0 : (precio * cantidad)
                         filas.push({
