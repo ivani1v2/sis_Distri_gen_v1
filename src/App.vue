@@ -55,7 +55,7 @@ export default {
     },
     mounted() {
         window.addEventListener("swUpdated", (event) => {
-            console.log("📦 swUpdated recibido.");
+            //console.log("📦 swUpdated recibido.");
             this.registration = event.detail;
             this.updateAvailable = true;
         });

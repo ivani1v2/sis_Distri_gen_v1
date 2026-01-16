@@ -124,7 +124,7 @@
                     <div class="text-caption grey--text text--darken-1" v-if="getFactor(producto_selecto) > 1">
                         Stock:
                         <strong>{{ Math.floor(Number(producto_selecto.stock || 0) / getFactor(producto_selecto))
-                        }}</strong>
+                            }}</strong>
                         cajas
                         + <strong>{{ Number(producto_selecto.stock || 0) % getFactor(producto_selecto) }}</strong> und
                         (total <strong>{{ producto_selecto.stock }}</strong> und) — Factor: {{
@@ -527,7 +527,9 @@ export default {
                 bonosOrdenados.forEach(bono => {
                     const veces = Math.floor(cantidadRestante / bono.apartir_de);
                     if (veces >= 1) {
-                        const productoBono = store.state.productos.find(p => p.id === bono.cod_producto);
+                        const idBono = String(bono.cod_producto || '').trim();
+                        const productoBono = store.state.productos.find(p => String(p.id).trim() === idBono);
+
                         if (productoBono) {
                             //console.log('precio bono',precioUnidad)
                             this.$emit('agrega_lista', {

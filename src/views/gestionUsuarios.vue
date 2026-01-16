@@ -180,7 +180,7 @@
             
                     <v-spacer></v-spacer>
               
-                    <v-btn small color="success" @click="dial_permitidos=!dial_permitidos">
+                    <v-btn disabled small color="success" @click="dial_permitidos=!dial_permitidos">
                         <v-icon left small>mdi-content-save</v-icon>
                         Productos Permitidos
                     </v-btn>

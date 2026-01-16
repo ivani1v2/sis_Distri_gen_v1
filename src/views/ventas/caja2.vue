@@ -7,7 +7,6 @@
                 </cat_fijo>
             </v-col>
           
-
             <v-col cols="12" md="8" class="venta-col d-flex flex-column">
                 <v-card class="mt-1">
                     <v-card-text>

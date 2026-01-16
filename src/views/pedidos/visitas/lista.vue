@@ -160,7 +160,7 @@
                                 <v-icon left small>mdi-table-eye</v-icon> Historial
                             </v-btn>
                             <v-btn x-small text color="red darken-2" @click="verDeudas(item)">
-                                <v-icon left small>mdi-cash-clock</v-icon> Deudas
+                                <v-icon left small>mdi-cash</v-icon> Deudas
                             </v-btn>
                         </div>
                     </template>
@@ -250,7 +250,7 @@
                                     </v-list-item>
                                     <v-list-item @click="verDeudas(item)">
                                         <v-list-item-title>
-                                            <v-icon left color="red">mdi-cash-clock</v-icon> Ver Deudas
+                                            <v-icon left color="red">mdi-cash</v-icon> Ver Deudas
                                         </v-list-item-title>
                                     </v-list-item>
                                 </v-list>
