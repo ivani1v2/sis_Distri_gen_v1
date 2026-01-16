@@ -75,8 +75,28 @@
 
                         </v-btn>
                     </v-col>
+                    <v-col cols="12" class="mt-n5">
+    <v-expansion-panels v-model="expansionObservacion">
+        <v-expansion-panel>
+            <v-expansion-panel-header>
+                Observación
+            </v-expansion-panel-header>
+            <v-expansion-panel-content>
+                <v-textarea 
+                    v-model="cabecera.observacion" 
+                    outlined 
+                    dense 
+                    hide-details 
+                    rows="3"
+                    placeholder="Escribe observaciones..." 
+                    auto-grow
+                ></v-textarea>
+            </v-expansion-panel-content>
+        </v-expansion-panel>
+    </v-expansion-panels>
+</v-col>
                 </v-row>
-            </v-card-text> <v-card class="mt-5">
+            </v-card-text> <v-card class="mt-3">
                 <div class="tabla-scroll">
                     <v-simple-table class="elevation-0" dense>
                         <!-- Sin encabezado: usamos tarjetas -->
@@ -310,6 +330,7 @@ export default {
                 { text: 'Carnet Extranjería', value: 'CEX' },
                 { text: 'Pasaporte', value: 'PAS' },
             ],
+            expansionObservacion: null,
         }
     },
     watch: {
@@ -643,6 +664,7 @@ export default {
         },
         cerrar() {
             this.internalOpen = false
+            this.expansionObservacion = null
             this.$emit('cancelar')
         },
         openEditCabecera() {

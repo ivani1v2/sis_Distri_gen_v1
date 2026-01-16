@@ -189,8 +189,8 @@ export default {
         productos: [],
         headers: [
             { text: 'ID', value: 'id', width: 60 },
-            { text: 'Categoría', value: 'categoria', width: 90 },
-            { text: 'Producto', value: 'nombre'},
+            { text: 'Categoría', value: 'categoria', width: 100 },
+            { text: 'Producto', value: 'nombre', width : 300},
             { text: 'Medida', value: 'medida', align: 'center', width: 80 },
             { text: 'Stock', value: 'stock', align: 'center', width: 80 },
             { text: 'Mínimo', value: 'stock_minimo', align: 'center', width: 80 },
@@ -299,7 +299,7 @@ export default {
             if (f <= 1) return s.toString()
             const cajas = Math.floor(s / f)
             const und = s - (cajas * f)
-            return und > 0 ? `${cajas}c ${und}u` : `${cajas}c`
+            return und > 0 ? `${cajas}/${und}` : `${cajas}`
         },
         
         formatoStockMobile(stock, factor = 1) {
@@ -323,7 +323,7 @@ export default {
             const difAbs = Math.abs(dif);
             const cajas = Math.floor(difAbs / f);
             const und = difAbs - (cajas * f);
-            return und > 0 ? `${signo}${cajas}c ${und}u` : `${signo}${cajas}c`;
+            return und > 0 ? `${signo}${cajas}/${und}` : `${signo}${cajas}`;
         },
         
         getCardClass(producto) {
@@ -373,6 +373,16 @@ export default {
             }))
             const wb = XLSX.utils.book_new()
             const ws = XLSX.utils.json_to_sheet(data)
+            ws['!cols'] =[
+                {wch: 3},
+                {wch: 15},
+                {wch: 50},
+                {wch: 15},
+                {wch: 15},
+                {wch: 15},
+                {wch: 15}
+                
+            ]
             XLSX.utils.book_append_sheet(wb, ws, 'Stock Mínimo')
             XLSX.writeFile(wb, `alerta_stock_${new Date().toISOString().split('T')[0]}.xlsx`)
         },

@@ -129,6 +129,14 @@ export default {
   computed: {
     sedesFiltro() {
       const sedes = (store.state.array_sedes || []).filter(s => s.tipo === 'sede')
+      console.log('Sedes para filtro:', store.state.array_sedes)
+      if (sedes.length === 0) {
+        return [{
+          nombre: 'PRINCIPAL',
+          base: store.state.baseDatos.bd,
+          esPrincipal: true
+        }]
+      }
       return sedes.map(s => ({
         nombre: s.nombre,
         base: s.base,
@@ -152,6 +160,7 @@ export default {
         { text: 'ID', value: 'id', align: 'start' },
         { text: 'Categoría', value: 'categoria' },
         { text: 'Nombre', value: 'nombre' },
+        { text: 'Medida', value: 'medida'},
         { text: `Costo (${simbolo})`, value: 'costo' },
         { text: 'Stock', value: 'stock' },
         { text: `Precio V (${simbolo})`, value: 'precio' },
