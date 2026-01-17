@@ -213,6 +213,20 @@
                         v-model="clienteForm.frecuencia" />
                 </v-col>
 
+                <v-col cols="6" class="mt-n4">
+                    <v-select :disabled="permiso_edita" :items="arrayTipoComprobante" item-text="text" item-value="value"
+                        label="Tipo Comprobante" dense outlined v-model="clienteForm.tipocomprobante">
+                        <template v-slot:append>
+                            <v-tooltip bottom>
+                                <template v-slot:activator="{ on, attrs }">
+                                    <v-icon small color="blue" v-bind="attrs" v-on="on">mdi-help-circle</v-icon>
+                                </template>
+                                <span>Tipo de comprobante por defecto para este cliente (Nota venta, Boleta, Factura)</span>
+                            </v-tooltip>
+                        </template>
+                    </v-select>
+                </v-col>
+
             </v-row>
             <v-alert v-if="error" type="error" dense class="mt-2">{{ error }}</v-alert>
         </v-card>
@@ -379,6 +393,11 @@ export default {
             dialtabla: false,
             arraydocumento: ['SIN DOCUMENTO', 'DNI', 'RUC', 'PASSAPORTE', 'CARNET DE EXTRANJERIA'],
             array_frec: ['SEMANAL', 'QUINCENAL', 'MENSUAL'],
+            arrayTipoComprobante: [
+                { text: 'NOTA', value: 'T' },
+                { text: 'BOLETA', value: 'B' },
+                { text: 'FACTURA', value: 'F' }
+            ],
 
             // viejo set de listas (para auto-map desde API): lo usaremos solo para bootstrap
             arrayDepas: [],

@@ -87,9 +87,23 @@
             <v-text-field dense v-model="icbper" label="ICBPER"></v-text-field>
           </v-col>
 
-          <v-col cols="6">
-            <v-select dense v-model="pordefecto" :items="arraydoc" menu-props="auto" hide-details
-              label="Comprobante Defecto"></v-select>
+          <v-col cols="6" class="d-flex align-center mt-n4">
+            <v-checkbox dense v-model="usar_comprobante_defecto" hide-details class="ma-0 pa-0">
+            </v-checkbox>
+
+            <span v-if="!usar_comprobante_defecto" class="text-caption mr-3">Comprobante Defecto</span>
+
+            <v-select v-if="usar_comprobante_defecto" dense v-model="pordefecto" :items="arraydoc" menu-props="auto"
+              hide-details label="Comprobante" item-text="texto"
+              item-value="valor"></v-select>
+
+            <v-tooltip bottom>
+              <template v-slot:activator="{ on, attrs }">
+                <v-icon small color="blue" v-bind="attrs" v-on="on" class="ml-1">mdi-help-circle</v-icon>
+              </template>
+              <span>Si está ACTIVO, se usará el comprobante seleccionado aquí. Si NO
+                se usará el tipo de comprobante asignado a cada cliente.</span>
+            </v-tooltip>
           </v-col>
 
           <v-col cols="6">
@@ -128,7 +142,7 @@
               </template>
             </v-checkbox>
           </v-col>
-            <v-col cols="6">
+          <v-col cols="6">
             <v-checkbox dense v-model="desc_porcentaje" label="Descuento x %">
               <template v-slot:append>
                 <v-tooltip bottom>
@@ -147,7 +161,9 @@
                   <template v-slot:activator="{ on, attrs }">
                     <v-icon small color="blue" v-bind="attrs" v-on="on">mdi-help-circle</v-icon>
                   </template>
-                  <span>Habilita la gestión de línea de crédito por cliente. Si está activo, se validará que la deuda no supere el límite asignado en pre-ventas.</span>
+                  <span>Habilita la gestión de línea de crédito por cliente. Si está activo, se validará que la deuda no
+                    supere el
+                    límite asignado en pre-ventas.</span>
                 </v-tooltip>
               </template>
             </v-checkbox>
@@ -179,7 +195,13 @@ export default {
       icbper: "0.30",
       distancia_visita: 15,
       pordefecto: "T",
-      arraydoc: ["T", "B", "F"],
+      arraydoc: [{
+        valor: 'T', texto: 'NOTA',
+      }, {
+        valor: 'B', texto: 'BOLETA'
+      }, {
+        valor: 'F', texto: 'FACTURA'
+      }],
       arrayOperacion: ["GRAVADA", "EXONERADA"],
       operacion: "GRAVADA",
       empresa: "",
@@ -187,6 +209,7 @@ export default {
       desc_porcentaje: false,
       alerta_stock_minimo: false,
       linea_credito_activo: false,
+      usar_comprobante_defecto: false,
       moneda_defecto: "PEN",
     };
   },
@@ -234,6 +257,7 @@ export default {
             desc_porcentaje = this.desc_porcentaje,
             alerta_stock_minimo = this.alerta_stock_minimo,
             linea_credito_activo = this.linea_credito_activo,
+            usar_comprobante_defecto = this.usar_comprobante_defecto,
             moneda_defecto = this.moneda_defecto,
           } = config;
 
@@ -258,6 +282,7 @@ export default {
             desc_porcentaje,
             alerta_stock_minimo,
             linea_credito_activo,
+            usar_comprobante_defecto,
           });
         });
     },
@@ -282,6 +307,7 @@ export default {
       grabaConfigura("desc_porcentaje", this.desc_porcentaje);
       grabaConfigura("alerta_stock_minimo", this.alerta_stock_minimo);
       grabaConfigura("linea_credito_activo", this.linea_credito_activo);
+      grabaConfigura("usar_comprobante_defecto", this.usar_comprobante_defecto);
       grabaConfigura("moneda_defecto", this.moneda_defecto);
       store.commit("dialogoConfiguracion");
     },

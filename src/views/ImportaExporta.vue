@@ -142,17 +142,17 @@ export default {
     esquemaPorDefecto() {
       if (this.target === 'productos') {
         return [
-          'id', 'activo', 'codbarra', 'nombre', 'categoria', 'medida', 'stock', 'factor',
+          'id', 'activo', 'codbarra', 'nombre', 'categoria', 'medida', 'stock', 'stock_minimo', 'factor',
           'precio', 'escala_may1', 'precio_may1', 'escala_may2', 'precio_may2',
           'peso', 'costo', 'margen', 'tipoproducto', 'operacion', 'icbper', 'controstock',
-          'lista_bono', 'tiene_bono', 'marca'
+          'lista_bono', 'tiene_bono', 'marca', 'proveedor', 'obs1'
         ]
       }
       if (this.target === 'clientes') {
         return [
           'activo', 'id', 'tipodoc', 'documento', 'nombre', 'giro', 'correo', 'direccion', 'telefono',
           'sede', 'nota', 'referencia', 'departamento', 'provincia', 'distrito', 'ubigeo',
-          'tipocomprobante', 'zona', 'dia', 'latitud', 'longitud'
+          'tipocomprobante', 'zona', 'dia', 'latitud', 'longitud', 'permite_credito', 'linea_credito', 'listas_precios'
         ]
       }
       // stock
@@ -188,7 +188,10 @@ export default {
           controstock: true,
           lista_bono: '[]',   // como texto JSON
           tiene_bono: false,
-          marca: ''
+          marca: '',
+          proveedor: '',
+          obs1: '',
+          stock_minimo: 0
         }]
         sheetName = 'productos'
       } else if (this.target === 'clientes') {
@@ -213,7 +216,10 @@ export default {
           zona: '',
           dia: '',
           latitud: '',
-          longitud: ''
+          longitud: '',
+          permite_credito: false,
+          linea_credito: 0,
+          listas_precios: '[]'
         }]
         sheetName = 'clientes'
       } else {
@@ -258,7 +264,10 @@ export default {
           controstock: p.controstock !== false,
           lista_bono: JSON.stringify(p.lista_bono || []),
           tiene_bono: !!p.tiene_bono,
-          marca: p.marca || ''
+          marca: p.marca || '',
+          proveedor: p.proveedor || '',
+          obs1: p.obs1 || '',
+          stock_minimo: Number(p.stock_minimo) || 0
         }))
         name = 'productos'
       } else if (this.target === 'clientes') {
@@ -292,7 +301,10 @@ export default {
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
             .toLowerCase(),
           latitud: c.latitud || '',
-          longitud: c.longitud || ''
+          longitud: c.longitud || '',
+          permite_credito: c.permite_credito === true,
+          linea_credito: Number(c.linea_credito) || 0,
+          listas_precios: JSON.stringify(Array.isArray(c.listas_precios) ? c.listas_precios : [])
         }))
         name = 'clientes'
       } else {
@@ -392,7 +404,10 @@ export default {
         controstock: this._toBool(o.controstock, true),
         lista_bono,
         tiene_bono: this._toBool(o.tiene_bono, false),
-        marca: this._toStr(o.marca)
+        marca: this._toStr(o.marca),
+        proveedor: this._toStr(o.proveedor),
+        obs1: this._toStr(o.obs1),
+        stock_minimo: this._toNum(o.stock_minimo, 0)
       }
     },
 
@@ -425,7 +440,16 @@ export default {
           .toLowerCase(),
         latitud: this._toStr(o.latitud),
         longitud: this._toStr(o.longitud),
+        permite_credito: this._toBool(o.permite_credito, false),
+        linea_credito: this._toNum(o.linea_credito, 0),
+        listas_precios: this._parseArrayJSON(o.listas_precios, []),
       }
+    },
+
+    _parseArrayJSON(v, def = []) {
+      if (Array.isArray(v)) return v
+      if (v === null || v === undefined || v === '') return def
+      try { return JSON.parse(String(v)) } catch { return def }
     },
 
     normalizaStock(row) {
@@ -516,6 +540,9 @@ export default {
               lista_bono: Array.isArray(r.lista_bono) ? r.lista_bono : [],
               tiene_bono: !!r.tiene_bono,
               marca: r.marca || '',
+              proveedor: r.proveedor || '',
+              obs1: r.obs1 || '',
+              stock_minimo: Number(r.stock_minimo ?? 0),
               editado: ahora,
             }
             return nuevoProducto(r.id, payload)
@@ -544,6 +571,9 @@ export default {
               dia: [r.dia] || '',
               latitud: String(r.latitud ?? ''),
               longitud: String(r.longitud ?? ''),
+              permite_credito: !!r.permite_credito,
+              linea_credito: Number(r.linea_credito) || 0,
+              listas_precios: Array.isArray(r.listas_precios) ? r.listas_precios : [],
               editado: ahora,
             }
             return crearOActualizarCliente(r.documento, { ...form })

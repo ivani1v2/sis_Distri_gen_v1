@@ -211,7 +211,6 @@
 import {
     allEmpleados,
     obtenContador,
-
     nuevaCuentaxcobrar
 } from '../../db'
 import { crearOActualizarCliente as nuevoCliente, colClientes } from '../../db_firestore'
@@ -304,7 +303,15 @@ export default {
 
             this.direccion = this.cliente.dir
         }
-        this.tipocomprobante = store.state.configuracion.defecto
+        const usarDefecto = store.state.configuracion.usar_comprobante_defecto === true
+        if (usarDefecto) {
+            this.tipocomprobante = store.state.configuracion.defecto || 'T'
+        } else {
+            this.tipocomprobante = store.state.cliente_selecto?.tipocomprobante
+                || store.state.cliente?.tipocomprobante
+                || 'T'
+        }
+
         this.total = this.cabecera.total - this.cabecera.descuentos
         this.moneda = this.cabecera.moneda
         this.modopagos = []
@@ -800,6 +807,15 @@ export default {
             if (data.telefono) {
                 this.telfcliente = data.telefono;
             }
+            const usarDefecto = store.state.configuracion.usar_comprobante_defecto === true
+
+            if (usarDefecto) {
+                this.tipocomprobante = store.state.configuracion.defecto || 'T'
+            } else {
+                this.tipocomprobante = (data.tipocomprobante || data.tipo_comprobante)
+                    ? (data.tipocomprobante || data.tipo_comprobante)
+                    : 'T'
+            }
 
             this.dial_cliente = false;
         },
@@ -829,7 +845,7 @@ export default {
         cierre() {
             this.$emit('cierre', false)
         },
-    async visualizar() {
+        async visualizar() {
             store.commit("dialogoprogress")
             if (this.valida_pagos() != parseFloat(this.total)) {
                 alert('Debe ingresar monto correcto')
