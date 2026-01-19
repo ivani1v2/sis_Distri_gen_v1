@@ -117,6 +117,11 @@
                 <v-system-bar window dark>
                     <v-icon @click="dialo_cantidad = false">mdi-close</v-icon>
                     <v-spacer></v-spacer>
+                    <IndicadorBono v-if="producto_selecto && tieneBonoProducto(producto_selecto)" 
+                        :producto="producto_selecto" 
+                        :bonos-globales="bonosGlobalesCache"
+                        :solo-icono="false"
+                        class="mr-4" />
                     <v-checkbox v-if="$store.state.permisos.edita_bono" v-model="es_bono" label="ES BONO"></v-checkbox>
                 </v-system-bar>
                 <v-card-text class="mt-4">
@@ -260,10 +265,14 @@
 <script>
 import store from '@/store/index'
 import DescuentosPorcentaje from '@/components/descuentos_porcentaje.vue'
+import IndicadorBono from '@/views/productos/components/IndicadorBono.vue'
+import { allBono } from '../db'
+
 export default {
     name: 'catalogo_fijo',
     components: {
-        DescuentosPorcentaje
+        DescuentosPorcentaje,
+        IndicadorBono
     },
 
     props: {
@@ -298,7 +307,8 @@ export default {
             snackMsg: 'Producto agregado',
             es_bono: false,
             moneda: 'S/ ',
-            descuentoAplicado: { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 }
+            descuentoAplicado: { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 },
+            bonosGlobalesCache: []
         }
     },
     computed: {
@@ -352,6 +362,7 @@ export default {
     mounted() {
         this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         window.addEventListener("keydown", this.detectarTecla);
+        this.cargarBonosGlobales();
     },
     beforeDestroy() {
         window.removeEventListener("keydown", this.detectarTecla);
@@ -401,6 +412,49 @@ export default {
         this._tierSugerido = 1; // estado interno para pintar sugerencia
     },
     methods: {
+        async cargarBonosGlobales() {
+            try {
+                const snap = await allBono().once("value");
+                const val = typeof snap.val === "function" ? snap.val() : null;
+
+                let arr = [];
+                if (Array.isArray(val)) arr = val.filter(Boolean);
+                else if (val && typeof val === "object") arr = Object.values(val);
+
+                // Solo bonos activos y vigentes
+                this.bonosGlobalesCache = arr.filter(b => {
+                    if (!b.activo) return false;
+                    if (b.fecha_vencimiento && new Date(b.fecha_vencimiento) < new Date()) return false;
+                    return true;
+                });
+            } catch (e) {
+                console.error(e);
+                this.bonosGlobalesCache = [];
+            }
+        },
+
+        tieneBonoProducto(producto) {
+            if (!producto) return false;
+            // Bono unitario
+            if (producto.tiene_bono && producto.lista_bono && producto.lista_bono.length > 0) {
+                return true;
+            }
+            // Bono global precio
+            if (producto.grupo_precio) {
+                const bono = this.bonosGlobalesCache.find(b => 
+                    b.codigo === producto.grupo_precio && b.tipo === 'precio'
+                );
+                if (bono) return true;
+            }
+            // Bono global bono
+            if (producto.grupo_bono) {
+                const bono = this.bonosGlobalesCache.find(b => 
+                    b.codigo === producto.grupo_bono && b.tipo === 'bono'
+                );
+                if (bono) return true;
+            }
+            return false;
+        },
 
         precioChip(producto, tier) {
             const base = this.precioPorTier(producto, tier);      // precio por UNIDAD según tier
@@ -540,7 +594,11 @@ export default {
                                 cantidad: veces * bono.cantidad, // en unidades
                                 precio: precioUnidad,
                                 precio_base: precioUnidad,
-                                observacion: ''
+                                observacion: '',
+                                // Marcar como bono automático para que sea recalculado
+                                bono_auto: true,
+                                bono_origen_tipo: 'lista_bono',
+                                bono_origen: this.producto_selecto.id,
                             });
                             cantidadRestante -= veces * bono.apartir_de;
                         }

@@ -5,6 +5,11 @@
             <v-system-bar window dark>
                 <v-icon large color="red" @click="cierra()">mdi-close</v-icon>
                 <v-spacer></v-spacer>
+                <IndicadorBono v-if="tieneBonoProducto" 
+                    :producto="productoCompleto" 
+                    :bonos-globales="bonosGlobalesCache"
+                    :solo-icono="false"
+                    class="mr-4" />
                 <v-checkbox :disabled="!$store.state.permisos.edita_bono" v-model="es_bono"
                     label="ES BONO"></v-checkbox>
             </v-system-bar>
@@ -79,9 +84,14 @@
 
 <script>
 import store from "@/store";
+import IndicadorBono from '@/views/productos/components/IndicadorBono.vue';
+import { allBono } from '../../db';
 
 export default {
     name: "caja2",
+    components: {
+        IndicadorBono
+    },
     props: {
         item_selecto: {
             type: Object,
@@ -100,6 +110,7 @@ export default {
             desc_3: 0,
             es_bono: false,
             porcentaje: false,
+            bonosGlobalesCache: [],
         };
     },
     created() {
@@ -119,6 +130,8 @@ export default {
             this.preciodescuento = 0
         }
         this.dial = true
+        
+        this.cargarBonosGlobales();
     },
     watch: {
         es_bono(nuevo) {
@@ -150,9 +163,47 @@ export default {
 
             // Si NO es gratuita -> solo importa caja_edita_cantidad
             return true;
+        },
+        productoCompleto() {
+            // Busca el producto completo desde el store usando el id del item seleccionado
+            const prod = this.$store.state.productos.find(
+                p => String(p.id) === String(this.item_selecto?.id)
+            );
+            return prod || this.item_selecto || {};
+        },
+        tieneBonoProducto() {
+            if (!this.productoCompleto?.id) return false;
+            const prodId = String(this.productoCompleto.id);
+            
+            // Verificar bono unitario
+            const tieneUnitario = !!(
+                this.productoCompleto.bono && 
+                Number(this.productoCompleto.bono) > 0
+            );
+            
+            // Verificar bono global
+            const tieneGlobal = this.bonosGlobalesCache.some(b => {
+                if (!b.activo) return false;
+                const productos = b.productos || [];
+                return productos.some(p => String(p.id) === prodId);
+            });
+            
+            return tieneUnitario || tieneGlobal;
         }
     },
     methods: {
+        async cargarBonosGlobales() {
+            try {
+                const snap = await allBono().once("value");
+                const val = typeof snap.val === "function" ? snap.val() : null;
+                let arr = [];
+                if (Array.isArray(val)) arr = val.filter(Boolean);
+                else if (val && typeof val === "object") arr = Object.values(val);
+                this.bonosGlobalesCache = arr.filter(b => b.activo);
+            } catch (error) {
+                this.bonosGlobalesCache = [];
+            }
+        },
         grabaEdita() {
             const esBono = !!this.es_bono;
 
