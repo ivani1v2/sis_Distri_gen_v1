@@ -46,22 +46,24 @@
             <v-divider class="my-2" color="grey"></v-divider>
           </v-col>
 
-          <v-col cols="6" class="mt-b6">
-            <v-checkbox dense v-model="detracciones" label="Detracciones">
-              <template v-slot:append>
-                <v-tooltip bottom>
-                  <template v-slot:activator="{ on, attrs }">
-                    <v-icon small color="blue" v-bind="attrs" v-on="on">mdi-help-circle</v-icon>
-                  </template>
-                  <span>Activa campo para ingresar operacion de venta afectas a Detraccion</span>
-                </v-tooltip>
-              </template>
+          <v-col cols="6" class="d-flex align-center mt-1 mb-3">
+            <v-checkbox dense v-model="detracciones" hide-details class="ma-0 pa-0">
             </v-checkbox>
-          </v-col>
-          <v-col cols="6">
-            <v-text-field class="mb-n6" outlined dense v-model="cuenta_detra"
+
+            <span v-if="!detracciones" class="text-caption mr-3">Activar Detracciones</span>
+            <v-text-field v-if="detracciones" class="mb-n6" outlined dense v-model="cuenta_detra"
               label="Cuenta BN Detracciones"></v-text-field>
+
+
+            <v-tooltip bottom>
+              <template v-slot:activator="{ on, attrs }">
+                <v-icon small color="blue" v-bind="attrs" v-on="on" class="ml-1">mdi-help-circle</v-icon>
+              </template>
+              <span>Activa campo para ingresar operacion de venta afectas a Detraccion</span>
+            </v-tooltip>
           </v-col>
+
+
           <v-col cols="12" class="mt-n3">
             <v-divider class="my-2" color="grey"></v-divider>
           </v-col>
@@ -71,7 +73,7 @@
           </v-col>
 
 
-          <v-col cols="6" class="mt-n6">
+          <v-col cols="6" class="mt-n4">
             <v-checkbox dense v-model="mostrar_ope_gratuitas" label="Mostrar Ope Gratuitas"></v-checkbox>
           </v-col>
 
@@ -94,8 +96,7 @@
             <span v-if="!usar_comprobante_defecto" class="text-caption mr-3">Comprobante Defecto</span>
 
             <v-select v-if="usar_comprobante_defecto" dense v-model="pordefecto" :items="arraydoc" menu-props="auto"
-              hide-details label="Comprobante" item-text="texto"
-              item-value="valor"></v-select>
+              hide-details label="Comprobante" item-text="texto" item-value="valor"></v-select>
 
             <v-tooltip bottom>
               <template v-slot:activator="{ on, attrs }">

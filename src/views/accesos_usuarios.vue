@@ -56,6 +56,10 @@ export default {
                         [
                             { label: 'Administrador', value: 'es_admin' },
                             { label: 'Master', value: 'es_master' },
+                        ],
+                        [
+                            { label: 'NO Permitir editar Bono Automatico', value: 'permite_editar_bono',tooltip: 'Si esta activo, los bonos automaticos son estaticos no permite agregar mas o quitar. calculo Estricto de la logica' },
+                            
                         ]
                     ],
                 },
@@ -166,7 +170,7 @@ export default {
                            [
                             { label: 'Agregar Producto ', value: 'agrega_producto' },
 
-                            { label: 'Edita Bono', value: 'edita_bono' },
+                            { label: 'Edita Bono', value: 'edita_bono' ,tooltip: 'Permite al momento de pedido o venta, convertir un producto en bono o tambien quitarlo.'},
                         ],
                     ],
                 },

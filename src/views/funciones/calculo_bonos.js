@@ -15,7 +15,7 @@
  *  - createUUID: fn() => string (para líneas de bono)
  *  - inPlace: boolean (true = muta arreglo original; false = retorna copia)
  */
-import store from '@/store/index'
+import store from "@/store/index";
 
 function _clonarSiNecesario(arr, inPlace) {
   return inPlace ? arr : JSON.parse(JSON.stringify(arr || []));
@@ -147,7 +147,7 @@ export function analizaPrecios({
     if (desc >= linea.precio) linea.preciodescuento = 0;
 
     linea.totalLinea = redondear(
-      toNum(linea.cantidad, 0) * toNum(linea.precio, 0)
+      toNum(linea.cantidad, 0) * toNum(linea.precio, 0),
     );
   };
 
@@ -205,7 +205,7 @@ export function analizaPrecios({
       if (desc >= linea.precio) linea.preciodescuento = 0;
 
       linea.totalLinea = redondear(
-        toNum(linea.cantidad, 0) * toNum(linea.precio, 0)
+        toNum(linea.cantidad, 0) * toNum(linea.precio, 0),
       );
     }
   }
@@ -268,7 +268,25 @@ export function analizaGrupos({
   // 3) Totales por producto-origen para lista_bono (cuando grupo_bono es null)
   //    Guardamos unidades compradas por producto id
   const totalPorProducto = {}; // { idProducto: unidades }
+  // ====== STOCK: helpers mínimos ======
+const stockDe = (p) => Number(p?.stock || 0);
 
+  const unidadesEnPedido = (pid) => {
+    let u = 0;
+    for (const l of res) {
+      if (String(l.id) !== String(pid)) continue;
+
+      const factor = Number(l.factor || 1);
+      const medida = String(l.medida || "")
+        .trim()
+        .toUpperCase();
+      let cant = Number(l.cantidad || 0);
+
+      if (factor > 1 && medida !== "UNIDAD") cant *= factor;
+      u += cant;
+    }
+    return u;
+  };
   for (const linea of res) {
     if (_isGratuita(linea)) continue;
 
@@ -344,6 +362,11 @@ export function analizaGrupos({
     const prodBono = productos.find((p) => String(p.id) === String(idBono));
     if (!prodBono) continue;
 
+    // ✅ limitar bono por stock disponible (incluye lo ya pedido)
+    const disponible = stockDe(prodBono) - unidadesEnPedido(prodBono.id);
+    qtyFree = Math.min(qtyFree, Math.max(0, disponible));
+    if (qtyFree <= 0) continue;
+
     const medidaBono =
       String(prodBono.medida || "")
         .trim()
@@ -386,10 +409,10 @@ export function analizaGrupos({
   // --------------------------
   if (store.state.permisos.permite_editar_bono) {
     for (const [prodOrigenId, unidadesCompradas] of Object.entries(
-      totalPorProducto
+      totalPorProducto,
     )) {
       const prodOrigen = productos.find(
-        (p) => String(p.id) === String(prodOrigenId)
+        (p) => String(p.id) === String(prodOrigenId),
       );
       if (!prodOrigen) continue;
 
@@ -425,9 +448,14 @@ export function analizaGrupos({
       const prodBono = productos.find((p) => String(p.id) === String(idBono));
       if (!prodBono) continue;
 
-      // Bono SIEMPRE en UNIDAD (tal como vienes trabajando)
+      // ✅ limitar bono por stock disponible (incluye lo ya pedido)
+      const disponible = stockDe(prodBono) - unidadesEnPedido(prodBono.id);
+      const qtyFreeLimit = Math.min(qtyFree, Math.max(0, disponible));
+      if (qtyFreeLimit <= 0) continue;
+
+      // Bono SIEMPRE en UNIDAD ...
       const basePeso = Number(prodBono.peso || 0);
-      const pesoLinea = basePeso * Number(qtyFree);
+      const pesoLinea = basePeso * Number(qtyFreeLimit);
 
       res.push({
         uuid: createUUID().slice(-7),
@@ -435,7 +463,7 @@ export function analizaGrupos({
         nombre: prodBono.nombre,
         medida: "UNIDAD",
         factor: Number(prodBono.factor || 1),
-        cantidad: Number(qtyFree),
+        cantidad: Number(qtyFreeLimit),
         precio: Number(prodBono.precio || 0),
         precio_base: Number(prodBono.precio || 0),
         preciodescuento: 0,
@@ -450,7 +478,7 @@ export function analizaGrupos({
         bono_origen_tipo: "lista_bono",
         bono_origen: prodOrigen.id, // de qué producto se originó
         bono_regla: `${prodOrigen.id}:${String(
-          reglaElegida.apartir_de
+          reglaElegida.apartir_de,
         )}:${String(reglaElegida.cod_producto)}`,
       });
     }
@@ -501,10 +529,35 @@ export function aplicaPreciosYBonos({
  * @returns {Array} Nueva lista de productos actualizada
  */
 
-export function agregarLista({ listaActual, nuevosItems, createUUID, redondear }) {
+export function agregarLista({
+  listaActual,
+  nuevosItems,
+  createUUID,
+  redondear,
+}) {
   const lista = Array.isArray(listaActual) ? [...listaActual] : [];
   const items = Array.isArray(nuevosItems) ? nuevosItems : [nuevosItems];
+  const getProd = (id) =>
+    store.state.productos.find((p) => String(p.id) === String(id));
 
+  const stockDe = (id) => Number(getProd(id)?.stock || 0);
+
+  const unidadesLinea = (l) => {
+    const factor = Number(l.factor || 1);
+    const medida = String(l.medida || "").trim().toUpperCase();
+    let cant = Number(l.cantidad || 0);
+    if (factor > 1 && medida !== "UNIDAD") cant *= factor;
+    return cant;
+  };
+
+  const unidadesYaEnLista = (id) => {
+    let u = 0;
+    for (const l of lista) {
+      if (String(l.id) !== String(id)) continue;
+      u += unidadesLinea(l);
+    }
+    return u;
+  };
   const pickExtras = (val) => ({
     // ✅ descuentos
     desc_1: Number(val.desc_1 || 0),
@@ -519,22 +572,42 @@ export function agregarLista({ listaActual, nuevosItems, createUUID, redondear }
 
   items.forEach((val) => {
     const medidaLinea = (val.medida || "").toString().trim().toUpperCase();
-    const esGratuitaNueva = String(val.operacion || "").toUpperCase() === "GRATUITA";
+    const esGratuitaNueva =
+      String(val.operacion || "").toUpperCase() === "GRATUITA";
     const cantidad = Number(val.cantidad || 0);
     const basePeso = Number(val.peso || 0);
     const factor = Number(val.factor || 1);
 
     let pesoLinea = 0;
-    if (factor > 1 && medidaLinea !== "UNIDAD") pesoLinea = basePeso * factor * cantidad;
+    if (factor > 1 && medidaLinea !== "UNIDAD")
+      pesoLinea = basePeso * factor * cantidad;
     else pesoLinea = basePeso * cantidad;
 
     // ================= GRATUITA =================
     if (esGratuitaNueva) {
+       const prod = getProd(val.id);
+      if (prod && prod.controstock) {
+        const stockReal = stockDe(val.id);
+
+        // disponible = stock - (todo lo que ya está en lista, EXCEPTO esta misma entrada)
+        const disponible = stockReal - unidadesYaEnLista(val.id);
+
+        // la gratuita entra en UNIDAD normalmente; si viniera en caja, igual se pasa a unidades
+        const qtyUnd = unidadesLinea({ ...val, medida: medidaLinea, cantidad });
+
+        const qtyOk = Math.min(qtyUnd, Math.max(0, disponible));
+
+        if (qtyOk <= 0) return; // ✅ no agrega la línea gratuita
+
+        // ✅ si vino más de lo disponible, recorta la cantidad
+        // (como tu bono es UNIDAD, basta ajustar "cantidad")
+        val = { ...val, cantidad: qtyOk, medida: "UNIDAD", factor: 1 };
+      }
       const existenteGrat = lista.find(
         (item) =>
           item.id === val.id &&
           String(item.medida || "").toUpperCase() === medidaLinea &&
-          String(item.operacion || "").toUpperCase() === "GRATUITA"
+          String(item.operacion || "").toUpperCase() === "GRATUITA",
       );
 
       if (existenteGrat) {
@@ -563,7 +636,7 @@ export function agregarLista({ listaActual, nuevosItems, createUUID, redondear }
       (item) =>
         item.id === val.id &&
         String(item.medida || "").toUpperCase() === medidaLinea &&
-        String(item.operacion || "").toUpperCase() !== "GRATUITA"
+        String(item.operacion || "").toUpperCase() !== "GRATUITA",
     );
 
     if (existente) {
@@ -595,8 +668,10 @@ export function agregarLista({ listaActual, nuevosItems, createUUID, redondear }
       medida: medidaLinea,
       precio: precioNum,
       precioedita: precioNum,
-      precio_base: val.precio_base != null ? Number(val.precio_base) : precioNum,
-      preciodescuento: val.preciodescuento != null ? Number(val.preciodescuento) : 0,
+      precio_base:
+        val.precio_base != null ? Number(val.precio_base) : precioNum,
+      preciodescuento:
+        val.preciodescuento != null ? Number(val.preciodescuento) : 0,
       peso: pesoLinea,
       totalLinea: redondear(precioNum * cantidad),
     });
@@ -604,4 +679,3 @@ export function agregarLista({ listaActual, nuevosItems, createUUID, redondear }
 
   return lista;
 }
-
