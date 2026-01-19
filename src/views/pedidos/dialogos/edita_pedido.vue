@@ -412,7 +412,7 @@ export default {
         },
         condicionesItemsFiltradas() {
             if (!this.lineaCreditoActiva) {
-                return [{ text: 'Contado', value: 'CONTADO' }]
+                return this.condicionesItems
             }
             if (this.lineaCreditoCliente <= 0) {
                 return [{ text: 'Contado', value: 'CONTADO' }]

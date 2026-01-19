@@ -14,7 +14,7 @@ export const pdfGenera = (cabecera, arraydatos, medida = "80", modo = "abre") =>
   switch (medida) {
     case "A4":
       return impresionA4_ordenPedido(cabecera, arraydatos);
-    case "58":                                     
+    case "58":
       return impresion58_ordenPedido(cabecera, arraydatos);
     case "80":
     default:
@@ -25,7 +25,7 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
   const emp = store.state.baseDatos || {};
   const cfg = store.state.configImpresora || {};
   const imagen = store.state.logoempresa || "";
-  
+
   const mostrarLogo = cfg.mostrar_logo_pedido !== false;
 
   const lMargin = 14;      // márgenes cómodos para A4
@@ -71,7 +71,7 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
     doc.roundedRect(x, y - 5, w, h - 5, r, r, stroke ? "S" : (fill ? "F" : "N"));
   }
 
-  const colW_logo = (imagen && mostrarLogo) ? 28 : 0; 
+  const colW_logo = (imagen && mostrarLogo) ? 28 : 0;
   const colW_right = 75;
   const colW_center = contentWidth - colW_logo - colW_right - (colW_logo ? 6 : 0);
 
@@ -103,7 +103,7 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
   const usedH = Math.max(logoHeight, 13 + (empInfo.length ? (empInfo.length * 4.6) : 0));
 
   const boxH = Math.max(usedH, 30);
-  doc.setDrawColor(60); 
+  doc.setDrawColor(60);
   doc.setLineWidth(0.3);
   roundedRect({ x: xRight, y, w: colW_right, h: boxH, r: 3, stroke: true });
 
@@ -114,7 +114,7 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
 
   yBox += 6
   doc.setFontSize(12);
-  doc.setTextColor(0, 90, 180); 
+  doc.setTextColor(0, 90, 180);
   const tituloDoc = (cabecera?.tipo_doc_titulo || "ORDEN DE PEDIDO").toUpperCase();
   doc.text(tituloDoc, xRight + colW_right / 2, yBox, { align: "center" });
   doc.setTextColor(0);
@@ -244,15 +244,49 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
     doc.text(`Atiende: ${cabecera.cod_vendedor}`, lMargin, y);
     y += 6;
   }
-
+  
   const enLetras = `Son: ${NumerosALetras(Number(total).toFixed(2), moneda)}`;
   const enLetrasTxt = doc.splitTextToSize(enLetras, contentWidth);
   doc.text(enLetrasTxt, lMargin, y);
   y += 6 + (enLetrasTxt.length - 1) * 5;
 
+  doc.setFont("Helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text("Detalle de cronograma: ", 14, y + 3);
+
+  const cuotasData = Array.isArray(cabecera?.cronograma)
+    ? cabecera.cronograma
+    : (cabecera?.cronograma?.cuotas || []);
+
+  if ((condicion || '').toUpperCase() === 'CREDITO' && cuotasData.length > 0) {
+    y += 4;
+    doc.autoTable({
+      startY: y,
+      margin: { top: 10, left: lMargin },
+      styles: {
+        fontSize: 8,
+        cellPadding: 1,
+        valign: "middle",
+        halign: "center",
+        lineWidth: 0.2,
+        lineColor: 1,
+      },
+      headStyles: { lineWidth: 0.2, lineColor: 1 },
+      columnStyles: {
+        0: { columnWidth: 35, halign: "center", fontStyle: "bold" },
+        1: { columnWidth: 35, halign: "center" },
+        2: { columnWidth: 40, halign: "center" },
+      },
+      theme: ["plain"],
+      head: [["CUOTA", "IMPORTE", "VENCE"]],
+      body: cuotascredito(cuotasData),
+    });
+    y = doc.previousAutoTable.finalY + 3;
+  }
+
   doc.setFontSize(9);
   doc.setTextColor(120);
-  doc.text("**Documento no válido como comprobante de pago**", lMargin, y);
+  doc.text("**Documento no válido como comprobante de pago**", lMargin, y + 4);
   y += 8;
   doc.setTextColor(0);
 
@@ -353,13 +387,13 @@ async function impresion80_ordenPedido(cabecera, items = []) {
     orientation: "portrait",
     unit: "mm",
     format: [1000, pdfInMM], // altura larga, ancho 80mm (75 útiles aprox)
-        compress: true, // <--- IMPORTANTE: Evita pérdida de calidad
-  precision: 2    // <--- Precisión de dibujo
+    compress: true, // <--- IMPORTANTE: Evita pérdida de calidad
+    precision: 2    // <--- Precisión de dibujo
   });
 
   const separacion = "-------------------------------------------------------------------------------------------------------------------";
 
-    doc.setTextColor(0, 0, 0);
+  doc.setTextColor(0, 0, 0);
   doc.text(".", 0, linea); linea += 3;
 
   // Logo opcional
@@ -420,7 +454,7 @@ async function impresion80_ordenPedido(cabecera, items = []) {
     texto = doc.splitTextToSize("Dirección: " + cabecera.cliente_direccion, pdfInMM - lMargin - rMargin);
     doc.text(texto, lMargin, linea, "left"); linea += 3.5 * texto.length;
   }
-   if (cabecera?.cliente_referencia) {
+  if (cabecera?.cliente_referencia) {
     texto = doc.splitTextToSize("Refe: " + cabecera.cliente_referencia, pdfInMM - lMargin - rMargin);
     doc.text(texto, lMargin, linea, "left"); linea += 3.5 * texto.length;
   }
@@ -472,7 +506,7 @@ async function impresion80_ordenPedido(cabecera, items = []) {
 
   doc.autoTable({
     margin: { top: linea - 9, left: 1, right: 1 },
-    styles: { fontSize: 8, cellPadding: 0.1, valign: "middle", halign: "center",  textColor: [0, 0, 0], },
+    styles: { fontSize: 8, cellPadding: 0.1, valign: "middle", halign: "center", textColor: [0, 0, 0], },
     headStyles: { lineWidth: 0, minCellHeight: 9, fontStyle: "bold" },
     columnStyles: {
       0: { columnWidth: 8, halign: "center", valign: "top" }, // Cant
@@ -519,6 +553,41 @@ async function impresion80_ordenPedido(cabecera, items = []) {
   // Son:
   texto = doc.splitTextToSize("Son: " + NumerosALetras(Number(total).toFixed(2), moneda), pdfInMM - lMargin - rMargin);
   doc.text(texto, pageCenter, linea, "center"); linea += 4 * texto.length;
+
+  doc.setFont("Helvetica", "normal"); 
+  doc.setFontSize(8);
+  doc.text("Detalle de cronograma: ", lMargin, linea + 3);
+
+  const cuotasData80 = Array.isArray(cabecera?.cronograma)
+    ? cabecera.cronograma
+    : (cabecera?.cronograma?.cuotas || []);
+
+  if ((condicion || '').toUpperCase() === 'CREDITO' && cuotasData80.length > 0) {
+    linea += 6;
+    doc.autoTable({
+      startY: linea,
+      margin: { top: 10, left: 3 },
+      styles: {
+        fontSize: 7.5,
+        cellPadding: 0.2,
+        valign: "middle",
+        halign: "center",
+        lineWidth: 0.2,
+        lineColor: 1,
+        textColor: [0, 0, 0],
+      },
+      headStyles: { lineWidth: 0.2, lineColor: 1 },
+      columnStyles: {
+        0: { columnWidth: 15, halign: "center", fontStyle: "bold" },
+        1: { columnWidth: 26, halign: "center" },
+        2: { columnWidth: 25, halign: "center" },
+      },
+      theme: ["plain"],
+      head: [["CUOTA", "IMPORTE", "VENCE"]],
+      body: cuotascredito(cuotasData80),
+    });
+    linea = doc.previousAutoTable.finalY + 3;
+  }
 
   // Leyenda
   doc.setFontSize(7);
@@ -615,9 +684,9 @@ async function impresion58_ordenPedido(cabecera, items = []) {
   const doc = new jspdf({
     orientation: "portrait",
     unit: "mm",
-    format: [1000, pdfInMM], 
-        compress: true, // <--- IMPORTANTE: Evita pérdida de calidad
-  precision: 2    // <--- Precisión de dibujo// alto grande (continuo), ancho 58 mm
+    format: [1000, pdfInMM],
+    compress: true, // <--- IMPORTANTE: Evita pérdida de calidad
+    precision: 2    // <--- Precisión de dibujo// alto grande (continuo), ancho 58 mm
   });
 
   const separacion = "------------------------------------------------------------";
@@ -688,7 +757,7 @@ async function impresion58_ordenPedido(cabecera, items = []) {
     texto = doc.splitTextToSize("Dirección: " + cabecera.cliente_direccion, pdfInMM - lMargin - rMargin);
     doc.text(texto, lMargin, linea, "left"); linea += 3.6 * texto.length;
   }
-    if (cabecera?.referencia) {
+  if (cabecera?.referencia) {
     texto = doc.splitTextToSize("Ref: " + cabecera.referencia, pdfInMM - lMargin - rMargin);
     doc.text(texto, lMargin, linea, "left"); linea += 3.6 * texto.length;
   }
@@ -699,7 +768,7 @@ async function impresion58_ordenPedido(cabecera, items = []) {
   }
 
   // Condición / Vencimiento
-  const condTxt = "Condición: " + condicion ;
+  const condTxt = "Condición: " + condicion;
   texto = doc.splitTextToSize(condTxt, pdfInMM - lMargin - rMargin);
   doc.text(texto, lMargin, linea, "left"); linea += 4;
 
@@ -742,7 +811,7 @@ async function impresion58_ordenPedido(cabecera, items = []) {
 
   doc.autoTable({
     margin: { top: linea - 7, left: 1, right: 1 },
-    styles: { fontSize: 9, cellPadding: 0.3, valign: "middle", halign: "center",  textColor: [0, 0, 0], },
+    styles: { fontSize: 9, cellPadding: 0.3, valign: "middle", halign: "center", textColor: [0, 0, 0], },
     headStyles: { lineWidth: 0, minCellHeight: 8, fontStyle: "bold" },
     columnStyles: {
       0: { columnWidth: 7, halign: "center", valign: "top", }, // Cant
@@ -792,10 +861,45 @@ async function impresion58_ordenPedido(cabecera, items = []) {
   texto = doc.splitTextToSize("Son: " + NumerosALetras(Number(total).toFixed(2), moneda), pdfInMM - lMargin - rMargin);
   doc.text(texto, pageCenter, linea, "center"); linea += 3.4 * texto.length;
 
+  doc.setFont("Helvetica", "normal");
+  doc.setFontSize(8.4);
+  doc.text("Detalle de cronograma de pagos:", lMargin, linea + 5);
+
+  const cuotasData58 = Array.isArray(cabecera?.cronograma)
+    ? cabecera.cronograma
+    : (cabecera?.cronograma?.cuotas || []);
+
+  if ((condicion || '').toUpperCase() === 'CREDITO' && cuotasData58.length > 0) {
+    linea += 5;
+    doc.autoTable({
+      startY: linea,
+      margin: { top: 10, left: 1 },
+      styles: {
+        fontSize: 7,
+        cellPadding: 0.2,
+        valign: "middle",
+        halign: "center",
+        lineWidth: 0.2,
+        lineColor: 1,
+        textColor: [0, 0, 0],
+      },
+      headStyles: { lineWidth: 0.2, lineColor: 1 },
+      columnStyles: {
+        0: { columnWidth: 12, halign: "center", fontStyle: "bold" },
+        1: { columnWidth: 22, halign: "center" },
+        2: { columnWidth: 21, halign: "center" },
+      },
+      theme: ["plain"],
+      head: [["CUOTA", "IMPORTE", "VENCE"]],
+      body: cuotascredito(cuotasData58),
+    });
+    linea = doc.previousAutoTable.finalY + 3;
+  }
+
   // Leyenda
   doc.setFontSize(7.8);
   texto = doc.splitTextToSize("**Documento no válido como comprobante de pago**", pdfInMM - lMargin - rMargin);
-  doc.text(texto, pageCenter, linea, "center"); linea += 5.4;
+  doc.text(texto, pageCenter, linea, "center"); linea += 6;
 
   // Pie
   if (cfg.piepagina) {
@@ -985,6 +1089,25 @@ function tabla_A4(array, linea) {
   return { table, ope_grat };
 }
 
+
+function cuotascredito(cuotas) {
+  if (!cuotas || !Array.isArray(cuotas)) return [];
+  return cuotas.map((cuota, index) => {
+    const numCuota = cuota.cuota || cuota.numero || (index + 1);
+    const importe = moneda + (Number(cuota.importe || cuota.monto || 0).toFixed(2));
+    let vence = '';
+    if (cuota.fecha_vence) {
+      vence = typeof cuota.fecha_vence === 'number'
+        ? moment.unix(cuota.fecha_vence).format('DD/MM/YYYY')
+        : cuota.fecha_vence;
+    } else if (cuota.vencimiento) {
+      vence = moment(cuota.vencimiento).format('DD/MM/YYYY');
+    } else if (cuota.vence) {
+      vence = cuota.vence;
+    }
+    return [numCuota, importe, vence];
+  });
+}
 
 function formatMoney(num) {
   const n = Number(num || 0);
