@@ -6,7 +6,7 @@
                 <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true" :x_categoria="true">
                 </cat_fijo>
             </v-col>
-          
+            ASDASD
             <v-col cols="12" md="8" class="venta-col d-flex flex-column">
                 <v-card class="mt-1">
                     <v-card-text>
