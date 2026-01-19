@@ -448,12 +448,7 @@ export default {
             return this.totalDetalle > this.saldoDisponible;
         },
         opcionesFormaPago() {
-            if (!this.lineaCreditoActivo) {
-                return ['CONTADO'];
-            }
-            if (this.lineaCreditoCliente <= 0) {
-                return ['CONTADO'];
-            }
+   
             return ['CONTADO', 'CREDITO'];
         }
     },
