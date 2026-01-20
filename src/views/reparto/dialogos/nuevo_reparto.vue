@@ -292,6 +292,8 @@
 
         <dial_consolidado v-if="dialogConsolidado" :selected-ids="selectedIds"
             :consolidado-seleccionados="consolidadoSeleccionados" @cierra="dialogConsolidado = false" />
+        
+        <dial_orden_lifo v-if="dialogOrdenLifo" :pedidos="pedidosParaOrdenar" @cerrar="dialogOrdenLifo = false" @confirmar="onConfirmarOrdenLifo" />
     </v-dialog>
 </template>
 
@@ -299,13 +301,15 @@
 import moment from "moment";
 import { all_pedidos, detalle_pedido, modifica_pedidos } from "../../../db";
 import dial_consolidado from "../../pedidos/dialogos/dialogo_rep_consolidado.vue";
+import dial_orden_lifo from "./dial_orden_lifo.vue";
 import store from '@/store/index'
 import axios from "axios";
 import CryptoJS from "crypto-js";
 
 export default {
     components: {
-        dial_consolidado
+        dial_consolidado,
+        dial_orden_lifo
     },
     data() {
         return {
@@ -317,6 +321,9 @@ export default {
             detalleSeleccionado: [],
             dialogConsolidado: false,
             consolidadoSeleccionados: [],
+            dialogOrdenLifo: false,
+            pedidosParaOrdenar: [],
+            pedidosOrdenados: [],
             date1: moment().format("YYYY-MM-DD"),
             date2: moment().format("YYYY-MM-DD"),
             pedidosArray: [],
@@ -592,6 +599,19 @@ export default {
                     : alert("Selecciona al menos un documento.");
                 return;
             }
+            // Obtener los pedidos seleccionados
+            const set = new Set(this.selectedIds.map(String));
+            this.pedidosParaOrdenar = this.pedidosArray.filter(p => set.has(String(p.id)));
+            
+            // Abrir diálogo de ordenamiento LIFO
+            this.dialogOrdenLifo = true;
+        },
+
+        onConfirmarOrdenLifo(pedidosOrdenados) {
+            this.pedidosOrdenados = pedidosOrdenados;
+            this.dialogOrdenLifo = false;
+            
+            // Configurar fechas y abrir diálogo de confirmación
             this.fechaTraslado = this.date2;
             this.fechaEmision = this.date2;
             this.dialogCrear = true;
@@ -616,12 +636,24 @@ export default {
                     ? 'todos'
                     : this.vendedoresSeleccionados.join(',');
 
+                // Crear array de pedidos con orden LIFO
+                const pedidosConOrden = this.pedidosOrdenados.length > 0
+                    ? this.pedidosOrdenados.map(p => ({
+                        id: p.id,
+                        orden_lifo: p.orden_lifo
+                    }))
+                    : this.selectedIds.map((id, idx) => ({
+                        id,
+                        orden_lifo: idx + 1
+                    }));
+
                 const payload = {
                     fecha_traslado: unixTraslado,
                     fecha_emision: moment().unix(),
                     fecha_comprobantes: unixEmision,
                     vendedor: vendedorStr,
-                    pedidos: this.selectedIds,
+                    pedidos: pedidosConOrden.map(p => p.id),
+                    pedidos_orden: pedidosConOrden,
                     obs: this.obs,
                     resumen: {
                         total_contado: this.totalContadoSel.toFixed(2),
