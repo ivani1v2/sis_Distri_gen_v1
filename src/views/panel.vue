@@ -38,7 +38,7 @@
                     </v-container>
                 </v-card>
             </v-col>
-            <v-col v-if="$store.state.permisos.es_admin" cols="6" class="pa-1 mx-auto " md="4" sm="4" xs="6">
+            <v-col v-if="$store.state.permisos.transferencias" cols="6" class="pa-1 mx-auto " md="4" sm="4" xs="6">
                 <v-card @click.prevent="router('transferencia_productos')">
                     <v-container>
                         <v-img class="mx-auto" height="70" width="70" src="/truck.png"></v-img>
