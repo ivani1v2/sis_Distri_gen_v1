@@ -9,12 +9,20 @@
                     :producto="productoCompleto" 
                     :bonos-globales="bonosGlobalesCache"
                     :solo-icono="false"
-                    class="mr-4" />
-                <v-checkbox :disabled="!$store.state.permisos.edita_bono" v-model="es_bono"
+                    class="mr-14" />
+                <v-checkbox v-if="$store.state.permisos.edita_bono" v-model="es_bono"
                     label="ES BONO"></v-checkbox>
             </v-system-bar>
         </div>
         <v-card class="pa-3">
+
+            <v-alert v-if="esBonoGlobal" type="warning" dense text class="mb-6 m">
+                Bono global - No editable
+            </v-alert>
+            
+            <v-alert v-else-if="esBonoIndividualBloqueado" type="info" dense text class="mb-6">
+                Bono exclusivo - No editable
+            </v-alert>
 
             <v-row class="mx-auto mt-4 text-center" dense v-if="puedeEditarCantidad">
 
@@ -69,7 +77,7 @@
 
             <v-card-actions class="mt-n6">
 
-                <v-btn color="red darken-1" text @click="eliminaedita()">
+                <v-btn color="red darken-1" text @click="eliminaedita()" :disabled="!puedeEliminar">
                     Elimina
                 </v-btn>
 
@@ -136,36 +144,58 @@ export default {
     watch: {
         es_bono(nuevo) {
             if (nuevo) {
-                // Si ahora es bono: precio y descuento en 0
                 this.precioedita = 0;
                 this.preciodescuento = 0;
             } else {
-                // Si deja de ser bono: recupera precio/descuento del item original
-                if (this.item_selecto && Number(this.item_selecto.precio) > 0) {
-                    this.precioedita = Number(this.item_selecto.precio) || 0;
-                    this.preciodescuento = Number(this.item_selecto.preciodescuento) || 0;
+                let precioRecuperado = Number(this.item_selecto?.precio_base || 0);
+                
+                if (!precioRecuperado || precioRecuperado <= 0) {
+                    const prodOriginal = store.state.productos.find(
+                        p => String(p.id) === String(this.item_selecto?.id)
+                    );
+                    if (prodOriginal) {
+                        precioRecuperado = Number(prodOriginal.precio || 0);
+                    }
                 }
+                if (!precioRecuperado || precioRecuperado <= 0) {
+                    precioRecuperado = Number(this.item_selecto?.precio || 0);
+                }
+                
+                this.precioedita = precioRecuperado;
+                this.preciodescuento = 0;
             }
         }
     },
 
     computed: {
+        checkboxBonoVisible() {
+            return this.$store.state.permisos.edita_bono === true;
+        },
+        esBonoGlobal() {
+            return this.item_selecto?.bono_auto === true && 
+                   this.item_selecto?.bono_origen_tipo === 'grupo_bono' &&
+                   this.es_bono === true;
+        },
+        esBonoIndividualBloqueado() {
+            if (this.item_selecto?.bono_auto !== true) return false;
+            if (this.item_selecto?.bono_origen_tipo !== 'lista_bono') return false;            
+            if (this.es_bono !== true) return false;
+            return this.$store.state.permisos.permite_editar_bono === true;
+        },
+
         puedeEditarCantidad() {
-            // Si no tiene permiso general para editar cantidad, nunca puede
+            if (this.esBonoGlobal) return false;
+            if (this.esBonoIndividualBloqueado) return false;
             if (!this.$store.state.permisos.caja_edita_cantidad) return false;
+            return true;
+        },
 
-            const op = String(this.item_selecto?.operacion || '').toUpperCase();
-
-            // Si es GRATUITA -> depende también de permiso edita_bono
-            if (op === 'GRATUITA') {
-                return !!this.$store.state.permisos.edita_bono;
-            }
-
-            // Si NO es gratuita -> solo importa caja_edita_cantidad
+        puedeEliminar() {
+            if (this.esBonoGlobal) return false;
+            if (this.esBonoIndividualBloqueado) return false;
             return true;
         },
         productoCompleto() {
-            // Busca el producto completo desde el store usando el id del item seleccionado
             const prod = this.$store.state.productos.find(
                 p => String(p.id) === String(this.item_selecto?.id)
             );
@@ -173,22 +203,24 @@ export default {
         },
         tieneBonoProducto() {
             if (!this.productoCompleto?.id) return false;
-            const prodId = String(this.productoCompleto.id);
             
-            // Verificar bono unitario
             const tieneUnitario = !!(
-                this.productoCompleto.bono && 
-                Number(this.productoCompleto.bono) > 0
+                this.productoCompleto.tiene_bono && 
+                Array.isArray(this.productoCompleto.lista_bono) &&
+                this.productoCompleto.lista_bono.length > 0
             );
             
-            // Verificar bono global
-            const tieneGlobal = this.bonosGlobalesCache.some(b => {
+            const tieneGrupoPrecio = this.bonosGlobalesCache.some(b => {
                 if (!b.activo) return false;
-                const productos = b.productos || [];
-                return productos.some(p => String(p.id) === prodId);
+                return b.codigo === this.productoCompleto.grupo_precio && b.tipo === 'precio';
             });
             
-            return tieneUnitario || tieneGlobal;
+            const tieneGrupoBono = this.bonosGlobalesCache.some(b => {
+                if (!b.activo) return false;
+                return b.codigo === this.productoCompleto.grupo_bono && b.tipo === 'bono';
+            });
+            
+            return tieneUnitario || tieneGrupoPrecio || tieneGrupoBono;
         }
     },
     methods: {
@@ -279,10 +311,20 @@ export default {
 
             if (esBono) {
                 linea.operacion = 'GRATUITA';
-                linea.precio = linea.precio_base;
+                linea.precio = linea.precio_base || Number(this.item_selecto.precio || 0);
                 linea.totalLinea = '0.00';
                 linea.preciodescuento = 0;
+                
+                if (this.item_selecto.bono_auto) {
+                    linea.bono_editado = true;
+                }
             } else {
+                if (this.item_selecto.bono_auto) {
+                    linea.bono_auto = false;
+                    linea.bono_origen_tipo = null;
+                    linea.bono_origen = null;
+                    linea.bono_regla = null;
+                }                
                 linea.operacion =
                     (linea.operacion === 'GRATUITA')
                         ? 'GRAVADA'
@@ -293,7 +335,6 @@ export default {
                 linea.totalLinea = this.redondear(linea.cantidad * linea.precio);
             }
 
-            // 👉 Enviamos la línea actualizada al padre
             this.$emit('editaProducto', linea);
 
         },

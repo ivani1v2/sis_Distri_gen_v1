@@ -81,8 +81,19 @@
                                                         <v-chip v-if="item.medida" x-small class="ml-1" label>
                                                             {{ item.medida }}
                                                         </v-chip>
-                                                        <v-chip v-if="item.operacion === 'GRATUITA'" x-small
+                                                        <v-chip v-if="item.bono_auto && item.bono_origen_tipo === 'lista_bono'" x-small class="ml-1"
+                                                            color="green" text-color="white" label>
+                                                            <v-icon x-small left>mdi-star</v-icon>
+                                                            B Exclusivo
+                                                        </v-chip>
+                                                        <v-chip v-else-if="item.bono_auto" x-small class="ml-1"
+                                                            color="teal" text-color="white" label>
+                                                            <v-icon x-small left>mdi-gift</v-icon>
+                                                            B Global
+                                                        </v-chip>
+                                                        <v-chip v-else-if="item.operacion === 'GRATUITA'" x-small
                                                             class="ml-1" color="pink" text-color="white" label>
+                                                            <v-icon x-small left>mdi-gift</v-icon>
                                                             Gratuita
                                                         </v-chip>
                                                     </div>
@@ -188,7 +199,6 @@
                 </v-toolbar>
 
                 <v-divider></v-divider>
-
 
                 <!-- Tipo de comprobante -->
                 <v-row dense class="">
@@ -837,10 +847,24 @@ export default {
 
 
         eliminaedita() {
-            var pos = this.listaproductos.map(e => e.uuid).indexOf(this.item_selecto.uuid)
-            this.listaproductos.splice(pos, 1)
-            this.dialogoProducto = false
-            this.recalculoCompleto()
+            const itemAEliminar = this.item_selecto;
+            const pos = this.listaproductos.map(e => e.uuid).indexOf(itemAEliminar.uuid);
+            if (itemAEliminar.bono_auto && itemAEliminar.bono_origen_tipo === 'lista_bono' && itemAEliminar.bono_origen) {
+                const idOrigen = String(itemAEliminar.bono_origen);
+                const lineaOrigen = this.listaproductos.find(l => String(l.id) === idOrigen && !l.bono_auto);
+                if (lineaOrigen) {
+                    if (!lineaOrigen.bonos_eliminados) {
+                        this.$set(lineaOrigen, 'bonos_eliminados', []);
+                    }
+                    lineaOrigen.bonos_eliminados.push(itemAEliminar.bono_regla);
+                }
+            }
+            
+            if (pos !== -1) {
+                this.listaproductos.splice(pos, 1);
+            }
+            this.dialogoProducto = false;
+            this.recalculoCompleto();
         },
         editaProductoFinal(lineaActualizada) {
             const idx = this.listaproductos.findIndex(
@@ -848,14 +872,10 @@ export default {
             );
 
             if (idx !== -1) {
-                // Actualizamos esa línea en la lista
                 this.$set(this.listaproductos, idx, lineaActualizada);
             }
 
-            // Recalcula precios por escala + bonos
             this.recalculoCompleto();
-
-            // Cerramos el diálogo
             this.dialogoProducto = false;
         },
 

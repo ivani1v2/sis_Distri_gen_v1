@@ -50,8 +50,7 @@
                             item-value="value" :menu-props="{ closeOnContentClick: true, maxHeight: 300 }" />
                     </v-col>
                 </v-row>
-
-                <!-- Crédito -->
+                
                 <v-row dense v-if="cabecera.condicion_pago === 'CREDITO'">
                     <v-col cols="6">
                         <v-menu v-model="menuFecha" :close-on-content-click="false" transition="scale-transition"
@@ -76,7 +75,6 @@
             </v-card-text>
 
 
-            <!-- Detalle (editable) -->
             <v-card-text class="mt-n3">
                 <v-row class="" dense>
                     <v-col cols="8">
@@ -120,10 +118,8 @@
                                 <td class="pa-0 mt-n1 mb-n1">
                                     <v-card class="ma-1 pa-2 " outlined :elevation="0" ripple>
                                         <div class="d-flex align-center mt-n2 mb-n2">
-                                            <!-- Contenido -->
                                             <div class="flex-grow-1 mr-2">
                                                 <div class="text-caption grey--text text--darken-1">
-                                                    <!-- Precio + chips -->
                                                     <span>
                                                         Precio: {{ moneda }}
                                                         {{ redondear(item.precio) }}
@@ -140,8 +136,18 @@
                                                     <v-chip v-if="item.medida" x-small class="ml-1" label>
                                                         {{ item.medida }}
                                                     </v-chip>
-                                                    <v-chip v-if="item.operacion === 'GRATUITA'" x-small class="ml-1"
-                                                        color="pink" text-color="white" label>
+                                                    <v-chip v-if="item.bono_auto && item.bono_origen_tipo === 'lista_bono'" x-small class="ml-1"
+                                                        color="green" text-color="white" label>
+                                                        <v-icon x-small left>mdi-star</v-icon>
+                                                        B Exclusivo
+                                                    </v-chip>
+                                                    <v-chip v-else-if="item.bono_auto" x-small class="ml-1"
+                                                        color="teal" text-color="white" label>
+                                                        <v-icon x-small left>mdi-gift</v-icon>
+                                                        B Global
+                                                    </v-chip>
+                                                    <v-chip v-else-if="item.operacion === 'GRATUITA'" x-small class="ml-1"
+                                                        color="pink" text-color="white" label><v-icon x-small left>mdi-gift</v-icon>
                                                         Gratuita
                                                     </v-chip>
                                                 </div>
@@ -284,6 +290,7 @@ import axios from "axios"
 import store from '@/store/index'
 import { colClientes } from '../../../db_firestore'
 import { allcuentaxcobrar } from '../../../db'
+import { analizaPrecios, analizaGrupos } from '@/views/funciones/calculo_bonos'
 
 export default {
     name: 'EditorDetallePedido',
@@ -337,6 +344,7 @@ export default {
             expansionObservacion: null,
             clienteData: null,
             deudaCliente: 0,
+            recalculandoBonos: false,
         }
     },
     watch: {
@@ -481,10 +489,20 @@ export default {
         },
 
         editaProducto(val) {
+            let precioBase = Number(val.precio_base || val.precio || 0);
+            
+            if (val.bono_auto || val.operacion === 'GRATUITA') {
+                const productos = this.$store?.state?.productos || [];
+                const prodOriginal = productos.find(p => String(p.id) === String(val.id));
+                if (prodOriginal) {
+                    precioBase = Number(prodOriginal.precio || 0);
+                }
+            }
+            
             console.log(val)
             this.item_selecto = {
                 ...val,
-                precio_base: Number(val.precio_base || val.precio || 0),
+                precio_base: precioBase,
                 desc_1: Number(val.desc_1 || 0),
                 desc_2: Number(val.desc_2 || 0),
                 desc_3: Number(val.desc_3 || 0)
@@ -497,6 +515,9 @@ export default {
             if (pos === -1) return;
 
             const linea = this.lineas[pos];
+            const eraBonoAuto = linea.bono_auto === true;
+            const ahoraEsGratuita = String(lineaActualizada.operacion || '').toUpperCase() === 'GRATUITA';
+            
             linea.cantidad = Number(lineaActualizada.cantidad || 0);
             linea.precio = Number(lineaActualizada.precio || 0);
             linea.precio_base = Number(lineaActualizada.precio_base || linea.precio_base || linea.precio || 0);
@@ -507,18 +528,85 @@ export default {
             linea.operacion = lineaActualizada.operacion || linea.operacion;
             linea.nombre = lineaActualizada.nombre || linea.nombre;
             linea.totalLinea = Number(lineaActualizada.totalLinea || 0);
+            
+            if (lineaActualizada.bono_editado) {
+                linea.bono_editado = true;
+            }
+            
+            if (eraBonoAuto && !ahoraEsGratuita) {
+                linea.bono_auto = false;
+                linea.bono_origen_tipo = null;
+                linea.bono_origen = null;
+                linea.bono_regla = null;
+            }
 
             this.recalcularLinea(linea);
             this.dialogoProducto = false;
+            
+            this.$nextTick(() => {
+                this.recalcularBonos()
+            })
         },
 
         eliminaedita() {
-            var pos = this.lineas.map(e => e.uuid).indexOf(this.item_selecto.uuid)
-            this.lineas.splice(pos, 1)
-            this.dialogoProducto = false
+            const itemAEliminar = this.item_selecto;
+            const pos = this.lineas.map(e => e.uuid).indexOf(itemAEliminar.uuid);
+            
+            if (itemAEliminar.bono_auto && itemAEliminar.bono_origen_tipo === 'lista_bono' && itemAEliminar.bono_origen) {
+                const idOrigen = String(itemAEliminar.bono_origen);
+                const lineaOrigen = this.lineas.find(l => String(l.id) === idOrigen && !l.bono_auto);
+                if (lineaOrigen) {
+                    if (!lineaOrigen.bonos_eliminados) {
+                        this.$set(lineaOrigen, 'bonos_eliminados', []);
+                    }
+                    lineaOrigen.bonos_eliminados.push(itemAEliminar.bono_regla);
+                }
+            }
+            
+            if (pos !== -1) {
+                this.lineas.splice(pos, 1);
+            }
+            this.dialogoProducto = false;
+            
+            this.$nextTick(() => {
+                this.recalcularBonos()
+            })
         },
+        
+        recalcularBonos() {
+            if (this.recalculandoBonos) return
+            this.recalculandoBonos = true
+            
+            try {
+                const productos = store.state.productos || []
+                const bonos = store.state.bonos || {}
+                
+                const conPrecios = analizaPrecios({
+                    lineas: this.lineas,
+                    productos,
+                    bonos,
+                    redondear: this.redondear,
+                    inPlace: false,
+                })
+                
+                const conBonos = analizaGrupos({
+                    lineas: conPrecios,
+                    productos,
+                    bonos,
+                    createUUID: () => `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                    redondear: this.redondear,
+                    inPlace: false,
+                })
+                
+                this.lineas = conBonos
+            } catch (e) {
+                console.error('Error recalculando bonos:', e)
+            } finally {
+                this.recalculandoBonos = false
+            }
+        },
+
         _cargarDesdeProps() {
-            // Clona el detalle y asegura campos requeridos
             const base = Array.isArray(this.detalle) ? this.detalle : []
             this.lineas = base.map(it => ({
                 uuid: it.uuid || `${it.id}-${Date.now()}`,
@@ -538,8 +626,18 @@ export default {
                 tipoproducto: it.tipoproducto,
                 controstock: it.controstock,
                 peso: Number(it.peso || 0),
+                bono_auto: it.bono_auto || false,
+                bono_editado: it.bono_editado || false,
+                bono_origen_tipo: it.bono_origen_tipo || null,
+                bono_origen: it.bono_origen || null,
+                bono_regla: it.bono_regla || null,
+                bonos_eliminados: it.bonos_eliminados || null,
                 totalLinea: Number(it.totalLinea != null ? it.totalLinea : (Number(it.cantidad || 0) * Number(it.precio || 0)))
             }))
+            
+            this.$nextTick(() => {
+                this.recalcularBonos()
+            })
         },
         number2(n) {
             const x = Number(n || 0)
@@ -585,7 +683,6 @@ export default {
                 return 1;
             }
 
-            // Caso raro: solo may2
             if (!hayMay1 && hayMay2) {
                 const esc2 = this.toNum(producto.escala_may2, Infinity);
                 return cantidad >= esc2 ? 3 : 1;
@@ -600,12 +697,19 @@ export default {
         agregar_lista(items) {
             const nuevos = Array.isArray(items) ? items : [items]
             nuevos.forEach(val => {
-                // evita duplicados por id+medida (ajusta la regla si quieres)
                 const medidaLinea = (val.medida || '').toString().trim().toUpperCase()
-                const dup = this.lineas.find(
-                    x => x.id === val.id && (x.medida || '').toUpperCase() === medidaLinea
-                )
-                if (dup) return
+                const esBono = val.bono_auto === true || String(val.operacion || '').toUpperCase() === 'GRATUITA'
+                
+                if (!esBono) {
+                    const dup = this.lineas.find(
+                        x => x.id === val.id && (x.medida || '').toUpperCase() === medidaLinea && !x.bono_auto
+                    )
+                    if (dup) {
+                        dup.cantidad = Number(dup.cantidad || 0) + Number(val.cantidad || 1)
+                        this.recalcularLinea(dup)
+                        return
+                    }
+                }
 
                 const cant = Number(val.cantidad || 1)
                 const precio = Number(val.precio || 0)
@@ -614,22 +718,33 @@ export default {
                 const total = esGratuita ? 0 : this.fix2(Math.max(0, cant * (precio - descUnit)))
 
                 this.lineas.push({
-                    uuid: (val.uuid || '').toString() || `${val.id}-${Date.now()}`,
+                    uuid: (val.uuid || '').toString() || `${val.id}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                     id: val.id,
                     nombre: val.nombre,
                     medida: medidaLinea,
                     cantidad: cant,
                     precio,
-                    precio_base: precio,
+                    precio_base: Number(val.precio_base || precio),
                     preciodescuento: descUnit,
+                    desc_1: Number(val.desc_1 || 0),
+                    desc_2: Number(val.desc_2 || 0),
+                    desc_3: Number(val.desc_3 || 0),
                     operacion: val.operacion,
                     factor: val.factor,
                     costo: val.costo,
                     tipoproducto: val.tipoproducto,
                     controstock: val.controstock,
                     peso: Number(val.peso || 0),
+                    bono_auto: val.bono_auto || false,
+                    bono_origen_tipo: val.bono_origen_tipo || null,
+                    bono_origen: val.bono_origen || null,
+                    bono_regla: val.bono_regla || null,
                     totalLinea: total
                 })
+            })
+            
+            this.$nextTick(() => {
+                this.recalcularBonos()
             })
         },
         async api_rest(data, metodo) {

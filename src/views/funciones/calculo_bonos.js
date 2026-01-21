@@ -182,8 +182,15 @@ export function analizaPrecios({
     const p2 = toNum(cfg.precio_may2, 0);
 
     let precioObjetivo = null;
-    if (esc2 && unidadesGrupo >= esc2 && p2) precioObjetivo = p2;
-    else if (esc1 && unidadesGrupo >= esc1 && p1) precioObjetivo = p1;
+    let etiquetaPrecio = null;
+    
+    if (esc2 && unidadesGrupo >= esc2 && p2) {
+      precioObjetivo = p2;
+      etiquetaPrecio = 'mayorista_2';
+    } else if (esc1 && unidadesGrupo >= esc1 && p1) {
+      precioObjetivo = p1;
+      etiquetaPrecio = 'mayorista_1';
+    }
 
     for (const linea of res) {
       if (_isGratuita(linea)) continue;
@@ -192,14 +199,16 @@ export function analizaPrecios({
       if (!prod) continue;
       if ((prod.grupo_precio || null) !== grupoId) continue;
 
-      // precio por grupo (tal cual)
+      const precioOriginalProducto = toNum(prod.precio, 0);
       const nuevoPrecio =
         precioObjetivo != null
           ? toNum(precioObjetivo, 0)
-          : toNum(linea.precio, 0);
+          : precioOriginalProducto;
 
       linea.precio = Number(nuevoPrecio);
-      linea.precio_base = Number(nuevoPrecio); // ✅ CAMBIO
+      linea.precio_base = Number(nuevoPrecio);
+      
+      linea._precio_grupo = etiquetaPrecio;
 
       const desc = toNum(linea.preciodescuento, 0);
       if (desc >= linea.precio) linea.preciodescuento = 0;
@@ -258,8 +267,8 @@ export function analizaGrupos({
   redondear = (n) => Number(n).toFixed(2),
   inPlace = true,
 } = {}) {
-  // 1) Recalcular desde cero: borra bonos automáticos previos
-  const base = (lineas || []).filter((l) => !l?.bono_auto);
+  const base = (lineas || []).filter((l) => !l?.bono_auto || l?.bono_editado);
+
   const res = _clonarSiNecesario(base, inPlace);
 
   // 2) Totales por grupo_bono (cuando existe)
@@ -312,17 +321,20 @@ const stockDe = (p) => Number(p?.stock || 0);
       continue;
     }
 
-    // B) sin grupo_bono → si tiene lista_bono, acumular por producto
-    if (Array.isArray(prod.lista_bono) && prod.lista_bono.length > 0) {
+    // B) sin grupo_bono → si tiene_bono y lista_bono, acumular por producto
+    if (prod.tiene_bono && Array.isArray(prod.lista_bono) && prod.lista_bono.length > 0) {
       const pid = String(prod.id);
       totalPorProducto[pid] = (totalPorProducto[pid] || 0) + unidadesLinea;
     }
   }
 
   // --------------------------
-  // 4) BONOS POR GRUPO (igual que antes)
+  // 4) BONOS POR GRUPO
   // --------------------------
   for (const [grupoId, cantidadGrupo] of Object.entries(totalPorGrupo)) {
+    const yaEditado = res.some(l => l.bono_editado && l.bono_origen_tipo === 'grupo_bono' && l.bono_origen === grupoId);
+    if (yaEditado) continue;
+
     const cfg = bonos[grupoId];
     if (!cfg || cfg.tipo !== "bono" || !cfg.activo) continue;
 
@@ -407,81 +419,85 @@ const stockDe = (p) => Number(p?.stock || 0);
   // --------------------------
   // 5) BONOS POR lista_bono (grupo_bono null)
   // --------------------------
-  if (store.state.permisos.permite_editar_bono) {
-    for (const [prodOrigenId, unidadesCompradas] of Object.entries(
-      totalPorProducto,
-    )) {
-      const prodOrigen = productos.find(
-        (p) => String(p.id) === String(prodOrigenId),
-      );
-      if (!prodOrigen) continue;
+  for (const [prodOrigenId, unidadesCompradas] of Object.entries(
+    totalPorProducto,
+  )) {
+    const yaEditado = res.some(l => l.bono_editado && l.bono_origen_tipo === 'lista_bono' && String(l.bono_origen) === String(prodOrigenId));
+    if (yaEditado) continue;
 
-      const reglas = Array.isArray(prodOrigen.lista_bono)
-        ? prodOrigen.lista_bono
-        : [];
-      if (!reglas.length) continue;
+    const prodOrigen = productos.find(
+      (p) => String(p.id) === String(prodOrigenId),
+    );
+    if (!prodOrigen) continue;
 
-      // elegir mejor regla por mayor apartir_de alcanzado
-      let reglaElegida = null;
-      for (const r of reglas) {
-        const apartir = Number(r.apartir_de || 0);
-        if (!apartir) continue;
-        if (unidadesCompradas >= apartir) {
-          if (!reglaElegida || apartir > Number(reglaElegida.apartir_de || 0)) {
-            reglaElegida = r;
-          }
+    const reglas = Array.isArray(prodOrigen.lista_bono)
+      ? prodOrigen.lista_bono
+      : [];
+    if (!reglas.length) continue;
+
+    let reglaElegida = null;
+    for (const r of reglas) {
+      const apartir = Number(r.apartir_de || 0);
+      if (!apartir) continue;
+      if (unidadesCompradas >= apartir) {
+        if (!reglaElegida || apartir > Number(reglaElegida.apartir_de || 0)) {
+          reglaElegida = r;
         }
       }
-      if (!reglaElegida) continue;
-
-      const apartir = Number(reglaElegida.apartir_de || 0);
-      const cantBonoPorVez = Number(reglaElegida.cantidad || 0); // lista_bono usa "cantidad"
-      const idBono = reglaElegida.cod_producto; // ✅ producto bono real
-      if (!apartir || !cantBonoPorVez || !idBono) continue;
-
-      const veces = Math.floor(unidadesCompradas / apartir);
-      if (veces <= 0) continue;
-
-      const qtyFree = veces * cantBonoPorVez;
-      if (qtyFree <= 0) continue;
-
-      const prodBono = productos.find((p) => String(p.id) === String(idBono));
-      if (!prodBono) continue;
-
-      // ✅ limitar bono por stock disponible (incluye lo ya pedido)
-      const disponible = stockDe(prodBono) - unidadesEnPedido(prodBono.id);
-      const qtyFreeLimit = Math.min(qtyFree, Math.max(0, disponible));
-      if (qtyFreeLimit <= 0) continue;
-
-      // Bono SIEMPRE en UNIDAD ...
-      const basePeso = Number(prodBono.peso || 0);
-      const pesoLinea = basePeso * Number(qtyFreeLimit);
-
-      res.push({
-        uuid: createUUID().slice(-7),
-        id: prodBono.id,
-        nombre: prodBono.nombre,
-        medida: "UNIDAD",
-        factor: Number(prodBono.factor || 1),
-        cantidad: Number(qtyFreeLimit),
-        precio: Number(prodBono.precio || 0),
-        precio_base: Number(prodBono.precio || 0),
-        preciodescuento: 0,
-        costo: Number(prodBono.costo || 0),
-        tipoproducto: prodBono.tipoproducto,
-        operacion: "GRATUITA",
-        peso: pesoLinea,
-        controstock: !!prodBono.controstock,
-        totalLinea: redondear(0),
-
-        bono_auto: true,
-        bono_origen_tipo: "lista_bono",
-        bono_origen: prodOrigen.id, // de qué producto se originó
-        bono_regla: `${prodOrigen.id}:${String(
-          reglaElegida.apartir_de,
-        )}:${String(reglaElegida.cod_producto)}`,
-      });
     }
+    if (!reglaElegida) continue;
+
+    const apartir = Number(reglaElegida.apartir_de || 0);
+    const cantBonoPorVez = Number(reglaElegida.cantidad || 0);
+    const idBono = reglaElegida.cod_producto;
+    if (!apartir || !cantBonoPorVez || !idBono) continue;
+    const bonoRegla = `${prodOrigen.id}:${String(reglaElegida.apartir_de)}:${String(reglaElegida.cod_producto)}`;
+    
+    const lineaOrigen = res.find(l => String(l.id) === String(prodOrigenId) && !l.bono_auto);
+    if (lineaOrigen && Array.isArray(lineaOrigen.bonos_eliminados) && lineaOrigen.bonos_eliminados.includes(bonoRegla)) {
+      continue;
+    }
+
+    const veces = Math.floor(unidadesCompradas / apartir);
+    if (veces <= 0) continue;
+
+    const qtyFree = veces * cantBonoPorVez;
+    if (qtyFree <= 0) continue;
+
+    const prodBono = productos.find((p) => String(p.id) === String(idBono));
+    if (!prodBono) continue;
+
+    const disponible = stockDe(prodBono) - unidadesEnPedido(prodBono.id);
+    const qtyFreeLimit = Math.min(qtyFree, Math.max(0, disponible));
+    if (qtyFreeLimit <= 0) continue;
+
+    const basePeso = Number(prodBono.peso || 0);
+    const pesoLinea = basePeso * Number(qtyFreeLimit);
+
+    res.push({
+      uuid: createUUID().slice(-7),
+      id: prodBono.id,
+      nombre: prodBono.nombre,
+      medida: "UNIDAD",
+      factor: Number(prodBono.factor || 1),
+      cantidad: Number(qtyFreeLimit),
+      precio: Number(prodBono.precio || 0),
+      precio_base: Number(prodBono.precio || 0),
+      preciodescuento: 0,
+      costo: Number(prodBono.costo || 0),
+      tipoproducto: prodBono.tipoproducto,
+      operacion: "GRATUITA",
+      peso: pesoLinea,
+      controstock: !!prodBono.controstock,
+      totalLinea: redondear(0),
+
+      bono_auto: true,
+      bono_origen_tipo: "lista_bono",
+      bono_origen: prodOrigen.id,
+      bono_regla: `${prodOrigen.id}:${String(
+        reglaElegida.apartir_de,
+      )}:${String(reglaElegida.cod_producto)}`,
+    });
   }
 
   return res;
