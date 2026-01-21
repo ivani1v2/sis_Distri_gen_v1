@@ -30,7 +30,8 @@
                     Verificar
                     <v-chip x-small class="ml-2"
                         :color="boletasVerificadas === pedidosOrdenados.length ? 'success' : 'warning'" dark>
-                        {{ boletasVerificadas }}/{{ pedidosOrdenados.length }}
+                        {{ boletasVerificadasFiltradas }}/{{ pedidosFiltradosVerificacion.length }}
+
                     </v-chip>
                 </v-tab>
             </v-tabs>
@@ -108,7 +109,7 @@
                                 </template>
 
                                 <template v-slot:[`item.producto`]="{ item }">
-                                    <div class="font-weight-medium">{{ item.nombre }}</div>
+                                    <div class="font-weight-medium">{{ item.codigo }} - {{ item.nombre }}</div>
                                 </template>
 
                                 <template v-slot:[`item.cantidad_total`]="{ item }">
@@ -162,55 +163,72 @@
                         </v-card>
 
                         <div v-else>
-                            <v-card v-for="item in productosFiltrados" :key="item.key_unico" outlined class="mb-2"
-                                :class="getRowClass(item)">
-                                <v-card-text class="pa-3">
-                                    <div class="d-flex align-center mb-2">
+                            <v-card v-for="item in productosFiltrados" :key="item.key_unico" flat outlined
+                                class="mb-2 rounded-lg border-2"
+                                :class="item.cantidad_subida === item.cantidad_total ? 'success-border' : getRowClass(item)">
+
+                                <v-card-text class="pa-2">
+                                    <div class="d-flex align-start mb-1">
                                         <v-checkbox :input-value="item.cantidad_subida === item.cantidad_total"
                                             @change="toggleAlistarItem(item, $event)" :disabled="item.bloqueado" dense
-                                            hide-details class="ma-0 pa-0 mr-2">
-                                        </v-checkbox>
-                                        <v-icon v-if="item.bloqueado" small color="info" class="mr-2">mdi-lock</v-icon>
-                                        <div class="flex-grow-1">
-                                            <div class="font-weight-bold text-body-2">{{ item.nombre }}</div>
-                                            <div class="text-caption grey--text">
-                                                <v-chip x-small outlined>{{ item.medida }}</v-chip>
+                                            hide-details class="ma-0 pa-0 pt-1 mr-2" color="success"></v-checkbox>
+
+                                        <div class="flex-grow-1" style="min-width: 0;">
+                                            <div
+                                                class="text-subtitle-2 font-weight-black line-height-tight text-truncate text-uppercase">
+                                                {{ item.nombre }}
+                                            </div>
+                                            <div class="d-flex align-center mt-1">
+                                                <v-chip x-small label outlined color="grey darken-1"
+                                                    class="mr-1 font-weight-bold">{{
+                                                    item.codigo }}</v-chip>
+                                                <v-chip x-small label color="grey lighten-4"
+                                                    class="grey--text text--darken-2">{{ item.medida
+                                                    }}</v-chip>
+                                                <v-icon v-if="item.bloqueado" x-small color="grey"
+                                                    class="ml-1">mdi-lock</v-icon>
                                             </div>
                                         </div>
-                                        <v-chip x-small :color="getEstadoColor(item)" dark>
+
+                                        <v-chip x-small :color="getEstadoColor(item)" class="ml-1 px-1 font-weight-bold"
+                                            dark>
                                             {{ getEstadoTexto(item) }}
                                         </v-chip>
                                     </div>
 
-                                    <v-row dense align="center" class="mb-2">
-                                        <v-col cols="4" class="text-center">
-                                            <div class="text-caption grey--text">Req</div>
-                                            <v-chip x-small color="primary" dark>{{ item.cantidad_total }}</v-chip>
+                                    <v-row no-gutters align="center" class="bg-light rounded-pill pa-1 mt-2">
+                                        <v-col cols="3" class="text-center border-right">
+                                            <div class="text-overline grey--text lh-1">REQ.</div>
+                                            <div class="text-body-2 font-weight-black primary--text">{{
+                                                item.cantidad_total }}</div>
                                         </v-col>
-                                        <v-col cols="6">
-                                            <div class="text-caption grey--text text-center mb-1">Alistado</div>
-                                            <div class="d-flex align-center justify-center">
-                                                <v-btn icon x-small color="error" @click="decrementarCantidad(item)"
-                                                    :disabled="item.bloqueado || item.cantidad_subida <= 0">
-                                                    <v-icon x-small>mdi-minus</v-icon>
-                                                </v-btn>
-                                                <v-text-field v-model.number="item.cantidad_subida" type="number"
-                                                    outlined dense hide-details class="centered-input mx-1"
-                                                    style="max-width: 50px; font-size: 0.75rem;"
-                                                    @keydown="e => e.key === '-' && e.preventDefault()"
-                                                    @input="onCantidadChange(item)"
-                                                    :disabled="item.bloqueado"></v-text-field>
-                                                <v-btn icon x-small color="success" @click="incrementarCantidad(item)"
-                                                    :disabled="item.bloqueado">
-                                                    <v-icon x-small>mdi-plus</v-icon>
-                                                </v-btn>
-                                            </div>
-                                        </v-col>
-                                        <v-col cols="2" class="text-center d-flex align-center justify-center">
-                                            <v-btn icon x-small text color="indigo" @click="abrirDialogClientes(item)">
-                                                <v-icon x-small>mdi-eye</v-icon>
+
+                                        <v-col cols="6" class="d-flex align-center justify-center">
+                                            <v-btn icon small color="error" class="grey lighten-4"
+                                                @click="decrementarCantidad(item)"
+                                                :disabled="item.bloqueado || item.cantidad_subida <= 0">
+                                                <v-icon>mdi-minus</v-icon>
                                             </v-btn>
-                                            <span class="caption">{{ item.pedidos.length }}</span>
+
+                                            <input v-model.number="item.cantidad_subida" type="number"
+                                                class="mx-2 text-center font-weight-black text-h6"
+                                                style="width: 45px; border: none; background: transparent; outline: none;"
+                                                @input="onCantidadChange(item)" :disabled="item.bloqueado" />
+
+                                            <v-btn icon small color="success" class="grey lighten-4"
+                                                @click="incrementarCantidad(item)" :disabled="item.bloqueado">
+                                                <v-icon>mdi-plus</v-icon>
+                                            </v-btn>
+                                        </v-col>
+
+                                        <v-col cols="3" class="text-center border-left"
+                                            @click="abrirDialogClientes(item)">
+                                            <div class="text-overline grey--text lh-1">PEDS.</div>
+                                            <div class="d-flex align-center justify-center">
+                                                <span class="text-body-2 font-weight-bold indigo--text">{{
+                                                    item.pedidos.length }}</span>
+                                                <v-icon x-small color="indigo" class="ml-1">mdi-eye-outline</v-icon>
+                                            </div>
                                         </v-col>
                                     </v-row>
                                 </v-card-text>
@@ -221,145 +239,162 @@
 
                 <v-tab-item>
                     <v-card flat class="pa-3 pa-md-4">
-                        <v-card outlined class="mb-4 pa-3">
-                            <div class="d-flex align-center mb-3">
-                                <v-icon color="teal" class="mr-2">mdi-qrcode-scan</v-icon>
-                                <span class="font-weight-medium">Escanear Comprobante</span>
-                            </div>
+                        <v-card flat class="rounded-xl mb-3 grey lighten-5 border-thin">
+                            <v-card-text class="pa-3">
+                                <v-row no-gutters align="center">
+                                    <v-col>
+                                        <div class="d-flex align-end">
+                                            <span class="text-h4 font-weight-black success--text line-height-1">{{
+                                                boletasVerificadas
+                                                }}</span>
+                                            <span class="text-h6 grey--text mx-1">/</span>
+                                            <span class="text-h6 grey--text text--darken-1">{{ pedidosOrdenados.length
+                                                }}</span>
+                                        </div>
+                                        <div class="text-caption grey--text font-weight-bold text-uppercase">Progreso
+                                            Total</div>
+                                    </v-col>
+                                    <v-col class="text-right">
+                                        <v-progress-circular :value="porcentajeVerificacion"
+                                            :color="porcentajeVerificacion === 100 ? 'success' : 'warning'" size="50"
+                                            width="6">
+                                            <span class="caption font-weight-bold">{{ Math.round(porcentajeVerificacion)
+                                                }}%</span>
+                                        </v-progress-circular>
+                                    </v-col>
+                                </v-row>
 
-                            <v-row dense align="center">
-                                <v-col :cols="isMobile ? (codigoEscaneado ? 8 : 10) : 8"
-                                    :sm="(codigoEscaneado ? 8 : 10)" :md="6">
-                                    <v-autocomplete v-model="codigoEscaneado" :items="correlativosFiltrados" outlined
-                                        dense :label="isMobile ? 'Correlativo' : 'Ingrese correlativo'"
-                                        @keyup.enter="buscarComprobante" :loading="buscandoComprobante" clearable
-                                        hide-details ref="inputEscaner" :filter="filtroCorrelativo"
-                                        :placeholder="tipoDocSeleccionado !== 'todos' ? 'Ej: 534 ó 00000534' : 'Ej: BD06-00000534'"
-                                        @input="onCodigoChange">
-                                        <template v-slot:prepend-inner>
-                                            <v-menu offset-y>
-                                                <template v-slot:activator="{ on, attrs }">
-                                                    <v-chip small label v-bind="attrs" v-on="on"
-                                                        :color="tipoDocSeleccionado === 'todos' ? 'grey' : 'primary'"
-                                                        dark class="mr-1 cursor-pointer">
-                                                        {{ tipoDocSeleccionado === 'todos' ? '*' : tipoDocSeleccionado
-                                                        }}
-                                                        <v-icon x-small right>mdi-menu-down</v-icon>
-                                                    </v-chip>
-                                                </template>
-                                                <v-list dense>
-                                                    <v-list-item v-for="tipo in tiposDocumento" :key="tipo.value"
-                                                        @click="seleccionarTipoDoc(tipo.value)">
-                                                        <v-list-item-title>
-                                                            <v-chip x-small label
-                                                                :color="tipo.value === tipoDocSeleccionado ? 'primary' : 'grey lighten-2'"
-                                                                :dark="tipo.value === tipoDocSeleccionado" class="mr-2">
-                                                                {{ tipo.value === 'todos' ? '*' : tipo.value }}
-                                                            </v-chip>
-                                                            {{ tipo.text }}
-                                                        </v-list-item-title>
-                                                    </v-list-item>
-                                                </v-list>
-                                            </v-menu>
-                                        </template>
-                                        <template v-slot:item="{ item }">
-                                            <v-list-item-content>
-                                                <v-list-item-title>{{ item }}</v-list-item-title>
-                                            </v-list-item-content>
-                                        </template>
-                                    </v-autocomplete>
-                                </v-col>
-
-                                <v-col v-if="codigoEscaneado" cols="2" sm="2" class="px-1">
-                                    <v-btn block :height="isMobile ? 40 : 40" color="teal" dark
-                                        @click="buscarComprobante" :loading="buscandoComprobante" class="elevation-2">
-                                        <v-icon>mdi-magnify</v-icon>
-                                    </v-btn>
-                                </v-col>
-
-                                <v-col :cols="isMobile ? (codigoEscaneado ? 2 : 2) : 2" :sm="(codigoEscaneado ? 2 : 2)"
-                                    class="px-1">
-                                    <v-btn block :height="isMobile ? 40 : 40" color="indigo" dark @click="abrirCamara"
-                                        class="elevation-2">
-                                        <v-icon>mdi-camera</v-icon>
-                                    </v-btn>
-                                </v-col>
-                            </v-row>
+                                <v-progress-linear :value="porcentajeVerificacion" height="6" rounded
+                                    :color="porcentajeVerificacion === 100 ? 'success' : 'warning'"
+                                    class="mt-3"></v-progress-linear>
+                            </v-card-text>
                         </v-card>
 
-                        <v-card outlined class="mb-4 pa-3">
+                        <v-card flat outlined class="rounded-xl pa-3 mb-4">
+                            <v-row dense align="center" class="mb-2">
+                                <v-col cols="8">
+                                    <div class="d-flex align-center">
+                                        <v-icon color="teal" small class="mr-1">mdi-qrcode-scan</v-icon>
+                                        <span class="text-subtitle-2 font-weight-bold">Verificación Rápida</span>
+                                    </div>
+                                </v-col>
+                                <v-col cols="4">
+                                    <v-select v-model="filtroVerificacion" :items="opcionesVerificacion" dense
+                                        hide-details flat solo-inverted background-color="grey lighten-4"
+                                        class="compact-select" />
+                                </v-col>
+                            </v-row>
+
                             <v-row dense>
-                                <v-col cols="6" class="text-center">
-                                    <div class="text-h6 font-weight-bold success--text">{{ boletasVerificadas }}</div>
-                                    <div class="caption grey--text">Verificadas</div>
+                                <v-col cols="12">
+                           <v-autocomplete
+  v-model="codigoEscaneado"
+  :items="correlativosFiltrados"
+  outlined
+  rounded
+  dense
+  class="rounded-pill custom-input"
+  hide-details
+  :loading="buscandoComprobante"
+  :placeholder="tipoDocSeleccionado === 'todos' ? 'Serie-Correlativo' : 'Ingrese número'"
+  @keyup.enter="buscarComprobante"
+  ref="inputEscaner"
+  :append-icon="''"
+>
+  <template v-slot:prepend-inner>
+    <v-menu offset-y transition="scale-transition">
+      <template v-slot:activator="{ on, attrs }">
+        <v-btn small depressed color="primary" class="rounded-lg mr-2" v-bind="attrs" v-on="on">
+          {{ tipoDocSeleccionado === 'todos' ? '*' : tipoDocSeleccionado }}
+          <v-icon x-small right>mdi-chevron-down</v-icon>
+        </v-btn>
+      </template>
+      <v-list dense>
+        <v-list-item v-for="tipo in tiposDocumento" :key="tipo.value" @click="seleccionarTipoDoc(tipo.value)">
+          <v-list-item-title class="caption font-weight-bold">{{ tipo.text }}</v-list-item-title>
+        </v-list-item>
+      </v-list>
+    </v-menu>
+  </template>
+
+  <template v-slot:append-outer>
+    <v-btn icon small class="mt-n1" color="indigo" @click="abrirCamara" :disabled="buscandoComprobante">
+      <v-icon>mdi-barcode-scan</v-icon>
+    </v-btn>
+  </template>
+</v-autocomplete>
                                 </v-col>
-                                <v-col cols="6" class="text-center">
-                                    <div class="text-h6 font-weight-bold warning--text">{{ pedidosOrdenados.length -
-                                        boletasVerificadas
-                                    }}</div>
-                                    <div class="caption grey--text">Pendientes</div>
+
+                                <v-col cols="12" v-if="codigoEscaneado" class="mt-2 animate-fade-in">
+                                    <v-btn block color="teal font-weight-bold" dark depressed rounded height="45"
+                                        @click="buscarComprobante" :loading="buscandoComprobante">
+                                        <v-icon left>mdi-magnify</v-icon>
+                                        Buscar Comprobante
+                                    </v-btn>
                                 </v-col>
                             </v-row>
-                            <v-progress-linear :value="porcentajeVerificacion" height="10" rounded
-                                :color="porcentajeVerificacion === 0 ? 'grey' : (porcentajeVerificacion === 100 ? 'success' : 'warning')"
-                                class="mt-2">
-                            </v-progress-linear>
                         </v-card>
 
-                        <v-row>
-                            <v-col v-for="(pedido, idx) in pedidosOrdenados" :key="pedido.numeracion" cols="12" sm="6"
-                                md="4">
-                                <v-card outlined class="mb-2" :class="getCardClassPedido(pedido, idx)">
-                                    <v-card-title class="py-2 px-3 d-flex flex-wrap">
-                                        <v-chip small
-                                            :color="pedido.verificado ? 'success' : (idx === 0 ? 'info' : 'grey')" dark
-                                            class="mr-2 flex-shrink-0">
-                                            {{ idx + 1 }}°
-                                        </v-chip>
-                                        <span class="text-body-2 font-weight-bold" style="word-break: break-word;">
-                                            {{ pedido.cliente }}
-                                        </span>
-                                        <v-spacer></v-spacer>
-                                        <v-icon v-if="pedido.verificado" color="success"
-                                            class="flex-shrink-0">mdi-check-circle</v-icon>
-                                        <v-icon v-else-if="!puedeVerificarPedido(pedido)" color="warning" small
-                                            class="flex-shrink-0">mdi-alert</v-icon>
-                                    </v-card-title>
-
-                                    <v-divider></v-divider>
-
+                        <v-row dense>
+                            <v-col v-for="(pedido, idx) in pedidosFiltradosVerificacion" :key="pedido.numeracion"
+                                cols="12" sm="6" md="4">
+                                <v-card outlined class="rounded-lg mb-1" :class="getCardClassPedido(pedido, idx)">
                                     <v-card-text class="pa-2">
-                                        <div class="text-caption grey--text mb-1">
-                                            <v-icon x-small>mdi-receipt</v-icon>
-                                            {{ formatSerieCorrelativo(pedido.serie, pedido.correlativo) }}
-                                        </div>
-                                        <div class="text-caption grey--text mb-1">
-                                            <v-icon x-small>mdi-package-variant</v-icon>
-                                            {{ pedido.productos.length }} productos
-                                        </div>
+                                        <v-row no-gutters align="center">
+                                            <v-avatar
+                                                :color="pedido.verificado ? 'success' : (idx === 0 ? 'info' : 'grey lighten-2')"
+                                                size="24" class="mr-2 white--text font-weight-bold text-caption">
+                                                {{ idx + 1 }}
+                                            </v-avatar>
 
-                                        <v-chip v-if="pedido.verificado" x-small color="success" dark class="mt-1">
-                                            <v-icon x-small left>mdi-check</v-icon> VERIFICADO
-                                        </v-chip>
-                                        <v-chip v-else-if="!puedeVerificarPedido(pedido)" x-small color="warning" dark
-                                            class="mt-1">
-                                            <v-icon x-small left>mdi-alert</v-icon> PRODUCTOS INCOMPLETOS
-                                        </v-chip>
-                                        <v-chip v-else x-small color="grey" dark class="mt-1">
-                                            PENDIENTE
-                                        </v-chip>
+                                            <v-col class="text-truncate">
+                                                <div class="text-subtitle-2 font-weight-black text-truncate mb-n1">
+                                                    {{ pedido.cliente }}
+                                                </div>
+                                                <span class="text-caption grey--text font-weight-medium">
+                                                    {{ formatSerieCorrelativo(pedido.serie, pedido.correlativo) }}
+                                                </span>
+                                            </v-col>
+
+                                            <v-icon v-if="pedido.verificado" color="success">mdi-check-decagram</v-icon>
+                                            <v-icon v-else-if="!puedeVerificarPedido(pedido)"
+                                                color="warning">mdi-alert-circle-outline</v-icon>
+                                        </v-row>
+
+                                        <v-row no-gutters align="center" class="mt-2">
+                                            <div class="d-flex align-center grey--text text--darken-1 mr-3">
+                                                <v-icon x-small class="mr-1">mdi-package-variant-closed</v-icon>
+                                                <span class="text-caption font-weight-bold">{{ pedido.productos.length
+                                                }} SKU</span>
+                                            </div>
+
+                                            <v-spacer></v-spacer>
+
+                                            <v-chip v-if="pedido.verificado" x-small color="success lighten-5"
+                                                class="success--text font-weight-bold">
+                                                VERIFICADO
+                                            </v-chip>
+                                            <v-chip v-else-if="!puedeVerificarPedido(pedido)" x-small
+                                                color="warning lighten-5" class="warning--text font-weight-bold">
+                                                INCOMPLETO
+                                            </v-chip>
+                                            <v-chip v-else x-small color="grey lighten-4"
+                                                class="grey--text text--darken-2">
+                                                PENDIENTE
+                                            </v-chip>
+                                        </v-row>
                                     </v-card-text>
 
                                     <v-card-actions class="pa-2 pt-0">
-                                        <v-btn x-small text color="indigo" @click="abrirDialogPedido(pedido)">
-                                            <v-icon left x-small>mdi-eye</v-icon>
-                                            Ver detalle
+                                        <v-btn x-small text color="primary" class="text-none"
+                                            @click="abrirDialogPedido(pedido)">
+                                            <v-icon left x-small>mdi-magnify</v-icon>Detalles
                                         </v-btn>
                                         <v-spacer></v-spacer>
                                         <v-btn v-if="!pedido.verificado && puedeVerificarPedido(pedido)" x-small
-                                            color="success" dark depressed @click="verificarPedidoManual(pedido)">
-                                            <v-icon left x-small>mdi-check</v-icon>
-                                            Verificar
+                                            color="success" depressed class="text-none rounded-md px-3"
+                                            @click="verificarPedidoManual(pedido)">
+                                            <v-icon left x-small>mdi-check</v-icon>Verificar
                                         </v-btn>
                                     </v-card-actions>
                                 </v-card>
@@ -570,7 +605,9 @@
                     </div>
                     <div v-if="boletasVerificadas < pedidosOrdenados.length" class="mb-3">
                         <v-icon color="warning" class="mr-2">mdi-receipt</v-icon>
-                        <strong>{{ pedidosOrdenados.length - boletasVerificadas }}</strong> boletas sin verificar
+                        <strong>{{ pedidosFiltradosVerificacion.length - boletasVerificadasFiltradas }}</strong> boletas
+                        sin
+                        verificar
                     </div>
                     <v-alert dense text type="info" class="mt-3">
                         Debe completar el alistado de todos los productos y verificar todas las boletas antes de
@@ -657,10 +694,35 @@ export default {
                 { text: 'Factura', value: 'F' },
                 { text: 'Boleta', value: 'B' }
             ],
-            correlativosFiltrados: []
+            correlativosFiltrados: [],
+            filtroVerificacion: 'todos',
+            opcionesVerificacion: [
+                { text: 'Todos', value: 'todos' },
+                { text: 'Verificados', value: 'verificados' },
+                { text: 'Pendientes', value: 'pendientes' },
+            ],
         };
     },
     computed: {
+        boletasVerificadasFiltradas() {
+            return this.pedidosFiltradosVerificacion.filter(p => p.verificado).length;
+        },
+        porcentajeVerificacionFiltrado() {
+            const total = this.pedidosFiltradosVerificacion.length;
+            if (!total) return 0;
+            return (this.boletasVerificadasFiltradas / total) * 100;
+        },
+
+        pedidosFiltradosVerificacion() {
+            if (this.filtroVerificacion === 'verificados') {
+                return this.pedidosOrdenados.filter(p => p.verificado);
+            }
+            if (this.filtroVerificacion === 'pendientes') {
+                return this.pedidosOrdenados.filter(p => !p.verificado);
+            }
+            return this.pedidosOrdenados;
+        },
+
         isMobile() {
             return this.$vuetify?.breakpoint?.smAndDown || false;
         },
@@ -1510,5 +1572,60 @@ export default {
     50% {
         border-color: #81C784;
     }
+}
+
+.line-height-1 {
+    line-height: 1;
+}
+
+.border-thin {
+    border: 1px solid #eee;
+}
+
+.compact-select {
+    font-size: 0.75rem !important;
+}
+
+.compact-select :deep(.v-input__control) {
+    min-height: 30px !important;
+}
+
+/* Animación simple */
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Ajuste para el input redondeado de Vuetify */
+.custom-input :deep(.v-input__slot) {
+  padding-left: 8px !important;
+  padding-right: 8px !important; /* <-- clave */
+  background: #fff !important;
+}
+
+
+.line-height-tight { line-height: 1.2 !important; }
+.lh-1 { line-height: 1 !important; margin-bottom: 2px !important; }
+.bg-light { background-color: #f8f9fa; }
+.border-right { border-right: 1px solid #e0e0e0; }
+.border-left { border-left: 1px solid #e0e0e0; }
+.success-border { border: 2px solid #4CAF50 !important; }
+
+/* Quitar flechas del input number */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 </style>

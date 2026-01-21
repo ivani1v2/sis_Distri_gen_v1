@@ -217,7 +217,7 @@
 
                 <v-divider class="mx-3"></v-divider>
 
-                <v-card-actions class="py-1 px-2 d-flex justify-end align-center">
+                <v-card-actions class="py-1 px-0 d-flex justify-end align-center">
 
                     <v-btn x-small text color="blue-grey darken-1" @click="ir_reparto(pedido)">
                         <v-icon left x-small>mdi-clipboard-list</v-icon>
@@ -229,14 +229,14 @@
                         Carga
                     </v-btn>
 
-                    <v-btn x-small text color="indigo darken-1" class="ml-1" @click="reparto_transporte(pedido)">
+                    <v-btn x-small text color="indigo darken-1" class="ml-n1" @click="reparto_transporte(pedido)">
                         <v-icon left x-small>mdi-truck-delivery</v-icon>
                         Mapa
                     </v-btn>
 
                     <v-menu offset-y left>
                         <template v-slot:activator="{ on, attrs }">
-                            <v-btn x-small text color="green darken-1" class="ml-1" v-bind="attrs" v-on="on">
+                            <v-btn x-small text color="green darken-1" class="ml-n1" v-bind="attrs" v-on="on">
                                 <v-icon left x-small>mdi-cash-multiple</v-icon>
                                 Opciones
                             </v-btn>
