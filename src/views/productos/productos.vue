@@ -703,7 +703,8 @@ import {
     obtenContador,
     sumaContador,
     allCategorias,
-    allBono
+    allBono,
+    nuevoProductoOtraBase
 } from '../../db'
 import store from '@/store/index'
 import XLSX from 'xlsx'
@@ -1275,13 +1276,35 @@ export default {
                 stock_minimo: Number(this.stock_minimo) || 0
             }
             await nuevoProducto(this.id, array)
+            
             if (this.sumacon == true) {
+                await this.copiarProductoATodasLasSedes(this.id, array);
                 this.sumacontador()
             }
             this.dialogo = cerrar
 
             store.commit("dialogoprogress")
         },
+        
+        async copiarProductoATodasLasSedes(id, producto) {
+            try {
+                const sedes = store.state.array_sedes || [];
+                const bdActual = store.state.baseDatos.bd;
+                const otrasSedes = sedes.filter(s => s.tipo === 'sede' && s.base !== bdActual);                
+                const promesas = otrasSedes.map(sede => {
+                    const productoConStock0 = { ...producto, stock: 0 };
+                    return nuevoProductoOtraBase(sede.base, id, productoConStock0);
+                });
+                
+                if (promesas.length > 0) {
+                    await Promise.all(promesas);
+                    console.log(`Producto ${id} copiado a ${promesas.length} sedes con stock 0`);
+                }
+            } catch (error) {
+                console.error('Error copiando producto a otras sedes:', error);
+            }
+        },
+        
         async eliminar() {
             if (confirm('seguro de eliminar?')) {
                 await eliminaProducto(this.id)
