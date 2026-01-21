@@ -259,7 +259,12 @@ export function analizaGrupos({
   inPlace = true,
 } = {}) {
   // 1) Recalcular desde cero: borra bonos automáticos previos
-  const base = (lineas || []).filter((l) => !l?.bono_auto);
+
+  // 1) Recalcular desde cero: borra bonos automáticos previos SOLO si permite editar bono
+  const base = store.state.permisos.permite_editar_bono
+    ? (lineas || []).filter((l) => !l?.bono_auto)
+    : lineas || [];
+
   const res = _clonarSiNecesario(base, inPlace);
 
   // 2) Totales por grupo_bono (cuando existe)
@@ -269,7 +274,7 @@ export function analizaGrupos({
   //    Guardamos unidades compradas por producto id
   const totalPorProducto = {}; // { idProducto: unidades }
   // ====== STOCK: helpers mínimos ======
-const stockDe = (p) => Number(p?.stock || 0);
+  const stockDe = (p) => Number(p?.stock || 0);
 
   const unidadesEnPedido = (pid) => {
     let u = 0;
@@ -513,6 +518,7 @@ export function aplicaPreciosYBonos({
     redondear,
     inPlace: true, // ya trabajamos sobre conPrecios
   });
+
   return conBonos;
 }
 /**
@@ -544,7 +550,9 @@ export function agregarLista({
 
   const unidadesLinea = (l) => {
     const factor = Number(l.factor || 1);
-    const medida = String(l.medida || "").trim().toUpperCase();
+    const medida = String(l.medida || "")
+      .trim()
+      .toUpperCase();
     let cant = Number(l.cantidad || 0);
     if (factor > 1 && medida !== "UNIDAD") cant *= factor;
     return cant;
@@ -585,7 +593,7 @@ export function agregarLista({
 
     // ================= GRATUITA =================
     if (esGratuitaNueva) {
-       const prod = getProd(val.id);
+      const prod = getProd(val.id);
       if (prod && prod.controstock) {
         const stockReal = stockDe(val.id);
 
@@ -616,6 +624,7 @@ export function agregarLista({
         existenteGrat.totalLinea = "0.00";
         // ✅ si quieres conservar descuentos en gratuitas, mantenlos también:
         // existenteGrat.desc_1 = existenteGrat.desc_1 || Number(val.desc_1 || 0);
+
         return;
       }
 
