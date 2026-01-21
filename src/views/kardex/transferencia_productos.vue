@@ -44,6 +44,7 @@
             </v-card>
         </v-card>
 
+
         <v-card outlined>
             <v-data-table :headers="headers" :items="movimientos" dense class="elevation-1 d-none d-md-block"
                 :items-per-page="10">
@@ -70,7 +71,10 @@
                     </v-chip>
                 </template>
                 <template v-slot:item.productos="{ item }">
-                    {{ item.productos.length }} productos
+                    <v-chip small color="primary" text-color="white" @click="verDetalle(item)" style="cursor: pointer;">
+                        <v-icon left x-small>mdi-package-variant</v-icon>
+                        {{ item.productos.length }} productos
+                    </v-chip>
                 </template>
                 <template v-slot:item.usuario="{ item }">
                     {{ moneda }} {{ item.total || '-' }}
@@ -95,6 +99,7 @@
                                 <v-list-item-icon><v-icon color="red">mdi-cancel</v-icon></v-list-item-icon>
                                 <v-list-item-content>Anular</v-list-item-content>
                             </v-list-item>
+                            <v-divider></v-divider>
                             <v-list-item @click="imprimirTransferencia(item)">
                                 <v-list-item-icon><v-icon color="green">mdi-printer</v-icon></v-list-item-icon>
                                 <v-list-item-content>Imprimir Ticket</v-list-item-content>
@@ -111,7 +116,6 @@
                         </v-list>
                     </v-menu>
                 </template>
-
             </v-data-table>
 
             <div class="d-md-none pa-2">
@@ -353,6 +357,7 @@
     </div>
 </template>
 
+
 <script>
 import dial_mov from '@/views/kardex/dialogos/dial_transferencia'
 import {
@@ -366,10 +371,10 @@ import { anularMovimientosTransferencia } from '@/views/kardex/help_mov_tranfere
 import moment from 'moment'
 import store from '@/store'
 
+
 export default {
     components: {
-        dial_mov,
-        dialogo_editar_transferencia
+        dial_mov
     },
     data() {
         return {
@@ -383,7 +388,7 @@ export default {
                 { text: 'Origen', value: 'sede_origen' },
                 { text: 'Destino', value: 'sede_destino' },
                 { text: 'Productos', value: 'productos' },
-                { text: 'Usuario', value: 'usuario' },
+                { text: 'Total', value: 'usuario' },
                 { text: 'Acción', value: 'accion', sortable: false }
             ],
             mostrarDetalle: false,
@@ -414,20 +419,39 @@ export default {
     },
     mounted() {
         this.prepararSedesDestino()
+        this.inicializarSedeFiltro()
         this.cargarMovimientos()
     },
     methods: {
+        inicializarSedeFiltro() {
+            if (this.esAdmin) {
+                this.sede_destino = '*';
+            } else {
+                this.sede_destino = this.sedeActualBase || '*';
+            }
+        },
         prepararSedesDestino() {
             const sedes = (store.state.array_sedes || []).filter(s => s.tipo === 'sede')
 
-            // opcional: agregar opción "Todas"
-            this.sedesDestino = [
-                { nombre: 'TODAS', base: '*' },
-                ...sedes.map(s => ({
-                    nombre: s.nombre,
-                    base: s.base
-                }))
-            ]
+
+            if (this.esAdmin) {
+                this.sedesDestino = [
+                    { nombre: 'TODAS', base: '*' },
+                    ...sedes.map(s => ({
+                        nombre: s.nombre,
+                        base: s.base
+                    }))
+                ]
+            } else {
+                const miSede = sedes.find(s => s.base === this.sedeActualBase);
+                this.sedesDestino = [
+                    { nombre: 'TODAS MIS TRANSFERENCIAS', base: '*' },
+                    ...(miSede ? [{ nombre: miSede.nombre, base: miSede.base }] : [])
+                ];
+            }
+        },
+        calcularUnidades(transferencia) {
+            return (transferencia.productos || []).reduce((s, p) => s + Number(p.cantidad || 0), 0);
         },
         verDetalle(movimiento) {
             this.detalleActual = movimiento
@@ -446,10 +470,9 @@ export default {
             const datos = []
             snapshot.forEach(item => {
                 const obj = item.val()
-                obj.key = item.key // aquí guardamos la key del nodo
+                obj.key = item.key
                 datos.push(obj)
             })
-            // Ordenar descendente por fecha
             datos.sort((a, b) => b.fecha_unix - a.fecha_unix)
             let filtrados = datos
 
@@ -463,7 +486,10 @@ export default {
 
             // Filtro adicional por sede destino seleccionada
             if (this.sede_destino && this.sede_destino !== '*') {
-                filtrados = datos.filter(mov => mov.sede_destino === this.sede_destino)
+                filtrados = filtrados.filter(mov =>
+                    mov.sede_destino === this.sede_destino ||
+                    mov.sede_origen === this.sede_destino
+                )
             }
 
             this.movimientos = filtrados
@@ -473,7 +499,6 @@ export default {
         },
         nombreSede(base) {
             if (!base) return '-';
-            // Puedes usar store.state o this.$store si usas namespaced modules
             const sedes = store.state.array_sedes.filter(e => e.tipo == 'sede') || [];
             const s = sedes.find(s => s.base == base);
             return s ? s.nombre : base;
@@ -484,6 +509,7 @@ export default {
             this.dialogoEditar = true
         },
 
+
         async anularTransferencia(item) {
             if (item.estado === 'anulado') {
                 this.muestraMsg('Esta transferencia ya está anulada.', 'warning');
@@ -493,34 +519,29 @@ export default {
             this.cargando = true;
             try {
                 store.commit("dialogoprogress")
-                // Cargar productos actuales de cada sede
                 const snap_origen = await allProductoOtraBase(item.sede_origen).once('value');
                 const origen_actual = snap_origen.val() ? Object.values(snap_origen.val()) : [];
+
 
                 const snap_destino = await allProductoOtraBase(item.sede_destino).once('value');
                 const destino_actual = snap_destino.val() ? Object.values(snap_destino.val()) : [];
 
-                // Por cada producto, revertir stock
+
                 for (const prod of item.productos) {
-                    // En origen: sumamos la cantidad transferida
                     const prodOrigen = origen_actual.find(p => p.id == prod.id);
                     const stockOrigen = prodOrigen ? Number(prodOrigen.stock) : 0;
                     await grabarStockOtraBase(item.sede_origen, prod.id, stockOrigen + Number(prod.cantidad));
 
-                    // En destino: restamos la cantidad transferida (no puede ser menor a 0)
+
                     const prodDestino = destino_actual.find(p => p.id == prod.id);
                     const stockDestino = prodDestino ? Number(prodDestino.stock) : 0;
                     const nuevoStockDestino = Math.max(0, stockDestino - Number(prod.cantidad));
                     await grabarStockOtraBase(item.sede_destino, prod.id, nuevoStockDestino);
                 }
-
-                // Actualizar estado a "anulado"
-                // Cambia "actualiza_transferencia" según tu helper, y el nombre de la key (item.key)
                 await actualiza_transferencia(item.key || item.id, { estado: 'anulado', anulado_por: store.state.permisos.correo, anulado_en: moment().unix() });
                 await anularMovimientosTransferencia(item);
                 store.commit("dialogoprogress")
                 this.muestraMsg('Transferencia anulada y stocks revertidos.', 'success');
-                // Si quieres cerrar dialog/actualizar tabla:
                 if (typeof this.cargarMovimientos === "function") this.cargarMovimientos();
             } catch (e) {
                 this.muestraMsg('Error al anular transferencia: ' + (e.message || e), 'error');
@@ -530,11 +551,32 @@ export default {
         imprimirTransferencia(item) {
             imprimirTransferenciaPDF80mm(
                 item,
-                this.nombreSede,         // función que convierte base => nombre
-                this.formatoFecha        // función para formatear fecha unix
+                this.nombreSede,
+                this.formatoFecha
             );
         },
-        // Si no tienes muestraMsg:
+        imprimirTransferenciaA4(item) {
+            const logoEmpresa = store.state.logoempresa || null;
+            imprimirTransferenciaPDFA4(item, this.nombreSede, logoEmpresa);
+        },
+        exportarTransferenciaExcel(item) {
+            exportarExcelItem(item, this.nombreSede);
+        },
+        exportarListaExcel() {
+            if (this.movimientos.length === 0) {
+                this.muestraMsg('No hay transferencias para exportar', 'warning');
+                return;
+            }
+            exportarListaTransferenciasExcel(this.movimientos, this.nombreSede);
+        },
+        cerrarDialogoNuevo() {
+            this.mostrarDialogo = false;
+            this.cargarMovimientos();
+        },
+        cerrarDialogoEditar() {
+            this.dialogoEditar = false;
+            this.cargarMovimientos();
+        },
         muestraMsg(msg, color = 'info') {
             this.textoMensaje = msg;
             this.colorMensaje = color;
