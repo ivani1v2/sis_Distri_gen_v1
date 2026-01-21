@@ -110,33 +110,33 @@
                 <v-data-table :headers="headersTransferencia" :items="lista_transferencia" dense
                     class="elevation-0" :items-per-page="10" no-data-text="Agregue productos a transferir"
                     :class="{'d-none': $vuetify.breakpoint.smAndDown && lista_transferencia.length > 0}">
-                    <template v-slot:item.nombre="{ item }">
+                    <template v-slot:[`item.nombre`]="{ item }">
                         <div>
                             <strong>{{ item.nombre }}</strong>
                             <div class="text-caption grey--text">{{ item.codbarra || item.id }}</div>
                         </div>
                     </template>
-                    <template v-slot:item.stock_origen="{ item }">
+                    <template v-slot:[`item.stock_origen`]="{ item }">
                         <v-chip x-small :color="item.stock_origen > 0 ? 'success' : 'error'">
                             {{ item.stock_origen }}
                         </v-chip>
                     </template>
-                    <template v-slot:item.cantidad="{ item }">
+                    <template v-slot:[`item.cantidad`]="{ item }">
                         <v-chip color="primary" small @click="editarCantidadProducto(item)">
                             {{ item.cantidad }}
                             <v-icon small right>mdi-pencil</v-icon>
                         </v-chip>
                     </template>
-                    <template v-slot:item.precio="{ item }">
+                    <template v-slot:[`item.precio`]="{ item }">
                         S/ {{ Number(item.precio || 0).toFixed(2) }}
                     </template>
-                    <template v-slot:item.monto_soles="{ item }">
+                    <template v-slot:[`item.monto_soles`]="{ item }">
                         <strong>S/ {{ Number(item.monto_soles || 0).toFixed(2) }}</strong>
                     </template>
-                    <template v-slot:item.peso_total="{ item }">
+                    <template v-slot:[`item.peso_total`]="{ item }">
                         {{ ((item.peso || 0) * item.cantidad).toFixed(2) }} kg
                     </template>
-                    <template v-slot:item.acciones="{ item }">
+                    <template v-slot:[`item.acciones`]="{ item }">
                         <v-btn icon small color="orange" @click="editarCantidadProducto(item)">
                             <v-icon small>mdi-pencil</v-icon>
                         </v-btn>

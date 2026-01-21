@@ -130,10 +130,10 @@
                                         <span class="blue-grey--text text--darken-1 font-weight-medium">Detalle</span>
                                     </v-btn>
 
-                                    <v-btn x-small color="teal lighten-5" class="mx-1 my-1" depressed rounded
+                                    <v-btn x-small :color="getCargaButtonColor(pedido)" class="mx-1 my-1" depressed rounded
                                         elevation="1" @click="abrirCargaProductos(pedido)">
-                                        <v-icon left small color="teal darken-1">mdi-truck-cargo-container</v-icon>
-                                        <span class="teal--text text--darken-1 font-weight-medium">Carga</span>
+                                        <v-icon left small :color="getCargaIconColor(pedido)">{{ getCargaIcon(pedido) }}</v-icon>
+                                        <span :class="getCargaTextClass(pedido)" class="font-weight-medium">Carga</span>
                                     </v-btn>
 
                                     <v-btn x-small color="indigo lighten-5" class="mx-1 my-1" depressed rounded
@@ -224,8 +224,8 @@
                         Detalle
                     </v-btn>
 
-                    <v-btn x-small text color="teal darken-1" class="ml-1" @click="abrirCargaProductos(pedido)">
-                        <v-icon left x-small>mdi-truck-cargo-container</v-icon>
+                    <v-btn x-small text :color="pedido.estado_carga && pedido.estado_carga.completo ? 'cyan darken-2' : 'orange darken-1'" class="ml-1" @click="abrirCargaProductos(pedido)">
+                        <v-icon left x-small>{{ getCargaIcon(pedido) }}</v-icon>
                         Carga
                     </v-btn>
 
@@ -437,6 +437,31 @@ export default {
         onCargaGuardada(datosCarga) {
             this.$store.commit('dialogosnackbar', 'Carga guardada correctamente');
             this.dial_carga = false;
+            this.filtrar();
+        },
+        getCargaIcon(pedido) {
+            if (pedido.estado_carga && pedido.estado_carga.completo) {
+                return 'mdi-truck-check';
+            }
+            return 'mdi-truck-cargo-container';
+        },
+        getCargaButtonColor(pedido) {
+            if (pedido.estado_carga && pedido.estado_carga.completo) {
+                return 'cyan lighten-5';
+            }
+            return 'orange lighten-5';
+        },
+        getCargaIconColor(pedido) {
+            if (pedido.estado_carga && pedido.estado_carga.completo) {
+                return 'cyan darken-2';
+            }
+            return 'orange darken-1';
+        },
+        getCargaTextClass(pedido) {
+            if (pedido.estado_carga && pedido.estado_carga.completo) {
+                return 'cyan--text text--darken-2';
+            }
+            return 'orange--text text--darken-1';
         },
         reparto_transporte(data) {
             this.$router.push({
