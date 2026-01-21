@@ -568,7 +568,7 @@ export default {
         },
 
 
-        confirmarTransferencia() {
+        async confirmarTransferencia() {
             if (!this.sede_origen || !this.sede_destino) {
                 this.muestraMsg('Seleccione sede origen y destino', 'error');
                 return;
