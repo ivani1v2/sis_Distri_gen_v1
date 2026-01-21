@@ -1,12 +1,11 @@
 <template>
-    <v-dialog v-model="dial" persistent hide-overlay transition="dialog-bottom-transition" max-width="750px" fullscreen>
+    <v-dialog v-model="dial" persistent hide-overlay transition="dialog-bottom-transition" max-width="900px" fullscreen>
         <div>
             <v-system-bar class="" dense window dark height="40">
                 <v-icon large color="red" @click="cierra()">mdi-close</v-icon>
                 <v-spacer></v-spacer>
-                <h3 class="">Categorias</h3>
+                <h3>{{ modoEdicion ? 'Editar Transferencia' : 'Nueva Transferencia de Productos' }}</h3>
                 <v-spacer></v-spacer>
-
             </v-system-bar>
         </div>
 
@@ -15,8 +14,9 @@
                 <v-row dense align="center">
                     <v-col cols="6" sm="" md="4">
                         <v-select v-model="sede_origen" :items="sedes" label="Sede Origen" item-text="nombre"
-                            item-value="base" outlined dense @change="cargarProductos"
-                            :rules="[v => !!v || 'Seleccione sede origen']"></v-select>
+                            item-value="base" outlined dense @change="cargarProductos" prepend-inner-icon="mdi-store"
+                            :rules="[v => !!v || 'Seleccione sede origen']" :disabled="modoEdicion || !esAdmin">
+                        </v-select>
                     </v-col>
                     <v-col cols="6" sm="6" md="4">
                         <v-select v-model="sede_destino" :items="sedesDestino" label="Sede Destino" item-text="nombre"
@@ -339,34 +339,53 @@
     </v-dialog>
 </template>
 
+
 <script>
 import {
     allProductoOtraBase,
     grabarStockOtraBase,
     graba_transferencia,
-    
+    nuevoProductoOtraBase,
+    actualiza_transferencia,
 } from '@/db';
 import { registrarMovimientosTransferencia, rehacerMovimientosTransferencia } from '../help_mov_tranferencia';
 import store from '@/store/index';
-import moment from 'moment'
+import moment from 'moment';
+
+
 export default {
+    props: {
+        transferencia: {
+            type: Object,
+            default: null
+        }
+    },
     data() {
         return {
             dial: false,
             sedes: store.state.array_sedes.filter(e => e.tipo == 'sede'),
             sede_origen: '',
             sede_destino: '',
+            fecha_transferencia: moment().format('YYYY-MM-DDTHH:mm'),
             productos_origen: [],
-            cantidadBackup: {}, // Para backup temporal por producto
-            producto: '', // id seleccionado
+            productoSeleccionado: null,
             codigo_barra_busqueda: '',
-            cantidad: 1,
             lista_transferencia: [],
             observacion: '',
             mensaje: false,
             textoMensaje: '',
             colorMensaje: 'success',
             cargando: false,
+            dialogoCantidad: false,
+            productoActual: null,
+            cantidadAgregar: 1,
+            modoEdicionCantidad: false,
+            indiceEdicion: -1,
+            dialogoConfirmar: false,
+            transferenciaKey: null,
+            productosOriginales: [],
+
+
             headersTransferencia: [
                 { text: 'Producto', value: 'nombre', width: '30%' },
                 { text: 'Cantidad', value: 'cantidad', width: '12%', align: 'center' },
@@ -378,59 +397,122 @@ export default {
         };
     },
     created() {
-        this.dial = true
+        this.dial = true;
+        this.inicializar();
     },
-
     computed: {
-        totalMontoSoles() {
-            return this.lista_transferencia.reduce((sum, item) => sum + Number(item.monto_soles || 0), 0);
+        esAdmin() {
+            return store.state.permisos?.es_admin === true || store.state.permisos?.master === true;
+        },
+        modoEdicion() {
+            return !!this.transferencia;
         },
         sedesDestino() {
             return this.sedes.filter(s => s.base !== this.sede_origen);
         },
-        stockDisponible() {
-            const prod = this.productos_origen.find(p => p.id == this.producto);
-            return prod ? Number(prod.stock) : 0;
+        productosDisponibles() {
+            const idsEnLista = this.lista_transferencia.map(p => p.id);
+            return this.productos_origen.filter(p => !idsEnLista.includes(p.id) && p.stock > 0);
+        },
+        totalMontoSoles() {
+            return this.lista_transferencia.reduce((sum, item) => sum + Number(item.monto_soles || 0), 0);
+        },
+        totalUnidades() {
+            return this.lista_transferencia.reduce((sum, item) => sum + Number(item.cantidad || 0), 0);
+        },
+        totalPeso() {
+            return this.lista_transferencia.reduce((sum, item) => {
+                return sum + (Number(item.peso || 0) * Number(item.cantidad || 0));
+            }, 0);
+        },
+        stockMaximoEdicion() {
+            if (!this.productoActual) return 0;
+            return this.modoEdicionCantidad ? this.productoActual.stock_origen : this.productoActual.stock;
         },
         cantidadValida() {
-            return this.cantidad > 0 && this.cantidad <= this.stockDisponible;
+            if (!this.productoActual) return false;
+            return this.cantidadAgregar > 0 && this.cantidadAgregar <= this.stockMaximoEdicion;
+        },
+        reglaCantidad() {
+            if (!this.productoActual) return [];
+            return [
+                v => v > 0 || 'Mínimo 1 unidad',
+                v => v <= this.stockMaximoEdicion || `Máximo ${this.stockMaximoEdicion} unidades disponibles`
+            ];
+        },
+        nombreSedeOrigen() {
+            const sede = this.sedes.find(s => s.base === this.sede_origen);
+            return sede ? sede.nombre : this.sede_origen;
+        },
+        nombreSedeDestino() {
+            const sede = this.sedes.find(s => s.base === this.sede_destino);
+            return sede ? sede.nombre : this.sede_destino;
         }
     },
     methods: {
-        backupCantidad(item) {
-            // Guarda valor previo por si cancelan la edición
-            this.cantidadBackup[item.id] = item.cantidad;
-        },
-        restauraCantidad(item, index) {
-            // Restaura el valor anterior si cancelan
-            item.cantidad = this.cantidadBackup[item.id];
-        },
-        validaCantidad(item, index) {
-            if (item.cantidad < 1) {
-                item.cantidad = 1;
-                this.muestraMsg('No puedes transferir menos de 1 unidad', 'error');
+        async inicializar() {
+            if (this.modoEdicion && this.transferencia) {
+                this.sede_origen = this.transferencia.sede_origen;
+                this.sede_destino = this.transferencia.sede_destino;
+                this.fecha_transferencia = moment.unix(this.transferencia.fecha_unix).format('YYYY-MM-DDTHH:mm');
+                this.observacion = this.transferencia.observacion || '';
+                this.transferenciaKey = this.transferencia.key;
+                this.productosOriginales = JSON.parse(JSON.stringify(this.transferencia.productos || []));
+                await this.cargarProductos();
+                for (const prod of (this.transferencia.productos || [])) {
+                    const prodOrigen = this.productos_origen.find(p => p.id == prod.id);
+                    this.lista_transferencia.push({
+                        id: prod.id,
+                        nombre: prod.nombre,
+                        codbarra: prod.codbarra,
+                        cantidad: prod.cantidad,
+                        stock_origen: prodOrigen ? (Number(prodOrigen.stock) + Number(prod.cantidad)) : prod.cantidad,
+                        precio: prod.precio || 0,
+                        peso: prod.peso || 0,
+                        monto_soles: Number(prod.monto_soles || 0),
+                    });
+                }
+            } else {
+                this.sede_origen = store.state.sedeActual?.base || store.state.sedeActual?.codigo || '';
+                if (this.sede_origen) {
+                    await this.cargarProductos();
+                }
             }
-            const prod = this.productos_origen.find(p => p.id == item.id);
-            if (item.cantidad > prod.stock) {
-                item.cantidad = prod.stock;
-                this.muestraMsg('No puedes transferir más que el stock actual (' + prod.stock + ')', 'error');
-            }
-            item.monto_soles = Number(item.cantidad) * Number(item.precio || 0);
         },
+
+
+        filtroProducto(item, queryText) {
+            const query = (queryText || '').toLowerCase();
+            const nombre = (item.nombre || '').toLowerCase();
+            const codigo = (item.codbarra || '').toLowerCase();
+            const id = String(item.id || '').toLowerCase();
+            return nombre.includes(query) || codigo.includes(query) || id.includes(query);
+        },
+
+
         async cargarProductos() {
             this.productos_origen = [];
-            this.producto = '';
+            this.productoSeleccionado = null;
             this.codigo_barra_busqueda = '';
             if (!this.modoEdicion) {
                 this.lista_transferencia = [];
             }
 
             if (this.sede_origen) {
-                const snap = await allProductoOtraBase(this.sede_origen).once('value');
-                const data = snap.val();
-                this.productos_origen = data ? Object.values(data) : [];
+                try {
+                    const snap = await allProductoOtraBase(this.sede_origen).once('value');
+                    const data = snap.val();
+                    this.productos_origen = data ? Object.values(data).map(p => ({
+                        ...p,
+                        stock: Number(p.stock || 0)
+                    })) : [];
+                } catch (e) {
+                    this.muestraMsg('Error cargando productos: ' + e.message, 'error');
+                }
             }
         },
+
+
         buscarPorCodigoBarra() {
             if (!this.codigo_barra_busqueda) return;
 
@@ -473,17 +555,15 @@ export default {
 
             const existente = this.lista_transferencia.find(p => p.id === producto.id);
             if (existente) {
-                // Sumar la cantidad, pero sin pasar el stock disponible en origen
-                const stock_restante = Number(prod.stock) - Number(existente.cantidad);
-                const cantidad_a_sumar = Math.min(Number(this.cantidad), stock_restante);
+                this.muestraMsg('Este producto ya está en la lista de transferencia', 'warning');
+                this.productoSeleccionado = null;
+                return;
+            }
 
-                if (cantidad_a_sumar > 0) {
-                    existente.cantidad += cantidad_a_sumar;
-                    this.muestraMsg('Cantidad sumada al producto ya existente en la lista', 'success');
-                } else {
-                    this.muestraMsg('No puedes agregar más cantidad, llegaste al límite de stock', 'error');
-                }
-                this.limpiarCamposProducto();
+
+            if (producto.stock <= 0) {
+                this.muestraMsg('Este producto no tiene stock disponible', 'error');
+                this.productoSeleccionado = null;
                 return;
             }
 
@@ -568,7 +648,7 @@ export default {
         },
 
 
-        async confirmarTransferencia() {
+        confirmarTransferencia() {
             if (!this.sede_origen || !this.sede_destino) {
                 this.muestraMsg('Seleccione sede origen y destino', 'error');
                 return;
@@ -581,9 +661,13 @@ export default {
                 this.muestraMsg('Agregue productos a transferir', 'error');
                 return;
             }
+            this.dialogoConfirmar = true;
+        },
+
+
+        async ejecutarTransferencia() {
             this.cargando = true;
             try {
-                // Obtener productos destino
                 const snap_destino = await allProductoOtraBase(this.sede_destino).once('value');
                 const productos_destino = snap_destino.val() ? Object.values(snap_destino.val()) : [];
 
@@ -673,18 +757,17 @@ export default {
                         }
                     }
 
-                // Proceso producto por producto
-                for (const item of this.lista_transferencia) {
-                    // Restar stock en origen
-                    const prodOrigen = this.productos_origen.find(p => p.id == item.id);
-                    const nuevoStockOrigen = Number(prodOrigen.stock) - Number(item.cantidad);
-                    await grabarStockOtraBase(this.sede_origen, item.id, nuevoStockOrigen);
 
-                    // Sumar stock en destino
-                    const prodDestino = productos_destino.find(p => p.id == item.id);
-                    let nuevoStockDestino = prodDestino
-                        ? Number(prodDestino.stock) + Number(item.cantidad)
-                        : Number(item.cantidad);
+                    for (const item of this.lista_transferencia) {
+                        const prodOrigen = this.productos_origen.find(p => p.id == item.id);
+                        const nuevoStockOrigen = Number(prodOrigen.stock) - Number(item.cantidad);
+                        await grabarStockOtraBase(this.sede_origen, item.id, nuevoStockOrigen);
+
+
+                        const prodDestino = productos_destino.find(p => p.id == item.id);
+                        let nuevoStockDestino = prodDestino
+                            ? Number(prodDestino.stock) + Number(item.cantidad)
+                            : Number(item.cantidad);
 
 
                         if (prodDestino) {
@@ -744,11 +827,14 @@ export default {
             } this.cargando = false;
         },
 
+
         muestraMsg(msg, color) {
             this.textoMensaje = msg;
             this.colorMensaje = color;
             this.mensaje = true;
         },
+
+
         cierra() {
             this.$emit('cerrar');
             this.dial = false;
