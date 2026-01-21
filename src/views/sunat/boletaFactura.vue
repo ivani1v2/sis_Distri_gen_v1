@@ -107,7 +107,7 @@
                 </v-system-bar>
             </div>
             <v-card class="pa-3">
-                <v-btn color="warning" small @click="normalizaGratuitas" v-if="false">
+                <v-btn color="warning" small @click="normalizaGratuitas" v-if="true">
                 </v-btn>
                 <v-row dense>
                     <v-col cols="8">
