@@ -143,7 +143,6 @@ export default {
         this.precioedita = val.precio
         this.preciodescuento = val.preciodescuento
 
-        // Si la línea es gratuita, marcar el checkbox y forzar precio/descuento a 0
         this.es_bono = String(val.operacion || '').toUpperCase() === 'GRATUITA'
         if (this.es_bono) {
             this.precioedita = 0
