@@ -266,26 +266,38 @@
                             v-model="precio" label="Precio"></v-text-field>
                     </v-col>
                 </v-row>
+
+                <v-alert v-if="grupoPrecioSelect" type="info" dense text class="mt-n4 mb-10">
+                    Escalas deshabilitadas: Tiene grupo de precio global asignado
+                    <v-btn x-small text color="primary" class="ml-2" @click="quitarGrupoPrecio">
+                        Quitar grupo de precio Global
+                    </v-btn>
+                </v-alert>
+
                 <v-row class="mt-n6" dense>
                     <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" type="number" dense
-                            v-model="escala_may1" label="Escala may 1"></v-text-field>
+                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect" type="number" dense
+                            v-model="escala_may1" label="Escala may 1"
+                            persistent-hint></v-text-field>
                     </v-col>
                     <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" type="number" dense
-                            v-model="precio_may1" label="Precio may 1"></v-text-field>
+                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect" type="number" dense
+                            v-model="precio_may1" label="Precio may 1"
+                            persistent-hint></v-text-field>
                     </v-col>
 
                 </v-row>
 
                 <v-row class="mt-n6" dense>
                     <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" type="number" dense
-                            v-model="escala_may2" label="Escala may 2"></v-text-field>
+                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect" type="number" dense
+                            v-model="escala_may2" label="Escala may 2"
+                            persistent-hint></v-text-field>
                     </v-col>
                     <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" type="number" dense
-                            v-model="precio_may2" label="Precio may 2"></v-text-field>
+                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect" type="number" dense
+                            v-model="precio_may2" label="Precio may 2"
+                            persistent-hint></v-text-field>
                     </v-col>
 
                 </v-row>

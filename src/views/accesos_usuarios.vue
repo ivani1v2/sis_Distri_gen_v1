@@ -58,8 +58,8 @@ export default {
                             { label: 'Master', value: 'es_master' },
                         ],
                         [
-                            { label: 'BONO AUTOMATICO ESTRICTO', value: 'permite_editar_bono',tooltip: 'Si esta activo, los bonos automaticos son estaticos no permite agregar mas o quitar. calculo Estricto de la logica' },
-                            
+                            { label: 'BONO AUTOMATICO ESTRICTO', value: 'permite_editar_bono', tooltip: 'Si esta activo, los bonos automaticos son estaticos no permite agregar mas o quitar. calculo Estricto de la logica' },
+                            { label: 'PRECIO AUTOMATICO ESTRICTO', value: 'permite_editar_precio', tooltip: 'Si esta activo, los precios por escala son estaticos. No permite modificar cantidad ni eliminar productos con precio mayorista aplicado' },
                         ]
                     ],
                 },

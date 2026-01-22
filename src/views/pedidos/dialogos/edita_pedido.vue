@@ -437,7 +437,6 @@ export default {
     },
     methods: {
         recalcularSiPermiteBonos() {
-            if (!store.state.permisos.permite_editar_bono) return;
             this.$nextTick(() => this.recalculoCompleto());
         },
         async cargarDatosCredito() {

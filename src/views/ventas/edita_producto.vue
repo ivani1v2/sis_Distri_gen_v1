@@ -16,6 +16,23 @@
         </div>
         <v-card class="pa-3">
 
+            <v-alert v-if="esBonoGlobal" type="warning" dense text class="mb-6">
+                Bono global - No editable
+            </v-alert>
+            
+            <v-alert v-else-if="esBonoIndividualBloqueado" type="info" dense text class="mb-6">
+                Bono exclusivo - No editable
+            </v-alert>
+            
+            <v-alert v-else-if="esPrecioEstricto && tieneEscalasConfiguradas && !es_bono" type="info" dense text class="mb-2">
+                Precio automático por escala
+                <span v-if="tienePrecioGrupoAplicado || tienePrecioEscalaAplicado" class="ml-1">
+                    <v-chip x-small class="ml-1" color="blue" text-color="white">
+                        {{ tienePrecioGrupoAplicado ? item_selecto._precio_grupo : ('Tier ' + (item_selecto._precio_tier || 1)) }}
+                    </v-chip>
+                </span>
+            </v-alert>
+
             <v-row class="mx-auto mt-4 text-center" dense v-if="puedeEditarCantidad">
 
                 <v-col cols="4" xs="4">
@@ -58,7 +75,9 @@
             <v-row class="mx-auto text-center mt-2" dense>
                 <v-col readonly @focus="$event.target.select()" cols="6" v-if="$store.state.permisos.caja_edita_precio">
                     <v-text-field outlined dense @keyup.enter="grabaEdita()" type="number" v-model="precioedita"
-                        label="Precio"></v-text-field>
+                        label="Precio" :disabled="esPrecioEstricto && tieneEscalasConfiguradas && !es_bono"
+                        :hint="(esPrecioEstricto && tieneEscalasConfiguradas) ? 'Precio automático por escala' : ''"
+                        :persistent-hint="esPrecioEstricto && tieneEscalasConfiguradas"></v-text-field>
                 </v-col>
                 <v-col cols="6" v-if="$store.state.permisos.descuentos && !$store.state.configuracion.desc_porcentaje">
                     <v-text-field :disabled="es_bono" @focus="$event.target.select()" outlined dense
@@ -135,6 +154,75 @@ export default {
         this.cargarBonosGlobales();
     },
     watch: {
+        cantidadEdita(nuevaCantidad) {
+            if (this.es_bono) return;
+            
+            const cantidad = Number(nuevaCantidad) || 0;
+            if (cantidad <= 0) return;
+            
+            const factor = Number(this.item_selecto?.factor || 1);
+            const medida = String(this.item_selecto?.medida || '').toUpperCase();
+            const unidadesTotal = (factor > 1 && medida !== 'UNIDAD') ? cantidad * factor : cantidad;
+            
+            const prod = store.state.productos.find(p => String(p.id) === String(this.item_selecto?.id));
+            if (!prod) return;
+            
+            const tieneGrupoPrecio = !!prod.grupo_precio;
+            const tieneMay1 = Number(prod.precio_may1 || 0) > 0 && Number(prod.escala_may1 || 0) > 0;
+            const tieneMay2 = Number(prod.precio_may2 || 0) > 0 && Number(prod.escala_may2 || 0) > 0;
+            
+            if (!tieneGrupoPrecio && !tieneMay1 && !tieneMay2) return;
+            
+            let precioFinal = null;
+            
+            if (tieneGrupoPrecio) {
+                const bonos = this.$store.state.bonos || {};
+                const cfg = bonos[prod.grupo_precio];
+                if (cfg && cfg.tipo === 'precio' && cfg.activo) {
+                    const esc1 = Number(cfg.escala_may1 || 0);
+                    const esc2 = Number(cfg.escala_may2 || 0);
+                    const p1 = Number(cfg.precio_may1 || 0);
+                    const p2 = Number(cfg.precio_may2 || 0);
+                    const precioBase = Number(prod.precio || 0);
+                    
+                    let nuevoPrecio = precioBase;
+                    if (esc2 && unidadesTotal >= esc2 && p2) {
+                        nuevoPrecio = p2;
+                    } else if (esc1 && unidadesTotal >= esc1 && p1) {
+                        nuevoPrecio = p1;
+                    }
+                    
+                    precioFinal = (factor > 1 && medida !== 'UNIDAD') ? nuevoPrecio * factor : nuevoPrecio;
+                }
+            } else if (tieneMay1 || tieneMay2) {
+                const esc1 = Number(prod.escala_may1 || Infinity);
+                const esc2 = Number(prod.escala_may2 || Infinity);
+                const precioBase = Number(prod.precio || 0);
+                const precioMay1 = Number(prod.precio_may1 || precioBase);
+                const precioMay2 = Number(prod.precio_may2 || precioBase);
+                
+                let precioUnidad = precioBase;
+                if (tieneMay1 && tieneMay2) {
+                    const lim1 = Math.min(esc1, esc2);
+                    const lim2 = Math.max(esc1, esc2);
+                    if (unidadesTotal >= lim2) {
+                        precioUnidad = precioMay2;
+                    } else if (unidadesTotal >= lim1) {
+                        precioUnidad = precioMay1;
+                    }
+                } else if (tieneMay1) {
+                    precioUnidad = unidadesTotal >= esc1 ? precioMay1 : precioBase;
+                } else if (tieneMay2) {
+                    precioUnidad = unidadesTotal >= esc2 ? precioMay2 : precioBase;
+                }
+                
+                precioFinal = (factor > 1 && medida !== 'UNIDAD') ? precioUnidad * factor : precioUnidad;
+            }
+            
+            if (precioFinal !== null) {
+                this.precioedita = this.redondear(precioFinal);
+            }
+        },
         es_bono(nuevo) {
             if (nuevo) {
                 this.precioedita = 0;
@@ -163,6 +251,56 @@ export default {
     computed: {
         checkboxBonoVisible() {
             return this.$store.state.permisos.edita_bono === true;
+        },
+        
+        esBonoGlobal() {
+            if (this.item_selecto?.bono_auto !== true) return false;
+            if (this.item_selecto?.bono_origen_tipo !== 'grupo_bono') return false;
+            if (this.es_bono !== true) return false;
+            return this.$store.state.permisos.permite_editar_bono === true;
+        },
+        
+        esBonoIndividualBloqueado() {
+            if (this.item_selecto?.bono_auto !== true) return false;
+            if (this.item_selecto?.bono_origen_tipo !== 'lista_bono') return false;
+            if (this.es_bono !== true) return false;
+            return this.$store.state.permisos.permite_editar_bono === true;
+        },
+        
+        tienePrecioEscalaAplicado() {
+            const tier = this.item_selecto?._precio_tier || 1;
+            return tier > 1;
+        },
+
+        tienePrecioGrupoAplicado() {
+            return !!this.item_selecto?._precio_grupo;
+        },
+
+        esPrecioEstricto() {
+            return this.$store.state.permisos.permite_editar_precio === true;
+        },
+        
+        tieneEscalasConfiguradas() {
+            const prod = this.productoCompleto;
+            if (!prod?.id) return false;
+            
+            const tieneGrupoPrecio = !!prod.grupo_precio;
+            if (tieneGrupoPrecio) {
+                const bonos = this.$store.state.bonos || {};
+                const cfg = bonos[prod.grupo_precio];
+                if (cfg && cfg.tipo === 'precio' && cfg.activo) return true;
+            }
+            
+            const tieneMay1 = Number(prod.precio_may1 || 0) > 0 && Number(prod.escala_may1 || 0) > 0;
+            const tieneMay2 = Number(prod.precio_may2 || 0) > 0 && Number(prod.escala_may2 || 0) > 0;
+            
+            return tieneMay1 || tieneMay2;
+        },
+        
+        esPrecioEscalaBloqueado() {
+            if (!this.tienePrecioEscalaAplicado && !this.tienePrecioGrupoAplicado) return false;
+            if (this.es_bono) return false;
+            return this.$store.state.permisos.permite_editar_precio === true;
         },
 
         puedeEditarCantidad() {

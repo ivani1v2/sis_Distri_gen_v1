@@ -213,31 +213,30 @@ export function analizaPrecios({
   // ==========================================================
   // 2) ESCALAS POR PRODUCTO (si NO hay grupo_precio activo)
   // ==========================================================
-  if (store.state.permisos.permite_editar_precios) {
-    for (const linea of res) {
-      if (_isGratuita(linea)) continue;
+  
+  for (const linea of res) {
+    if (_isGratuita(linea)) continue;
 
-      const prod = productos.find((p) => String(p.id) === String(linea.id));
-      if (!prod) continue;
+    const prod = productos.find((p) => String(p.id) === String(linea.id));
+    if (!prod) continue;
 
-      const grupo = prod.grupo_precio || null;
-      if (grupo) {
-        const cfg = bonos[grupo];
-        if (cfg && cfg.tipo === "precio" && cfg.activo) continue; // no tocar
-      }
-
-      const hayMay1 = tieneMay1(prod);
-      const hayMay2 = tieneMay2(prod);
-      if (!hayMay1 && !hayMay2) continue;
-
-      const u = unidadesLinea(linea);
-      const tier = sugerirTier(prod, u);
-      const pUnidad = precioUnidadPorTier(prod, tier);
-
-      linea._precio_tier = tier;
-
-      setPrecioLinea(linea, pUnidad); // ✅ aquí también actualiza precio_base
+    const grupo = prod.grupo_precio || null;
+    if (grupo) {
+      const cfg = bonos[grupo];
+      if (cfg && cfg.tipo === "precio" && cfg.activo) continue;
     }
+
+    const hayMay1 = tieneMay1(prod);
+    const hayMay2 = tieneMay2(prod);
+    if (!hayMay1 && !hayMay2) continue;
+
+    const u = unidadesLinea(linea);
+    const tier = sugerirTier(prod, u);
+    const pUnidad = precioUnidadPorTier(prod, tier);
+
+    linea._precio_tier = tier;
+
+    setPrecioLinea(linea, pUnidad);
   }
 
   return res;
@@ -282,10 +281,20 @@ export function analizaGrupos({
 
   // 1) Base: si se permite, recalcula desde cero (borra bonos automáticos previos)
   //    Si NO se permite editar bono, NO tocamos nada.
-  const base =
-    store.state.permisos.permite_editar_bono === true
-      ? (lineas || []).filter((l) => !l?.bono_auto) // quita bonos auto anteriores
-      : lineas || [];
+  const gruposPermitidos = new Set(Object.keys(bonos || {}));
+
+const base =
+  store.state.permisos.permite_editar_bono === true
+    ? (lineas || []).filter((l) => {
+        const esBonoAutoGrupo =
+          l?.bono_auto === true &&
+          String(l?.bono_origen_tipo) === "grupo_bono" &&
+          gruposPermitidos.has(String(l?.bono_origen));
+
+        // si es bono auto de un grupo que voy a recalcular => lo saco
+        return !esBonoAutoGrupo;
+      })
+    : lineas || [];
 
   const res = _clonarSiNecesario(base, inPlace);
 

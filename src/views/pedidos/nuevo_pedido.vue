@@ -609,9 +609,8 @@ export default {
             this.dial_direcciones = false;
         },
         grabar() {
-            if (store.state.permisos.permite_editar_bono) {
-                this.recalculoCompleto()
-            }
+            // Siempre recalcular antes de grabar
+            this.recalculoCompleto()
             this.dial_guardar = true;
         },
         async confirmarGuardado() {
@@ -878,9 +877,7 @@ export default {
             var pos = this.listaproductos.map(e => e.uuid).indexOf(this.item_selecto.uuid)
             this.listaproductos.splice(pos, 1)
             this.dialogoProducto = false
-            if (store.state.permisos.permite_editar_bono) {
-                this.recalculoCompleto()
-            }
+            this.recalculoCompleto()
         },
         editaProductoFinal(lineaActualizada) {
             const idx = this.listaproductos.findIndex(
@@ -888,16 +885,10 @@ export default {
             );
 
             if (idx !== -1) {
-                // Actualizamos esa línea en la lista
                 this.$set(this.listaproductos, idx, lineaActualizada);
             }
 
-            // Recalcula precios por escala + bonos
-            if (store.state.permisos.permite_editar_bono) {
-                this.recalculoCompleto()
-            }
-
-            // Cerramos el diálogo
+            this.recalculoCompleto()
             this.dialogoProducto = false;
         },
 
