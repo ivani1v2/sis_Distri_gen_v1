@@ -113,7 +113,7 @@
                                                         style="max-width: 70vw;">
                                                         <span class="font-weight-bold red--text">{{
                                                             Number(item.cantidad)
-                                                            }}×</span>
+                                                        }}×</span>
                                                         {{ item.nombre }}
                                                     </div>
                                                 </div>
@@ -174,7 +174,7 @@
                                                 <v-list-item v-for="m in $store.state.moneda" :key="m.codigo"
                                                     @click="moneda = m.simbolo">
                                                     <v-list-item-title>{{ m.simbolo }} - {{ m.moneda
-                                                        }}</v-list-item-title>
+                                                    }}</v-list-item-title>
                                                 </v-list-item>
                                             </v-list>
                                         </v-menu>
@@ -267,7 +267,7 @@ import cobrar from '@/views/ventas/cobro_final'
 import agrega_producto from '@/views/ventas/agrega_producto'
 import imprime from '@/components/dialogos/dialog_imprime'
 import cat_fijo from '@/components/catalogo_fijo'
-import { aplicaPreciosYBonos, agregarLista,analizaPreciosParcial, analizaGruposParcial} from "../funciones/calculo_bonos";
+import { aplicaPreciosYBonos, agregarLista, analizaPreciosParcial, analizaGruposParcial } from "../funciones/calculo_bonos";
 import dial_edita_prod from './edita_producto.vue'
 export default {
     name: 'caja',
@@ -383,22 +383,23 @@ export default {
 
     methods: {
         editaProductoFinal(lineaActualizada) {
-            const idx = this.listaproductos.findIndex(
-                l => l.uuid === lineaActualizada.uuid
-            );
+            // ✅ si el usuario cambió el precio, marcamos como manual
+            // (asumo que en tu diálogo editas lineaActualizada.precio)
+            lineaActualizada.precio_manual = true;
 
-            if (idx !== -1) {
-                // Actualizamos esa línea en la lista
-                this.$set(this.listaproductos, idx, lineaActualizada);
-            }
-            // Recalcula precios por escala + bonos
-            if (store.state.permisos.permite_editar_bono) {
-                this.recalculoCompleto()
+            // opcional: si quieres conservar "precio_base" como el precio original de catálogo:
+            // si no existe base, la seteas una vez
+            if (lineaActualizada.precio_base == null) {
+                lineaActualizada.precio_base = Number(lineaActualizada.precio || 0);
             }
 
-            // Cerramos el diálogo
+            const idx = this.listaproductos.findIndex(l => l.uuid === lineaActualizada.uuid);
+            if (idx !== -1) this.$set(this.listaproductos, idx, lineaActualizada);
+
+            if (store.state.permisos.permite_editar_bono) this.recalculoCompleto();
             this.dialogoProducto = false;
         },
+
         eliminaedita() {
             var pos = this.listaproductos.map(e => e.uuid).indexOf(this.item_selecto.uuid)
             this.listaproductos.splice(pos, 1)
@@ -558,30 +559,30 @@ export default {
             if (!ids.length) return;
 
             // ✅ 1) Precios SOLO para esos IDs (si permites editar precios)
-         
-                this.listaproductos = analizaPreciosParcial({
-                    lineas: this.listaproductos,
-                    productos: this.$store.state.productos,
-                    bonos: this.$store.state.bonos,
-                    idsAfectados: ids,
-                    lista_precios: this.lista_precios_selecta,
-                    redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
-                    inPlace: true,
-                });
-            
+
+            this.listaproductos = analizaPreciosParcial({
+                lineas: this.listaproductos,
+                productos: this.$store.state.productos,
+                bonos: this.$store.state.bonos,
+                idsAfectados: ids,
+                lista_precios: this.lista_precios_selecta,
+                redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
+                inPlace: true,
+            });
+
 
             // ✅ 2) Bonos: SOLO si está permitido editar bono (si no, NO tocamos nada)
-           
-                this.listaproductos = analizaGruposParcial({
-                    lineas: this.listaproductos,
-                    productos: this.$store.state.productos,
-                    bonos: this.$store.state.bonos,
-                    idsAfectados: ids, // esto limita a grupos del último producto
-                    createUUID: this.create_UUID,
-                    redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
-                    inPlace: true,
-                });
-            
+
+            this.listaproductos = analizaGruposParcial({
+                lineas: this.listaproductos,
+                productos: this.$store.state.productos,
+                bonos: this.$store.state.bonos,
+                idsAfectados: ids, // esto limita a grupos del último producto
+                createUUID: this.create_UUID,
+                redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
+                inPlace: true,
+            });
+
         },
 
         editaProducto(val) {

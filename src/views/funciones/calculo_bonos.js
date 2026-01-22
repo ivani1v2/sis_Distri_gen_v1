@@ -28,7 +28,9 @@ function _toUpper(val) {
 function _isGratuita(linea) {
   return _toUpper(linea?.operacion) === "GRATUITA";
 }
-
+function _isPrecioManual(linea) {
+  return linea?.precio_manual === true;
+}
 function _getReglasBono(cfg) {
   // Soporta: data = []  o  data = { bonos: [] }
   if (!cfg) return [];
@@ -197,9 +199,16 @@ export function analizaPrecios({
         precioObjetivo != null
           ? toNum(precioObjetivo, 0)
           : toNum(linea.precio, 0);
+      // ✅ si el usuario editó precio, NO lo sobrescribas
+      if (!_isPrecioManual(linea)) {
+        linea.precio = Number(nuevoPrecio);
+        linea.precio_base = Number(nuevoPrecio);
+      }
 
-      linea.precio = Number(nuevoPrecio);
-      linea.precio_base = Number(nuevoPrecio); // ✅ CAMBIO
+      // ✅ pero siempre recalcula total con el precio actual
+      linea.totalLinea = redondear(
+        toNum(linea.cantidad, 0) * toNum(linea.precio, 0),
+      );
 
       const desc = toNum(linea.preciodescuento, 0);
       if (desc >= linea.precio) linea.preciodescuento = 0;
@@ -213,7 +222,7 @@ export function analizaPrecios({
   // ==========================================================
   // 2) ESCALAS POR PRODUCTO (si NO hay grupo_precio activo)
   // ==========================================================
-  
+
   for (const linea of res) {
     if (_isGratuita(linea)) continue;
 
@@ -236,7 +245,14 @@ export function analizaPrecios({
 
     linea._precio_tier = tier;
 
-    setPrecioLinea(linea, pUnidad);
+    if (!_isPrecioManual(linea)) {
+      setPrecioLinea(linea, pUnidad);
+    } else {
+      // ✅ si es manual, solo recalcula total
+      linea.totalLinea = redondear(
+        toNum(linea.cantidad, 0) * toNum(linea.precio, 0),
+      );
+    }
   }
 
   return res;
@@ -283,18 +299,18 @@ export function analizaGrupos({
   //    Si NO se permite editar bono, NO tocamos nada.
   const gruposPermitidos = new Set(Object.keys(bonos || {}));
 
-const base =
-  store.state.permisos.permite_editar_bono === true
-    ? (lineas || []).filter((l) => {
-        const esBonoAutoGrupo =
-          l?.bono_auto === true &&
-          String(l?.bono_origen_tipo) === "grupo_bono" &&
-          gruposPermitidos.has(String(l?.bono_origen));
+  const base =
+    store.state.permisos.permite_editar_bono === true
+      ? (lineas || []).filter((l) => {
+          const esBonoAutoGrupo =
+            l?.bono_auto === true &&
+            String(l?.bono_origen_tipo) === "grupo_bono" &&
+            gruposPermitidos.has(String(l?.bono_origen));
 
-        // si es bono auto de un grupo que voy a recalcular => lo saco
-        return !esBonoAutoGrupo;
-      })
-    : lineas || [];
+          // si es bono auto de un grupo que voy a recalcular => lo saco
+          return !esBonoAutoGrupo;
+        })
+      : lineas || [];
 
   const res = _clonarSiNecesario(base, inPlace);
 
@@ -330,7 +346,8 @@ const base =
     const grupo = p.grupo_bono || null;
     if (!grupo) continue;
 
-    unidadesPorGrupo[grupo] = (unidadesPorGrupo[grupo] || 0) + unidadesDeLinea(l);
+    unidadesPorGrupo[grupo] =
+      (unidadesPorGrupo[grupo] || 0) + unidadesDeLinea(l);
   }
 
   // 3) Por cada grupo, aplicar regla “mejor” (mayor apartir_de que cumpla)
@@ -393,7 +410,7 @@ const base =
         String(x?.id) === String(prodBono.id) &&
         x?.bono_origen_tipo === "grupo_bono" &&
         String(x?.bono_origen) === String(grupoId) &&
-        String(x?.bono_regla ?? "") === String(regla.id ?? "")
+        String(x?.bono_regla ?? "") === String(regla.id ?? ""),
     );
 
     if (existente) {
@@ -640,18 +657,22 @@ export function analizaPreciosParcial({
   productos = [],
   bonos = {},
   idsAfectados = [],
-  lista_precios = ["1","2","3"],
+  lista_precios = ["1", "2", "3"],
   redondear = (n) => Number(n).toFixed(2),
   inPlace = true,
 } = {}) {
-  const ids = new Set((idsAfectados || []).map(x => String(x)));
+  const ids = new Set((idsAfectados || []).map((x) => String(x)));
   if (!ids.size) return lineas;
 
   // reutiliza tu analizaPrecios, pero “finge” un array solo con esas líneas,
   // y luego las reinyecta en el array original.
   const ref = inPlace ? lineas : JSON.parse(JSON.stringify(lineas || []));
 
-  const subset = ref.filter(l => ids.has(String(l.id)) && String(l.operacion || "").toUpperCase() !== "GRATUITA");
+  const subset = ref.filter(
+    (l) =>
+      ids.has(String(l.id)) &&
+      String(l.operacion || "").toUpperCase() !== "GRATUITA",
+  );
 
   // aplica la lógica de precios que ya tienes
   analizaPrecios({
@@ -674,16 +695,16 @@ export function analizaGruposParcial({
   redondear = (n) => Number(n).toFixed(2),
   inPlace = true,
 } = {}) {
-  const ids = new Set((idsAfectados || []).map(x => String(x)));
+  const ids = new Set((idsAfectados || []).map((x) => String(x)));
   if (!ids.size) return lineas;
 
   const ref = inPlace ? lineas : JSON.parse(JSON.stringify(lineas || []));
 
-  const prodById = new Map((productos || []).map(p => [String(p.id), p]));
+  const prodById = new Map((productos || []).map((p) => [String(p.id), p]));
 
   // 1) grupos_bono afectados por los ids agregados
   const gruposAfectados = new Set();
-  ids.forEach(id => {
+  ids.forEach((id) => {
     const p = prodById.get(String(id));
     if (p?.grupo_bono) gruposAfectados.add(String(p.grupo_bono));
   });
@@ -704,7 +725,9 @@ export function analizaGruposParcial({
   //    truco: calculamos bonos solo si el grupo está en gruposAfectados.
   //    (hacemos un “bonos filtrado”)
   const bonosFiltrados = {};
-  gruposAfectados.forEach(g => { bonosFiltrados[g] = bonos[g]; });
+  gruposAfectados.forEach((g) => {
+    bonosFiltrados[g] = bonos[g];
+  });
 
   return analizaGrupos({
     lineas: ref,

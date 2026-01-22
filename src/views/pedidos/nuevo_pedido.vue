@@ -880,17 +880,23 @@ export default {
             this.recalculoCompleto()
         },
         editaProductoFinal(lineaActualizada) {
-            const idx = this.listaproductos.findIndex(
-                l => l.uuid === lineaActualizada.uuid
-            );
+            // ✅ si el usuario cambió el precio, marcamos como manual
+            // (asumo que en tu diálogo editas lineaActualizada.precio)
+            lineaActualizada.precio_manual = true;
 
-            if (idx !== -1) {
-                this.$set(this.listaproductos, idx, lineaActualizada);
+            // opcional: si quieres conservar "precio_base" como el precio original de catálogo:
+            // si no existe base, la seteas una vez
+            if (lineaActualizada.precio_base == null) {
+                lineaActualizada.precio_base = Number(lineaActualizada.precio || 0);
             }
 
-            this.recalculoCompleto()
+            const idx = this.listaproductos.findIndex(l => l.uuid === lineaActualizada.uuid);
+            if (idx !== -1) this.$set(this.listaproductos, idx, lineaActualizada);
+
+            if (store.state.permisos.permite_editar_bono) this.recalculoCompleto();
             this.dialogoProducto = false;
         },
+
 
 
         sumaTotal() {

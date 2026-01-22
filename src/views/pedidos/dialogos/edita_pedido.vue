@@ -507,42 +507,39 @@ export default {
         },
 
         onEditaProducto(lineaActualizada) {
-            const pos = this.lineas.map(e => e.uuid).indexOf(lineaActualizada.uuid);
+            const pos = this.lineas.findIndex(e => e.uuid === lineaActualizada.uuid);
             if (pos === -1) return;
 
             const linea = this.lineas[pos];
-            const eraBonoAuto = linea.bono_auto === true;
-            const ahoraEsGratuita = String(lineaActualizada.operacion || '').toUpperCase() === 'GRATUITA';
 
+            const precioAntes = Number(linea.precio || 0);          // 👈 antes
+            const nuevoPrecio = Number(lineaActualizada.precio || 0);
+
+            // aplica cambios
             linea.cantidad = Number(lineaActualizada.cantidad || 0);
-            linea.precio = Number(lineaActualizada.precio || 0);
-            linea.precio_base = Number(lineaActualizada.precio_base || linea.precio_base || linea.precio || 0);
+            linea.precio = nuevoPrecio;
+
+            // ⚠️ NO recalcules precio_base desde el precio editado
+            linea.precio_base = Number(lineaActualizada.precio_base ?? linea.precio_base ?? 0);
+
             linea.preciodescuento = Number(lineaActualizada.preciodescuento || 0);
             linea.desc_1 = Number(lineaActualizada.desc_1 || 0);
             linea.desc_2 = Number(lineaActualizada.desc_2 || 0);
             linea.desc_3 = Number(lineaActualizada.desc_3 || 0);
             linea.operacion = lineaActualizada.operacion || linea.operacion;
             linea.nombre = lineaActualizada.nombre || linea.nombre;
-            linea.totalLinea = Number(lineaActualizada.totalLinea || 0);
 
-            if (lineaActualizada.bono_editado) {
-                linea.bono_editado = true;
-            }
-
-            if (eraBonoAuto && !ahoraEsGratuita) {
-                linea.bono_auto = false;
-                linea.bono_origen_tipo = null;
-                linea.bono_origen = null;
-                linea.bono_regla = null;
+            // ✅ marcar manual solo si cambió
+            if (nuevoPrecio !== precioAntes) {
+                this.$set(linea, 'precio_manual', true);
             }
 
             this.recalcularLinea(linea);
             this.dialogoProducto = false;
 
-            this.$nextTick(() => {
-                this.recalcularSiPermiteBonos()
-            })
+            this.$nextTick(() => this.recalcularSiPermiteBonos());
         },
+
 
         eliminaedita() {
             const itemAEliminar = this.item_selecto;
@@ -594,11 +591,12 @@ export default {
                 bono_origen_tipo: it.bono_origen_tipo || null,
                 bono_origen: it.bono_origen || null,
                 bono_regla: it.bono_regla || null,
+                precio_manual: it.precio_manual === true,
                 bonos_eliminados: it.bonos_eliminados || null,
                 totalLinea: Number(it.totalLinea != null ? it.totalLinea : (Number(it.cantidad || 0) * Number(it.precio || 0)))
             }))
 
-      
+
         },
         number2(n) {
             const x = Number(n || 0)
