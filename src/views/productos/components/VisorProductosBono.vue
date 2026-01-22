@@ -1,157 +1,160 @@
 <template>
     <div>
-        <v-dialog v-model="dialogo" max-width="650px" scrollable @input="onDialogChange">
-            <v-card>
-                <v-system-bar window dark>
-                    <v-icon @click="cerrar">mdi-close</v-icon>
-                    <span class="ml-2">Productos asignados al bono</span>
-                    <v-spacer></v-spacer>
-                    <v-chip x-small :color="bono.activo ? 'success' : 'error'" text-color="white">
-                        {{ bono.activo ? 'Activo' : 'Inactivo' }}
-                    </v-chip>
-                </v-system-bar>
+       
+<v-dialog v-model="dialogo" max-width="650px" scrollable @input="onDialogChange" :fullscreen="$vuetify.breakpoint.xsOnly">
+    <v-card class="rounded-lg-md">
+        <v-toolbar color="grey darken-4" dark flat dense max-height="48">
+            <v-toolbar-title class="text-body-2 font-weight-medium">Productos del Bono</v-toolbar-title>
+            <v-spacer></v-spacer>
+            <v-chip x-small :color="bono.activo ? 'success' : 'error'" class="font-weight-bold">
+                {{ bono.activo ? 'ACTIVO' : 'INACTIVO' }}
+            </v-chip>
+            <v-btn icon small @click="cerrar" class="ml-2">
+                <v-icon small>mdi-close</v-icon>
+            </v-btn>
+        </v-toolbar>
 
-                <v-card-title class="py-2">
-                    <div class="flex-grow-1">
-                        <div class="text-subtitle-1 font-weight-bold">{{ bono.nombre }}</div>
-                        <div class="text-caption grey--text">
-                            Código: {{ bono.codigo }} | {{ bono.tipo === 'precio' ? 'Precio Mayoreo' : 'Bonificación' }}
-                            <span v-if="bono.fecha_vencimiento">
-                                | Vence: {{ formatearFecha(bono.fecha_vencimiento) }}
-                            </span>
-                        </div>
+        <v-card-text class="pa-4 flex-grow-0 grey lighten-4">
+            <v-row no-gutters align="center">
+                <v-col>
+                    <div class="text-h6 font-weight-black primary--text lh-1 mb-1">{{ bono.nombre }}</div>
+                    <div class="d-flex flex-wrap align-center caption grey--text text--darken-2">
+                        <v-icon x-small class="mr-1">mdi-barcode</v-icon> {{ bono.codigo }}
+                        <v-divider vertical class="mx-2"></v-divider>
+                        <v-icon x-small class="mr-1">mdi-label-outline</v-icon> {{ bono.tipo === 'precio' ? 'Precio Mayoreo' : 'Bonificación' }}
+                        <v-divider vertical class="mx-2" v-if="bono.fecha_vencimiento"></v-divider>
+                        <span v-if="bono.fecha_vencimiento" class="orange--text font-weight-bold">
+                            <v-icon x-small color="orange">mdi-calendar-clock</v-icon> Exp: {{ formatearFecha(bono.fecha_vencimiento) }}
+                        </span>
                     </div>
-                </v-card-title>
+                </v-col>
+            </v-row>
+        </v-card-text>
 
-                <v-divider></v-divider>
+        <v-divider></v-divider>
 
-                <v-card-text class="pa-2" style="max-height: 450px; overflow-y: auto;">
-                    <v-card outlined class="pa-2 mb-3" color="grey lighten-5">
-                        <div class="d-flex justify-space-between align-center">
-                            <div>
-                                <div class="text-caption font-weight-bold">
-                                    <v-icon small color="primary" class="mr-1">mdi-package-variant</v-icon>
-                                    Productos asignados: {{ productosAsignados.length }}
-                                </div>
-                            </div>
-                            <v-btn color="primary" small @click="dialogoBusqueda = true">
-                                <v-icon left small>mdi-magnify-plus</v-icon>
-                                Buscar Productos
-                            </v-btn>
-                        </div>
-                    </v-card>
+        <v-card-text class="pa-3">
+            <v-row dense align="center" class="mb-3">
+                <v-col cols="12" sm="8">
+                    <v-text-field 
+                        v-model="busqueda" 
+                        dense 
+                        filled 
+                        rounded 
+                        hide-details 
+                        prepend-inner-icon="mdi-magnify"
+                        placeholder="Filtrar asignados..." 
+                        clearable
+                    ></v-text-field>
+                </v-col>
+                <v-col cols="12" sm="4">
+                    <v-btn color="primary" block depressed rounded class="text-none" @click="dialogoBusqueda = true">
+                        <v-icon left size="18">mdi-plus-circle</v-icon>
+                        Añadir Productos
+                    </v-btn>
+                </v-col>
+            </v-row>
 
-                    <v-text-field v-model="busqueda" dense outlined hide-details prepend-inner-icon="mdi-magnify"
-                        placeholder="Buscar en productos asignados..." class="mb-2" clearable></v-text-field>
+            <div class="text-overline mb-1 grey--text">
+                Productos Afectados ({{ productosFiltrados.length }})
+            </div>
 
-                    <v-simple-table dense fixed-header height="200px" v-if="productosFiltrados.length">
-                        <template v-slot:default>
-                            <thead>
-                                <tr>
-                                    <th width="80">ID</th>
-                                    <th>Producto</th>
-                                    <th>Categoría</th>
-                                    <th width="100">Precio</th>
-                                    <th width="50">Quitar</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="prod in productosFiltrados" :key="prod.id">
-                                    <td class="text-caption">{{ prod.id }}</td>
-                                    <td>{{ prod.nombre }}</td>
-                                    <td class="text-caption grey--text">{{ prod.categoria }}</td>
-                                    <td class="text-caption">S/{{ Number(prod.precio || 0).toFixed(2) }}</td>
-                                    <td>
-                                        <v-btn icon x-small color="red" @click="quitarProducto(prod)" 
-                                            :loading="quitando === prod.id">
-                                            <v-icon x-small>mdi-close</v-icon>
-                                        </v-btn>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </template>
-                    </v-simple-table>
-
-                    <v-alert v-else type="info" dense text>
-                        No hay productos asignados a este bono
-                    </v-alert>
-
-                    <v-expansion-panels v-if="bono.tipo === 'bono' && bono.data && bono.data.length" class="mt-4">
-                        <v-expansion-panel>
-                            <v-expansion-panel-header>
-                                <v-icon small color="orange" class="mr-2">mdi-gift</v-icon>
-                                <span class="text-subtitle-2">Reglas de Bonificación</span>
-                                <v-chip x-small color="orange" text-color="white" class="ml-2">
-                                    {{ bono.data.length }}
-                                </v-chip>
-                            </v-expansion-panel-header>
-                            <v-expansion-panel-content class="pa-2">
-                                <v-simple-table dense>
-                                    <template v-slot:default>
-                                        <thead>
-                                            <tr>
-                                                <th>A partir de</th>
-                                                <th>Bono</th>
-                                                <th>Máx</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr v-for="(regla, idx) in bono.data" :key="idx">
-                                                <td>{{ regla.apartir_de }} und</td>
-                                                <td>{{ regla.cantidad_bono }}x {{ obtenerNombreProducto(regla.codigo) }}</td>
-                                                <td>{{ regla.cantidad_max || '∞' }}</td>
-                                            </tr>
-                                        </tbody>
-                                    </template>
-                                </v-simple-table>
-                            </v-expansion-panel-content>
-                        </v-expansion-panel>
-                    </v-expansion-panels>
-
-                    <v-expansion-panels v-if="bono.tipo === 'precio'" class="mt-4">
-                        <v-expansion-panel>
-                            <v-expansion-panel-header>
-                                <v-icon small color="blue" class="mr-2">mdi-tag-multiple</v-icon>
-                                <span class="text-subtitle-2">Escalas de Precios</span>
-                                <v-chip x-small color="blue" text-color="white" class="ml-2">
-                                    {{ (bono.escala_may1 ? 1 : 0) + (bono.escala_may2 ? 1 : 0) }}
-                                </v-chip>
-                            </v-expansion-panel-header>
-                            <v-expansion-panel-content class="pa-2">
-                                <v-row dense>
-                                    <v-col cols="12" sm="6" v-if="bono.escala_may1">
-                                        <v-card outlined class="pa-2">
-                                            <div class="text-caption grey--text">Mayorista 1</div>
-                                            <div>≥ <strong>{{ bono.escala_may1 }}</strong> und</div>
-                                            <div class="success--text font-weight-bold">S/{{ bono.precio_may1 }}</div>
-                                        </v-card>
-                                    </v-col>
-                                    <v-col cols="12" sm="6" v-if="bono.escala_may2">
-                                        <v-card outlined class="pa-2">
-                                            <div class="text-caption grey--text">Mayorista 2</div>
-                                            <div>≥ <strong>{{ bono.escala_may2 }}</strong> und</div>
-                                            <div class="success--text font-weight-bold">S/{{ bono.precio_may2 }}</div>
-                                        </v-card>
-                                    </v-col>
-                                </v-row>
-                            </v-expansion-panel-content>
-                        </v-expansion-panel>
-                    </v-expansion-panels>
-                </v-card-text>
-
-                <v-divider></v-divider>
-
-                <v-card-actions class="py-1">
-                    <v-chip small outlined>
-                        <v-icon small left>mdi-package-variant</v-icon>
-                        {{ productosAsignados.length }} productos asignados
-                    </v-chip>
-                    <v-spacer></v-spacer>
-                    <v-btn text color="primary" @click="cerrar">Cerrar</v-btn>
-                </v-card-actions>
+            <v-card outlined class="overflow-hidden rounded-lg">
+                <v-simple-table dense fixed-header height="250px">
+                    <template v-slot:default>
+                        <thead>
+                            <tr class="grey lighten-4">
+                                <th class="text-left py-2">Producto</th>
+                                <th class="text-center" width="80">Precio</th>
+                                <th class="text-center" width="50">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody v-if="productosFiltrados.length">
+                            <tr v-for="prod in productosFiltrados" :key="prod.id">
+                                <td class="py-2">
+                                    <div class="font-weight-bold text-body-2 lh-tight">{{ prod.nombre }}</div>
+                                    <div class="caption grey--text">ID: {{ prod.id }} • {{ prod.categoria }}</div>
+                                </td>
+                                <td class="text-center font-weight-medium">S/{{ Number(prod.precio || 0).toFixed(2) }}</td>
+                                <td class="text-center">
+                                    <v-btn icon small color="red lighten-4" @click="quitarProducto(prod)" :loading="quitando === prod.id">
+                                        <v-icon small color="red">mdi-trash-can-outline</v-icon>
+                                    </v-btn>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </template>
+                </v-simple-table>
+                <v-alert v-if="!productosFiltrados.length" type="info" text tile dense class="ma-0">
+                    No se encontraron productos
+                </v-alert>
             </v-card>
-        </v-dialog>
 
+            <div class="mt-4">
+                <v-expansion-panels v-if="bono.tipo === 'bono' && bono.data && bono.data.length" flat outlined class="rounded-lg">
+                    <v-expansion-panel class="grey lighten-5">
+                        <v-expansion-panel-header class="py-0 min-height-48">
+                            <template v-slot:default="{ open }">
+                                <v-icon small color="orange" class="mr-2">mdi-gift</v-icon>
+                                <span class="text-subtitle-2 font-weight-bold grey--text text--darken-3">Reglas de Bonificación</span>
+                                <v-spacer></v-spacer>
+                                <v-chip x-small color="orange" dark class="mr-2">{{ bono.data.length }}</v-chip>
+                            </template>
+                        </v-expansion-panel-header>
+                        <v-expansion-panel-content>
+                            <v-card v-for="(regla, idx) in bono.data" :key="idx" flat outlined class="mb-2 pa-2 white rounded-md">
+                                <div class="d-flex justify-space-between align-center">
+                                    <div class="caption">Compra: <strong>{{ regla.apartir_de }} und</strong></div>
+                                    <v-icon small color="grey lighten-1">mdi-arrow-right</v-icon>
+                                    <div class="caption font-weight-bold primary--text">Lleva: {{ regla.cantidad_bono }}x {{ obtenerNombreProducto(regla.codigo) }}</div>
+                                </div>
+                                <div class="text-right caption grey--text mt-1 border-top-pt-1">Límite máx: {{ regla.cantidad_max || 'Sin límite' }}</div>
+                            </v-card>
+                        </v-expansion-panel-content>
+                    </v-expansion-panel>
+                </v-expansion-panels>
+
+                <v-expansion-panels v-if="bono.tipo === 'precio'" flat outlined class="rounded-lg">
+                    <v-expansion-panel class="grey lighten-5">
+                        <v-expansion-panel-header class="py-0 min-height-48">
+                            <v-icon small color="blue" class="mr-2">mdi-tag-multiple</v-icon>
+                            <span class="text-subtitle-2 font-weight-bold grey--text text--darken-3">Escalas de Precios</span>
+                        </v-expansion-panel-header>
+                        <v-expansion-panel-content>
+                            <v-row dense>
+                                <v-col cols="6" v-if="bono.escala_may1">
+                                    <v-card flat outlined class="pa-2 white text-center">
+                                        <div class="text-overline lh-1 grey--text">May. 1</div>
+                                        <div class="text-body-2">≥ <strong>{{ bono.escala_may1 }}</strong> und</div>
+                                        <div class="text-subtitle-2 success--text font-weight-bold">S/{{ bono.precio_may1 }}</div>
+                                    </v-card>
+                                </v-col>
+                                <v-col cols="6" v-if="bono.escala_may2">
+                                    <v-card flat outlined class="pa-2 white text-center">
+                                        <div class="text-overline lh-1 grey--text">May. 2</div>
+                                        <div class="text-body-2">≥ <strong>{{ bono.escala_may2 }}</strong> und</div>
+                                        <div class="text-subtitle-2 success--text font-weight-bold">S/{{ bono.precio_may2 }}</div>
+                                    </v-card>
+                                </v-col>
+                            </v-row>
+                        </v-expansion-panel-content>
+                    </v-expansion-panel>
+                </v-expansion-panels>
+            </div>
+        </v-card-text>
+
+        <v-divider></v-divider>
+
+        <v-card-actions class="pa-3 grey lighten-4">
+            <div class="caption grey--text font-weight-bold">
+                <v-icon x-small class="mr-1">mdi-check-circle-outline</v-icon>
+                {{ productosAsignados.length }} ítems totales
+            </div>
+            <v-spacer></v-spacer>
+            <v-btn color="grey darken-2" text class="text-none px-6" @click="cerrar">Cerrar</v-btn>
+        </v-card-actions>
+    </v-card>
+</v-dialog>
         <v-dialog v-model="dialogoBusqueda" max-width="500px" @input="onDialogBusquedaChange">
             <v-card>
                 <v-toolbar flat dense color="primary" dark>
@@ -431,3 +434,10 @@ export default {
     }
 };
 </script>
+<style scoped>
+.lh-1 { line-height: 1 !important; }
+.lh-tight { line-height: 1.2 !important; }
+.min-height-48 { min-height: 48px !important; }
+.border-top-pt-1 { border-top: 1px dashed #eee; padding-top: 4px; }
+.rounded-lg-md { border-radius: 12px !important; }
+</style>

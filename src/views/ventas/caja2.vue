@@ -6,7 +6,7 @@
                 <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true" :x_categoria="true">
                 </cat_fijo>
             </v-col>
-          
+
             <v-col cols="12" md="8" class="venta-col d-flex flex-column">
                 <v-card class="mt-1">
                     <v-card-text>
@@ -267,7 +267,7 @@ import cobrar from '@/views/ventas/cobro_final'
 import agrega_producto from '@/views/ventas/agrega_producto'
 import imprime from '@/components/dialogos/dialog_imprime'
 import cat_fijo from '@/components/catalogo_fijo'
-import { aplicaPreciosYBonos, agregarLista } from "../funciones/calculo_bonos";
+import { aplicaPreciosYBonos, agregarLista,analizaPreciosParcial, analizaGruposParcial} from "../funciones/calculo_bonos";
 import dial_edita_prod from './edita_producto.vue'
 export default {
     name: 'caja',
@@ -391,9 +391,10 @@ export default {
                 // Actualizamos esa línea en la lista
                 this.$set(this.listaproductos, idx, lineaActualizada);
             }
-
             // Recalcula precios por escala + bonos
-            this.recalculoCompleto();
+            if (store.state.permisos.permite_editar_bono) {
+                this.recalculoCompleto()
+            }
 
             // Cerramos el diálogo
             this.dialogoProducto = false;
@@ -402,7 +403,10 @@ export default {
             var pos = this.listaproductos.map(e => e.uuid).indexOf(this.item_selecto.uuid)
             this.listaproductos.splice(pos, 1)
             this.dialogoProducto = false
-            this.recalculoCompleto()
+            if (store.state.permisos.permite_editar_bono) {
+                this.recalculoCompleto()
+            }
+
         },
         getDirPrincipal(cliente) {
             const arr = Array.isArray(cliente?.direcciones) ? cliente.direcciones : [];
@@ -441,7 +445,9 @@ export default {
             return fecha
         },
         async cobrar() {
-            this.recalculoCompleto();
+            if (store.state.permisos.permite_editar_bono) {
+                this.recalculoCompleto()
+            }
             if (!this.comparafecha()) {
                 alert('Fecha Excede el limite')
                 return
@@ -538,9 +544,45 @@ export default {
 
             // 4) Asignamos y recalculamos bonos / precios
             this.listaproductos = nuevaLista;
-            this.recalculoCompleto();
+            this.recalculoUltimoAgregado(value);
         },
 
+        recalculoUltimoAgregado(value) {
+            const items = Array.isArray(value) ? value : [value];
+
+            // ids agregados (último/últimos)
+            const ids = items
+                .map(x => String(x?.id ?? x?.cod_producto ?? ''))
+                .filter(Boolean);
+
+            if (!ids.length) return;
+
+            // ✅ 1) Precios SOLO para esos IDs (si permites editar precios)
+         
+                this.listaproductos = analizaPreciosParcial({
+                    lineas: this.listaproductos,
+                    productos: this.$store.state.productos,
+                    bonos: this.$store.state.bonos,
+                    idsAfectados: ids,
+                    lista_precios: this.lista_precios_selecta,
+                    redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
+                    inPlace: true,
+                });
+            
+
+            // ✅ 2) Bonos: SOLO si está permitido editar bono (si no, NO tocamos nada)
+           
+                this.listaproductos = analizaGruposParcial({
+                    lineas: this.listaproductos,
+                    productos: this.$store.state.productos,
+                    bonos: this.$store.state.bonos,
+                    idsAfectados: ids, // esto limita a grupos del último producto
+                    createUUID: this.create_UUID,
+                    redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
+                    inPlace: true,
+                });
+            
+        },
 
         editaProducto(val) {
             console.log(val)

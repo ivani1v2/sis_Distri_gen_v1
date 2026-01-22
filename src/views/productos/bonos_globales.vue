@@ -201,132 +201,141 @@
       </div>
     </v-card>
 
-    <v-dialog v-model="dial_mov" max-width="750px" persistent>
-      <div>
-        <v-system-bar window dark>
-          <v-icon @click="dial_mov = false">mdi-close</v-icon>
-          <v-switch v-model="activo" color="green" label="Activo" class="ml-3"></v-switch>
-          <v-spacer></v-spacer>
-          <v-radio-group class="mt-4" v-model="modo_bono" row dense>
-            <v-radio label="Precio" value="precio"></v-radio>
-            <v-radio label="Bono" value="bono"></v-radio>
-          </v-radio-group>
-        </v-system-bar>
-      </div>
+   <v-dialog v-model="dial_mov" max-width="700px" persistent scrollable transition="dialog-bottom-transition">
+    <v-card class="rounded-xl overflow-hidden">
+        <v-toolbar flat color="grey darken-4" dark dense max-height="64">
+            <v-icon @click="dial_mov = false" class="mr-2">mdi-close</v-icon>
+            <v-toolbar-title class="text-body-1 font-weight-bold">
+                Configuración de Promoción
+            </v-toolbar-title>
+            <v-spacer></v-spacer>
+            <v-chip :color="activo ? 'success' : 'grey'" small class="font-weight-black">
+                {{ activo ? 'ACTIVO' : 'INACTIVO' }}
+            </v-chip>
+        </v-toolbar>
 
-      <v-card>
-        <v-card-text class="pa-4 pa-sm-6">
-          <v-row dense>
-            <v-col cols="12" sm="6">
-              <v-text-field dense outlined v-model="nombre" label="Nombre *"
-                prepend-inner-icon="mdi-tag"></v-text-field>
-            </v-col>
-            <v-col cols="12" sm="6">
-              <v-autocomplete dense outlined v-model="proveedor" :items="proveedoresItems" clearable label="Proveedor"
-                prepend-inner-icon="mdi-truck"></v-autocomplete>
-            </v-col>
-            <v-col cols="12">
-              <v-textarea dense outlined v-model="observacion" auto-grow filled label="Observación"
-                rows="1"></v-textarea>
-            </v-col>
-            <v-col cols="12" sm="6">
-              <v-menu v-model="menuFechaVencimiento" :close-on-content-click="false" transition="scale-transition"
-                offset-y min-width="auto">
-                <template v-slot:activator="{ on, attrs }">
-                  <v-text-field v-model="fecha_vencimiento" label="Fecha de Vencimiento"
-                    prepend-inner-icon="mdi-calendar" readonly v-bind="attrs" v-on="on" dense outlined clearable
-                    hint="Dejar vacío para sin vencimiento" persistent-hint></v-text-field>
-                </template>
-                <v-date-picker v-model="fecha_vencimiento" @input="menuFechaVencimiento = false"
-                  :min="hoy"></v-date-picker>
-              </v-menu>
-            </v-col>
-            <v-col cols="12" sm="6">
-              <v-alert v-if="fecha_vencimiento" dense text :type="esFechaProxima ? 'warning' : 'info'" class="mb-0">
-                {{ diasRestantes }} días restantes
-              </v-alert>
-            </v-col>
-          </v-row>
+        <v-card-text class="pa-4 pa-sm-6 grey lighten-5">
+            <v-row dense align="center" class="mb-4">
+                <v-col cols="12" sm="4" class="d-flex align-center">
+                    <v-switch v-model="activo" inset color="success" label="Estado Activo" class="mt-0 pt-0" hide-details></v-switch>
+                </v-col>
+                <v-col cols="12" sm="8">
+                    <v-btn-toggle v-model="modo_bono" mandatory borderless class="w-full d-flex" color="primary">
+                        <v-btn value="precio" class="flex-grow-1 text-none" small>
+                            <v-icon left>mdi-tag-multiple</v-icon> Escala de Precios
+                        </v-btn>
+                        <v-btn value="bono" class="flex-grow-1 text-none" small>
+                            <v-icon left>mdi-gift</v-icon> Bonificación
+                        </v-btn>
+                    </v-btn-toggle>
+                </v-col>
+            </v-row>
 
-          <v-divider class="my-3"></v-divider>
+            <v-card flat class="rounded-lg pa-4 mb-4 white border-subtle">
+                <v-row dense>
+                    <v-col cols="12" sm="6">
+                        <v-text-field v-model="nombre" label="Nombre de la promoción *" prepend-inner-icon="mdi-format-title" dense outlined hide-details class="mb-3"></v-text-field>
+                    </v-col>
+                    <v-col cols="12" sm="6">
+                        <v-autocomplete v-model="proveedor" :items="proveedoresItems" label="Proveedor" prepend-inner-icon="mdi-truck-outline" dense outlined hide-details class="mb-3" clearable></v-autocomplete>
+                    </v-col>
+                    <v-col cols="12" sm="6">
+                        <v-menu v-model="menuFechaVencimiento" :close-on-content-click="false" offset-y min-width="auto">
+                            <template v-slot:activator="{ on, attrs }">
+                                <v-text-field v-model="fecha_vencimiento" label="Fecha de Vencimiento" prepend-inner-icon="mdi-calendar-clock" readonly v-bind="attrs" v-on="on" dense outlined clearable hide-details class="mb-1"></v-text-field>
+                                <span class="text-caption grey--text pl-1">Dejar vacío para "Sin vencimiento"</span>
+                            </template>
+                            <v-date-picker v-model="fecha_vencimiento" @input="menuFechaVencimiento = false" :min="hoy"></v-date-picker>
+                        </v-menu>
+                    </v-col>
+                    <v-col cols="12" sm="6" v-if="fecha_vencimiento">
+                        <v-alert dense outlined :type="esFechaProxima ? 'warning' : 'info'" class="mb-0 text-caption rounded-lg py-1">
+                            <strong>{{ diasRestantes }} días</strong> para que caduque.
+                        </v-alert>
+                    </v-col>
+                    <v-col cols="12" class="mt-2">
+                        <v-textarea v-model="observacion" label="Notas u observaciones" prepend-inner-icon="mdi-comment-text-outline" dense outlined auto-grow rows="1" hide-details filled></v-textarea>
+                    </v-col>
+                </v-row>
+            </v-card>
 
-          <v-row class="mt-1" v-if="modo_bono == 'precio'" dense>
-            <v-col cols="12" class="mb-2">
-              <span class="text-subtitle-2">
-                <v-icon small color="blue">mdi-tag-multiple</v-icon>
-                Configuración de Precios Mayorista
-              </span>
-            </v-col>
-            <v-col cols="12" sm="6">
-              <v-text-field outlined dense type="number" v-model="escala_may1" label="Escala Mayorista 1 (und)"
-                prepend-inner-icon="mdi-numeric"></v-text-field>
-            </v-col>
-            <v-col cols="12" sm="6">
-              <v-text-field outlined dense type="number" v-model="precio_may1" label="Precio Mayorista 1"
-                prepend-inner-icon="S/"></v-text-field>
-            </v-col>
-            <v-col cols="12" sm="6">
-              <v-text-field outlined dense type="number" v-model="escala_may2" label="Escala Mayorista 2 (und)"
-                prepend-inner-icon="mdi-numeric"></v-text-field>
-            </v-col>
-            <v-col cols="12" sm="6">
-              <v-text-field outlined dense type="number" v-model="precio_may2" label="Precio Mayorista 2"
-                prepend-inner-icon="S/"></v-text-field>
-            </v-col>
-          </v-row>
+            <div class="mt-2">
+                <v-row v-if="modo_bono == 'precio'" dense>
+                    <v-col cols="12" class="mb-2 d-flex align-center font-weight-bold grey--text text--darken-2 text-subtitle-2 font-weight-black">
+                        <v-icon color="blue" class="mr-2">mdi-numeric-1-box</v-icon> ESCALAS MAYORISTAS
+                    </v-col>
+                    <v-col cols="12" sm="6">
+                        <v-card outlined class="pa-3 rounded-lg border-blue">
+                            <div class="caption blue--text font-weight-bold mb-2">ESCALA 1</div>
+                            <v-text-field label="Desde (und)" v-model="escala_may1" type="number" dense outlined hide-details class="mb-2"></v-text-field>
+                            <v-text-field label="Precio S/" v-model="precio_may1" type="number" dense outlined hide-details prefix="S/"></v-text-field>
+                        </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="6">
+                        <v-card outlined class="pa-3 rounded-lg border-blue">
+                            <div class="caption blue--text font-weight-bold mb-2">ESCALA 2</div>
+                            <v-text-field label="Desde (und)" v-model="escala_may2" type="number" dense outlined hide-details class="mb-2"></v-text-field>
+                            <v-text-field label="Precio S/" v-model="precio_may2" type="number" dense outlined hide-details prefix="S/"></v-text-field>
+                        </v-card>
+                    </v-col>
+                </v-row>
 
-          <!-- BONOS -->
-          <v-row class="mt-n1" v-else>
-            <v-col cols="12" class="mb-2">
-              <span class="text-subtitle-2">
-                <v-icon small color="orange">mdi-gift</v-icon>
-                Configuración de Bonificaciones
-              </span>
-              <v-btn x-small class="ml-3" @click="dial_agrega = true" color="success">
-                <v-icon left x-small>mdi-plus</v-icon>Agregar Regla
-              </v-btn>
-            </v-col>
-            <v-col cols="12">
-              <v-simple-table fixed-header height="20vh" dense v-if="array_bono2.length">
-                <template v-slot:default>
-                  <thead>
-                    <tr>
-                      <th class="text-left">A partir de</th>
-                      <th class="text-left">Cant. Bono</th>
-                      <th class="text-left">Producto</th>
-                      <th class="text-left">Máx</th>
-                      <th class="text-left">Quitar</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="(item, idx) in array_bono2" :key="idx">
-                      <td>{{ item.apartir_de }} und</td>
-                      <td><strong class="success--text">{{ item.cantidad_bono }}x</strong></td>
-                      <td>{{ vernombre(item.codigo) }}</td>
-                      <td>{{ item.cantidad_max || '∞' }}</td>
-                      <td>
-                        <v-icon small color="red" @click="elimina(2, item)">mdi-delete</v-icon>
-                      </td>
-                    </tr>
-                  </tbody>
-                </template>
-              </v-simple-table>
-              <v-alert v-else type="info" dense text>
-                No hay reglas de bonificación. Agrega una regla para continuar.
-              </v-alert>
-            </v-col>
-          </v-row>
+                <div v-else>
+                    <div class="mb-3 d-flex align-center justify-space-between font-weight-black text-subtitle-2 grey--text text--darken-2">
+                        <span><v-icon color="orange" class="mr-2">mdi-gift-outline</v-icon> REGLAS DE BONO</span>
+                        <v-btn small depressed color="success" class="rounded-lg text-none" @click="dial_agrega = true">
+                            <v-icon left small>mdi-plus</v-icon> Agregar Regla
+                        </v-btn>
+                    </div>
+
+                    <v-card outlined class="rounded-lg overflow-hidden border-subtle">
+                        <v-simple-table dense fixed-header height="200px" v-if="array_bono2.length">
+                            <template v-slot:default>
+                                <thead>
+                                    <tr class="grey lighten-4 text-uppercase">
+                                        <th class="caption font-weight-bold">A partir de</th>
+                                        <th class="caption font-weight-bold">Regalo</th>
+                                        <th class="caption font-weight-bold text-center">Máx</th>
+                                        <th class="caption font-weight-bold text-center">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(item, idx) in array_bono2" :key="idx">
+                                        <td class="text-body-2">{{ item.apartir_de }} und</td>
+                                        <td class="py-1">
+                                            <div class="success--text font-weight-bold lh-1">{{ item.cantidad_bono }} Unidades</div>
+                                            <div class="caption grey--text text-truncate" style="max-width: 150px;">{{ vernombre(item.codigo) }}</div>
+                                        </td>
+                                        <td class="text-center font-weight-bold">{{ item.cantidad_max || '∞' }}</td>
+                                        <td class="text-center">
+                                            <v-btn icon x-small color="red lighten-4" @click="elimina(2, item)">
+                                                <v-icon small color="red">mdi-trash-can-outline</v-icon>
+                                            </v-btn>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </template>
+                        </v-simple-table>
+                        <v-card-text v-else class="text-center py-6 grey lighten-4">
+                            <v-icon x-large color="grey lighten-2">mdi-gift-off</v-icon>
+                            <div class="grey--text mt-2 font-italic text-caption">No hay reglas registradas aún.</div>
+                        </v-card-text>
+                    </v-card>
+                </div>
+            </div>
         </v-card-text>
 
-        <v-card-actions class="mt-n6">
-          <v-spacer></v-spacer>
-          <v-btn color="success" @click="genera_bono()">
-            <v-icon left>mdi-content-save</v-icon>Guardar
-          </v-btn>
-          <v-btn color="error" @click="dial_mov = false">Cancelar</v-btn>
+        <v-divider></v-divider>
+
+        <v-card-actions class="pa-4 bg-white">
+            <v-btn text color="grey darken-1" class="text-none px-6" @click="dial_mov = false">Cancelar</v-btn>
+            <v-spacer></v-spacer>
+            <v-btn color="primary" depressed class="text-none px-8 rounded-lg font-weight-bold" @click="genera_bono()">
+                <v-icon left>mdi-content-save-check</v-icon> Guardar Cambios
+            </v-btn>
         </v-card-actions>
-      </v-card>
-    </v-dialog>
+    </v-card>
+</v-dialog>
 
     <v-dialog v-model="dial_agrega" max-width="460px">
       <div>
@@ -787,6 +796,7 @@ export default {
     },
 
     editarTransferencia(item) {
+      console.log(item)
       const idx = this.movimientos.findIndex((x) => String(x.id) === String(item.id));
       if (idx < 0) return;
 
@@ -843,3 +853,10 @@ export default {
   },
 };
 </script>
+<style scoped>
+.w-full { width: 100%; }
+.lh-1 { line-height: 1.1; }
+.border-subtle { border: 1px solid #e0e0e0 !important; }
+.border-blue { border: 1px solid #90caf9 !important; border-top: 4px solid #1976d2 !important; }
+.v-btn-toggle .v-btn { height: 36px !important; }
+</style>

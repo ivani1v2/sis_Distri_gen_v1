@@ -16,14 +16,6 @@
         </div>
         <v-card class="pa-3">
 
-            <v-alert v-if="esBonoGlobal" type="warning" dense text class="mb-6 m">
-                Bono global - No editable
-            </v-alert>
-            
-            <v-alert v-else-if="esBonoIndividualBloqueado" type="info" dense text class="mb-6">
-                Bono exclusivo - No editable
-            </v-alert>
-
             <v-row class="mx-auto mt-4 text-center" dense v-if="puedeEditarCantidad">
 
                 <v-col cols="4" xs="4">
@@ -123,6 +115,7 @@ export default {
     },
     created() {
         var val = this.item_selecto
+     
         this.desc_1 = val.desc_1 || 0
         this.desc_2 = val.desc_2 || 0
         this.desc_3 = val.desc_3 || 0
@@ -170,17 +163,6 @@ export default {
     computed: {
         checkboxBonoVisible() {
             return this.$store.state.permisos.edita_bono === true;
-        },
-        esBonoGlobal() {
-            return this.item_selecto?.bono_auto === true && 
-                   this.item_selecto?.bono_origen_tipo === 'grupo_bono' &&
-                   this.es_bono === true;
-        },
-        esBonoIndividualBloqueado() {
-            if (this.item_selecto?.bono_auto !== true) return false;
-            if (this.item_selecto?.bono_origen_tipo !== 'lista_bono') return false;            
-            if (this.es_bono !== true) return false;
-            return this.$store.state.permisos.permite_editar_bono === true;
         },
 
         puedeEditarCantidad() {

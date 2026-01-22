@@ -58,7 +58,7 @@ export default {
                             { label: 'Master', value: 'es_master' },
                         ],
                         [
-                            { label: 'NO Permitir editar Bono Automatico', value: 'permite_editar_bono',tooltip: 'Si esta activo, los bonos automaticos son estaticos no permite agregar mas o quitar. calculo Estricto de la logica' },
+                            { label: 'BONO AUTOMATICO ESTRICTO', value: 'permite_editar_bono',tooltip: 'Si esta activo, los bonos automaticos son estaticos no permite agregar mas o quitar. calculo Estricto de la logica' },
                             
                         ]
                     ],

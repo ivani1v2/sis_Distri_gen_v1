@@ -13,14 +13,14 @@
             </v-toolbar>
 
             <v-card-text>
-                <v-alert v-if="excedeLineaCredito" dense border="left" colored-border 
-                    type="error" class="mb-3 mt-5">
+                <v-alert v-if="excedeLineaCredito" dense border="left" colored-border type="error" class="mb-3 mt-5">
                     <div class="d-flex justify-space-between flex-wrap caption">
                         <span>Línea Crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2) }}</strong></span>
-                        <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2) }}</strong></span>
+                        <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2)
+                                }}</strong></span>
                         <span>Disponible: <strong class="red--text">
-                            {{ moneda }} {{ saldoDisponible.toFixed(2) }}
-                        </strong></span>
+                                {{ moneda }} {{ saldoDisponible.toFixed(2) }}
+                            </strong></span>
                     </div>
                     <div class="mt-1 caption red--text">
                         El total del pedido supera el saldo disponible. Ajuste el pedido para poder guardar.
@@ -50,7 +50,7 @@
                             item-value="value" :menu-props="{ closeOnContentClick: true, maxHeight: 300 }" />
                     </v-col>
                 </v-row>
-                
+
                 <v-row dense v-if="cabecera.condicion_pago === 'CREDITO'">
                     <v-col cols="6">
                         <v-menu v-model="menuFecha" :close-on-content-click="false" transition="scale-transition"
@@ -136,18 +136,10 @@
                                                     <v-chip v-if="item.medida" x-small class="ml-1" label>
                                                         {{ item.medida }}
                                                     </v-chip>
-                                                    <v-chip v-if="item.bono_auto && item.bono_origen_tipo === 'lista_bono'" x-small class="ml-1"
-                                                        color="green" text-color="white" label>
-                                                        <v-icon x-small left>mdi-star</v-icon>
-                                                        B Exclusivo
-                                                    </v-chip>
-                                                    <v-chip v-else-if="item.bono_auto" x-small class="ml-1"
-                                                        color="teal" text-color="white" label>
-                                                        <v-icon x-small left>mdi-gift</v-icon>
-                                                        B Global
-                                                    </v-chip>
-                                                    <v-chip v-else-if="item.operacion === 'GRATUITA'" x-small class="ml-1"
-                                                        color="pink" text-color="white" label><v-icon x-small left>mdi-gift</v-icon>
+
+                                                    <v-chip v-if="item.operacion === 'GRATUITA'" x-small class="ml-1"
+                                                        color="pink" text-color="white" label><v-icon x-small
+                                                            left>mdi-gift</v-icon>
                                                         Gratuita
                                                     </v-chip>
                                                 </div>
@@ -156,7 +148,7 @@
                                                     style="max-width: 70vw;">
                                                     <span class="font-weight-bold red--text">{{
                                                         Number(item.cantidad)
-                                                    }}×</span>
+                                                        }}×</span>
                                                     {{ item.nombre }}
                                                 </div>
                                             </div>
@@ -290,7 +282,7 @@ import axios from "axios"
 import store from '@/store/index'
 import { colClientes } from '../../../db_firestore'
 import { allcuentaxcobrar } from '../../../db'
-import { analizaPrecios, analizaGrupos } from '@/views/funciones/calculo_bonos'
+import { aplicaPreciosYBonos, agregarLista, analizaPreciosParcial, analizaGruposParcial } from '@/views/funciones/calculo_bonos'
 
 export default {
     name: 'EditorDetallePedido',
@@ -429,6 +421,7 @@ export default {
         }
     },
     created() {
+        console.log(this.detalle)
         if (this.cabecera && this.cabecera.moneda) {
             this.moneda = this.cabecera.moneda
         } else {
@@ -443,10 +436,14 @@ export default {
         this.cargarDatosCredito()
     },
     methods: {
+        recalcularSiPermiteBonos() {
+            if (!store.state.permisos.permite_editar_bono) return;
+            this.$nextTick(() => this.recalculoCompleto());
+        },
         async cargarDatosCredito() {
             const doc = String(this.cabecera?.doc_numero || '').trim()
             if (!doc) return
-            
+
             try {
                 const docSnap = await colClientes().doc(doc).get()
                 if (docSnap.exists) {
@@ -458,7 +455,7 @@ export default {
                     .orderByChild('documento')
                     .equalTo(doc)
                     .once('value')
-                
+
                 let totalDeuda = 0
                 if (deudaSnap.exists()) {
                     deudaSnap.forEach(item => {
@@ -490,7 +487,7 @@ export default {
 
         editaProducto(val) {
             let precioBase = Number(val.precio_base || val.precio || 0);
-            
+
             if (val.bono_auto || val.operacion === 'GRATUITA') {
                 const productos = this.$store?.state?.productos || [];
                 const prodOriginal = productos.find(p => String(p.id) === String(val.id));
@@ -498,7 +495,7 @@ export default {
                     precioBase = Number(prodOriginal.precio || 0);
                 }
             }
-            
+
             console.log(val)
             this.item_selecto = {
                 ...val,
@@ -517,7 +514,7 @@ export default {
             const linea = this.lineas[pos];
             const eraBonoAuto = linea.bono_auto === true;
             const ahoraEsGratuita = String(lineaActualizada.operacion || '').toUpperCase() === 'GRATUITA';
-            
+
             linea.cantidad = Number(lineaActualizada.cantidad || 0);
             linea.precio = Number(lineaActualizada.precio || 0);
             linea.precio_base = Number(lineaActualizada.precio_base || linea.precio_base || linea.precio || 0);
@@ -528,11 +525,11 @@ export default {
             linea.operacion = lineaActualizada.operacion || linea.operacion;
             linea.nombre = lineaActualizada.nombre || linea.nombre;
             linea.totalLinea = Number(lineaActualizada.totalLinea || 0);
-            
+
             if (lineaActualizada.bono_editado) {
                 linea.bono_editado = true;
             }
-            
+
             if (eraBonoAuto && !ahoraEsGratuita) {
                 linea.bono_auto = false;
                 linea.bono_origen_tipo = null;
@@ -542,16 +539,16 @@ export default {
 
             this.recalcularLinea(linea);
             this.dialogoProducto = false;
-            
+
             this.$nextTick(() => {
-                this.recalcularBonos()
+                this.recalcularSiPermiteBonos()
             })
         },
 
         eliminaedita() {
             const itemAEliminar = this.item_selecto;
             const pos = this.lineas.map(e => e.uuid).indexOf(itemAEliminar.uuid);
-            
+
             if (itemAEliminar.bono_auto && itemAEliminar.bono_origen_tipo === 'lista_bono' && itemAEliminar.bono_origen) {
                 const idOrigen = String(itemAEliminar.bono_origen);
                 const lineaOrigen = this.lineas.find(l => String(l.id) === idOrigen && !l.bono_auto);
@@ -562,48 +559,15 @@ export default {
                     lineaOrigen.bonos_eliminados.push(itemAEliminar.bono_regla);
                 }
             }
-            
+
             if (pos !== -1) {
                 this.lineas.splice(pos, 1);
             }
             this.dialogoProducto = false;
-            
+
             this.$nextTick(() => {
-                this.recalcularBonos()
+                this.recalcularSiPermiteBonos()
             })
-        },
-        
-        recalcularBonos() {
-            if (this.recalculandoBonos) return
-            this.recalculandoBonos = true
-            
-            try {
-                const productos = store.state.productos || []
-                const bonos = store.state.bonos || {}
-                
-                const conPrecios = analizaPrecios({
-                    lineas: this.lineas,
-                    productos,
-                    bonos,
-                    redondear: this.redondear,
-                    inPlace: false,
-                })
-                
-                const conBonos = analizaGrupos({
-                    lineas: conPrecios,
-                    productos,
-                    bonos,
-                    createUUID: () => `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-                    redondear: this.redondear,
-                    inPlace: false,
-                })
-                
-                this.lineas = conBonos
-            } catch (e) {
-                console.error('Error recalculando bonos:', e)
-            } finally {
-                this.recalculandoBonos = false
-            }
         },
 
         _cargarDesdeProps() {
@@ -634,10 +598,8 @@ export default {
                 bonos_eliminados: it.bonos_eliminados || null,
                 totalLinea: Number(it.totalLinea != null ? it.totalLinea : (Number(it.cantidad || 0) * Number(it.precio || 0)))
             }))
-            
-            this.$nextTick(() => {
-                this.recalcularBonos()
-            })
+
+      
         },
         number2(n) {
             const x = Number(n || 0)
@@ -694,59 +656,86 @@ export default {
             if (tier === 2) return this.toNum(producto.precio_may1, this.toNum(producto.precio, 0));
             return this.toNum(producto.precio, 0);
         },
-        agregar_lista(items) {
-            const nuevos = Array.isArray(items) ? items : [items]
-            nuevos.forEach(val => {
-                const medidaLinea = (val.medida || '').toString().trim().toUpperCase()
-                const esBono = val.bono_auto === true || String(val.operacion || '').toUpperCase() === 'GRATUITA'
-                
-                if (!esBono) {
-                    const dup = this.lineas.find(
-                        x => x.id === val.id && (x.medida || '').toUpperCase() === medidaLinea && !x.bono_auto
-                    )
-                    if (dup) {
-                        dup.cantidad = Number(dup.cantidad || 0) + Number(val.cantidad || 1)
-                        this.recalcularLinea(dup)
-                        return
-                    }
-                }
+        agregar_lista(value) {
+            // 1) Fusiona / suma / respeta UUID con tu helper oficial
+            let nuevaLista = agregarLista({
+                listaActual: this.lineas,
+                nuevosItems: value,
+                createUUID: this.create_UUID,
+                redondear: (n) => this.redondear(n),
+            });
 
-                const cant = Number(val.cantidad || 1)
-                const precio = Number(val.precio || 0)
-                const descUnit = Number(val.preciodescuento || 0)
-                const esGratuita = String(val.operacion || '').toUpperCase() === 'GRATUITA'
-                const total = esGratuita ? 0 : this.fix2(Math.max(0, cant * (precio - descUnit)))
+            // 2) (Opcional) marca timestamp interno por si luego quieres ordenar “últimos arriba”
+            const baseTs = Date.now();
+            let offset = 0;
+            nuevaLista = nuevaLista.map(item => {
+                if (item.__tsAdd) return item;
+                return { ...item, __tsAdd: baseTs + (offset++) };
+            });
 
-                this.lineas.push({
-                    uuid: (val.uuid || '').toString() || `${val.id}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-                    id: val.id,
-                    nombre: val.nombre,
-                    medida: medidaLinea,
-                    cantidad: cant,
-                    precio,
-                    precio_base: Number(val.precio_base || precio),
-                    preciodescuento: descUnit,
-                    desc_1: Number(val.desc_1 || 0),
-                    desc_2: Number(val.desc_2 || 0),
-                    desc_3: Number(val.desc_3 || 0),
-                    operacion: val.operacion,
-                    factor: val.factor,
-                    costo: val.costo,
-                    tipoproducto: val.tipoproducto,
-                    controstock: val.controstock,
-                    peso: Number(val.peso || 0),
-                    bono_auto: val.bono_auto || false,
-                    bono_origen_tipo: val.bono_origen_tipo || null,
-                    bono_origen: val.bono_origen || null,
-                    bono_regla: val.bono_regla || null,
-                    totalLinea: total
-                })
-            })
-            
+            // 3) Asigna lista y recalcula SOLO lo afectado
+            this.lineas = nuevaLista;
+
             this.$nextTick(() => {
-                this.recalcularBonos()
-            })
+                this.recalculoUltimoAgregado(value);
+            });
         },
+
+        recalculoUltimoAgregado(value) {
+            const items = Array.isArray(value) ? value : [value];
+
+            // ids agregados
+            const ids = items
+                .map(x => String(x?.id ?? x?.cod_producto ?? ''))
+                .filter(Boolean);
+
+            if (!ids.length) return;
+
+            // 🔹 Precios parcial (solo ids)
+            this.lineas = analizaPreciosParcial({
+                lineas: this.lineas,
+                productos: this.$store.state.productos,
+                bonos: this.$store.state.bonos,
+                idsAfectados: ids,
+                // si manejas lista de precios en editor, pásala; si no, quítalo
+                // lista_precios: this.lista_precios_selecta,
+                redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
+                inPlace: true,
+            });
+
+            // 🔹 Bonos parcial (solo ids)
+            this.lineas = analizaGruposParcial({
+                lineas: this.lineas,
+                productos: this.$store.state.productos,
+                bonos: this.$store.state.bonos,
+                idsAfectados: ids,
+                createUUID: this.create_UUID,
+                redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
+                inPlace: true,
+            });
+        },
+
+        recalculoCompleto() {
+            this.lineas = aplicaPreciosYBonos({
+                lineas: this.lineas,
+                productos: this.$store.state.productos,
+                bonos: this.$store.state.bonos,
+                createUUID: this.create_UUID,
+                redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
+                inPlace: true,
+            });
+        },
+
+        create_UUID() {
+            let dt = new Date().getTime();
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                const r = (dt + Math.random() * 16) % 16 | 0;
+                dt = Math.floor(dt / 16);
+                return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+            });
+        },
+
+
         async api_rest(data, metodo) {
 
             var a = axios({
