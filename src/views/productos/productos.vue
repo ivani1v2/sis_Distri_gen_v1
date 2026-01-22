@@ -276,13 +276,13 @@
 
                 <v-row class="mt-n6" dense>
                     <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect" type="number" dense
-                            v-model="escala_may1" label="Escala may 1"
+                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
+                            type="number" dense v-model="escala_may1" label="Escala may 1"
                             persistent-hint></v-text-field>
                     </v-col>
                     <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect" type="number" dense
-                            v-model="precio_may1" label="Precio may 1"
+                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
+                            type="number" dense v-model="precio_may1" label="Precio may 1"
                             persistent-hint></v-text-field>
                     </v-col>
 
@@ -290,13 +290,13 @@
 
                 <v-row class="mt-n6" dense>
                     <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect" type="number" dense
-                            v-model="escala_may2" label="Escala may 2"
+                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
+                            type="number" dense v-model="escala_may2" label="Escala may 2"
                             persistent-hint></v-text-field>
                     </v-col>
                     <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect" type="number" dense
-                            v-model="precio_may2" label="Precio may 2"
+                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
+                            type="number" dense v-model="precio_may2" label="Precio may 2"
                             persistent-hint></v-text-field>
                     </v-col>
 
@@ -330,13 +330,23 @@
                     <v-tabs-items v-model="tabBonos">
                         <v-tab-item px-2>
                             <v-card flat class="pa-3">
-                                <div class="d-flex justify-space-between align-center mb-2">
+                                <div class="d-flex flex-wrap justify-space-between align-center mb-2">
                                     <span class="text-overline grey--text">Promoción de Regalo</span>
-                                    <v-btn color="primary" depressed x-small rounded
-                                        @click="abrirBonoGlobalTab('bono')">
-                                        <v-icon x-small left>mdi-sync</v-icon> {{ grupoBonoAsignado ? 'Cambiar' :
-                                            'Asignar' }}
-                                    </v-btn>
+                                    <div class="d-flex">
+                                        <v-btn color="primary" depressed x-small rounded
+                                            @click="abrirBonoGlobalTab('bono')">
+                                            <v-icon x-small left>mdi-sync</v-icon> {{ grupoBonoAsignado ? 'Cambiar' :
+                                                'Asignar' }}
+                                        </v-btn>
+                                        <v-btn color="success" depressed x-small rounded class="ml-1"
+                                            @click="abrirNuevoBonoDesdeProductos('bono')">
+                                            <v-icon x-small left>mdi-plus</v-icon> Nuevo
+                                        </v-btn>
+                                        <v-btn v-if="grupoBonoAsignado" color="info" depressed x-small rounded class="ml-1"
+                                            @click="abrirVisorProductos(grupoBonoAsignado)">
+                                            <v-icon x-small left>mdi-account-group</v-icon> Ver Productos
+                                        </v-btn>
+                                    </div>
                                 </div>
 
                                 <v-card v-if="grupoBonoAsignado" flat outlined class="pa-0 rounded-lg border-orange">
@@ -398,13 +408,23 @@
 
                         <v-tab-item>
                             <v-card flat class="pa-3">
-                                <div class="d-flex justify-space-between align-center mb-2">
+                                <div class="d-flex flex-wrap justify-space-between align-center mb-2">
                                     <span class="text-overline grey--text">Escalas de Precio</span>
-                                    <v-btn color="primary" depressed x-small rounded
-                                        @click="abrirBonoGlobalTab('precio')">
-                                        <v-icon x-small left>mdi-sync</v-icon> {{ grupoPrecioAsignado ? 'Cambiar' :
-                                            'Asignar' }}
-                                    </v-btn>
+                                    <div class="d-flex">
+                                        <v-btn color="primary" depressed x-small rounded
+                                            @click="abrirBonoGlobalTab('precio')">
+                                            <v-icon x-small left>mdi-sync</v-icon> {{ grupoPrecioAsignado ? 'Cambiar' :
+                                                'Asignar' }}
+                                        </v-btn>
+                                        <v-btn color="success" depressed x-small rounded class="ml-1"
+                                            @click="abrirNuevoBonoDesdeProductos('precio')">
+                                            <v-icon x-small left>mdi-plus</v-icon> Nuevo
+                                        </v-btn>
+                                        <v-btn v-if="grupoPrecioAsignado" color="info" depressed x-small rounded class="ml-1"
+                                            @click="abrirVisorProductos(grupoPrecioAsignado)">
+                                            <v-icon x-small left>mdi-account-group</v-icon> Ver Productos
+                                        </v-btn>
+                                    </div>
                                 </div>
 
                                 <v-card v-if="grupoPrecioAsignado" flat outlined class="rounded-lg border-blue pa-0">
@@ -716,6 +736,11 @@
         <dial_categorias v-if="dial_categorias" @cierra="cerrarYActualizarCategorias" :tipo='tipo_tabla' />
         <dial_alerta_stock_minimo v-if="permisoAlertaStockActivo" v-model="dialogoAlertaStock" />
         <dial_alerta_stock_minimo v-model="dialogoAlertaStockManual" />
+        <dial_config_bono v-model="dial_bono_productos" :bono="bonoSeleccionadoProductos"
+            :proveedoresItems="proveedoresItemsProductos" :productos="productosItems" :editando="editandoBonoProductos"
+            @guardar="guardarBonoDesdeProductos" />
+        
+        <VisorProductosBono v-model="dialVisorProductos" :bono="bonoParaVisor" @producto-agregado="onProductoAgregado" @producto-quitado="onProductoQuitado" />
     </div>
 </template>
 
@@ -726,6 +751,8 @@ import lector from "@/components/lector";
 import moment from 'moment'
 import { imprime_codbarra } from './imprime_cod_barra'
 import { runMigracionBonosUnitariosToGlobales } from './migracion_bonos'
+import dial_config_bono from './dialogos/dial_config_bono.vue';
+import VisorProductosBono from './components/VisorProductosBono.vue';
 import {
     nuevoProducto,
     eliminaProducto,
@@ -733,7 +760,7 @@ import {
     sumaContador,
     allCategorias,
     allBono,
-    nuevoProductoOtraBase
+    nuevoProductoOtraBase,
 } from '../../db'
 import store from '@/store/index'
 import XLSX from 'xlsx'
@@ -744,7 +771,9 @@ export default {
     components: {
         lector,
         dial_categorias,
-        dial_alerta_stock_minimo
+        dial_alerta_stock_minimo,
+        dial_config_bono,
+        VisorProductosBono
     },
     data: () => ({
         dial_adicional: false,
@@ -855,6 +884,12 @@ export default {
         stock_minimo: 0,
         bonosGlobalesCache: [],
         tabBonos: 0,
+        dial_bono_productos: false,
+        bonoSeleccionadoProductos: {},
+        editandoBonoProductos: false,
+        tipoBonoActual: 'precio',
+        dialVisorProductos: false,
+        bonoParaVisor: {},
     }),
 
     async beforeCreate() {
@@ -977,6 +1012,16 @@ export default {
             if (this.grupoBonoAsignado) count++;
             return count;
         },
+        productosItems() {
+      return store.state.productos || [];
+    },
+    proveedoresItemsProductos() {
+      const provs = new Set();
+      (store.state.productos || []).forEach(p => {
+        if (p.proveedor) provs.add(p.proveedor);
+      });
+      return Array.from(provs).sort();
+    },
     },
 
     methods: {
@@ -1532,6 +1577,106 @@ export default {
                 barWidth: 1
             });
         },
+
+        abrirNuevoBonoDesdeProductos(tipo) {
+            this.tipoBonoActual = tipo;
+            this.editandoBonoProductos = false;
+            this.bonoSeleccionadoProductos = {
+                tipo: tipo,
+                activo: true,
+                nombre: '',
+                observacion: '',
+                proveedor: null,
+                fecha_vencimiento: null,
+                ...(tipo === 'precio' ? {
+                    escala_may1: null,
+                    precio_may1: null,
+                    escala_may2: null,
+                    precio_may2: null
+                } : {
+                    data: []
+                })
+            };
+            this.dial_bono_productos = true;
+        },
+
+        editarBonoDesdeProductos(bono) {
+            this.tipoBonoActual = bono.tipo;
+            this.editandoBonoProductos = true;
+            this.bonoSeleccionadoProductos = { ...bono };
+            this.dial_bono_productos = true;
+        },
+
+        async guardarBonoDesdeProductos(bonoData) {
+            if (!bonoData.nombre?.trim()) {
+                store.commit("dialogosnackbar", "Escribe un nombre para el bono.");
+                return;
+            }
+
+            store.commit("dialogoprogress");
+
+            try {
+                const { nuevoBono } = await import('../../db');
+                let codigo;
+                if (this.editandoBonoProductos && this.bonoSeleccionadoProductos.codigo) {
+                    codigo = this.bonoSeleccionadoProductos.codigo;
+                } else {
+                    codigo = this._generarCodigoBono(bonoData.tipo);
+                }
+
+                const payload = {
+                    ...bonoData,
+                    codigo: codigo,
+                    creado: this.editandoBonoProductos ? (this.bonoSeleccionadoProductos.creado || Date.now()) : Date.now(),
+                    usuario: store?.state?.usuario || null,
+                };
+
+                await nuevoBono(codigo, payload);
+                if (bonoData.tipo === 'precio') {
+                    this.grupoPrecioSelect = codigo;
+                } else {
+                    this.grupoBonoSelect = codigo;
+                }
+                await this.cargarBonosGlobalesCache();
+                await this.cargarGruposBonos();
+
+                store.commit("dialogosnackbar", "Bono guardado y asignado correctamente");
+                this.dial_bono_productos = false;
+
+            } catch (e) {
+                console.error('Error guardando bono:', e);
+                store.commit("dialogosnackbar", "Error al guardar el bono");
+            } finally {
+                store.commit("dialogoprogress");
+            }
+        },
+
+        _generarCodigoBono(tipo) {
+            const prefix = tipo === 'precio' ? 'P' : 'B';
+            const existentes = this.bonosGlobalesCache
+                .filter(b => b.tipo === tipo && typeof b.codigo === 'string')
+                .map(b => {
+                    const match = b.codigo.match(/^[PB](\d+)$/i);
+                    return match ? Number(match[1]) : 0;
+                })
+                .filter(n => Number.isFinite(n));
+            const max = existentes.length ? Math.max(...existentes) : 0;
+            return `${prefix}${String(max + 1).padStart(5, '0')}`;
+        },
+
+        abrirVisorProductos(bono) {
+            this.bonoParaVisor = bono;
+            this.dialVisorProductos = true;
+        },
+
+        onProductoAgregado(producto) {
+            this.cargarBonosGlobalesCache();
+        },
+
+        onProductoQuitado(producto) {
+            this.cargarBonosGlobalesCache();
+        },
+        
 
     },
 
