@@ -342,8 +342,8 @@
                                             @click="abrirNuevoBonoDesdeProductos('bono')">
                                             <v-icon x-small left>mdi-plus</v-icon> Nuevo
                                         </v-btn>
-                                        <v-btn v-if="grupoBonoAsignado" color="info" depressed x-small rounded class="ml-1"
-                                            @click="abrirVisorProductos(grupoBonoAsignado)">
+                                        <v-btn v-if="grupoBonoAsignado" color="info" depressed x-small rounded
+                                            class="ml-1" @click="abrirVisorProductos(grupoBonoAsignado)">
                                             <v-icon x-small left>mdi-account-group</v-icon> Ver Productos
                                         </v-btn>
                                     </div>
@@ -389,7 +389,7 @@
                                                     </div>
                                                     <div class="text-overline grey--text lh-1">Límite: {{ r.cantidad_max
                                                         || '∞'
-                                                    }}</div>
+                                                        }}</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -420,8 +420,8 @@
                                             @click="abrirNuevoBonoDesdeProductos('precio')">
                                             <v-icon x-small left>mdi-plus</v-icon> Nuevo
                                         </v-btn>
-                                        <v-btn v-if="grupoPrecioAsignado" color="info" depressed x-small rounded class="ml-1"
-                                            @click="abrirVisorProductos(grupoPrecioAsignado)">
+                                        <v-btn v-if="grupoPrecioAsignado" color="info" depressed x-small rounded
+                                            class="ml-1" @click="abrirVisorProductos(grupoPrecioAsignado)">
                                             <v-icon x-small left>mdi-account-group</v-icon> Ver Productos
                                         </v-btn>
                                     </div>
@@ -739,8 +739,9 @@
         <dial_config_bono v-model="dial_bono_productos" :bono="bonoSeleccionadoProductos"
             :proveedoresItems="proveedoresItemsProductos" :productos="productosItems" :editando="editandoBonoProductos"
             @guardar="guardarBonoDesdeProductos" />
-        
-        <VisorProductosBono v-model="dialVisorProductos" :bono="bonoParaVisor" @producto-agregado="onProductoAgregado" @producto-quitado="onProductoQuitado" />
+
+        <VisorProductosBono v-model="dialVisorProductos" :bono="bonoParaVisor" @producto-agregado="onProductoAgregado"
+            @producto-quitado="onProductoQuitado" />
     </div>
 </template>
 
@@ -1013,15 +1014,15 @@ export default {
             return count;
         },
         productosItems() {
-      return store.state.productos || [];
-    },
-    proveedoresItemsProductos() {
-      const provs = new Set();
-      (store.state.productos || []).forEach(p => {
-        if (p.proveedor) provs.add(p.proveedor);
-      });
-      return Array.from(provs).sort();
-    },
+            return store.state.productos || [];
+        },
+        proveedoresItemsProductos() {
+            const provs = new Set();
+            (store.state.productos || []).forEach(p => {
+                if (p.proveedor) provs.add(p.proveedor);
+            });
+            return Array.from(provs).sort();
+        },
     },
 
     methods: {
@@ -1371,6 +1372,15 @@ export default {
                 return;
             }
             store.commit("dialogoprogress")
+            const tieneGrupoPrecio = !!this.grupoPrecioSelect;
+
+            // si hay grupo de precio global, limpia escalas locales
+            if (tieneGrupoPrecio) {
+                this.escala_may1 = 0;
+                this.precio_may1 = 0;
+                this.escala_may2 = 0;
+                this.precio_may2 = 0;
+            }
             var array = {
                 id: this.id,
                 activo: this.activo,
@@ -1676,7 +1686,7 @@ export default {
         onProductoQuitado(producto) {
             this.cargarBonosGlobalesCache();
         },
-        
+
 
     },
 

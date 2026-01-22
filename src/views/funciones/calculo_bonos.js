@@ -664,17 +664,31 @@ export function analizaPreciosParcial({
   const ids = new Set((idsAfectados || []).map((x) => String(x)));
   if (!ids.size) return lineas;
 
-  // reutiliza tu analizaPrecios, pero “finge” un array solo con esas líneas,
-  // y luego las reinyecta en el array original.
   const ref = inPlace ? lineas : JSON.parse(JSON.stringify(lineas || []));
 
-  const subset = ref.filter(
-    (l) =>
-      ids.has(String(l.id)) &&
-      String(l.operacion || "").toUpperCase() !== "GRATUITA",
-  );
+  const prodById = new Map((productos || []).map(p => [String(p.id), p]));
 
-  // aplica la lógica de precios que ya tienes
+  // 1) detectar grupos_precio involucrados por los ids agregados
+  const gruposAfectados = new Set();
+  ids.forEach((id) => {
+    const p = prodById.get(String(id));
+    if (p?.grupo_precio) gruposAfectados.add(String(p.grupo_precio));
+  });
+
+  // 2) subset = (ids directos) + (todas las líneas que pertenezcan a esos grupos)
+  const subset = ref.filter((l) => {
+    if (String(l.operacion || "").toUpperCase() === "GRATUITA") return false;
+
+    const idLinea = String(l.id);
+    if (ids.has(idLinea)) return true;
+
+    const p = prodById.get(idLinea);
+    if (!p) return false;
+
+    return p.grupo_precio && gruposAfectados.has(String(p.grupo_precio));
+  });
+
+  // 3) recalcular precios (ahora sí con el total real del grupo)
   analizaPrecios({
     lineas: subset,
     productos,
@@ -686,6 +700,7 @@ export function analizaPreciosParcial({
 
   return ref;
 }
+
 export function analizaGruposParcial({
   lineas = [],
   productos = [],
