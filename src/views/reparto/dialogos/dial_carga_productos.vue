@@ -79,9 +79,10 @@
                                 </v-select>
                             </v-col>
                             <v-col cols="6" sm="3" md="2">
-                                <v-btn block color="teal" dark small @click="marcarTodosListos" :disabled="todosListos">
-                                    <v-icon left small>mdi-check-all</v-icon>
-                                    Marcar Todos
+                                <v-btn block :color="todosListos ? 'warning' : 'teal'" dark small
+                                    @click="toggleMarcarTodos" :loading="procesandoMarcarTodos">
+                                    <v-icon left small>{{ todosListos ? 'mdi-close-box' : 'mdi-check-all' }}</v-icon>
+                                    {{ todosListos ? 'Desmarcar Todos' : 'Marcar Todos' }}
                                 </v-btn>
                             </v-col>
                         </v-row>
@@ -109,7 +110,9 @@
                                 </template>
 
                                 <template v-slot:[`item.producto`]="{ item }">
-                                    <div class="font-weight-medium">{{ item.codigo }} - {{ item.nombre }}</div>
+                                    <div class="font-weight-medium">
+                                        {{ item.codigo }} - {{ item.nombre }}
+                                    </div>
                                 </template>
 
                                 <template v-slot:[`item.cantidad_total`]="{ item }">
@@ -163,7 +166,7 @@
                         </v-card>
 
                         <div v-else>
-                            <v-card v-for="item in productosFiltrados" :key="item.key_unico" flat outlined
+                            <v-card v-for="item in productosMostrados" :key="item.key_unico" flat outlined
                                 class="mb-2 rounded-lg border-2"
                                 :class="item.cantidad_subida === item.cantidad_total ? 'success-border' : getRowClass(item)">
 
@@ -181,7 +184,7 @@
                                             <div class="d-flex align-center mt-1">
                                                 <v-chip x-small label outlined color="grey darken-1"
                                                     class="mr-1 font-weight-bold">{{
-                                                    item.codigo }}</v-chip>
+                                                        item.codigo }}</v-chip>
                                                 <v-chip x-small label color="grey lighten-4"
                                                     class="grey--text text--darken-2">{{ item.medida
                                                     }}</v-chip>
@@ -233,6 +236,14 @@
                                     </v-row>
                                 </v-card-text>
                             </v-card>
+
+                            <div v-if="productosMostrados.length < productosFiltrados.length"
+                                class="text-center pb-4 mt-2">
+                                <v-btn small outlined color="teal" @click="verMasProductos">
+                                    <v-icon left small>mdi-chevron-down</v-icon>
+                                    Ver más ({{ productosFiltrados.length - productosMostrados.length }} restantes)
+                                </v-btn>
+                            </div>
                         </div>
                     </v-card>
                 </v-tab-item>
@@ -246,10 +257,10 @@
                                         <div class="d-flex align-end">
                                             <span class="text-h4 font-weight-black success--text line-height-1">{{
                                                 boletasVerificadas
-                                                }}</span>
+                                            }}</span>
                                             <span class="text-h6 grey--text mx-1">/</span>
                                             <span class="text-h6 grey--text text--darken-1">{{ pedidosOrdenados.length
-                                                }}</span>
+                                            }}</span>
                                         </div>
                                         <div class="text-caption grey--text font-weight-bold text-uppercase">Progreso
                                             Total</div>
@@ -259,7 +270,7 @@
                                             :color="porcentajeVerificacion === 100 ? 'success' : 'warning'" size="50"
                                             width="6">
                                             <span class="caption font-weight-bold">{{ Math.round(porcentajeVerificacion)
-                                                }}%</span>
+                                            }}%</span>
                                         </v-progress-circular>
                                     </v-col>
                                 </v-row>
@@ -272,57 +283,76 @@
 
                         <v-card flat outlined class="rounded-xl pa-3 mb-4">
                             <v-row dense align="center" class="mb-2">
-                                <v-col cols="8">
+                                <v-col cols="6" sm="4">
                                     <div class="d-flex align-center">
                                         <v-icon color="teal" small class="mr-1">mdi-qrcode-scan</v-icon>
-                                        <span class="text-subtitle-2 font-weight-bold">Verificación Rápida</span>
+                                        <span class="text-subtitle-2 font-weight-bold d-none d-sm-flex">Verificación
+                                            Rápida</span>
+                                        <span
+                                            class="text-subtitle-2 font-weight-bold d-flex d-sm-none">Verificación</span>
                                     </div>
                                 </v-col>
-                                <v-col cols="4">
+                                <v-col cols="6" sm="4">
                                     <v-select v-model="filtroVerificacion" :items="opcionesVerificacion" dense
                                         hide-details flat solo-inverted background-color="grey lighten-4"
                                         class="compact-select" />
+                                </v-col>
+                                <v-col cols="12" sm="4" class="mt-1 mt-sm-0">
+                                    <v-btn block :color="todasVerificadas ? 'warning' : 'success'" dark small
+                                        @click="toggleVerificarTodas" :loading="procesandoVerificarTodas"
+                                        :disabled="todasVerificadas ? pedidosVerificadosCount === 0 : pedidosVerificablesCount === 0"
+                                        class="text-none px-1">
+
+                                        <v-icon x-small class="mr-1">{{ todasVerificadas ? 'mdi-close-box' :
+                                            'mdi-check-all' }}</v-icon>
+                                        <span class="d-none d-sm-inline">
+                                            {{ todasVerificadas ? 'Desverificar' : 'Verificar' }} Todas
+                                        </span>
+                                        <span class="d-inline d-sm-none">
+                                            {{ todasVerificadas ? 'Desv.' : 'Verif.' }}
+                                        </span>
+                                        <span class="ml-1">
+                                            ({{ todasVerificadas ? pedidosVerificadosCount : pedidosVerificablesCount
+                                            }})
+                                        </span>
+                                    </v-btn>
                                 </v-col>
                             </v-row>
 
                             <v-row dense>
                                 <v-col cols="12">
-                           <v-autocomplete
-  v-model="codigoEscaneado"
-  :items="correlativosFiltrados"
-  outlined
-  rounded
-  dense
-  class="rounded-pill custom-input"
-  hide-details
-  :loading="buscandoComprobante"
-  :placeholder="tipoDocSeleccionado === 'todos' ? 'Serie-Correlativo' : 'Ingrese número'"
-  @keyup.enter="buscarComprobante"
-  ref="inputEscaner"
-  :append-icon="''"
->
-  <template v-slot:prepend-inner>
-    <v-menu offset-y transition="scale-transition">
-      <template v-slot:activator="{ on, attrs }">
-        <v-btn small depressed color="primary" class="rounded-lg mr-2" v-bind="attrs" v-on="on">
-          {{ tipoDocSeleccionado === 'todos' ? '*' : tipoDocSeleccionado }}
-          <v-icon x-small right>mdi-chevron-down</v-icon>
-        </v-btn>
-      </template>
-      <v-list dense>
-        <v-list-item v-for="tipo in tiposDocumento" :key="tipo.value" @click="seleccionarTipoDoc(tipo.value)">
-          <v-list-item-title class="caption font-weight-bold">{{ tipo.text }}</v-list-item-title>
-        </v-list-item>
-      </v-list>
-    </v-menu>
-  </template>
+                                    <v-autocomplete v-model="codigoEscaneado" :items="correlativosFiltrados" outlined
+                                        rounded dense class="rounded-pill custom-input" hide-details
+                                        :loading="buscandoComprobante"
+                                        :placeholder="tipoDocSeleccionado === 'todos' ? 'Serie-Correlativo' : 'Ingrese número'"
+                                        @keyup.enter="buscarComprobante" ref="inputEscaner" :append-icon="''">
+                                        <template v-slot:prepend-inner>
+                                            <v-menu offset-y transition="scale-transition">
+                                                <template v-slot:activator="{ on, attrs }">
+                                                    <v-btn small depressed color="primary" class="rounded-lg mr-2"
+                                                        v-bind="attrs" v-on="on">
+                                                        {{ tipoDocSeleccionado === 'todos' ? '*' : tipoDocSeleccionado
+                                                        }}
+                                                        <v-icon x-small right>mdi-chevron-down</v-icon>
+                                                    </v-btn>
+                                                </template>
+                                                <v-list dense>
+                                                    <v-list-item v-for="tipo in tiposDocumento" :key="tipo.value"
+                                                        @click="seleccionarTipoDoc(tipo.value)">
+                                                        <v-list-item-title class="caption font-weight-bold">{{ tipo.text
+                                                            }}</v-list-item-title>
+                                                    </v-list-item>
+                                                </v-list>
+                                            </v-menu>
+                                        </template>
 
-  <template v-slot:append-outer>
-    <v-btn icon small class="mt-n1" color="indigo" @click="abrirCamara" :disabled="buscandoComprobante">
-      <v-icon>mdi-barcode-scan</v-icon>
-    </v-btn>
-  </template>
-</v-autocomplete>
+                                        <template v-slot:append-outer>
+                                            <v-btn icon small class="mt-n1" color="indigo" @click="abrirCamara"
+                                                :disabled="buscandoComprobante">
+                                                <v-icon>mdi-barcode-scan</v-icon>
+                                            </v-btn>
+                                        </template>
+                                    </v-autocomplete>
                                 </v-col>
 
                                 <v-col cols="12" v-if="codigoEscaneado" class="mt-2 animate-fade-in">
@@ -335,71 +365,84 @@
                             </v-row>
                         </v-card>
 
-                        <v-row dense>
-                            <v-col v-for="(pedido, idx) in pedidosFiltradosVerificacion" :key="pedido.numeracion"
-                                cols="12" sm="6" md="4">
-                                <v-card outlined class="rounded-lg mb-1" :class="getCardClassPedido(pedido, idx)">
-                                    <v-card-text class="pa-2">
-                                        <v-row no-gutters align="center">
-                                            <v-avatar
-                                                :color="pedido.verificado ? 'success' : (idx === 0 ? 'info' : 'grey lighten-2')"
-                                                size="24" class="mr-2 white--text font-weight-bold text-caption">
-                                                {{ idx + 1 }}
-                                            </v-avatar>
+                        <div :style="!isMobile ? 'max-height: 66vh; overflow-y: auto; overflow-x: hidden;' : ''">
+                            <v-row dense>
+                                <v-col v-for="(pedido, idx) in pedidosMostradosVerificacion" :key="pedido.numeracion"
+                                    cols="12" sm="6" md="4">
+                                    <v-card outlined class="rounded-lg mb-1" :class="getCardClassPedido(pedido, idx)">
+                                        <v-card-text class="pa-2">
+                                            <v-row no-gutters align="center">
+                                                <v-avatar
+                                                    :color="pedido.verificado ? 'success' : (idx === 0 ? 'info' : 'grey lighten-2')"
+                                                    size="24" class="mr-2 white--text font-weight-bold text-caption">
+                                                    {{ idx + 1 }}
+                                                </v-avatar>
 
-                                            <v-col class="text-truncate">
-                                                <div class="text-subtitle-2 font-weight-black text-truncate mb-n1">
-                                                    {{ pedido.cliente }}
+                                                <v-col class="text-truncate">
+                                                    <div class="text-subtitle-2 font-weight-black text-truncate mb-n1">
+                                                        {{ pedido.cliente }}
+                                                    </div>
+                                                    <span class="text-caption grey--text font-weight-medium">
+                                                        {{ formatSerieCorrelativo(pedido.serie, pedido.correlativo) }}
+                                                    </span>
+                                                </v-col>
+
+                                                <v-icon v-if="pedido.verificado"
+                                                    color="success">mdi-check-decagram</v-icon>
+                                                <v-icon v-else-if="!puedeVerificarPedido(pedido)"
+                                                    color="warning">mdi-alert-circle-outline</v-icon>
+                                            </v-row>
+
+                                            <v-row no-gutters align="center" class="mt-2">
+                                                <div class="d-flex align-center grey--text text--darken-1 mr-3">
+                                                    <v-icon x-small class="mr-1">mdi-package-variant-closed</v-icon>
+                                                    <span class="text-caption font-weight-bold">{{
+                                                        pedido.productos.length
+                                                        }} SKU</span>
                                                 </div>
-                                                <span class="text-caption grey--text font-weight-medium">
-                                                    {{ formatSerieCorrelativo(pedido.serie, pedido.correlativo) }}
-                                                </span>
-                                            </v-col>
 
-                                            <v-icon v-if="pedido.verificado" color="success">mdi-check-decagram</v-icon>
-                                            <v-icon v-else-if="!puedeVerificarPedido(pedido)"
-                                                color="warning">mdi-alert-circle-outline</v-icon>
-                                        </v-row>
+                                                <v-spacer></v-spacer>
 
-                                        <v-row no-gutters align="center" class="mt-2">
-                                            <div class="d-flex align-center grey--text text--darken-1 mr-3">
-                                                <v-icon x-small class="mr-1">mdi-package-variant-closed</v-icon>
-                                                <span class="text-caption font-weight-bold">{{ pedido.productos.length
-                                                }} SKU</span>
-                                            </div>
+                                                <v-chip v-if="pedido.verificado" x-small color="success lighten-5"
+                                                    class="success--text font-weight-bold">
+                                                    VERIFICADO
+                                                </v-chip>
+                                                <v-chip v-else-if="!puedeVerificarPedido(pedido)" x-small
+                                                    color="warning lighten-5" class="warning--text font-weight-bold">
+                                                    INCOMPLETO
+                                                </v-chip>
+                                                <v-chip v-else x-small color="grey lighten-4"
+                                                    class="grey--text text--darken-2">
+                                                    PENDIENTE
+                                                </v-chip>
+                                            </v-row>
+                                        </v-card-text>
 
+                                        <v-card-actions class="pa-2 pt-0">
+                                            <v-btn x-small text color="primary" class="text-none"
+                                                @click="abrirDialogPedido(pedido)">
+                                                <v-icon left x-small>mdi-magnify</v-icon>Detalles
+                                            </v-btn>
                                             <v-spacer></v-spacer>
+                                            <v-btn v-if="!pedido.verificado && puedeVerificarPedido(pedido)" x-small
+                                                color="success" depressed class="text-none rounded-md px-3"
+                                                @click="verificarPedidoManual(pedido)">
+                                                <v-icon left x-small>mdi-check</v-icon>Verificar
+                                            </v-btn>
+                                        </v-card-actions>
+                                    </v-card>
+                                </v-col>
+                            </v-row>
+                        </div>
 
-                                            <v-chip v-if="pedido.verificado" x-small color="success lighten-5"
-                                                class="success--text font-weight-bold">
-                                                VERIFICADO
-                                            </v-chip>
-                                            <v-chip v-else-if="!puedeVerificarPedido(pedido)" x-small
-                                                color="warning lighten-5" class="warning--text font-weight-bold">
-                                                INCOMPLETO
-                                            </v-chip>
-                                            <v-chip v-else x-small color="grey lighten-4"
-                                                class="grey--text text--darken-2">
-                                                PENDIENTE
-                                            </v-chip>
-                                        </v-row>
-                                    </v-card-text>
-
-                                    <v-card-actions class="pa-2 pt-0">
-                                        <v-btn x-small text color="primary" class="text-none"
-                                            @click="abrirDialogPedido(pedido)">
-                                            <v-icon left x-small>mdi-magnify</v-icon>Detalles
-                                        </v-btn>
-                                        <v-spacer></v-spacer>
-                                        <v-btn v-if="!pedido.verificado && puedeVerificarPedido(pedido)" x-small
-                                            color="success" depressed class="text-none rounded-md px-3"
-                                            @click="verificarPedidoManual(pedido)">
-                                            <v-icon left x-small>mdi-check</v-icon>Verificar
-                                        </v-btn>
-                                    </v-card-actions>
-                                </v-card>
-                            </v-col>
-                        </v-row>
+                        <div v-if="isMobile && pedidosMostradosVerificacion.length < pedidosFiltradosVerificacion.length"
+                            class="text-center pb-4 mt-2">
+                            <v-btn small outlined color="teal" @click="verMasPedidos">
+                                <v-icon left small>mdi-chevron-down</v-icon>
+                                Ver más ({{ pedidosFiltradosVerificacion.length - pedidosMostradosVerificacion.length }}
+                                restantes)
+                            </v-btn>
+                        </div>
                     </v-card>
                 </v-tab-item>
             </v-tabs-items>
@@ -435,7 +478,10 @@
                         </thead>
                         <tbody>
                             <tr v-for="pedido in productoActual.pedidos" :key="pedido.key_pedido">
-                                <td class="text-caption">{{ pedido.cliente_nombre }}</td>
+                                <td class="text-caption">
+                                    {{ pedido.cliente_nombre }}
+                                    <v-chip v-if="pedido.es_bono" x-small color="purple" dark class="ml-1">BONO</v-chip>
+                                </td>
                                 <td class="text-right">
                                     <strong>{{ pedido.cantidad }}</strong> {{ productoActual.medida }}
                                 </td>
@@ -493,7 +539,11 @@
                         <tbody>
                             <tr v-for="(prod, i) in pedidoActual.productos" :key="i">
                                 <td>
-                                    <div class="text-caption font-weight-medium">{{ prod.nombre }}</div>
+                                    <div class="text-caption font-weight-medium">
+                                        {{ prod.nombre }}
+                                        <v-chip v-if="prod.es_bono" x-small color="purple" dark
+                                            class="ml-1">BONO</v-chip>
+                                    </div>
                                     <div class="text-caption grey--text">{{ prod.codigo }}</div>
                                 </td>
                                 <td class="text-center">
@@ -621,9 +671,93 @@
             </v-card>
         </v-dialog>
 
+        <v-dialog v-model="dialogConfirmarMarcar" max-width="400">
+            <v-card>
+                <v-card-title class="teal white--text py-3">
+                    <v-icon left color="white">mdi-alert-circle</v-icon>
+                    {{ accionMarcar === 'marcar' ? 'Marcar Todos' : 'Desmarcar Todos' }}
+                </v-card-title>
+                <v-card-text class="pa-4 text-center">
+                    <v-icon x-large :color="accionMarcar === 'marcar' ? 'teal' : 'warning'" class="mb-3">
+                        {{ accionMarcar === 'marcar' ? 'mdi-check-circle' : 'mdi-alert-circle' }}
+                    </v-icon>
+                    <div class="text-h6 font-weight-bold mb-2">
+                        ¿Está seguro?
+                    </div>
+                    <div class="text-body-1">
+                        {{ accionMarcar === 'marcar'
+                            ? `Se marcarán ${productosDesbloqueadosCount} productos como listos.`
+                            : `Se desmarcarán ${productosDesbloqueadosCount} productos.` }}
+                    </div>
+                    <div class="text-caption grey--text mt-2">
+                        *Los productos bloqueados no serán afectados
+                    </div>
+                </v-card-text>
+                <v-card-actions class="pa-3">
+                    <v-spacer></v-spacer>
+                    <v-btn text color="grey" @click="dialogConfirmarMarcar = false">
+                        Cancelar
+                    </v-btn>
+                    <v-btn :color="accionMarcar === 'marcar' ? 'teal' : 'warning'" dark @click="confirmarAccionMarcar">
+                        {{ accionMarcar === 'marcar' ? 'Sí, Marcar' : 'Sí, Desmarcar' }}
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="3000">
             {{ snackbarText }}
         </v-snackbar>
+        <!-- Diálogo de confirmación para Verificar/Desverificar Todas -->
+        <v-dialog v-model="dialogConfirmarVerificar" max-width="450">
+            <v-card>
+                <v-card-title class="teal white--text py-3">
+                    <v-icon left color="white">mdi-check-decagram</v-icon>
+                    {{ accionVerificar === 'verificar' ? 'Verificar Todas' : 'Desverificar Todas' }}
+                </v-card-title>
+                <v-card-text class="pa-4">
+                    <div class="text-center mb-3">
+                        <v-icon x-large :color="accionVerificar === 'verificar' ? 'success' : 'warning'">
+                            {{ accionVerificar === 'verificar' ? 'mdi-check-circle' : 'mdi-alert-circle' }}
+                        </v-icon>
+                        <div class="text-h6 font-weight-bold mt-2">
+                            ¿Está seguro?
+                        </div>
+                    </div>
+
+                    <v-alert v-if="accionVerificar === 'verificar'" dense text type="info" class="mb-3">
+                        Solo se verificarán las boletas cuyos productos estén completamente alistados.
+                    </v-alert>
+
+                    <div class="text-body-1">
+                        {{ accionVerificar === 'verificar'
+                            ? `Se verificarán ${pedidosVerificablesCount} boletas.`
+                            : `Se desverificarán ${pedidosVerificadosCount} boletas.` }}
+                    </div>
+
+                    <div v-if="accionVerificar === 'verificar' && pedidosNoVerificablesCount > 0"
+                        class="text-caption warning--text mt-2">
+                        <v-icon x-small color="warning" class="mr-1">mdi-alert</v-icon>
+                        {{ pedidosNoVerificablesCount }} boletas no se pueden verificar
+                        (productos incompletos)
+                    </div>
+
+                    <div class="text-caption grey--text mt-3">
+                        *Esta acción afectará el estado de los productos relacionados
+                    </div>
+                </v-card-text>
+                <v-card-actions class="pa-3">
+                    <v-spacer></v-spacer>
+                    <v-btn text color="grey" @click="dialogConfirmarVerificar = false">
+                        Cancelar
+                    </v-btn>
+                    <v-btn :color="accionVerificar === 'verificar' ? 'success' : 'warning'" dark
+                        @click="confirmarAccionVerificar">
+                        {{ accionVerificar === 'verificar' ? 'Sí, Verificar' : 'Sí, Desverificar' }}
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </v-dialog>
 </template>
 
@@ -632,6 +766,15 @@ import { db, all_Cabecera_p, all_detalle_p, allProductoOtraBase } from '@/db';
 import store from '@/store/index';
 import moment from 'moment';
 import jsQR from 'jsqr';
+
+const cacheReparto = {
+    grupo: null,
+    productosConsolidados: null,
+    pedidosOrdenados: null,
+    productosStock: null,
+    timestamp: null
+};
+const CACHE_TTL = 5 * 60 * 1000;
 
 export default {
     name: 'DialCargaProductos',
@@ -701,9 +844,44 @@ export default {
                 { text: 'Verificados', value: 'verificados' },
                 { text: 'Pendientes', value: 'pendientes' },
             ],
+            pageProductos: 1,
+            pagePedidos: 1,
+            pageSize: 15,
+            accionMarcar: null,
+            procesandoVerificarTodas: false,
+            dialogConfirmarVerificar: false,
+            accionVerificar: null,
+            procesandoMarcarTodos: false,
+            dialogConfirmarMarcar: false,
         };
     },
     computed: {
+        pedidosVerificadosCount() {
+            return this.pedidosFiltradosVerificacion.filter(p => p.verificado).length;
+        },
+        todasVerificadas() {
+            if (this.pedidosFiltradosVerificacion.length === 0) return false;
+            return this.pedidosFiltradosVerificacion.every(p => p.verificado);
+        },
+
+        pedidosPendientesCount() {
+            return this.pedidosFiltradosVerificacion.filter(p => !p.verificado).length;
+        },
+
+        pedidosVerificablesCount() {
+            return this.pedidosFiltradosVerificacion.filter(p =>
+                !p.verificado && this.puedeVerificarPedido(p)
+            ).length;
+        },
+
+        pedidosNoVerificablesCount() {
+            return this.pedidosFiltradosVerificacion.filter(p =>
+                !p.verificado && !this.puedeVerificarPedido(p)
+            ).length;
+        },
+        productosDesbloqueadosCount() {
+            return this.productosConsolidados.filter(p => !p.bloqueado).length;
+        },
         boletasVerificadasFiltradas() {
             return this.pedidosFiltradosVerificacion.filter(p => p.verificado).length;
         },
@@ -721,6 +899,16 @@ export default {
                 return this.pedidosOrdenados.filter(p => !p.verificado);
             }
             return this.pedidosOrdenados;
+        },
+        productosMostrados() {
+            if (!this.isMobile) return this.productosFiltrados;
+            const end = this.pageProductos * this.pageSize;
+            return this.productosFiltrados.slice(0, end);
+        },
+        pedidosMostradosVerificacion() {
+            if (!this.isMobile) return this.pedidosFiltradosVerificacion;
+            const end = this.pagePedidos * this.pageSize;
+            return this.pedidosFiltradosVerificacion.slice(0, end);
         },
 
         isMobile() {
@@ -768,7 +956,7 @@ export default {
             return (this.boletasVerificadas / this.pedidosOrdenados.length) * 100;
         },
         puedeGuardar() {
-            return this.todosListos && this.boletasVerificadas === this.pedidosOrdenados.length;
+            return true;
         },
         todosSeleccionados() {
             if (!this.productosFiltrados.length) return false;
@@ -784,6 +972,11 @@ export default {
             );
         }
     },
+    watch: {
+        filtroVerificacion() {
+            this.pagePedidos = 1;
+        }
+    },
     async created() {
         await this.cargarDatos();
     },
@@ -791,6 +984,34 @@ export default {
         async cargarDatos() {
             try {
                 store.commit('dialogoprogress', true);
+
+                const ahora = Date.now();
+                const cacheValido = cacheReparto.grupo === this.grupo &&
+                    cacheReparto.timestamp &&
+                    (ahora - cacheReparto.timestamp) < CACHE_TTL &&
+                    cacheReparto.productosConsolidados;
+
+                if (cacheValido) {
+                    this.productosStock = { ...cacheReparto.productosStock };
+                    this.productosConsolidados = JSON.parse(JSON.stringify(cacheReparto.productosConsolidados));
+                    this.pedidosOrdenados = JSON.parse(JSON.stringify(cacheReparto.pedidosOrdenados));
+
+                    const snapCarga = await db.database()
+                        .ref(store.state.baseDatos.bd)
+                        .child('pedidos')
+                        .child('carga_reparto')
+                        .child(this.grupo)
+                        .once('value');
+
+                    if (snapCarga.exists()) {
+                        this.cargaExistente = snapCarga.val();
+                        this.aplicarCargaExistente();
+                    }
+
+                    this.filtrarProductos();
+                    this.filtrarCorrelativos();
+                    return;
+                }
 
                 const snapStock = await allProductoOtraBase(store.state.baseDatos.bd).once('value');
                 if (snapStock.exists()) {
@@ -874,17 +1095,21 @@ export default {
                         const stockInfo = this.productosStock[codigo] || { stock: 0, peso: 0 };
                         const pesoLinea = Number(det.peso_total || det.peso || 0) || (stockInfo.peso * cantidad);
 
+                        const esBono = String(det.operacion || '').toUpperCase() === 'GRATUITA' || det.bono_auto === true;
+
                         if (!productosMap.has(keyUnico)) {
                             productosMap.set(keyUnico, {
                                 key_unico: keyUnico,
                                 codigo,
                                 nombre: det.nombre || 'Sin nombre',
+                                nombre_display: det.nombre,
                                 medida,
                                 cantidad_total: 0,
                                 cantidad_subida: 0,
                                 stock: stockInfo.stock,
                                 peso_linea: 0,
                                 bloqueado: false,
+                                es_bono: esBono,
                                 pedidos: []
                             });
                         }
@@ -902,7 +1127,8 @@ export default {
                             cliente_nombre: cab.cliente || cab.cliente_nombre || 'Sin nombre',
                             cantidad: cantidad,
                             orden_lifo: ordenLifo,
-                            orden_carga: ordenCarga
+                            orden_carga: ordenCarga,
+                            es_bono: esBono
                         });
 
                         const pedido = pedidosMap.get(cab.numeracion);
@@ -911,7 +1137,8 @@ export default {
                             nombre: det.nombre || 'Sin nombre',
                             medida,
                             cantidad,
-                            peso: pesoLinea
+                            peso: pesoLinea,
+                            es_bono: esBono
                         });
                     });
                 }
@@ -925,6 +1152,12 @@ export default {
 
                 this.pedidosOrdenados = Array.from(pedidosMap.values())
                     .sort((a, b) => a.orden_carga - b.orden_carga);
+
+                cacheReparto.grupo = this.grupo;
+                cacheReparto.productosStock = { ...this.productosStock };
+                cacheReparto.productosConsolidados = JSON.parse(JSON.stringify(this.productosConsolidados));
+                cacheReparto.pedidosOrdenados = JSON.parse(JSON.stringify(this.pedidosOrdenados));
+                cacheReparto.timestamp = Date.now();
 
                 if (this.cargaExistente) {
                     this.aplicarCargaExistente();
@@ -995,6 +1228,15 @@ export default {
             }
 
             this.productosFiltrados = items;
+            this.pageProductos = 1;
+        },
+
+        verMasProductos() {
+            this.pageProductos += 1;
+        },
+
+        verMasPedidos() {
+            this.pagePedidos += 1;
         },
 
         abrirDialogClientes(item) {
@@ -1014,7 +1256,6 @@ export default {
                 valor = 0;
             }
 
-            // Redondear a 2 decimales para evitar problemas de precisión
             valor = Math.round(valor * 100) / 100;
 
             item.cantidad_subida = valor;
@@ -1049,11 +1290,9 @@ export default {
 
         formatPeso(peso) {
             if (!peso || peso === 0) return '-';
-            // Si es entero, no mostrar decimales
             if (Number.isInteger(peso)) {
                 return peso.toString();
             }
-            // Si tiene decimales, mostrar hasta 2 decimales
             return peso.toFixed(2);
         },
 
@@ -1095,11 +1334,9 @@ export default {
                 this.buscandoComprobante = true;
                 let codigo = this.codigoEscaneado.trim().toUpperCase();
 
-                // Si solo ingresaron números
                 if (/^\d+$/.test(codigo)) {
                     const correlativoFormateado = codigo.padStart(8, '0');
 
-                    // Si hay un tipo seleccionado, buscar con ese tipo
                     if (this.tipoDocSeleccionado !== 'todos') {
                         const pedidoConSerie = this.pedidosOrdenados.find(p =>
                             p.serie && p.serie.charAt(0).toUpperCase() === this.tipoDocSeleccionado
@@ -1108,9 +1345,8 @@ export default {
                             codigo = `${pedidoConSerie.serie}-${correlativoFormateado}`;
                         }
                     } else {
-                        // Sin tipo seleccionado, buscar en todos los pedidos por correlativo
                         const pedidoPorCorrelativo = this.pedidosOrdenados.find(p => {
-                            const corrNum = p.correlativo.replace(/\D/g, ''); // Solo números del correlativo
+                            const corrNum = p.correlativo.replace(/\D/g, '');
                             return corrNum === correlativoFormateado || corrNum.endsWith(codigo) || corrNum === codigo;
                         });
                         if (pedidoPorCorrelativo) {
@@ -1382,11 +1618,6 @@ export default {
         },
 
         async guardarCarga() {
-            if (!this.puedeGuardar) {
-                this.dialogAdvertenciaGuardar = true;
-                return;
-            }
-
             try {
                 this.guardando = true;
 
@@ -1395,12 +1626,19 @@ export default {
                     .filter(p => p.verificado)
                     .map(p => p.numeracion);
 
+                let estadoCarga = 'pendiente';
+                if (porcentaje >= 100) {
+                    estadoCarga = 'completo';
+                } else if (porcentaje > 0) {
+                    estadoCarga = 'incompleto';
+                }
+
                 const datosCarga = {
                     grupo: this.grupo,
                     fecha_carga: moment().unix(),
                     fecha_carga_str: moment().format('DD/MM/YYYY HH:mm'),
                     usuario: store.state.permisos?.correo || 'sistema',
-                    estado: 'completo',
+                    estado: estadoCarga,
                     productos: this.productosConsolidados.map(p => ({
                         key_unico: p.key_unico,
                         codigo: p.codigo,
@@ -1439,7 +1677,8 @@ export default {
                     .set({
                         porcentaje: porcentaje,
                         fecha: moment().unix(),
-                        completo: true
+                        estado: estadoCarga,
+                        completo: porcentaje >= 100
                     });
 
                 this.cargaExistente = datosCarga;
@@ -1502,7 +1741,167 @@ export default {
             this.cerrarCamara();
             this.dial = false;
             this.$emit('cerrar');
-        }
+        },
+        toggleMarcarTodos() {
+            if (this.todosListos) {
+                this.accionMarcar = 'desmarcar';
+                this.dialogConfirmarMarcar = true;
+            } else {
+                this.accionMarcar = 'marcar';
+                this.dialogConfirmarMarcar = true;
+            }
+        },
+
+        confirmarAccionMarcar() {
+            this.dialogConfirmarMarcar = false;
+
+            if (this.accionMarcar === 'marcar') {
+                this.marcarTodosListos();
+            } else {
+                this.desmarcarTodos();
+            }
+        },
+
+        async marcarTodosListos() {
+            try {
+                this.procesandoMarcarTodos = true;
+                const productosDesbloqueados = this.productosConsolidados.filter(p => !p.bloqueado);
+
+                if (productosDesbloqueados.length === 0) {
+                    this.mostrarMsg('No hay productos para marcar', 'info');
+                    return;
+                }
+                productosDesbloqueados.forEach(item => {
+                    item.cantidad_subida = item.cantidad_total;
+                });
+
+                this.filtrarProductos();
+                this.mostrarMsg(`${productosDesbloqueados.length} productos marcados como listos`, 'success');
+
+            } catch (error) {
+                this.mostrarMsg('Error al marcar productos: ' + error.message, 'error');
+            } finally {
+                this.procesandoMarcarTodos = false;
+            }
+        },
+
+        async desmarcarTodos() {
+            try {
+                this.procesandoMarcarTodos = true;
+                const productosDesbloqueados = this.productosConsolidados.filter(p => !p.bloqueado);
+
+                if (productosDesbloqueados.length === 0) {
+                    this.mostrarMsg('No hay productos para desmarcar', 'info');
+                    return;
+                }
+                productosDesbloqueados.forEach(item => {
+                    item.cantidad_subida = 0;
+                });
+
+                this.filtrarProductos();
+                this.mostrarMsg(`${productosDesbloqueados.length} productos desmarcados`, 'warning');
+
+            } catch (error) {
+                this.mostrarMsg('Error al desmarcar productos: ' + error.message, 'error');
+            } finally {
+                this.procesandoMarcarTodos = false;
+            }
+        },
+        toggleVerificarTodas() {
+            if (this.todasVerificadas) {
+                this.accionVerificar = 'desverificar';
+                this.dialogConfirmarVerificar = true;
+            } else {
+                this.accionVerificar = 'verificar';
+                this.dialogConfirmarVerificar = true;
+            }
+        },
+
+        confirmarAccionVerificar() {
+            this.dialogConfirmarVerificar = false;
+
+            if (this.accionVerificar === 'verificar') {
+                this.verificarTodas();
+            } else {
+                this.desverificarTodas();
+            }
+        },
+
+        async verificarTodas() {
+            try {
+                this.procesandoVerificarTodas = true;
+                const pedidosVerificables = this.pedidosFiltradosVerificacion.filter(p =>
+                    !p.verificado && this.puedeVerificarPedido(p)
+                );
+
+                if (pedidosVerificables.length === 0) {
+                    this.mostrarMsg('No hay boletas que se puedan verificar', 'info');
+                    return;
+                }
+                pedidosVerificables.forEach(pedido => {
+                    pedido.verificado = true;
+                    pedido.productos.forEach(prod => {
+                        const keyUnico = `${prod.codigo}_${prod.medida}`;
+                        const producto = this.productosConsolidados.find(p => p.key_unico === keyUnico);
+                        if (producto) {
+                            const todosVerificados = producto.pedidos.every(ped => {
+                                const pedidoCompleto = this.pedidosOrdenados.find(p => p.numeracion === ped.numeracion);
+                                return pedidoCompleto && pedidoCompleto.verificado;
+                            });
+                            if (todosVerificados) {
+                                producto.bloqueado = true;
+                            }
+                        }
+                    });
+                });
+
+                this.filtrarProductos();
+
+                let mensaje = `${pedidosVerificables.length} boletas verificadas`;
+                if (this.pedidosNoVerificablesCount > 0) {
+                    mensaje += ` (${this.pedidosNoVerificablesCount} no verificables por productos incompletos)`;
+                }
+
+                this.mostrarMsg(mensaje, 'success');
+
+            } catch (error) {
+                this.mostrarMsg('Error al verificar boletas: ' + error.message, 'error');
+            } finally {
+                this.procesandoVerificarTodas = false;
+            }
+        },
+
+        async desverificarTodas() {
+            try {
+                this.procesandoVerificarTodas = true;
+
+                const pedidosVerificados = this.pedidosFiltradosVerificacion.filter(p => p.verificado);
+
+                if (pedidosVerificados.length === 0) {
+                    this.mostrarMsg('No hay boletas verificadas para desverificar', 'info');
+                    return;
+                }
+                pedidosVerificados.forEach(pedido => {
+                    pedido.verificado = false;
+
+                    pedido.productos.forEach(prod => {
+                        const keyUnico = `${prod.codigo}_${prod.medida}`;
+                        const producto = this.productosConsolidados.find(p => p.key_unico === keyUnico);
+                        if (producto) {
+                            producto.bloqueado = false;
+                        }
+                    });
+                });
+
+                this.filtrarProductos();
+                this.mostrarMsg(`${pedidosVerificados.length} boletas desverificadas`, 'warning');
+
+            } catch (error) {
+                this.mostrarMsg('Error al desverificar boletas: ' + error.message, 'error');
+            } finally {
+                this.procesandoVerificarTodas = false;
+            }
+        },
     }
 };
 </script>
@@ -1607,22 +2006,39 @@ export default {
     }
 }
 
-/* Ajuste para el input redondeado de Vuetify */
 .custom-input :deep(.v-input__slot) {
-  padding-left: 8px !important;
-  padding-right: 8px !important; /* <-- clave */
-  background: #fff !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    /* <-- clave */
+    background: #fff !important;
 }
 
 
-.line-height-tight { line-height: 1.2 !important; }
-.lh-1 { line-height: 1 !important; margin-bottom: 2px !important; }
-.bg-light { background-color: #f8f9fa; }
-.border-right { border-right: 1px solid #e0e0e0; }
-.border-left { border-left: 1px solid #e0e0e0; }
-.success-border { border: 2px solid #4CAF50 !important; }
+.line-height-tight {
+    line-height: 1.2 !important;
+}
 
-/* Quitar flechas del input number */
+.lh-1 {
+    line-height: 1 !important;
+    margin-bottom: 2px !important;
+}
+
+.bg-light {
+    background-color: #f8f9fa;
+}
+
+.border-right {
+    border-right: 1px solid #e0e0e0;
+}
+
+.border-left {
+    border-left: 1px solid #e0e0e0;
+}
+
+.success-border {
+    border: 2px solid #4CAF50 !important;
+}
+
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
     -webkit-appearance: none;

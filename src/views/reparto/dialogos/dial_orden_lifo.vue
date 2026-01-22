@@ -148,7 +148,7 @@
                     </v-btn>
                     <v-btn color="success" @click="confirmar" :loading="cargando" class="flex-grow-1">
                         <v-icon left small>mdi-check</v-icon>
-                        Crear Reparto
+                        Confirmar Orden
                     </v-btn>
                 </div>
             </v-card-actions>

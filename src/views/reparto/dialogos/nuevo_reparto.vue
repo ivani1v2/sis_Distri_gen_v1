@@ -272,6 +272,10 @@
                 </v-card-text>
 
                 <v-card-actions class="px-4 pb-4">
+                    <v-btn :color="ordenConfigurado ? 'success' : 'orange'" outlined @click="abrirOrdenLIFO">
+                        <v-icon left>{{ ordenConfigurado ? 'mdi-check-circle' : 'mdi-sort-variant' }}</v-icon>
+                        {{ ordenConfigurado ? 'Orden Configurado' : 'Orden de Carga' }}
+                    </v-btn>
                     <v-spacer></v-spacer>
                     <v-btn color="success" large @click="confirmarCrearReparto">
                         <v-icon left>mdi-check-circle</v-icon> Crear
@@ -324,6 +328,7 @@ export default {
             dialogOrdenLifo: false,
             pedidosParaOrdenar: [],
             pedidosOrdenados: [],
+            ordenConfigurado: false,
             date1: moment().format("YYYY-MM-DD"),
             date2: moment().format("YYYY-MM-DD"),
             pedidosArray: [],
@@ -599,22 +604,29 @@ export default {
                     : alert("Selecciona al menos un documento.");
                 return;
             }
-            // Obtener los pedidos seleccionados
             const set = new Set(this.selectedIds.map(String));
             this.pedidosParaOrdenar = this.pedidosArray.filter(p => set.has(String(p.id)));
             
-            // Abrir diálogo de ordenamiento LIFO
+            this.ordenConfigurado = false;
+            this.pedidosOrdenados = [];
+            
+            this.fechaTraslado = this.date2;
+            this.fechaEmision = this.date2;
+            this.dialogCrear = true;
+        },
+
+        abrirOrdenLIFO() {
             this.dialogOrdenLifo = true;
         },
 
         onConfirmarOrdenLifo(pedidosOrdenados) {
             this.pedidosOrdenados = pedidosOrdenados;
+            this.ordenConfigurado = true;
             this.dialogOrdenLifo = false;
             
-            // Configurar fechas y abrir diálogo de confirmación
-            this.fechaTraslado = this.date2;
-            this.fechaEmision = this.date2;
-            this.dialogCrear = true;
+            this.$toast && this.$toast.success
+                ? this.$toast.success("Orden de carga configurado")
+                : null;
         },
 
         async confirmarCrearReparto() {
@@ -636,7 +648,6 @@ export default {
                     ? 'todos'
                     : this.vendedoresSeleccionados.join(',');
 
-                // Crear array de pedidos con orden LIFO
                 const pedidosConOrden = this.pedidosOrdenados.length > 0
                     ? this.pedidosOrdenados.map(p => ({
                         id: p.id,

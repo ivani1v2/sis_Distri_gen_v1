@@ -133,7 +133,12 @@
                                     <v-btn x-small :color="getCargaButtonColor(pedido)" class="mx-1 my-1" depressed rounded
                                         elevation="1" @click="abrirCargaProductos(pedido)">
                                         <v-icon left small :color="getCargaIconColor(pedido)">{{ getCargaIcon(pedido) }}</v-icon>
-                                        <span :class="getCargaTextClass(pedido)" class="font-weight-medium">Carga</span>
+                                        <span :class="getCargaTextClass(pedido)" class="font-weight-medium">
+                                            Carga
+                                            <template v-if="pedido.estado_carga && pedido.estado_carga.porcentaje > 0 && !pedido.estado_carga.completo">
+                                                ({{ Math.round(pedido.estado_carga.porcentaje) }}%)
+                                            </template>
+                                        </span>
                                     </v-btn>
 
                                     <v-btn x-small color="indigo lighten-5" class="mx-1 my-1" depressed rounded
@@ -224,9 +229,12 @@
                         Detalle
                     </v-btn>
 
-                    <v-btn x-small text :color="pedido.estado_carga && pedido.estado_carga.completo ? 'cyan darken-2' : 'orange darken-1'" class="ml-1" @click="abrirCargaProductos(pedido)">
+                    <v-btn x-small text :color="getCargaIconColor(pedido)" class="ml-1" @click="abrirCargaProductos(pedido)">
                         <v-icon left x-small>{{ getCargaIcon(pedido) }}</v-icon>
                         Carga
+                        <span v-if="pedido.estado_carga && pedido.estado_carga.porcentaje > 0 && !pedido.estado_carga.completo" class="ml-1 caption">
+                            ({{ Math.round(pedido.estado_carga.porcentaje) }}%)
+                        </span>
                     </v-btn>
 
                     <v-btn x-small text color="indigo darken-1" class="ml-n1" @click="reparto_transporte(pedido)">
@@ -443,11 +451,17 @@ export default {
             if (pedido.estado_carga && pedido.estado_carga.completo) {
                 return 'mdi-truck-check';
             }
+            if (pedido.estado_carga && pedido.estado_carga.estado === 'incompleto') {
+                return 'mdi-truck-alert';
+            }
             return 'mdi-truck-cargo-container';
         },
         getCargaButtonColor(pedido) {
             if (pedido.estado_carga && pedido.estado_carga.completo) {
                 return 'cyan lighten-5';
+            }
+            if (pedido.estado_carga && pedido.estado_carga.estado === 'incompleto') {
+                return 'red lighten-5';
             }
             return 'orange lighten-5';
         },
@@ -455,11 +469,17 @@ export default {
             if (pedido.estado_carga && pedido.estado_carga.completo) {
                 return 'cyan darken-2';
             }
+            if (pedido.estado_carga && pedido.estado_carga.estado === 'incompleto') {
+                return 'red darken-1';
+            }
             return 'orange darken-1';
         },
         getCargaTextClass(pedido) {
             if (pedido.estado_carga && pedido.estado_carga.completo) {
                 return 'cyan--text text--darken-2';
+            }
+            if (pedido.estado_carga && pedido.estado_carga.estado === 'incompleto') {
+                return 'red--text text--darken-1';
             }
             return 'orange--text text--darken-1';
         },
