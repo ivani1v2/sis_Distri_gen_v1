@@ -1,5 +1,9 @@
 <template>
     <div class="mb-6 mt-2 pa-3">
+        <v-btn icon small @click="migrarDiaAArray()" v-if="false">
+            migrar dia clientes
+        </v-btn>
+
         <v-row no-gutters class="mt-n1 mb-1">
             <v-col :cols="isMobile ? 4 : 3" class="pa-1">
                 <v-card @click.prevent="cliente_selecto = null, dial_cliente = true">
@@ -536,6 +540,47 @@ export default {
 
             return '-';
         },
+        async migrarDiaAArray() {
+            const snap = await colClientes().get();
+
+            const normalizar = (s) =>
+                String(s || '')
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/\./g, '')
+                    .toLowerCase()
+                    .trim()
+                    .slice(0, 3);
+
+            let cambios = 0;
+
+            for (const doc of snap.docs) {
+                const data = doc.data();
+                const dia = data.dia;
+
+                // ❌ no existe dia → no tocar
+                if (dia == null || dia === '') continue;
+
+                // ✅ ya es array → no tocar
+                if (Array.isArray(dia)) continue;
+
+                // ❌ no es string válido → no tocar
+                if (typeof dia !== 'string') continue;
+
+                const d = normalizar(dia);
+                if (!d) continue;
+
+                // 🔁 migrar a array
+                await doc.ref.update({
+                    dia: [d]
+                });
+
+                cambios++;
+            }
+
+            console.log(`Migración completada. Clientes actualizados: ${cambios}`);
+        }
+
 
     }
 }

@@ -144,8 +144,7 @@ export default {
         return [
           'id', 'activo', 'codbarra', 'nombre', 'categoria', 'medida', 'stock', 'stock_minimo', 'factor',
           'precio', 'escala_may1', 'precio_may1', 'escala_may2', 'precio_may2',
-          'peso', 'costo', 'margen', 'tipoproducto', 'operacion', 'icbper', 'controstock',
-          'lista_bono', 'tiene_bono', 'marca', 'proveedor', 'obs1'
+          'peso', 'costo', 'margen', 'tipoproducto', 'operacion', 'icbper', 'controstock',  'marca', 'proveedor', 'obs1'
         ]
       }
       if (this.target === 'clientes') {
@@ -186,8 +185,6 @@ export default {
           operacion: 'GRAVADA',
           icbper: false,
           controstock: true,
-          lista_bono: '[]',   // como texto JSON
-          tiene_bono: false,
           marca: '',
           proveedor: '',
           obs1: '',
@@ -262,8 +259,6 @@ export default {
           operacion: p.operacion || 'GRAVADA',
           icbper: !!p.icbper,
           controstock: p.controstock !== false,
-          lista_bono: JSON.stringify(p.lista_bono || []),
-          tiene_bono: !!p.tiene_bono,
           marca: p.marca || '',
           proveedor: p.proveedor || '',
           obs1: p.obs1 || '',
@@ -276,7 +271,7 @@ export default {
 
         // Mapea los documentos
         const cli = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-       // const cli = snap.val() ? Object.keys(snap.val()).map(key => ({ id: key, ...snap.val()[key] })) : [];
+        // const cli = snap.val() ? Object.keys(snap.val()).map(key => ({ id: key, ...snap.val()[key] })) : [];
 
         filas = cli.map(c => ({
           activo: c.activo !== false,
@@ -297,9 +292,7 @@ export default {
           ubigeo: c.ubigeo || '',
           tipocomprobante: c.tipocomprobante || 'T',
           zona: c.zona || '',
-          dia: (c.dia ? String(c.dia) : '')
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-            .toLowerCase(),
+          dia: Array.isArray(c.dia) ? c.dia.join(',') : (c.dia || ''),
           latitud: c.latitud || '',
           longitud: c.longitud || '',
           permite_credito: c.permite_credito === true,
@@ -402,8 +395,6 @@ export default {
         operacion: this._toStr(o.operacion || 'GRAVADA'),
         icbper: this._toBool(o.icbper, false),
         controstock: this._toBool(o.controstock, true),
-        lista_bono,
-        tiene_bono: this._toBool(o.tiene_bono, false),
         marca: this._toStr(o.marca),
         proveedor: this._toStr(o.proveedor),
         obs1: this._toStr(o.obs1),
@@ -435,9 +426,7 @@ export default {
         ubigeo: this._toStr(o.ubigeo),
         tipocomprobante: this._toStr(o.tipocomprobante || 'T'),
         zona: this._toStr(o.zona),
-        dia: this._toStr(o.dia)
-          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-          .toLowerCase(),
+        dia: this._normalizaDiaAArray(o.dia),
         latitud: this._toStr(o.latitud),
         longitud: this._toStr(o.longitud),
         permite_credito: this._toBool(o.permite_credito, false),
@@ -537,8 +526,6 @@ export default {
               operacion: r.operacion || 'GRAVADA',
               icbper: !!r.icbper,
               controstock: !!r.controstock,
-              lista_bono: Array.isArray(r.lista_bono) ? r.lista_bono : [],
-              tiene_bono: !!r.tiene_bono,
               marca: r.marca || '',
               proveedor: r.proveedor || '',
               obs1: r.obs1 || '',
@@ -568,7 +555,7 @@ export default {
               ubigeo: r.ubigeo || '',
               tipocomprobante: r.tipocomprobante || 'T',
               zona: r.zona || '',
-              dia: [r.dia] || '',
+              ...(r.dia ? { dia: r.dia } : {}),
               latitud: String(r.latitud ?? ''),
               longitud: String(r.longitud ?? ''),
               permite_credito: !!r.permite_credito,
@@ -598,7 +585,39 @@ export default {
         this.subiendoExcel = false
         store.commit("dialogoprogress")
       }
-    }
+    },
+    _normalizaDiaAArray(v) {
+      // null/empty => null (no guardar nada o guardar [])
+      if (v == null) return null;
+
+      // si ya viene como array => normaliza elementos
+      if (Array.isArray(v)) {
+        const arr = v
+          .flatMap(x => String(x || '').split(',')) // por si dentro del array viene "mie,lun"
+          .map(s => s.trim())
+          .filter(Boolean)
+          .map(s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\./g, '').toLowerCase().trim().slice(0, 3))
+          .filter(Boolean);
+
+        return [...new Set(arr)];
+      }
+
+      // si viene como string: "mie" o "mie,lun"
+      if (typeof v === 'string') {
+        const arr = v
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean)
+          .map(s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\./g, '').toLowerCase().trim().slice(0, 3))
+          .filter(Boolean);
+
+        return [...new Set(arr)];
+      }
+
+      // cualquier otro tipo => no tocar
+      return null;
+    },
+
 
   }
 }
