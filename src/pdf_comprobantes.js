@@ -426,8 +426,8 @@ async function impresion58(arraydatos, qr, cabecera) {
     doc.setFontSize(9);
     var texto = doc.splitTextToSize(
       "Representación Impresa de la " +
-        documento +
-        " Consultar su validez en https://domo.pe/buscardocumentos",
+      documento +
+      " Consultar su validez en https://domo.pe/buscardocumentos",
       pdfInMM - lMargin - rMargin
     );
     doc.text(texto, pageCenter, linea, "center");
@@ -879,12 +879,12 @@ async function impresion80(arraydatos, qr, cabecera) {
     doc.setFont("Helvetica", "");
     var texto = doc.splitTextToSize(
       "DETRACCION: " +
-        arraycabe.detraccion.porcentaje +
-        "%  : " +
-        moneda +
-        arraycabe.detraccion.monto +
-        "\nCTA. BANCO DE LA NACION: " +
-        arraycabe.detraccion.cuenta,
+      arraycabe.detraccion.porcentaje +
+      "%  : " +
+      moneda +
+      arraycabe.detraccion.monto +
+      "\nCTA. BANCO DE LA NACION: " +
+      arraycabe.detraccion.cuenta,
       80
     );
     doc.text(texto, pageCenter, linea, "center");
@@ -922,8 +922,8 @@ async function impresion80(arraydatos, qr, cabecera) {
     doc.setFontSize(8);
     var texto = doc.splitTextToSize(
       "Representación Impresa de la " +
-        documento +
-        " Consultar su validez en https://domo.pe/buscardocumentos",
+      documento +
+      " Consultar su validez en https://domo.pe/buscardocumentos",
       pdfInMM - lMargin - rMargin
     );
     doc.text(texto, pageCenter, linea, "center");
@@ -1187,8 +1187,25 @@ function impresionA4(array, qr, arraycabecera) {
   doc.text("SEÑORES", 15, linea, "left");
   doc.text(" : ", 32, linea, "left");
   doc.setFont("Helvetica", "");
+
   var texto = doc.splitTextToSize(arraycabe.cliente, 85);
+
+  if (texto.length > 2) {
+    texto = texto.slice(0, 2);
+    var ultimalinea = texto[1];
+    var anchoConPuntos = doc.getStringUnitWidth(ultimalinea + "...") * doc.internal.getFontSize() / doc.internal.scaleFactor;
+
+    if (anchoConPuntos > 85) {
+      while (ultimalinea.length > 0 &&
+        doc.getStringUnitWidth(ultimalinea + "...") * doc.internal.getFontSize() / doc.internal.scaleFactor > 85) {
+        ultimalinea = ultimalinea.slice(0, -1);
+      }
+    }
+    texto[1] = ultimalinea + "...";
+  }
+
   doc.text(texto, 36, linea, "left");
+
   linea = linea + 4 * texto.length;
   console.log(arraycabe);
   doc.setFont("Helvetica", "Bold");
@@ -1399,12 +1416,12 @@ function impresionA4(array, qr, arraycabecera) {
     doc.setFont("Helvetica", "bold");
     var texto = doc.splitTextToSize(
       "DETRACCION: " +
-        arraycabe.detraccion.porcentaje +
-        "%  : " +
-        moneda +
-        arraycabe.detraccion.monto +
-        "\nCTA. BANCO DE LA NACION: " +
-        arraycabe.detraccion.cuenta,
+      arraycabe.detraccion.porcentaje +
+      "%  : " +
+      moneda +
+      arraycabe.detraccion.monto +
+      "\nCTA. BANCO DE LA NACION: " +
+      arraycabe.detraccion.cuenta,
       80
     );
     doc.text(texto, 35, lineaqr2, "left");
@@ -1423,8 +1440,8 @@ function impresionA4(array, qr, arraycabecera) {
       doc.setFontSize(9);
       var texto = doc.splitTextToSize(
         "Representación Impresa de la " +
-          documento +
-          " Consultar su validez en https://domo.pe/buscardocumentos",
+        documento +
+        " Consultar su validez en https://domo.pe/buscardocumentos",
         90
       );
       doc.text(texto, 40, lineaqr, "left");
@@ -1763,9 +1780,9 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
       (
         parseFloat(
           array[i].precioedita ||
-            array[i].precio ||
-            array[i].precioVentaUnitario ||
-            0
+          array[i].precio ||
+          array[i].precioVentaUnitario ||
+          0
         ) * (array[i].cantidad || 0)
       ).toFixed(2) + obs;
   }
@@ -1984,12 +2001,12 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
     doc.setFont("Helvetica", "bold");
     texto = doc.splitTextToSize(
       "DETRACCION: " +
-        arraycabe.detraccion.porcentaje +
-        "%  : " +
-        moneda +
-        arraycabe.detraccion.monto +
-        "\nCTA. BANCO DE LA NACION: " +
-        arraycabe.detraccion.cuenta,
+      arraycabe.detraccion.porcentaje +
+      "%  : " +
+      moneda +
+      arraycabe.detraccion.monto +
+      "\nCTA. BANCO DE LA NACION: " +
+      arraycabe.detraccion.cuenta,
       110
     );
     doc.text(texto, margin + 25, lineaqr2, "left");
@@ -2073,9 +2090,9 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
     case "descarga":
       doc.save(
         (arraycabe.serie || "") +
-          "-" +
-          (arraycabe.correlativoDocEmitido || "") +
-          ".pdf"
+        "-" +
+        (arraycabe.correlativoDocEmitido || "") +
+        ".pdf"
       );
       break;
   }
@@ -2086,23 +2103,23 @@ export const generaQR = (cabecera) => {
   var fecha = moment.unix(cabecera.fecha).format("DD/MM/YYYY");
   var imgData = QR.drawImg(
     ruc +
-      "|" +
-      cabecera.cod_comprobante +
-      "|" +
-      cabecera.serie +
-      "|" +
-      cabecera.correlativoDocEmitido +
-      "|" +
-      cabecera.igv +
-      "|" +
-      cabecera.total +
-      "|" +
-      fecha +
-      "|" +
-      cabecera.cod_tipoDocumento +
-      "|" +
-      cabecera.dni +
-      "|",
+    "|" +
+    cabecera.cod_comprobante +
+    "|" +
+    cabecera.serie +
+    "|" +
+    cabecera.correlativoDocEmitido +
+    "|" +
+    cabecera.igv +
+    "|" +
+    cabecera.total +
+    "|" +
+    fecha +
+    "|" +
+    cabecera.cod_tipoDocumento +
+    "|" +
+    cabecera.dni +
+    "|",
     {
       typeNumber: 4,
       errorCorrectLevel: "M",
@@ -2227,11 +2244,11 @@ function isElectronEnv() {
   const p = typeof process !== "undefined" ? process : undefined;
   return Boolean(
     (p && p.versions && p.versions.electron) || // main / preload
-      (w && w.process && w.process.type === "renderer") || // renderer
-      (w &&
-        w.navigator &&
-        w.navigator.userAgent &&
-        w.navigator.userAgent.includes("Electron"))
+    (w && w.process && w.process.type === "renderer") || // renderer
+    (w &&
+      w.navigator &&
+      w.navigator.userAgent &&
+      w.navigator.userAgent.includes("Electron"))
   );
 }
 
@@ -2257,9 +2274,8 @@ function tabla_A4(array, linea) {
 
     // Texto descuentos combinados en una sola celda
     const textoDescuento = existeDescuento
-      ? `${descuentos.desc_1 || 0} / ${descuentos.desc_2 || 0} / ${
-          descuentos.desc_3 || 0
-        }`
+      ? `${descuentos.desc_1 || 0} / ${descuentos.desc_2 || 0} / ${descuentos.desc_3 || 0
+      }`
       : null;
 
     let obs = "";
