@@ -272,6 +272,10 @@
                 </v-card-text>
 
                 <v-card-actions class="px-4 pb-4">
+                    <v-btn :color="ordenConfigurado ? 'success' : 'orange'" outlined @click="abrirOrdenLIFO">
+                        <v-icon left>{{ ordenConfigurado ? 'mdi-check-circle' : 'mdi-sort-variant' }}</v-icon>
+                        {{ ordenConfigurado ? 'Orden Configurado' : 'Orden de Carga' }}
+                    </v-btn>
                     <v-spacer></v-spacer>
                     <v-btn color="success" large @click="confirmarCrearReparto">
                         <v-icon left>mdi-check-circle</v-icon> Crear
@@ -292,6 +296,8 @@
 
         <dial_consolidado v-if="dialogConsolidado" :selected-ids="selectedIds"
             :consolidado-seleccionados="consolidadoSeleccionados" @cierra="dialogConsolidado = false" />
+        
+        <dial_orden_lifo v-if="dialogOrdenLifo" :pedidos="pedidosParaOrdenar" @cerrar="dialogOrdenLifo = false" @confirmar="onConfirmarOrdenLifo" />
     </v-dialog>
 </template>
 
@@ -299,13 +305,15 @@
 import moment from "moment";
 import { all_pedidos, detalle_pedido, modifica_pedidos } from "../../../db";
 import dial_consolidado from "../../pedidos/dialogos/dialogo_rep_consolidado.vue";
+import dial_orden_lifo from "./dial_orden_lifo.vue";
 import store from '@/store/index'
 import axios from "axios";
 import CryptoJS from "crypto-js";
 
 export default {
     components: {
-        dial_consolidado
+        dial_consolidado,
+        dial_orden_lifo
     },
     data() {
         return {
@@ -317,6 +325,10 @@ export default {
             detalleSeleccionado: [],
             dialogConsolidado: false,
             consolidadoSeleccionados: [],
+            dialogOrdenLifo: false,
+            pedidosParaOrdenar: [],
+            pedidosOrdenados: [],
+            ordenConfigurado: false,
             date1: moment().format("YYYY-MM-DD"),
             date2: moment().format("YYYY-MM-DD"),
             pedidosArray: [],
@@ -592,9 +604,29 @@ export default {
                     : alert("Selecciona al menos un documento.");
                 return;
             }
+            const set = new Set(this.selectedIds.map(String));
+            this.pedidosParaOrdenar = this.pedidosArray.filter(p => set.has(String(p.id)));
+            
+            this.ordenConfigurado = false;
+            this.pedidosOrdenados = [];
+            
             this.fechaTraslado = this.date2;
             this.fechaEmision = this.date2;
             this.dialogCrear = true;
+        },
+
+        abrirOrdenLIFO() {
+            this.dialogOrdenLifo = true;
+        },
+
+        onConfirmarOrdenLifo(pedidosOrdenados) {
+            this.pedidosOrdenados = pedidosOrdenados;
+            this.ordenConfigurado = true;
+            this.dialogOrdenLifo = false;
+            
+            this.$toast && this.$toast.success
+                ? this.$toast.success("Orden de carga configurado")
+                : null;
         },
 
         async confirmarCrearReparto() {
@@ -616,12 +648,23 @@ export default {
                     ? 'todos'
                     : this.vendedoresSeleccionados.join(',');
 
+                const pedidosConOrden = this.pedidosOrdenados.length > 0
+                    ? this.pedidosOrdenados.map(p => ({
+                        id: p.id,
+                        orden_lifo: p.orden_lifo
+                    }))
+                    : this.selectedIds.map((id, idx) => ({
+                        id,
+                        orden_lifo: idx + 1
+                    }));
+
                 const payload = {
                     fecha_traslado: unixTraslado,
                     fecha_emision: moment().unix(),
                     fecha_comprobantes: unixEmision,
                     vendedor: vendedorStr,
-                    pedidos: this.selectedIds,
+                    pedidos: pedidosConOrden.map(p => p.id),
+                    pedidos_orden: pedidosConOrden,
                     obs: this.obs,
                     resumen: {
                         total_contado: this.totalContadoSel.toFixed(2),

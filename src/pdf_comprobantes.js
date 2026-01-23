@@ -13,9 +13,7 @@ export const pdfGenera = (arraydatos, cabecera, medida, modo) => {
   //console.log(arraydatos, cabecera, medida, modo);
   moneda = cabecera.moneda || "S/";
   modo_genera = modo;
-  if (cabecera.tipocomprobante != "T") {
-    var qrs = generaQR(cabecera);
-  }
+  var qrs = generaQR(cabecera);
   switch (medida) {
     case "A4":
       impresionA4(arraydatos, qrs, cabecera);
@@ -444,6 +442,14 @@ async function impresion58(arraydatos, qr, cabecera) {
         linea = linea + 14;
       }
     }
+  }
+
+  if (arraycabe.tipocomprobante == "T" && qr != "") {
+    doc.setFontSize(8);
+    doc.text(separacion, pageCenter, linea, "center");
+    linea = linea + 3;
+    doc.addImage(qr, "png", pdfInMM / 2 - 10, linea, 18, 18);
+    linea = linea + 20;
   }
 
   if (arraycabe.forma_pago == "Credito") {
@@ -928,10 +934,18 @@ async function impresion80(arraydatos, qr, cabecera) {
         arraycabe.tipocomprobante == "F" ||
         arraycabe.tipocomprobante == "B"
       ) {
-        doc.addImage(qr, "png", pdfInMM / 2 - 10, linea, 18, 18);
-        linea = linea + 14;
+        doc.addImage(qr, "png", pdfInMM / 2 - 12, linea, 24, 24);
+        linea = linea + 20;
       }
     }
+  }
+
+  if (arraycabe.tipocomprobante == "T" && qr != "") {
+    doc.setFontSize(8);
+    doc.text(separacion, pageCenter, linea, "center");
+    linea = linea + 3;
+    doc.addImage(qr, "png", pdfInMM / 2 - 12, linea, 24, 24);
+    linea = linea + 26;
   }
 
   if (arraycabe.forma_pago == "Credito") {
@@ -1398,10 +1412,13 @@ function impresionA4(array, qr, arraycabecera) {
 
   if (qr != "") {
     if (arraycabe.tipocomprobante == "F" || arraycabe.tipocomprobante == "B") {
-      doc.addImage(qr, "png", 10, lineaqr, 20, 20);
+      doc.addImage(qr, "png", 10, lineaqr, 28, 28);
+    }
+    if (arraycabe.tipocomprobante == "T") {
+      doc.addImage(qr, "png", 10, lineaqr, 28, 28);
     }
     if (arraycabe.tipocomprobante != "T") {
-      lineaqr = lineaqr + 14.5;
+      lineaqr = lineaqr + 18;
       doc.setFont("Helvetica", "");
       doc.setFontSize(9);
       var texto = doc.splitTextToSize(
@@ -1410,7 +1427,7 @@ function impresionA4(array, qr, arraycabecera) {
           " Consultar su validez en https://domo.pe/buscardocumentos",
         90
       );
-      doc.text(texto, 35, lineaqr, "left");
+      doc.text(texto, 40, lineaqr, "left");
     }
   }
   if (arraycabecera.forma_pago.toLowerCase() != "credito") {
@@ -1983,7 +2000,11 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
     qr &&
     (arraycabe.tipocomprobante === "F" || arraycabe.tipocomprobante === "B")
   ) {
-    doc.addImage(qr, "PNG", margin, lineaqr, 18, 18);
+    doc.addImage(qr, "PNG", margin, lineaqr, 25, 25);
+  }
+  // QR para Nota de Venta en A5
+  if (qr && arraycabe.tipocomprobante === "T") {
+    doc.addImage(qr, "PNG", margin, lineaqr, 25, 25);
   }
   if (arraycabe.tipocomprobante !== "T") {
     const leyenda =
@@ -1993,7 +2014,7 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
     doc.setFont("Helvetica", "");
     doc.setFontSize(7);
     texto = doc.splitTextToSize(leyenda, 80);
-    doc.text(texto, margin + 23, lineaqr + 2, "left");
+    doc.text(texto, margin + 28, lineaqr + 2, "left");
   }
 
   // --- Modo de pago (cuando NO es crédito) ---

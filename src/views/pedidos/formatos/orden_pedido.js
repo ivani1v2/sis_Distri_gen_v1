@@ -5,7 +5,7 @@ import moment from "moment";
 import { NumerosALetras } from "numero-a-letras";
 
 let moneda = "S/";
-let modo_genera = "abre"; // si luego quieres reutilizar abre/descarga/host
+let modo_genera = "abre";
 
 export const pdfGenera = (cabecera, arraydatos, medida = "80", modo = "abre") => {
   moneda = cabecera?.moneda || "S/";
@@ -245,6 +245,7 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
     y += 6;
   }
 
+
   const enLetras = `Son: ${NumerosALetras(Number(total).toFixed(2), moneda)}`;
   const enLetrasTxt = doc.splitTextToSize(enLetras, contentWidth);
   doc.text(enLetrasTxt, lMargin, y);
@@ -260,6 +261,9 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
     doc.setFontSize(10);
     doc.text("Detalle de cronograma: ", 14, y + 3);
 
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text("Detalle de cronograma: ", 14, y + 3);
     y += 4;
     doc.autoTable({
       startY: y,
@@ -555,11 +559,16 @@ async function impresion80_ordenPedido(cabecera, items = []) {
   texto = doc.splitTextToSize("Son: " + NumerosALetras(Number(total).toFixed(2), moneda), pdfInMM - lMargin - rMargin);
   doc.text(texto, pageCenter, linea, "center"); linea += 4 * texto.length;
 
+
   const cuotasData80 = Array.isArray(cabecera?.cronograma)
     ? cabecera.cronograma
     : (cabecera?.cronograma?.cuotas || []);
 
   if ((condicion || '').toUpperCase() === 'CREDITO' && cuotasData80.length > 0) {
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text("Detalle de cronograma: ", lMargin, linea + 3);
+
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(8);
     doc.text("Detalle de cronograma: ", lMargin, linea + 3);
@@ -861,6 +870,7 @@ async function impresion58_ordenPedido(cabecera, items = []) {
   texto = doc.splitTextToSize("Son: " + NumerosALetras(Number(total).toFixed(2), moneda), pdfInMM - lMargin - rMargin);
   doc.text(texto, pageCenter, linea, "center"); linea += 3.4 * texto.length;
 
+
   const cuotasData58 = Array.isArray(cabecera?.cronograma)
     ? cabecera.cronograma
     : (cabecera?.cronograma?.cuotas || []);
@@ -870,6 +880,9 @@ async function impresion58_ordenPedido(cabecera, items = []) {
     doc.setFontSize(8.4);
     doc.text("Detalle de cronograma de pagos:", lMargin, linea + 5);
 
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(8.4);
+    doc.text("Detalle de cronograma de pagos:", lMargin, linea + 5);
     linea += 5;
     doc.autoTable({
       startY: linea,

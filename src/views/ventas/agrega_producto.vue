@@ -51,7 +51,8 @@
 import {
     editaProducto,
     sumaContador,
-    obtenContador
+    obtenContador,
+    nuevoProductoOtraBase
 } from '../../db'
 import store from '@/store/index'
 export default {
@@ -131,6 +132,30 @@ export default {
         async guarda_producto() {
             var snapshot = await obtenContador().once("value")
             var id = snapshot.val().ordenproducto
+            
+            // Crear el objeto producto completo
+            const productoBase = {
+                id: id,
+                activo: true,
+                codbarra: '',
+                nombre: this.nombre.trim(),
+                categoria: '',
+                medida: this.medida,
+                stock: 0,
+                precio: this.precio,
+                costo: 0,
+                cocina: false,
+                tipoproducto: this.tipoproducto,
+                operacion: this.tipooperacion,
+                icbper: false,
+                barra: false,
+                controstock: false,
+                cargoxconsumo: false,
+                grupo_obs: [],
+                stock_min: 1
+            }
+            
+            // Guardar en la BD actual
             editaProducto(id, "id", id)
             editaProducto(id, "activo", true)
             editaProducto(id, "codbarra", '')
@@ -149,8 +174,36 @@ export default {
             editaProducto(id, "cargoxconsumo", false)
             editaProducto(id, "grupo_obs", [])
             await editaProducto(id, "stock_min", 1)
+            
+            // Copiar producto a todas las otras sedes con stock 0
+            await this.copiarProductoATodasLasSedes(id, productoBase)
+            
             await sumaContador("ordenproducto", parseInt(id) + 1)
             return true
+        },
+        
+        async copiarProductoATodasLasSedes(id, producto) {
+            try {
+                // Obtener todas las sedes
+                const sedes = store.state.array_sedes || [];
+                const bdActual = store.state.baseDatos.bd;
+                
+                // Filtrar solo sedes (no la actual)
+                const otrasSedes = sedes.filter(s => s.tipo === 'sede' && s.base !== bdActual);
+                
+                // Crear promesas para copiar a todas las sedes
+                const promesas = otrasSedes.map(sede => {
+                    const productoConStock0 = { ...producto, stock: 0 };
+                    return nuevoProductoOtraBase(sede.base, id, productoConStock0);
+                });
+                
+                if (promesas.length > 0) {
+                    await Promise.all(promesas);
+                    console.log(`Producto ${id} copiado a ${promesas.length} sedes`);
+                }
+            } catch (error) {
+                console.error('Error copiando producto a otras sedes:', error);
+            }
         },
         create_UUID() {
             var dt = new Date().getTime();

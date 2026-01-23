@@ -1,6 +1,5 @@
 <template>
     <v-container fluid class="pa-0 mb-12">
-        <!-- DESKTOP: toolbar clásica -->
         <v-toolbar v-if="!isMobile" flat color="white" class="mb-3 rounded-lg elevation-2">
             <v-toolbar-title class="font-weight-bold grey--text text--darken-2">
                 🚚 Gestión de Repartos
@@ -45,8 +44,6 @@
                 </v-list>
             </v-menu>
         </v-toolbar>
-
-        <!-- MOBILE: solo CARD con filtros y acciones -->
         <v-card v-else class="mb-3 mx-1 pa-2 rounded-lg elevation-2">
             <div class="font-weight-bold grey--text text--darken-2 mb-2">
                 🚚 Gestión de Repartos
@@ -133,6 +130,17 @@
                                         <span class="blue-grey--text text--darken-1 font-weight-medium">Detalle</span>
                                     </v-btn>
 
+                                    <v-btn x-small :color="getCargaButtonColor(pedido)" class="mx-1 my-1" depressed rounded
+                                        elevation="1" @click="abrirCargaProductos(pedido)">
+                                        <v-icon left small :color="getCargaIconColor(pedido)">{{ getCargaIcon(pedido) }}</v-icon>
+                                        <span :class="getCargaTextClass(pedido)" class="font-weight-medium">
+                                            Carga
+                                            <template v-if="pedido.estado_carga && pedido.estado_carga.porcentaje > 0 && !pedido.estado_carga.completo">
+                                                ({{ Math.round(pedido.estado_carga.porcentaje) }}%)
+                                            </template>
+                                        </span>
+                                    </v-btn>
+
                                     <v-btn x-small color="indigo lighten-5" class="mx-1 my-1" depressed rounded
                                         elevation="1" @click="reparto_transporte(pedido)">
                                         <v-icon left small color="indigo darken-1">mdi-truck-delivery</v-icon>
@@ -214,21 +222,29 @@
 
                 <v-divider class="mx-3"></v-divider>
 
-                <v-card-actions class="py-1 px-2 d-flex justify-end align-center">
+                <v-card-actions class="py-1 px-0 d-flex justify-end align-center">
 
                     <v-btn x-small text color="blue-grey darken-1" @click="ir_reparto(pedido)">
                         <v-icon left x-small>mdi-clipboard-list</v-icon>
                         Detalle
                     </v-btn>
 
-                    <v-btn x-small text color="indigo darken-1" class="ml-1" @click="reparto_transporte(pedido)">
+                    <v-btn x-small text :color="getCargaIconColor(pedido)" class="ml-1" @click="abrirCargaProductos(pedido)">
+                        <v-icon left x-small>{{ getCargaIcon(pedido) }}</v-icon>
+                        Carga
+                        <span v-if="pedido.estado_carga && pedido.estado_carga.porcentaje > 0 && !pedido.estado_carga.completo" class="ml-1 caption">
+                            ({{ Math.round(pedido.estado_carga.porcentaje) }}%)
+                        </span>
+                    </v-btn>
+
+                    <v-btn x-small text color="indigo darken-1" class="ml-n1" @click="reparto_transporte(pedido)">
                         <v-icon left x-small>mdi-truck-delivery</v-icon>
                         Mapa
                     </v-btn>
 
                     <v-menu offset-y left>
                         <template v-slot:activator="{ on, attrs }">
-                            <v-btn x-small text color="green darken-1" class="ml-1" v-bind="attrs" v-on="on">
+                            <v-btn x-small text color="green darken-1" class="ml-n1" v-bind="attrs" v-on="on">
                                 <v-icon left x-small>mdi-cash-multiple</v-icon>
                                 Opciones
                             </v-btn>
@@ -339,7 +355,8 @@
 
         <dial_nuevo_rep v-if="nuevo_rep" @cierra="nuevo_rep = false" />
         <dial_sube_rep v-if="dial_sube_excel" @cerrar="dial_sube_excel = false, filtrar" />
-        <cobranza_reparto v-if="dial_cobranza" :pedidos="null" :grupo="repartoActual" @cerrar="dial_cobranza = false" />
+        <cobranza_reparto v-if="dial_cobranza" :pedidos="null" :grupo="repartoActual" @cerrar="dial_cobranza = false" />        
+        <dial_carga_productos v-if="dial_carga" :grupo="grupoCarga" @cerrar="dial_carga = false" @guardado="onCargaGuardada" />
     </v-container>
 </template>
 
@@ -351,13 +368,15 @@ import store from '@/store/index'
 import dial_nuevo_rep from './dialogos/nuevo_reparto.vue'
 import dial_sube_rep from './dialogos/excel_ruta.vue'
 import cobranza_reparto from '../reparto/dialogos/cobranza_reparto.vue'
+import dial_carga_productos from './dialogos/dial_carga_productos.vue'
 import { pdf_a4_t } from './formatos/formato_liq_manual'
 export default {
     name: "lista_repartos",
     components: {
         dial_nuevo_rep,
         dial_sube_rep,
-        cobranza_reparto
+        cobranza_reparto,
+        dial_carga_productos
     },
     data() {
         return {
@@ -365,6 +384,8 @@ export default {
             repartoActual: null,
             dial_cobranza: false,
             dial_rep_consolidado: false,
+            dial_carga: false,
+            grupoCarga: null,
             selectedIds: [],
             dial_sube_excel: false,
             menuOpc: false,
@@ -417,7 +438,52 @@ export default {
         date2() { this.filtrar(); },
     },
     methods: {
-        reparto_transporte(data) {-
+        abrirCargaProductos(pedido) {
+            this.grupoCarga = pedido.grupo || pedido.id;
+            this.dial_carga = true;
+        },
+        onCargaGuardada(datosCarga) {
+            this.$store.commit('dialogosnackbar', 'Carga guardada correctamente');
+            this.dial_carga = false;
+            this.filtrar();
+        },
+        getCargaIcon(pedido) {
+            if (pedido.estado_carga && pedido.estado_carga.completo) {
+                return 'mdi-truck-check';
+            }
+            if (pedido.estado_carga && pedido.estado_carga.estado === 'incompleto') {
+                return 'mdi-truck-alert';
+            }
+            return 'mdi-truck-cargo-container';
+        },
+        getCargaButtonColor(pedido) {
+            if (pedido.estado_carga && pedido.estado_carga.completo) {
+                return 'cyan lighten-5';
+            }
+            if (pedido.estado_carga && pedido.estado_carga.estado === 'incompleto') {
+                return 'red lighten-5';
+            }
+            return 'orange lighten-5';
+        },
+        getCargaIconColor(pedido) {
+            if (pedido.estado_carga && pedido.estado_carga.completo) {
+                return 'cyan darken-2';
+            }
+            if (pedido.estado_carga && pedido.estado_carga.estado === 'incompleto') {
+                return 'red darken-1';
+            }
+            return 'orange darken-1';
+        },
+        getCargaTextClass(pedido) {
+            if (pedido.estado_carga && pedido.estado_carga.completo) {
+                return 'cyan--text text--darken-2';
+            }
+            if (pedido.estado_carga && pedido.estado_carga.estado === 'incompleto') {
+                return 'red--text text--darken-1';
+            }
+            return 'orange--text text--darken-1';
+        },
+        reparto_transporte(data) {
             this.$router.push({
                 path: "/reparto_transporte/" + data.grupo
             });
@@ -436,9 +502,9 @@ export default {
         chipColor(estado) {
             const s = (estado || '').toString().toLowerCase();
             if (s === 'anulado') return 'red';
-            if (s === 'enviado') return 'light-blue darken-1'; // Color mejorado
-            if (s === 'liquidado') return 'green lighten-1'; // Añadir color si existe estado 'liquidado'
-            return 'orange lighten-1'; // pendiente y otros (color más suave)
+            if (s === 'enviado') return 'light-blue darken-1';
+            if (s === 'liquidado') return 'green lighten-1';
+            return 'orange lighten-1';
         },
         filtrar() {
             // normaliza rango
