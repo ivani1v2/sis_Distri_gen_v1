@@ -32,13 +32,15 @@
                     <div> Cliente : {{ cliente_s.nombre }}</div>
                 </h4>
 
-                <v-alert v-if="excedeLineaCredito"
-                    type="error" dense border="left" colored-border class="mt-8 mb-6"
+                <v-alert v-if="excedeLineaCredito" type="error" dense border="left" colored-border class="mt-8 mb-6"
                     icon="mdi-alert-octagon">
                     <div class="d-flex flex-wrap justify-space-between align-center text-caption">
-                        <span>Línea de crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2) }}</strong></span>
-                        <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2) }}</strong></span>
-                        <span>Disponible: <strong class="red--text">{{ moneda }} {{ saldoDisponible.toFixed(2) }}</strong></span>
+                        <span>Línea de crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2)
+                                }}</strong></span>
+                        <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2)
+                                }}</strong></span>
+                        <span>Disponible: <strong class="red--text">{{ moneda }} {{ saldoDisponible.toFixed(2)
+                                }}</strong></span>
                     </div>
                     <div class="mt-1 red--text text-caption font-weight-medium">
                         El monto del pedido ({{ moneda }} {{ totalDetalle.toFixed(2) }}) supera el saldo disponible
@@ -91,7 +93,7 @@
                                                         style="max-width: 70vw;">
                                                         <span class="font-weight-bold red--text">{{
                                                             Number(item.cantidad)
-                                                        }}×</span>
+                                                            }}×</span>
                                                         {{ item.nombre }}
                                                     </div>
                                                 </div>
@@ -240,9 +242,8 @@
                     </v-col>
 
                     <v-col cols="12" sm="6" class="mt-n5">
-                        <v-select outlined dense v-model="formaPago" 
-                            :items="opcionesFormaPago"
-                            label="Forma de pago" prepend-inner-icon="mdi-cash-multiple" />
+                        <v-select outlined dense v-model="formaPago" :items="opcionesFormaPago" label="Forma de pago"
+                            prepend-inner-icon="mdi-cash-multiple" />
                     </v-col>
 
                     <v-col cols="6" class="mt-n5" v-if="formaPago === 'CREDITO'">
@@ -322,7 +323,7 @@ import store from '@/store/index'
 import cat_fijo from '@/components/catalogo_fijo'
 import dial_mapas from '../clientes/dial_mapa.vue'
 import { pdfGenera } from './formatos/orden_pedido.js'
-import { aplicaPreciosYBonos, agregarLista } from "../funciones/calculo_bonos";
+import { aplicaPreciosYBonos, agregarLista, analizaPreciosParcial, analizaGruposParcial } from "../funciones/calculo_bonos";
 import dialog_direcciones_cliente from '@/views/clientes/dialogos/dial_direcciones'
 import cronograma from '../ventas/dialogos/cronograma_creditos.vue'
 import dial_edita_prod from '../ventas/edita_producto.vue'
@@ -401,7 +402,7 @@ export default {
             } else {
                 this.tipocomprobante = data.tipocomprobante || 'T';
             }
-            
+
             // OPCIONAL: si tu componente tiene estas props/campos, completa coords
             if ('latitud' in this) this.latitud = (data.latitud ?? dirPri?.latitud ?? null);
             if ('longitud' in this) this.longitud = (data.longitud ?? dirPri?.longitud ?? null);
@@ -456,7 +457,7 @@ export default {
             return this.totalDetalle > this.saldoDisponible;
         },
         opcionesFormaPago() {
-   
+
             return ['CONTADO', 'CREDITO'];
         }
     },
@@ -608,6 +609,7 @@ export default {
             this.dial_direcciones = false;
         },
         grabar() {
+            // Siempre recalcular antes de grabar
             this.recalculoCompleto()
             this.dial_guardar = true;
         },
@@ -814,10 +816,45 @@ export default {
 
             // 4) Asignamos y recalculamos bonos / precios
             this.listaproductos = nuevaLista;
-            this.recalculoCompleto();
+            this.recalculoUltimoAgregado(value);
         },
 
+        recalculoUltimoAgregado(value) {
+            const items = Array.isArray(value) ? value : [value];
 
+            // ids agregados (último/últimos)
+            const ids = items
+                .map(x => String(x?.id ?? x?.cod_producto ?? ''))
+                .filter(Boolean);
+
+            if (!ids.length) return;
+
+            // ✅ 1) Precios SOLO para esos IDs (si permites editar precios)
+
+            this.listaproductos = analizaPreciosParcial({
+                lineas: this.listaproductos,
+                productos: this.$store.state.productos,
+                bonos: this.$store.state.bonos,
+                idsAfectados: ids,
+                lista_precios: this.lista_precios_selecta,
+                redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
+                inPlace: true,
+            });
+
+
+            // ✅ 2) Bonos: SOLO si está permitido editar bono (si no, NO tocamos nada)
+
+            this.listaproductos = analizaGruposParcial({
+                lineas: this.listaproductos,
+                productos: this.$store.state.productos,
+                bonos: this.$store.state.bonos,
+                idsAfectados: ids, // esto limita a grupos del último producto
+                createUUID: this.create_UUID,
+                redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
+                inPlace: true,
+            });
+
+        },
         recalculoCompleto() {
             this.listaproductos = aplicaPreciosYBonos({
                 lineas: this.listaproductos,
@@ -843,21 +880,23 @@ export default {
             this.recalculoCompleto()
         },
         editaProductoFinal(lineaActualizada) {
-            const idx = this.listaproductos.findIndex(
-                l => l.uuid === lineaActualizada.uuid
-            );
+            // ✅ si el usuario cambió el precio, marcamos como manual
+            // (asumo que en tu diálogo editas lineaActualizada.precio)
+            lineaActualizada.precio_manual = true;
 
-            if (idx !== -1) {
-                // Actualizamos esa línea en la lista
-                this.$set(this.listaproductos, idx, lineaActualizada);
+            // opcional: si quieres conservar "precio_base" como el precio original de catálogo:
+            // si no existe base, la seteas una vez
+            if (lineaActualizada.precio_base == null) {
+                lineaActualizada.precio_base = Number(lineaActualizada.precio || 0);
             }
 
-            // Recalcula precios por escala + bonos
-            this.recalculoCompleto();
+            const idx = this.listaproductos.findIndex(l => l.uuid === lineaActualizada.uuid);
+            if (idx !== -1) this.$set(this.listaproductos, idx, lineaActualizada);
 
-            // Cerramos el diálogo
+            if (store.state.permisos.permite_editar_bono) this.recalculoCompleto();
             this.dialogoProducto = false;
         },
+
 
 
         sumaTotal() {

@@ -117,11 +117,10 @@
                 <v-system-bar window dark>
                     <v-icon @click="dialo_cantidad = false">mdi-close</v-icon>
                     <v-spacer></v-spacer>
-                    <IndicadorBono v-if="producto_selecto && tieneBonoProducto(producto_selecto)" 
-                        :producto="producto_selecto" 
-                        :bonos-globales="bonosGlobalesCache"
-                        :solo-icono="false"
-                        class="mr-4" />
+                    <IndicadorBono v-if="producto_selecto && tieneBonoProducto(producto_selecto)"
+                        :producto="producto_selecto"
+                        :bonos-globales="$store.state.bonos ? Object.values($store.state.bonos).filter(b => b && b.activo) : []"
+                        :solo-icono="false" class="mr-2" />
                     <v-checkbox v-if="$store.state.permisos.edita_bono" v-model="es_bono" label="ES BONO"></v-checkbox>
                 </v-system-bar>
                 <v-card-text class="mt-4">
@@ -129,7 +128,7 @@
                     <div class="text-caption grey--text text--darken-1" v-if="getFactor(producto_selecto) > 1">
                         Stock:
                         <strong>{{ Math.floor(Number(producto_selecto.stock || 0) / getFactor(producto_selecto))
-                            }}</strong>
+                        }}</strong>
                         cajas
                         + <strong>{{ Number(producto_selecto.stock || 0) % getFactor(producto_selecto) }}</strong> und
                         (total <strong>{{ producto_selecto.stock }}</strong> und) — Factor: {{
@@ -153,121 +152,127 @@
                         </v-col>
                     </v-row>
 
-                    <div class="mb-3 text-center" v-if="producto_selecto && this.buscar_activo_precio(1)"">
+                    <div class="mb-3 text-center" v-if="producto_selecto && this.buscar_activo_precio(1)">
                         <!-- Precio normal -->
                         <v-tooltip bottom>
-                            <template v-slot:activator="{ on, attrs }">
-                        <v-chip x-small class="ma-1" outlined :color="tierVisual === 1 ? 'red' : 'grey lighten-2'"
-                            :text-color="tierVisual === 1 ? 'black' : 'black'" :input-value="tierVisual === 1"
-                            @click="precioSeleccionado = 1">
-                            S/ {{ fmt(precioChip(producto_selecto, 1)) }}
-                            <span class="ml-1 caption grey--text text--darken-1" v-if="tieneMay1(producto_selecto)">
-                                (&lt; {{ producto_selecto.escala_may1 }})
+                            <template v-slot:activator="{ on }">
+                                <v-chip x-small class="ma-1" outlined
+                                    :color="tierVisual === 1 ? 'red' : 'grey lighten-2'"
+                                    :text-color="tierVisual === 1 ? 'black' : 'black'" :input-value="tierVisual === 1"
+                                    @click="!esPrecioEstricto && (precioSeleccionado = 1)" :disabled="esPrecioEstricto">
+                                    S/ {{ fmt(precioChip(producto_selecto, 1)) }}
+                                    <span class="ml-1 caption grey--text text--darken-1"
+                                        v-if="tieneMay1(producto_selecto)">
+                                        (&lt; {{ producto_selecto.escala_may1 }})
+                                    </span>
+                                    <v-icon x-small class="ml-1"
+                                        v-if="precioSeleccionado === null && _tierSugerido === 1">mdi-robot</v-icon>
+                                </v-chip>
+
+                            </template>
+                            <span v-if="tieneMay1(producto_selecto)">
+                                Aplica cuando la cantidad es menor a {{ producto_selecto.escala_may1 }} unidades.
                             </span>
-                            <v-icon x-small class="ml-1"
-                                v-if="precioSeleccionado === null && _tierSugerido === 1">mdi-robot</v-icon>
-                        </v-chip>
+                            <span v-else>Precio sin mayoreo.</span>
+                        </v-tooltip>
 
-</template>
-<span v-if="tieneMay1(producto_selecto)">
-    Aplica cuando la cantidad es menor a {{ producto_selecto.escala_may1 }} unidades.
-</span>
-<span v-else>Precio sin mayoreo.</span>
-</v-tooltip>
-
-<!-- Mayoreo 1 -->
-<v-tooltip bottom v-if="tieneMay1(producto_selecto) && this.buscar_activo_precio(2)">
-    <template v-slot:activator="{ on, attrs }">
-        <v-chip x-small class="ma-1" outlined :color="tierVisual === 2 ? 'red' : 'grey lighten-2'"
-            :text-color="tierVisual === 2 ? 'black' : 'black'" :input-value="tierVisual === 2"
-            @click="precioSeleccionado = 2">
-            S/ {{ fmt(precioChip(producto_selecto, 2)) }}
-            <span class="ml-1 caption grey--text text--darken-1">
-                (desde {{ producto_selecto.escala_may1 }})
-            </span>
-            <v-icon x-small class="ml-1" v-if="precioSeleccionado === null && _tierSugerido === 2">mdi-robot</v-icon>
-        </v-chip>
-
-    </template>
-    <span v-if="tieneMay2(producto_selecto)">
-        Aplica desde {{ producto_selecto.escala_may1 }} hasta antes de {{
-            producto_selecto.escala_may2
-        }} unidades.
-    </span>
-    <span v-else>
-        Aplica desde {{ producto_selecto.escala_may1 }} unidades en adelante.
-    </span>
-</v-tooltip>
-
-<!-- Mayoreo 2 -->
-<v-tooltip bottom v-if="tieneMay2(producto_selecto) && this.buscar_activo_precio(3)"">
+                        <!-- Mayoreo 1 -->
+                        <v-tooltip bottom v-if="tieneMay1(producto_selecto) && this.buscar_activo_precio(2)">
                             <template v-slot:activator="{ on, attrs }">
-    <v-chip class="ma-1" outlined :color="tierVisual === 3 ? 'red' : 'grey lighten-2'"
-        :text-color="tierVisual === 3 ? 'black' : 'black'" :input-value="tierVisual === 3"
-        @click="precioSeleccionado = 3">
-        S/ {{ fmt(precioChip(producto_selecto, 3)) }}
-        <span class="ml-1 caption grey--text text--darken-1">
-            (desde {{ producto_selecto.escala_may2 }})
-        </span>
-        <v-icon x-small class="ml-1" v-if="precioSeleccionado === null && _tierSugerido === 3">mdi-robot</v-icon>
-    </v-chip>
-    </template>
-    <span>Aplica desde {{ producto_selecto.escala_may2 }} unidades en adelante.</span>
-</v-tooltip>
+                                <v-chip x-small class="ma-1" outlined
+                                    :color="tierVisual === 2 ? 'red' : 'grey lighten-2'"
+                                    :text-color="tierVisual === 2 ? 'black' : 'black'" :input-value="tierVisual === 2"
+                                    @click="!esPrecioEstricto && (precioSeleccionado = 2)" :disabled="esPrecioEstricto">
+                                    S/ {{ fmt(precioChip(producto_selecto, 2)) }}
+                                    <span class="ml-1 caption grey--text text--darken-1">
+                                        (desde {{ producto_selecto.escala_may1 }})
+                                    </span>
+                                    <v-icon x-small class="ml-1"
+                                        v-if="precioSeleccionado === null && _tierSugerido === 2">mdi-robot</v-icon>
+                                </v-chip>
 
-<!-- Botón para volver a AUTO -->
-<div class="mt-2" v-if="false">
-    <v-btn x-small text color="primary" @click="precioSeleccionado = null">
-        Usar precio automático por cantidad
-    </v-btn>
-</div>
-</div>
+                            </template>
+                            <span v-if="tieneMay2(producto_selecto)">
+                                Aplica desde {{ producto_selecto.escala_may1 }} hasta antes de {{
+                                    producto_selecto.escala_may2
+                                }} unidades.
+                            </span>
+                            <span v-else>
+                                Aplica desde {{ producto_selecto.escala_may1 }} unidades en adelante.
+                            </span>
+                        </v-tooltip>
 
-<div v-if="producto_selecto" class="mb-2">
-    <v-row dense>
-        <v-col cols="12">
-            <v-text-field type="number" outlined dense v-model.number="cantidadInput" :label="modoVenta === 'entero'
-                ? `Cantidad (${producto_selecto.medida || 'CAJA'})`
-                : 'Cantidad (UND)'" min="0" @focus="$event.target.select()" autofocus
-                @keydown.enter="agrega_con_cantidad()" />
-        </v-col>
-    </v-row>
+                        <!-- Mayoreo 2 -->
+                        <v-tooltip bottom v-if="tieneMay2(producto_selecto) && this.buscar_activo_precio(3)">
+                            <template v-slot:activator="{ on, attrs }">
+                                <v-chip class="ma-1" outlined :color="tierVisual === 3 ? 'red' : 'grey lighten-2'"
+                                    :text-color="tierVisual === 3 ? 'black' : 'black'" :input-value="tierVisual === 3"
+                                    @click="!esPrecioEstricto && (precioSeleccionado = 3)" :disabled="esPrecioEstricto">
+                                    S/ {{ fmt(precioChip(producto_selecto, 3)) }}
+                                    <span class="ml-1 caption grey--text text--darken-1">
+                                        (desde {{ producto_selecto.escala_may2 }})
+                                    </span>
+                                    <v-icon x-small class="ml-1"
+                                        v-if="precioSeleccionado === null && _tierSugerido === 3">mdi-robot</v-icon>
+                                </v-chip>
+                            </template>
+                            <span>Aplica desde {{ producto_selecto.escala_may2 }} unidades en adelante.</span>
+                        </v-tooltip>
 
-    <descuentos-porcentaje ref="descuentosRef" :precio-base="precioBaseParaDescuento" :es-bono="es_bono"
-        :decimales="$store.state.configuracion.decimal || 2" @cambio="onDescuentoCambio" />
+                        <!-- Botón para volver a AUTO -->
+                        <div class="mt-2" v-if="false">
+                            <v-btn x-small text color="primary" @click="precioSeleccionado = null">
+                                Usar precio automático por cantidad
+                            </v-btn>
+                        </div>
+                    </div>
 
-    <div class="text-caption mt-1">
-        Total a vender: <strong>{{ totalUnidades }}</strong> und
-        <span v-if="descuentoAplicado.precioFinal && descuentoAplicado.precioFinal !== precioBaseParaDescuento"
-            class="ml-2 green--text">
-            | Precio final: S/ {{ descuentoAplicado.precioFinal }}
-        </span>
+                    <div v-if="producto_selecto" class="mb-2">
+                        <v-row dense>
+                            <v-col cols="12">
+                                <v-text-field type="number" outlined dense v-model.number="cantidadInput" :label="modoVenta === 'entero'
+                                    ? `Cantidad (${producto_selecto.medida || 'CAJA'})`
+                                    : 'Cantidad (UND)'" min="0" @focus="$event.target.select()" autofocus
+                                    @keydown.enter="agrega_con_cantidad()" />
+                            </v-col>
+                        </v-row>
+
+                        <descuentos-porcentaje ref="descuentosRef" :precio-base="precioBaseParaDescuento"
+                            :es-bono="es_bono" :decimales="$store.state.configuracion.decimal || 2"
+                            @cambio="onDescuentoCambio" />
+
+                        <div class="text-caption mt-1">
+                            Total a vender: <strong>{{ totalUnidades }}</strong> und
+                            <span
+                                v-if="descuentoAplicado.precioFinal && descuentoAplicado.precioFinal !== precioBaseParaDescuento"
+                                class="ml-2 green--text">
+                                | Precio final: S/ {{ descuentoAplicado.precioFinal }}
+                            </span>
+                        </div>
+                    </div>
+                    <v-text-field ref="cantidadRef" v-if="false" type="number" autofocus outlined dense
+                        v-model="cantidad" label="CANTIDAD" @focus="$event.target.select(); centrarDialogoLuego()"
+                        @keydown.enter="agrega_con_cantidad()"></v-text-field>
+                </v-card-text>
+
+                <v-card-actions>
+                    <v-btn class="mt-n7" color="red" @click="agrega_con_cantidad()" block>OK</v-btn>
+                </v-card-actions>
+            </v-card>
+
+        </v-dialog>
+        <v-snackbar v-if="muestra_tabla" v-model="snackAgregar" :timeout="2000" top right color="success" elevation="2"
+            content-class="d-flex align-center">
+            <v-icon left small class="mr-2">mdi-check-circle</v-icon>
+            {{ snackMsg }}
+        </v-snackbar>
     </div>
-</div>
-<v-text-field ref="cantidadRef" v-if="false" type="number" autofocus outlined dense v-model="cantidad" label="CANTIDAD"
-    @focus="$event.target.select(); centrarDialogoLuego()" @keydown.enter="agrega_con_cantidad()"></v-text-field>
-</v-card-text>
-
-<v-card-actions>
-    <v-btn class="mt-n7" color="red" @click="agrega_con_cantidad()" block>OK</v-btn>
-</v-card-actions>
-</v-card>
-
-</v-dialog>
-<v-snackbar v-if="muestra_tabla" v-model="snackAgregar" :timeout="2000" top right color="success" elevation="2"
-    content-class="d-flex align-center">
-    <v-icon left small class="mr-2">mdi-check-circle</v-icon>
-    {{ snackMsg }}
-</v-snackbar>
-</div>
 </template>
 
 <script>
 import store from '@/store/index'
 import DescuentosPorcentaje from '@/components/descuentos_porcentaje.vue'
 import IndicadorBono from '@/views/productos/components/IndicadorBono.vue'
-import { allBono } from '../db'
-
 export default {
     name: 'catalogo_fijo',
     components: {
@@ -307,8 +312,7 @@ export default {
             snackMsg: 'Producto agregado',
             es_bono: false,
             moneda: 'S/ ',
-            descuentoAplicado: { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 },
-            bonosGlobalesCache: []
+            descuentoAplicado: { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 }
         }
     },
     computed: {
@@ -358,11 +362,13 @@ export default {
                 ? this._tierSugerido
                 : this.precioSeleccionado;
         },
+        esPrecioEstricto() {
+            return this.$store.state.permisos.permite_editar_precio === true;
+        },
     },
     mounted() {
         this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         window.addEventListener("keydown", this.detectarTecla);
-        this.cargarBonosGlobales();
     },
     beforeDestroy() {
         window.removeEventListener("keydown", this.detectarTecla);
@@ -412,48 +418,17 @@ export default {
         this._tierSugerido = 1; // estado interno para pintar sugerencia
     },
     methods: {
-        async cargarBonosGlobales() {
-            try {
-                const snap = await allBono().once("value");
-                const val = typeof snap.val === "function" ? snap.val() : null;
+        tieneBonoProducto(prod) {
+            if (!prod?.id) return false;
+            const tieneUnitario = !!(
+                prod.tiene_bono &&
+                Array.isArray(prod.lista_bono) &&
+                prod.lista_bono.length > 0
+            );
+            const tieneGrupoBono = !!prod.grupo_bono;
+            const tieneGrupoPrecio = !!prod.grupo_precio;
 
-                let arr = [];
-                if (Array.isArray(val)) arr = val.filter(Boolean);
-                else if (val && typeof val === "object") arr = Object.values(val);
-
-                // Solo bonos activos y vigentes
-                this.bonosGlobalesCache = arr.filter(b => {
-                    if (!b.activo) return false;
-                    if (b.fecha_vencimiento && new Date(b.fecha_vencimiento) < new Date()) return false;
-                    return true;
-                });
-            } catch (e) {
-                console.error(e);
-                this.bonosGlobalesCache = [];
-            }
-        },
-
-        tieneBonoProducto(producto) {
-            if (!producto) return false;
-            // Bono unitario
-            if (producto.tiene_bono && producto.lista_bono && producto.lista_bono.length > 0) {
-                return true;
-            }
-            // Bono global precio
-            if (producto.grupo_precio) {
-                const bono = this.bonosGlobalesCache.find(b => 
-                    b.codigo === producto.grupo_precio && b.tipo === 'precio'
-                );
-                if (bono) return true;
-            }
-            // Bono global bono
-            if (producto.grupo_bono) {
-                const bono = this.bonosGlobalesCache.find(b => 
-                    b.codigo === producto.grupo_bono && b.tipo === 'bono'
-                );
-                if (bono) return true;
-            }
-            return false;
+            return tieneUnitario || tieneGrupoBono || tieneGrupoPrecio;
         },
 
         precioChip(producto, tier) {
@@ -568,43 +543,6 @@ export default {
 
             this.$emit('agrega_lista', linea);
             this.avisarAgregado();
-
-
-
-            if (this.producto_selecto.tiene_bono && Array.isArray(this.producto_selecto.lista_bono)) {
-                const bonosOrdenados = [...this.producto_selecto.lista_bono]
-                    .map(b => ({ ...b, apartir_de: this.toNum(b.apartir_de, 0), cantidad: this.toNum(b.cantidad, 0) }))
-                    .sort((a, b) => b.apartir_de - a.apartir_de);
-
-                let cantidadRestante = unidadesTotal;
-
-                bonosOrdenados.forEach(bono => {
-                    const veces = Math.floor(cantidadRestante / bono.apartir_de);
-                    if (veces >= 1) {
-                        const idBono = String(bono.cod_producto || '').trim();
-                        const productoBono = store.state.productos.find(p => String(p.id).trim() === idBono);
-
-                        if (productoBono) {
-                            //console.log('precio bono',precioUnidad)
-                            this.$emit('agrega_lista', {
-                                ...productoBono,
-                                operacion: 'GRATUITA',
-                                medida: 'UNIDAD',
-                                factor: factor,
-                                cantidad: veces * bono.cantidad, // en unidades
-                                precio: precioUnidad,
-                                precio_base: precioUnidad,
-                                observacion: '',
-                                // Marcar como bono automático para que sea recalculado
-                                bono_auto: true,
-                                bono_origen_tipo: 'lista_bono',
-                                bono_origen: this.producto_selecto.id,
-                            });
-                            cantidadRestante -= veces * bono.apartir_de;
-                        }
-                    }
-                });
-            }
 
             this.$nextTick(() => {
                 this.observacionesSeleccionadas = [];

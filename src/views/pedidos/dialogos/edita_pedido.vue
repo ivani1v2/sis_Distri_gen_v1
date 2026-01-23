@@ -13,14 +13,14 @@
             </v-toolbar>
 
             <v-card-text>
-                <v-alert v-if="excedeLineaCredito" dense border="left" colored-border 
-                    type="error" class="mb-3 mt-5">
+                <v-alert v-if="excedeLineaCredito" dense border="left" colored-border type="error" class="mb-3 mt-5">
                     <div class="d-flex justify-space-between flex-wrap caption">
                         <span>Línea Crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2) }}</strong></span>
-                        <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2) }}</strong></span>
+                        <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2)
+                                }}</strong></span>
                         <span>Disponible: <strong class="red--text">
-                            {{ moneda }} {{ saldoDisponible.toFixed(2) }}
-                        </strong></span>
+                                {{ moneda }} {{ saldoDisponible.toFixed(2) }}
+                            </strong></span>
                     </div>
                     <div class="mt-1 caption red--text">
                         El total del pedido supera el saldo disponible. Ajuste el pedido para poder guardar.
@@ -51,7 +51,6 @@
                     </v-col>
                 </v-row>
 
-                <!-- Crédito -->
                 <v-row dense v-if="cabecera.condicion_pago === 'CREDITO'">
                     <v-col cols="6">
                         <v-menu v-model="menuFecha" :close-on-content-click="false" transition="scale-transition"
@@ -76,7 +75,6 @@
             </v-card-text>
 
 
-            <!-- Detalle (editable) -->
             <v-card-text class="mt-n3">
                 <v-row class="" dense>
                     <v-col cols="8">
@@ -120,10 +118,8 @@
                                 <td class="pa-0 mt-n1 mb-n1">
                                     <v-card class="ma-1 pa-2 " outlined :elevation="0" ripple>
                                         <div class="d-flex align-center mt-n2 mb-n2">
-                                            <!-- Contenido -->
                                             <div class="flex-grow-1 mr-2">
                                                 <div class="text-caption grey--text text--darken-1">
-                                                    <!-- Precio + chips -->
                                                     <span>
                                                         Precio: {{ moneda }}
                                                         {{ redondear(item.precio) }}
@@ -140,8 +136,10 @@
                                                     <v-chip v-if="item.medida" x-small class="ml-1" label>
                                                         {{ item.medida }}
                                                     </v-chip>
+
                                                     <v-chip v-if="item.operacion === 'GRATUITA'" x-small class="ml-1"
-                                                        color="pink" text-color="white" label>
+                                                        color="pink" text-color="white" label><v-icon x-small
+                                                            left>mdi-gift</v-icon>
                                                         Gratuita
                                                     </v-chip>
                                                 </div>
@@ -150,7 +148,7 @@
                                                     style="max-width: 70vw;">
                                                     <span class="font-weight-bold red--text">{{
                                                         Number(item.cantidad)
-                                                    }}×</span>
+                                                        }}×</span>
                                                     {{ item.nombre }}
                                                 </div>
                                             </div>
@@ -284,6 +282,7 @@ import axios from "axios"
 import store from '@/store/index'
 import { colClientes } from '../../../db_firestore'
 import { allcuentaxcobrar } from '../../../db'
+import { aplicaPreciosYBonos, agregarLista, analizaPreciosParcial, analizaGruposParcial } from '@/views/funciones/calculo_bonos'
 
 export default {
     name: 'EditorDetallePedido',
@@ -337,6 +336,7 @@ export default {
             expansionObservacion: null,
             clienteData: null,
             deudaCliente: 0,
+            recalculandoBonos: false,
         }
     },
     watch: {
@@ -421,6 +421,7 @@ export default {
         }
     },
     created() {
+        console.log(this.detalle)
         if (this.cabecera && this.cabecera.moneda) {
             this.moneda = this.cabecera.moneda
         } else {
@@ -435,10 +436,13 @@ export default {
         this.cargarDatosCredito()
     },
     methods: {
+        recalcularSiPermiteBonos() {
+            this.$nextTick(() => this.recalculoCompleto());
+        },
         async cargarDatosCredito() {
             const doc = String(this.cabecera?.doc_numero || '').trim()
             if (!doc) return
-            
+
             try {
                 const docSnap = await colClientes().doc(doc).get()
                 if (docSnap.exists) {
@@ -450,7 +454,7 @@ export default {
                     .orderByChild('documento')
                     .equalTo(doc)
                     .once('value')
-                
+
                 let totalDeuda = 0
                 if (deudaSnap.exists()) {
                     deudaSnap.forEach(item => {
@@ -481,10 +485,20 @@ export default {
         },
 
         editaProducto(val) {
+            let precioBase = Number(val.precio_base || val.precio || 0);
+
+            if (val.bono_auto || val.operacion === 'GRATUITA') {
+                const productos = this.$store?.state?.productos || [];
+                const prodOriginal = productos.find(p => String(p.id) === String(val.id));
+                if (prodOriginal) {
+                    precioBase = Number(prodOriginal.precio || 0);
+                }
+            }
+
             console.log(val)
             this.item_selecto = {
                 ...val,
-                precio_base: Number(val.precio_base || val.precio || 0),
+                precio_base: precioBase,
                 desc_1: Number(val.desc_1 || 0),
                 desc_2: Number(val.desc_2 || 0),
                 desc_3: Number(val.desc_3 || 0)
@@ -493,32 +507,66 @@ export default {
         },
 
         onEditaProducto(lineaActualizada) {
-            const pos = this.lineas.map(e => e.uuid).indexOf(lineaActualizada.uuid);
+            const pos = this.lineas.findIndex(e => e.uuid === lineaActualizada.uuid);
             if (pos === -1) return;
 
             const linea = this.lineas[pos];
+
+            const precioAntes = Number(linea.precio || 0);          // 👈 antes
+            const nuevoPrecio = Number(lineaActualizada.precio || 0);
+
+            // aplica cambios
             linea.cantidad = Number(lineaActualizada.cantidad || 0);
-            linea.precio = Number(lineaActualizada.precio || 0);
-            linea.precio_base = Number(lineaActualizada.precio_base || linea.precio_base || linea.precio || 0);
+            linea.precio = nuevoPrecio;
+
+            // ⚠️ NO recalcules precio_base desde el precio editado
+            linea.precio_base = Number(lineaActualizada.precio_base ?? linea.precio_base ?? 0);
+
             linea.preciodescuento = Number(lineaActualizada.preciodescuento || 0);
             linea.desc_1 = Number(lineaActualizada.desc_1 || 0);
             linea.desc_2 = Number(lineaActualizada.desc_2 || 0);
             linea.desc_3 = Number(lineaActualizada.desc_3 || 0);
             linea.operacion = lineaActualizada.operacion || linea.operacion;
             linea.nombre = lineaActualizada.nombre || linea.nombre;
-            linea.totalLinea = Number(lineaActualizada.totalLinea || 0);
+
+            // ✅ marcar manual solo si cambió
+            if (nuevoPrecio !== precioAntes) {
+                this.$set(linea, 'precio_manual', true);
+            }
 
             this.recalcularLinea(linea);
             this.dialogoProducto = false;
+
+            this.$nextTick(() => this.recalcularSiPermiteBonos());
         },
 
+
         eliminaedita() {
-            var pos = this.lineas.map(e => e.uuid).indexOf(this.item_selecto.uuid)
-            this.lineas.splice(pos, 1)
-            this.dialogoProducto = false
+            const itemAEliminar = this.item_selecto;
+            const pos = this.lineas.map(e => e.uuid).indexOf(itemAEliminar.uuid);
+
+            if (itemAEliminar.bono_auto && itemAEliminar.bono_origen_tipo === 'lista_bono' && itemAEliminar.bono_origen) {
+                const idOrigen = String(itemAEliminar.bono_origen);
+                const lineaOrigen = this.lineas.find(l => String(l.id) === idOrigen && !l.bono_auto);
+                if (lineaOrigen) {
+                    if (!lineaOrigen.bonos_eliminados) {
+                        this.$set(lineaOrigen, 'bonos_eliminados', []);
+                    }
+                    lineaOrigen.bonos_eliminados.push(itemAEliminar.bono_regla);
+                }
+            }
+
+            if (pos !== -1) {
+                this.lineas.splice(pos, 1);
+            }
+            this.dialogoProducto = false;
+
+            this.$nextTick(() => {
+                this.recalcularSiPermiteBonos()
+            })
         },
+
         _cargarDesdeProps() {
-            // Clona el detalle y asegura campos requeridos
             const base = Array.isArray(this.detalle) ? this.detalle : []
             this.lineas = base.map(it => ({
                 uuid: it.uuid || `${it.id}-${Date.now()}`,
@@ -538,8 +586,17 @@ export default {
                 tipoproducto: it.tipoproducto,
                 controstock: it.controstock,
                 peso: Number(it.peso || 0),
+                bono_auto: it.bono_auto || false,
+                bono_editado: it.bono_editado || false,
+                bono_origen_tipo: it.bono_origen_tipo || null,
+                bono_origen: it.bono_origen || null,
+                bono_regla: it.bono_regla || null,
+                precio_manual: it.precio_manual === true,
+                bonos_eliminados: it.bonos_eliminados || null,
                 totalLinea: Number(it.totalLinea != null ? it.totalLinea : (Number(it.cantidad || 0) * Number(it.precio || 0)))
             }))
+
+
         },
         number2(n) {
             const x = Number(n || 0)
@@ -585,7 +642,6 @@ export default {
                 return 1;
             }
 
-            // Caso raro: solo may2
             if (!hayMay1 && hayMay2) {
                 const esc2 = this.toNum(producto.escala_may2, Infinity);
                 return cantidad >= esc2 ? 3 : 1;
@@ -597,41 +653,86 @@ export default {
             if (tier === 2) return this.toNum(producto.precio_may1, this.toNum(producto.precio, 0));
             return this.toNum(producto.precio, 0);
         },
-        agregar_lista(items) {
-            const nuevos = Array.isArray(items) ? items : [items]
-            nuevos.forEach(val => {
-                // evita duplicados por id+medida (ajusta la regla si quieres)
-                const medidaLinea = (val.medida || '').toString().trim().toUpperCase()
-                const dup = this.lineas.find(
-                    x => x.id === val.id && (x.medida || '').toUpperCase() === medidaLinea
-                )
-                if (dup) return
+        agregar_lista(value) {
+            // 1) Fusiona / suma / respeta UUID con tu helper oficial
+            let nuevaLista = agregarLista({
+                listaActual: this.lineas,
+                nuevosItems: value,
+                createUUID: this.create_UUID,
+                redondear: (n) => this.redondear(n),
+            });
 
-                const cant = Number(val.cantidad || 1)
-                const precio = Number(val.precio || 0)
-                const descUnit = Number(val.preciodescuento || 0)
-                const esGratuita = String(val.operacion || '').toUpperCase() === 'GRATUITA'
-                const total = esGratuita ? 0 : this.fix2(Math.max(0, cant * (precio - descUnit)))
+            // 2) (Opcional) marca timestamp interno por si luego quieres ordenar “últimos arriba”
+            const baseTs = Date.now();
+            let offset = 0;
+            nuevaLista = nuevaLista.map(item => {
+                if (item.__tsAdd) return item;
+                return { ...item, __tsAdd: baseTs + (offset++) };
+            });
 
-                this.lineas.push({
-                    uuid: (val.uuid || '').toString() || `${val.id}-${Date.now()}`,
-                    id: val.id,
-                    nombre: val.nombre,
-                    medida: medidaLinea,
-                    cantidad: cant,
-                    precio,
-                    precio_base: precio,
-                    preciodescuento: descUnit,
-                    operacion: val.operacion,
-                    factor: val.factor,
-                    costo: val.costo,
-                    tipoproducto: val.tipoproducto,
-                    controstock: val.controstock,
-                    peso: Number(val.peso || 0),
-                    totalLinea: total
-                })
-            })
+            // 3) Asigna lista y recalcula SOLO lo afectado
+            this.lineas = nuevaLista;
+
+            this.$nextTick(() => {
+                this.recalculoUltimoAgregado(value);
+            });
         },
+
+        recalculoUltimoAgregado(value) {
+            const items = Array.isArray(value) ? value : [value];
+
+            // ids agregados
+            const ids = items
+                .map(x => String(x?.id ?? x?.cod_producto ?? ''))
+                .filter(Boolean);
+
+            if (!ids.length) return;
+
+            // 🔹 Precios parcial (solo ids)
+            this.lineas = analizaPreciosParcial({
+                lineas: this.lineas,
+                productos: this.$store.state.productos,
+                bonos: this.$store.state.bonos,
+                idsAfectados: ids,
+                // si manejas lista de precios en editor, pásala; si no, quítalo
+                // lista_precios: this.lista_precios_selecta,
+                redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
+                inPlace: true,
+            });
+
+            // 🔹 Bonos parcial (solo ids)
+            this.lineas = analizaGruposParcial({
+                lineas: this.lineas,
+                productos: this.$store.state.productos,
+                bonos: this.$store.state.bonos,
+                idsAfectados: ids,
+                createUUID: this.create_UUID,
+                redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
+                inPlace: true,
+            });
+        },
+
+        recalculoCompleto() {
+            this.lineas = aplicaPreciosYBonos({
+                lineas: this.lineas,
+                productos: this.$store.state.productos,
+                bonos: this.$store.state.bonos,
+                createUUID: this.create_UUID,
+                redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
+                inPlace: true,
+            });
+        },
+
+        create_UUID() {
+            let dt = new Date().getTime();
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                const r = (dt + Math.random() * 16) % 16 | 0;
+                dt = Math.floor(dt / 16);
+                return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+            });
+        },
+
+
         async api_rest(data, metodo) {
 
             var a = axios({

@@ -125,13 +125,13 @@
                     <template v-slot:item.precio="{ item }">
                         S/ {{ Number(item.precio || 0).toFixed(2) }}
                     </template>
-                    <template v-slot:[`item.monto_soles`]="{ item }">
+                    <template v-slot:item.monto_soles="{ item }">
                         <strong>S/ {{ Number(item.monto_soles || 0).toFixed(2) }}</strong>
                     </template>
-                    <template v-slot:[`item.peso_total`]="{ item }">
+                    <template v-slot:item.peso_total="{ item }">
                         {{ ((item.peso || 0) * item.cantidad).toFixed(2) }} kg
                     </template>
-                    <template v-slot:[`item.acciones`]="{ item }">
+                    <template v-slot:item.acciones="{ item }">
                         <v-btn icon small color="orange" @click="editarCantidadProducto(item)">
                             <v-icon small>mdi-pencil</v-icon>
                         </v-btn>
@@ -464,7 +464,7 @@ export default {
                     this.lista_transferencia.push({
                         id: prod.id,
                         nombre: prod.nombre,
-                        codbarra: prod.codbarra,
+                        codbarra: prod.codbarra || '',
                         cantidad: prod.cantidad,
                         stock_origen: prodOrigen ? (Number(prodOrigen.stock) + Number(prod.cantidad)) : prod.cantidad,
                         precio: prod.precio || 0,
@@ -617,7 +617,7 @@ export default {
                 this.lista_transferencia.push({
                     id: prod.id,
                     nombre: prod.nombre,
-                    codbarra: prod.codbarra,
+                    codbarra: prod.codbarra || '',
                     cantidad: this.cantidadAgregar,
                     stock_origen: prod.stock,
                     precio: prod.precio || 0,
@@ -717,7 +717,7 @@ export default {
                         productos: this.lista_transferencia.map(item => ({
                             id: item.id,
                             nombre: item.nombre,
-                            codbarra: item.codbarra,
+                            codbarra: item.codbarra || '',
                             cantidad: item.cantidad,
                             precio: item.precio || 0,
                             peso: item.peso || 0,
@@ -792,7 +792,7 @@ export default {
                         productos: this.lista_transferencia.map(item => ({
                             id: item.id,
                             nombre: item.nombre,
-                            codbarra: item.codbarra,
+                            codbarra: item.codbarra || '',
                             cantidad: item.cantidad,
                             precio: item.precio || 0,
                             peso: item.peso || 0,

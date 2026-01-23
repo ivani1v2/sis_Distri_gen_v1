@@ -201,178 +201,8 @@
       </div>
     </v-card>
 
-    <v-dialog v-model="dial_mov" max-width="750px" persistent>
-      <div>
-        <v-system-bar window dark>
-          <v-icon @click="dial_mov = false">mdi-close</v-icon>
-          <v-switch v-model="activo" color="green" label="Activo" class="ml-3"></v-switch>
-          <v-spacer></v-spacer>
-          <v-radio-group class="mt-4" v-model="modo_bono" row dense>
-            <v-radio label="Precio" value="precio"></v-radio>
-            <v-radio label="Bono" value="bono"></v-radio>
-          </v-radio-group>
-        </v-system-bar>
-      </div>
-
-      <v-card>
-        <v-card-text class="pa-4 pa-sm-6">
-          <v-row dense>
-            <v-col cols="12" sm="6">
-              <v-text-field dense outlined v-model="nombre" label="Nombre *"
-                prepend-inner-icon="mdi-tag"></v-text-field>
-            </v-col>
-            <v-col cols="12" sm="6">
-              <v-autocomplete dense outlined v-model="proveedor" :items="proveedoresItems" clearable label="Proveedor"
-                prepend-inner-icon="mdi-truck"></v-autocomplete>
-            </v-col>
-            <v-col cols="12">
-              <v-textarea dense outlined v-model="observacion" auto-grow filled label="Observación"
-                rows="1"></v-textarea>
-            </v-col>
-            <v-col cols="12" sm="6">
-              <v-menu v-model="menuFechaVencimiento" :close-on-content-click="false" transition="scale-transition"
-                offset-y min-width="auto">
-                <template v-slot:activator="{ on, attrs }">
-                  <v-text-field v-model="fecha_vencimiento" label="Fecha de Vencimiento"
-                    prepend-inner-icon="mdi-calendar" readonly v-bind="attrs" v-on="on" dense outlined clearable
-                    hint="Dejar vacío para sin vencimiento" persistent-hint></v-text-field>
-                </template>
-                <v-date-picker v-model="fecha_vencimiento" @input="menuFechaVencimiento = false"
-                  :min="hoy"></v-date-picker>
-              </v-menu>
-            </v-col>
-            <v-col cols="12" sm="6">
-              <v-alert v-if="fecha_vencimiento" dense text :type="esFechaProxima ? 'warning' : 'info'" class="mb-0">
-                {{ diasRestantes }} días restantes
-              </v-alert>
-            </v-col>
-          </v-row>
-
-          <v-divider class="my-3"></v-divider>
-
-          <v-row class="mt-1" v-if="modo_bono == 'precio'" dense>
-            <v-col cols="12" class="mb-2">
-              <span class="text-subtitle-2">
-                <v-icon small color="blue">mdi-tag-multiple</v-icon>
-                Configuración de Precios Mayorista
-              </span>
-            </v-col>
-            <v-col cols="12" sm="6">
-              <v-text-field outlined dense type="number" v-model="escala_may1" label="Escala Mayorista 1 (und)"
-                prepend-inner-icon="mdi-numeric"></v-text-field>
-            </v-col>
-            <v-col cols="12" sm="6">
-              <v-text-field outlined dense type="number" v-model="precio_may1" label="Precio Mayorista 1"
-                prepend-inner-icon="S/"></v-text-field>
-            </v-col>
-            <v-col cols="12" sm="6">
-              <v-text-field outlined dense type="number" v-model="escala_may2" label="Escala Mayorista 2 (und)"
-                prepend-inner-icon="mdi-numeric"></v-text-field>
-            </v-col>
-            <v-col cols="12" sm="6">
-              <v-text-field outlined dense type="number" v-model="precio_may2" label="Precio Mayorista 2"
-                prepend-inner-icon="S/"></v-text-field>
-            </v-col>
-          </v-row>
-
-          <!-- BONOS -->
-          <v-row class="mt-n1" v-else>
-            <v-col cols="12" class="mb-2">
-              <span class="text-subtitle-2">
-                <v-icon small color="orange">mdi-gift</v-icon>
-                Configuración de Bonificaciones
-              </span>
-              <v-btn x-small class="ml-3" @click="dial_agrega = true" color="success">
-                <v-icon left x-small>mdi-plus</v-icon>Agregar Regla
-              </v-btn>
-            </v-col>
-            <v-col cols="12">
-              <v-simple-table fixed-header height="20vh" dense v-if="array_bono2.length">
-                <template v-slot:default>
-                  <thead>
-                    <tr>
-                      <th class="text-left">A partir de</th>
-                      <th class="text-left">Cant. Bono</th>
-                      <th class="text-left">Producto</th>
-                      <th class="text-left">Máx</th>
-                      <th class="text-left">Quitar</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="(item, idx) in array_bono2" :key="idx">
-                      <td>{{ item.apartir_de }} und</td>
-                      <td><strong class="success--text">{{ item.cantidad_bono }}x</strong></td>
-                      <td>{{ vernombre(item.codigo) }}</td>
-                      <td>{{ item.cantidad_max || '∞' }}</td>
-                      <td>
-                        <v-icon small color="red" @click="elimina(2, item)">mdi-delete</v-icon>
-                      </td>
-                    </tr>
-                  </tbody>
-                </template>
-              </v-simple-table>
-              <v-alert v-else type="info" dense text>
-                No hay reglas de bonificación. Agrega una regla para continuar.
-              </v-alert>
-            </v-col>
-          </v-row>
-        </v-card-text>
-
-        <v-card-actions class="mt-n6">
-          <v-spacer></v-spacer>
-          <v-btn color="success" @click="genera_bono()">
-            <v-icon left>mdi-content-save</v-icon>Guardar
-          </v-btn>
-          <v-btn color="error" @click="dial_mov = false">Cancelar</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <v-dialog v-model="dial_agrega" max-width="460px">
-      <div>
-        <v-system-bar window dark>
-          <v-icon @click="dial_agrega = false">mdi-close</v-icon>
-          <span class="ml-2">Agregar Regla de Bonificación</span>
-        </v-system-bar>
-      </div>
-      <v-card class="pa-3">
-        <v-row dense>
-          <v-col cols="12">
-            <v-text-field outlined type="number" dense v-model="apartir_de" label="Bono a partir de (und) *"
-              prepend-inner-icon="mdi-numeric"></v-text-field>
-          </v-col>
-          <v-col cols="12" sm="6">
-            <v-text-field outlined type="number" dense v-model="cantidad_bono" label="Cantidad bonificación *"
-              prepend-inner-icon="mdi-gift"></v-text-field>
-          </v-col>
-          <v-col cols="12" sm="6">
-            <v-text-field outlined type="number" dense v-model="cantidad_max" label="Cantidad máxima" hint="Opcional"
-              persistent-hint prepend-inner-icon="mdi-infinity"></v-text-field>
-          </v-col>
-        </v-row>
-
-        <v-autocomplete v-model="producto_sele" :items="$store.state.productos" item-text="nombre" item-value="id"
-          label="Producto a bonificar *" clearable menu-props="auto" outlined dense prepend-inner-icon="mdi-magnify">
-          <template v-slot:item="{ item }">
-            <v-list-item-content>
-              <v-list-item-title>
-                <strong>{{ item.categoria }}</strong> - {{ item.nombre }}
-              </v-list-item-title>
-              <v-list-item-subtitle>
-                Stock: {{ item.stock }} | Precio: S/{{ item.precio }}
-              </v-list-item-subtitle>
-            </v-list-item-content>
-          </template>
-        </v-autocomplete>
-
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="success" @click="guardar_bono()">
-            <v-icon left>mdi-plus</v-icon>Agregar
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <dial_config_bono v-model="dial_mov" :bono="bonoSeleccionado" :proveedoresItems="proveedoresItems"
+      :productos="productosItems" :editando="!!editId" @guardar="guardarBonoHandler" />
 
     <VisorProductosBono v-model="dialVisorProductos" :bono="bonoSeleccionado" />
   </div>
@@ -382,32 +212,19 @@
 import store from "@/store";
 import { allBono, nuevoBono, eliminabono } from "../../db";
 import VisorProductosBono from './components/VisorProductosBono.vue';
+import dial_agregar_regla from "./dialogos/dial_agregar_regla.vue";
+import dial_config_bono from "./dialogos/dial_config_bono.vue";
 
 export default {
   components: {
-    VisorProductosBono
+    VisorProductosBono,
+    dial_agregar_regla,
+    dial_config_bono,
   },
   data() {
     return {
       dial_mov: false,
-      dial_agrega: false,
       dialVisorProductos: false,
-      menuFechaVencimiento: false,
-      modo_bono: "precio",
-      activo: true,
-      nombre: "",
-      observacion: "",
-      proveedor: null,
-      fecha_vencimiento: null,
-      escala_may1: null,
-      precio_may1: null,
-      escala_may2: null,
-      precio_may2: null,
-      producto_sele: null,
-      apartir_de: null,
-      cantidad_bono: null,
-      cantidad_max: null,
-      array_bono2: [],
       headers: [
         { text: "Código", value: "codigo", width: 90, align: 'center' },
         { text: "Tipo", value: "tipo", width: 90, align: 'center' },
@@ -428,7 +245,6 @@ export default {
       filtroEstado: 'todos',
       editIndex: -1,
       editId: null,
-      editTipo: null,
     };
   },
 
@@ -680,113 +496,8 @@ export default {
       const count = (this.movimientos || []).filter((m) => m && m.tipo === tipo).length;
       return count + 1;
     },
-    guardar_bono() {
-      if (!this.producto_sele || !this.apartir_de || !this.cantidad_bono) {
-        this._toast("Completa producto, 'a partir de' y 'cantidad de bonificación'.");
-        return;
-      }
-      this.array_bono2.push({
-        apartir_de: Number(this.apartir_de),
-        codigo: this.producto_sele,
-        cantidad_max: this.cantidad_max ? Number(this.cantidad_max) : null,
-        cantidad_bono: Number(this.cantidad_bono),
-      });
-      this.producto_sele = null;
-      this.apartir_de = null;
-      this.cantidad_bono = null;
-      this.cantidad_max = null;
-      this.dial_agrega = false;
-    },
-
-    elimina(_tipo, item) {
-      this.array_bono2 = this.array_bono2.filter((x) => x !== item);
-    },
-
-    _buildPrecioPayload() {
-      return {
-        tipo: "precio",
-        activo: !!this.activo,
-        nombre: (this.nombre || "").trim(),
-        observacion: (this.observacion || "").trim(),
-        proveedor: this.proveedor || null,
-        fecha_vencimiento: this.fecha_vencimiento || null,
-        escala_may1: this.escala_may1 != null ? Number(this.escala_may1) : null,
-        precio_may1: this.precio_may1 != null ? Number(this.precio_may1) : null,
-        escala_may2: this.escala_may2 != null ? Number(this.escala_may2) : null,
-        precio_may2: this.precio_may2 != null ? Number(this.precio_may2) : null,
-        creado: Date.now(),
-        usuario: store?.state?.usuario || null,
-      };
-    },
-
-    _buildBonoPayload() {
-      return {
-        tipo: "bono",
-        activo: !!this.activo,
-        nombre: (this.nombre || "").trim(),
-        observacion: (this.observacion || "").trim(),
-        proveedor: this.proveedor || null,
-        fecha_vencimiento: this.fecha_vencimiento || null,
-        data: this.array_bono2.map((b, i) => ({
-          id: i + 1,
-          apartir_de: Number(b.apartir_de),
-          cantidad_bono: Number(b.cantidad_bono),
-          cantidad_max: b.cantidad_max != null ? Number(b.cantidad_max) : null,
-          codigo: b.codigo,
-        })),
-        creado: Date.now(),
-        usuario: store?.state?.usuario || null,
-      };
-    },
-
-    async genera_bono() {
-      if (!this.nombre?.trim()) {
-        this._toast("Escribe un nombre.");
-        return;
-      }
-
-      let payload = this.modo_bono === "precio" ? this._buildPrecioPayload() : this._buildBonoPayload();
-      store.commit("dialogoprogress");
-
-      try {
-        if (this.editIndex >= 0 && this.editId != null) {
-          const anterior = this.movimientos[this.editIndex] || {};
-          const oldKey = anterior.codigo || anterior.id;
-
-          if (anterior.tipo === payload.tipo) {
-            payload.codigo = oldKey;
-            payload.id = oldKey;
-            payload.id_grupo = anterior.id_grupo ?? this.getNextGroupId(payload.tipo);
-            await nuevoBono(oldKey, payload);
-          } else {
-            const newCode = this._nextCodigo(payload.tipo);
-            payload.codigo = newCode;
-            payload.id = newCode;
-            payload.id_grupo = this.getNextGroupId(payload.tipo);
-            await nuevoBono(newCode, payload);
-            await nuevoBono(oldKey, null);
-          }
-        } else {
-          const newCode = this._nextCodigo(payload.tipo);
-          payload.codigo = newCode;
-          payload.id = newCode;
-          payload.id_grupo = this.getNextGroupId(payload.tipo);
-          await nuevoBono(newCode, payload);
-        }
-
-        await this.cargarMovimientos();
-        this._toast("Guardado correctamente");
-        this.dial_mov = false;
-        store.commit("dialogoprogress");
-        this._resetForm();
-      } catch (e) {
-        console.error(e);
-        this._toast("Error al guardar la programación.");
-        store.commit("dialogoprogress");
-      }
-    },
-
     editarTransferencia(item) {
+      console.log(item)
       const idx = this.movimientos.findIndex((x) => String(x.id) === String(item.id));
       if (idx < 0) return;
 
@@ -829,6 +540,57 @@ export default {
       }
     },
 
+    async guardarBonoHandler(bonoData) {
+      if (!bonoData.nombre?.trim()) {
+        this._toast("Escribe un nombre.");
+        return;
+      }
+
+      store.commit("dialogoprogress");
+
+      try {
+        const payload = {
+          ...bonoData,
+          creado: Date.now(),
+          usuario: store?.state?.usuario || null,
+        };
+
+        if (this.editId) {
+          const anterior = this.movimientos[this.editIndex] || {};
+          const oldKey = anterior.codigo || anterior.id;
+
+          if (anterior.tipo === payload.tipo) {
+            payload.codigo = oldKey;
+            payload.id = oldKey;
+            payload.id_grupo = anterior.id_grupo ?? this.getNextGroupId(payload.tipo);
+            await nuevoBono(oldKey, payload);
+          } else {
+            const newCode = this._nextCodigo(payload.tipo);
+            payload.codigo = newCode;
+            payload.id = newCode;
+            payload.id_grupo = this.getNextGroupId(payload.tipo);
+            await nuevoBono(newCode, payload);
+            await nuevoBono(oldKey, null);
+          }
+        } else {
+          const newCode = this._nextCodigo(payload.tipo);
+          payload.codigo = newCode;
+          payload.id = newCode;
+          payload.id_grupo = this.getNextGroupId(payload.tipo);
+          await nuevoBono(newCode, payload);
+        }
+
+        await this.cargarMovimientos();
+        this._toast("Guardado correctamente");
+        this.dial_mov = false;
+      } catch (e) {
+        console.error(e);
+        this._toast("Error al guardar la programación.");
+      } finally {
+        store.commit("dialogoprogress");
+      }
+    },
+
     _toast(msg) {
       if (this.$store?.commit) {
         this.$store.commit("dialogosnackbar", msg);
@@ -843,3 +605,25 @@ export default {
   },
 };
 </script>
+<style scoped>
+.w-full {
+  width: 100%;
+}
+
+.lh-1 {
+  line-height: 1.1;
+}
+
+.border-subtle {
+  border: 1px solid #e0e0e0 !important;
+}
+
+.border-blue {
+  border: 1px solid #90caf9 !important;
+  border-top: 4px solid #1976d2 !important;
+}
+
+.v-btn-toggle .v-btn {
+  height: 36px !important;
+}
+</style>

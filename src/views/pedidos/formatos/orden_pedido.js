@@ -245,6 +245,7 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
     y += 6;
   }
 
+
   const enLetras = `Son: ${NumerosALetras(Number(total).toFixed(2), moneda)}`;
   const enLetrasTxt = doc.splitTextToSize(enLetras, contentWidth);
   doc.text(enLetrasTxt, lMargin, y);
@@ -255,6 +256,11 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
     : (cabecera?.cronograma?.cuotas || []);
 
   if ((condicion || '').toUpperCase() === 'CREDITO' && cuotasData.length > 0) {
+
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text("Detalle de cronograma: ", 14, y + 3);
+
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(10);
     doc.text("Detalle de cronograma: ", 14, y + 3);
@@ -559,6 +565,9 @@ async function impresion80_ordenPedido(cabecera, items = []) {
     : (cabecera?.cronograma?.cuotas || []);
 
   if ((condicion || '').toUpperCase() === 'CREDITO' && cuotasData80.length > 0) {
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text("Detalle de cronograma: ", lMargin, linea + 3);
 
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(8);
@@ -867,6 +876,10 @@ async function impresion58_ordenPedido(cabecera, items = []) {
     : (cabecera?.cronograma?.cuotas || []);
 
   if ((condicion || '').toUpperCase() === 'CREDITO' && cuotasData58.length > 0) {
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(8.4);
+    doc.text("Detalle de cronograma de pagos:", lMargin, linea + 5);
+
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(8.4);
     doc.text("Detalle de cronograma de pagos:", lMargin, linea + 5);

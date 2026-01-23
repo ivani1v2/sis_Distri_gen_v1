@@ -45,6 +45,12 @@
                                 <v-icon left>mdi-gift</v-icon> Configuración de Bonos
                             </v-btn>
                         </v-list-item>
+                        <v-list-item>
+                            <v-btn small color="green" class="mr-n2" @click="analiza_gruposs">
+                                MIGRAR BONO
+                            </v-btn>
+                        </v-list-item>
+
                     </v-list>
                 </v-menu>
             </v-col>
@@ -231,8 +237,8 @@
                     </v-col>
                 </v-row>
 
-                <v-row class="mt-n6" dense>
-                    <v-col cols="12" xs="12" sm="4" md="4">
+                <v-row class="mt-n7" dense>
+                    <v-col cols="12" xs="12" sm="4" md="4" :class="$vuetify.breakpoint.smAndDown ? 'mb-n6 mt-n1' : ''">
                         <v-autocomplete outlined dense clearable :disabled="!$store.state.permisos.productos_edita"
                             v-model="medida" :items="itemsMedidasNombre" item-text="text" item-value="value"
                             label="Medida" :menu-props="{ maxHeight: 300 }" :filter="filtraStr"
@@ -260,26 +266,38 @@
                             v-model="precio" label="Precio"></v-text-field>
                     </v-col>
                 </v-row>
+
+                <v-alert v-if="grupoPrecioSelect" type="info" dense text class="mt-n4 mb-10">
+                    Escalas deshabilitadas: Tiene grupo de precio global asignado
+                    <v-btn x-small text color="primary" class="ml-2" @click="quitarGrupoPrecio">
+                        Quitar grupo de precio Global
+                    </v-btn>
+                </v-alert>
+
                 <v-row class="mt-n6" dense>
                     <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" type="number" dense
-                            v-model="escala_may1" label="Escala may 1"></v-text-field>
+                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
+                            type="number" dense v-model="escala_may1" label="Escala may 1"
+                            persistent-hint></v-text-field>
                     </v-col>
                     <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" type="number" dense
-                            v-model="precio_may1" label="Precio may 1"></v-text-field>
+                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
+                            type="number" dense v-model="precio_may1" label="Precio may 1"
+                            persistent-hint></v-text-field>
                     </v-col>
 
                 </v-row>
 
                 <v-row class="mt-n6" dense>
                     <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" type="number" dense
-                            v-model="escala_may2" label="Escala may 2"></v-text-field>
+                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
+                            type="number" dense v-model="escala_may2" label="Escala may 2"
+                            persistent-hint></v-text-field>
                     </v-col>
                     <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" type="number" dense
-                            v-model="precio_may2" label="Precio may 2"></v-text-field>
+                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
+                            type="number" dense v-model="precio_may2" label="Precio may 2"
+                            persistent-hint></v-text-field>
                     </v-col>
 
                 </v-row>
@@ -295,138 +313,165 @@
                             v-model="peso" label="Peso (KG)"></v-text-field>
                     </v-col>
                 </v-row>
-                <v-card outlined class="mt-2">
-                    <v-tabs v-model="tabBonos" dense grow>
-                        <v-tab>
-                            <v-icon small left>mdi-star</v-icon>
-                            Bono Unitario
-                            <v-chip x-small class="ml-1" color="orange" text-color="white" v-if="lista_bono.length">
-                                {{ lista_bono.length }}
-                            </v-chip>
+                <v-card flat outlined class="mt-n4 rounded-lg overflow-hidden">
+                    <v-tabs v-model="tabBonos" dense grow color="primary" background-color="grey lighten-5">
+                        <v-tab class="text-none">
+                            <v-icon small left color="orange">mdi-gift-outline</v-icon>
+                            Bono
+                            <v-badge v-if="grupoBonoAsignado" color="orange" content="1" inline small></v-badge>
                         </v-tab>
-                        <v-tab>
-                            <v-icon small left>mdi-earth</v-icon>
-                            Bonos Globales
-                            <v-chip x-small class="ml-1" color="blue" text-color="white"
-                                v-if="tieneBonosGlobalesAsignados">
-                                {{ contarBonosGlobales }}
-                            </v-chip>
+                        <v-tab class="text-none">
+                            <v-icon small left color="blue">mdi-tag-multiple-outline</v-icon>
+                            Precio
+                            <v-badge v-if="grupoPrecioAsignado" color="blue" content="1" inline small></v-badge>
                         </v-tab>
                     </v-tabs>
 
-                    <v-tabs-items v-model="tabBonos">                        
-                        <v-tab-item>
-                            <v-card flat class="pa-2">
-                                <v-row dense align="center">
-                                    <v-col>
-                                        <v-switch v-model="tiene_bono" label="Activar Bonificación Unitaria" dense
-                                            hide-details></v-switch>
-                                    </v-col>
-                                    <v-col cols="auto">
-                                        <v-btn color="success" x-small @click="dial_adiciona = true"
-                                            :disabled="!tiene_bono">
-                                            <v-icon small left>mdi-plus</v-icon> Adicionar
+                    <v-tabs-items v-model="tabBonos">
+                        <v-tab-item px-2>
+                            <v-card flat class="pa-3">
+                                <div class="d-flex flex-wrap justify-space-between align-center mb-2">
+                                    <span class="text-overline grey--text">Promoción de Regalo</span>
+                                    <div class="d-flex">
+                                        <v-btn color="primary" depressed x-small rounded
+                                            @click="abrirBonoGlobalTab('bono')">
+                                            <v-icon x-small left>mdi-sync</v-icon> {{ grupoBonoAsignado ? 'Cambiar' :
+                                                'Asignar' }}
                                         </v-btn>
-                                    </v-col>
-                                </v-row>
+                                        <v-btn color="success" depressed x-small rounded class="ml-1"
+                                            @click="abrirNuevoBonoDesdeProductos('bono')">
+                                            <v-icon x-small left>mdi-plus</v-icon> Nuevo
+                                        </v-btn>
+                                        <v-btn v-if="grupoBonoAsignado" color="info" depressed x-small rounded
+                                            class="ml-1" @click="abrirVisorProductos(grupoBonoAsignado)">
+                                            <v-icon x-small left>mdi-account-group</v-icon> Ver Productos
+                                        </v-btn>
+                                    </div>
+                                </div>
 
-                                <v-simple-table v-if="tiene_bono && lista_bono.length" fixed-header dense class="mt-2">
-                                    <template v-slot:default>
-                                        <thead>
-                                            <tr>
-                                                <th>A partir de</th>
-                                                <th>Descripción</th>
-                                                <th width="60">Acción</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr v-for="item in lista_bono" :key="item.id">
-                                                <td>{{ item.apartir_de }} und</td>
-                                                <td><strong class="red--text">{{ item.cantidad }}x</strong> {{
-                                                    item.nom_producto }}</td>
-                                                <td>
-                                                    <v-icon small color="red"
-                                                        @click="elimina_bono(item)">mdi-delete</v-icon>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </template>
-                                </v-simple-table>
+                                <v-card v-if="grupoBonoAsignado" flat outlined class="pa-0 rounded-lg border-orange">
+                                    <div class="pa-2 orange lighten-5 d-flex align-center">
+                                        <v-icon color="orange" small class="mr-2">mdi-gift</v-icon>
+                                        <div class="text-truncate mr-2 flex-grow-1">
+                                            <div
+                                                class="text-body-2 font-weight-black orange--text text--darken-4 lh-tight text-uppercase">
+                                                {{ grupoBonoAsignado.nombre }}</div>
+                                            <div class="text-caption grey--text">{{ grupoBonoAsignado.codigo }}</div>
+                                        </div>
+                                        <v-btn icon x-small color="red" @click.stop="quitarGrupoBono">
+                                            <v-icon small>mdi-delete-outline</v-icon>
+                                        </v-btn>
+                                    </div>
 
-                                <v-alert v-else-if="tiene_bono" type="info" dense text class="mt-2">
-                                    No hay bonos unitarios configurados. Haz clic en "Adicionar" para agregar.
+                                    <div class="pa-2 bg-white">
+                                        <div v-if="grupoBonoAsignado.data && grupoBonoAsignado.data.length">
+                                            <div v-for="(r, i) in grupoBonoAsignado.data" :key="i"
+                                                class="d-flex align-center py-2 border-bottom-dashed">
+                                                <div class="text-center mr-3 px-2 py-1 grey lighten-4 rounded"
+                                                    style="min-width: 50px;">
+                                                    <div class="text-caption grey--text lh-1 font-weight-bold">COMPRA
+                                                    </div>
+                                                    <div class="text-h6 font-weight-black lh-1 primary--text">{{
+                                                        r.apartir_de }}
+                                                    </div>
+                                                    <div class="text-overline grey--text lh-1"
+                                                        style="font-size: 0.5rem !important;">UND</div>
+                                                </div>
+
+                                                <div class="flex-grow-1">
+                                                    <div
+                                                        class="text-caption grey--text font-weight-medium mb-n1 uppercase">
+                                                        Y
+                                                        LLEVA GRATIS:</div>
+                                                    <div class="text-body-2 font-weight-black success--text lh-tight">
+                                                        {{ Number(r.cantidad_bono || r.cantidad || 0) }}x {{
+                                                            obtenerNombreProducto(r.codigo || r.cod_producto) }}
+                                                    </div>
+                                                    <div class="text-overline grey--text lh-1">Límite: {{ r.cantidad_max
+                                                        || '∞'
+                                                        }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <v-alert v-else type="warning" dense text class="ma-0 caption">Este grupo no
+                                            tiene
+                                            reglas.</v-alert>
+                                    </div>
+                                </v-card>
+
+                                <v-alert v-else color="grey lighten-3" dense class="text-center py-4 mb-0">
+                                    <v-icon color="grey" class="mb-1">mdi-gift-off-outline</v-icon>
+                                    <div class="caption grey--text text--darken-1">Sin bono asignado</div>
                                 </v-alert>
                             </v-card>
                         </v-tab-item>
 
                         <v-tab-item>
-                            <v-card flat class="pa-2">
-                                <v-row dense align="center" class="mb-2">
-                                    <v-col>
-                                        <span class="text-caption grey--text">Grupos de bonos asignados</span>
-                                    </v-col>
-                                    <v-col cols="auto">
-                                        <v-btn color="primary" x-small @click="dial_bono_global = true">
-                                            <v-icon small left>mdi-magnify</v-icon> Asignar
+                            <v-card flat class="pa-3">
+                                <div class="d-flex flex-wrap justify-space-between align-center mb-2">
+                                    <span class="text-overline grey--text">Escalas de Precio</span>
+                                    <div class="d-flex">
+                                        <v-btn color="primary" depressed x-small rounded
+                                            @click="abrirBonoGlobalTab('precio')">
+                                            <v-icon x-small left>mdi-sync</v-icon> {{ grupoPrecioAsignado ? 'Cambiar' :
+                                                'Asignar' }}
                                         </v-btn>
-                                    </v-col>
-                                </v-row>
+                                        <v-btn color="success" depressed x-small rounded class="ml-1"
+                                            @click="abrirNuevoBonoDesdeProductos('precio')">
+                                            <v-icon x-small left>mdi-plus</v-icon> Nuevo
+                                        </v-btn>
+                                        <v-btn v-if="grupoPrecioAsignado" color="info" depressed x-small rounded
+                                            class="ml-1" @click="abrirVisorProductos(grupoPrecioAsignado)">
+                                            <v-icon x-small left>mdi-account-group</v-icon> Ver Productos
+                                        </v-btn>
+                                    </div>
+                                </div>
 
-                                <v-card outlined class="pa-2 mb-2" v-if="grupoPrecioAsignado">
-                                    <v-row dense align="center" no-gutters>
-                                        <v-col cols="auto" class="mr-2">
-                                            <v-icon color="blue">mdi-tag-multiple</v-icon>
-                                        </v-col>
-                                        <v-col>
-                                            <div class="text-body-2 font-weight-medium">{{ grupoPrecioAsignado.nombre }}</div>
+                                <v-card v-if="grupoPrecioAsignado" flat outlined class="rounded-lg border-blue pa-0">
+                                    <div class="pa-2 blue lighten-5 d-flex align-center border-bottom-subtle">
+                                        <v-icon color="blue" small class="mr-2">mdi-tag-multiple</v-icon>
+                                        <div class="flex-grow-1 text-truncate">
+                                            <div
+                                                class="text-body-2 font-weight-black blue--text text--darken-4 lh-tight text-uppercase">
+                                                {{ grupoPrecioAsignado.nombre }}</div>
                                             <div class="text-caption grey--text">{{ grupoPrecioAsignado.codigo }}</div>
-                                        </v-col>
-                                        <v-col cols="auto">
-                                            <v-btn icon x-small color="red" @click="quitarGrupoPrecio">
-                                                <v-icon small>mdi-close</v-icon>
-                                            </v-btn>
-                                        </v-col>
-                                    </v-row>
-                                    <v-row dense class="mt-1" v-if="grupoPrecioAsignado.escala_may1">
-                                        <v-col cols="6">
-                                            <div class="text-caption blue--text">
-                                                ≥{{ grupoPrecioAsignado.escala_may1 }} und → <strong>S/{{ grupoPrecioAsignado.precio_may1 }}</strong>
-                                            </div>
-                                        </v-col>
-                                        <v-col cols="6" v-if="grupoPrecioAsignado.escala_may2">
-                                            <div class="text-caption blue--text">
-                                                ≥{{ grupoPrecioAsignado.escala_may2 }} und → <strong>S/{{ grupoPrecioAsignado.precio_may2 }}</strong>
-                                            </div>
-                                        </v-col>
-                                    </v-row>
+                                        </div>
+                                        <v-btn icon x-small color="red" @click.stop="quitarGrupoPrecio">
+                                            <v-icon small>mdi-delete-outline</v-icon>
+                                        </v-btn>
+                                    </div>
+
+                                    <div class="pa-3">
+                                        <v-row dense>
+                                            <v-col cols="6" v-if="grupoPrecioAsignado.escala_may1">
+                                                <div class="text-center pa-2 rounded grey lighten-5 border-blue-light">
+                                                    <div class="text-overline grey--text lh-1">≥{{
+                                                        grupoPrecioAsignado.escala_may1 }} UND</div>
+                                                    <div class="text-subtitle-2 font-weight-black blue--text">S/{{
+                                                        grupoPrecioAsignado.precio_may1 }}</div>
+                                                </div>
+                                            </v-col>
+                                            <v-col cols="6" v-if="grupoPrecioAsignado.escala_may2">
+                                                <div class="text-center pa-2 rounded grey lighten-5 border-blue-light">
+                                                    <div class="text-overline grey--text lh-1">≥{{
+                                                        grupoPrecioAsignado.escala_may2 }} UND</div>
+                                                    <div class="text-subtitle-2 font-weight-black blue--text">S/{{
+                                                        grupoPrecioAsignado.precio_may2 }}</div>
+                                                </div>
+                                            </v-col>
+                                        </v-row>
+                                    </div>
                                 </v-card>
 
-                                <v-card outlined class="pa-2 mb-2" v-if="grupoBonoAsignado">
-                                    <v-row dense align="center" no-gutters>
-                                        <v-col cols="auto" class="mr-2">
-                                            <v-icon color="orange">mdi-gift</v-icon>
-                                        </v-col>
-                                        <v-col>
-                                            <div class="text-body-2 font-weight-medium">{{ grupoBonoAsignado.nombre }}</div>
-                                            <div class="text-caption grey--text">
-                                                {{ grupoBonoAsignado.codigo }} · {{ grupoBonoAsignado.data ? grupoBonoAsignado.data.length : 0 }} regla(s)
-                                            </div>
-                                        </v-col>
-                                        <v-col cols="auto">
-                                            <v-btn icon x-small color="red" @click="quitarGrupoBono">
-                                                <v-icon small>mdi-close</v-icon>
-                                            </v-btn>
-                                        </v-col>
-                                    </v-row>
-                                </v-card>
-
-                                <v-alert v-if="!grupoPrecioAsignado && !grupoBonoAsignado" type="info" dense text>
-                                    Sin bonos globales. Haz clic en "Asignar" para configurar.
+                                <v-alert v-else color="grey lighten-3" dense class="text-center py-4 mb-0">
+                                    <v-icon color="grey" class="mb-1">mdi-tag-off-outline</v-icon>
+                                    <div class="caption grey--text text--darken-1">Sin escalas de precio</div>
                                 </v-alert>
                             </v-card>
                         </v-tab-item>
                     </v-tabs-items>
                 </v-card>
+
             </v-card>
         </v-dialog>
         <v-dialog v-model="dial_bono_global" max-width="650px" persistent scrollable>
@@ -445,8 +490,8 @@
                             Grupo de Precios Mayoreo
                         </div>
                         <v-autocomplete outlined dense clearable v-model="grupoPrecioSelect" :items="grupoPrecioItems"
-                            item-text="text" item-value="value" label="Seleccionar"
-                            prepend-inner-icon="mdi-magnify" no-data-text="No hay grupos de precios disponibles">
+                            item-text="text" item-value="value" label="Seleccionar" prepend-inner-icon="mdi-magnify"
+                            no-data-text="No hay grupos de precios disponibles">
                             <template v-slot:item="{ item }">
                                 <v-list-item-content>
                                     <v-list-item-title>{{ item.raw.nombre }}</v-list-item-title>
@@ -469,12 +514,14 @@
                             <v-row dense class="mt-1">
                                 <v-col cols="6" v-if="grupoPrecioSelectDetalle.escala_may1">
                                     <div class="text-caption blue--text">
-                                        ≥{{ grupoPrecioSelectDetalle.escala_may1 }} und → <strong>S/{{ grupoPrecioSelectDetalle.precio_may1 }}</strong>
+                                        ≥{{ grupoPrecioSelectDetalle.escala_may1 }} und → <strong>S/{{
+                                            grupoPrecioSelectDetalle.precio_may1 }}</strong>
                                     </div>
                                 </v-col>
                                 <v-col cols="6" v-if="grupoPrecioSelectDetalle.escala_may2">
                                     <div class="text-caption blue--text">
-                                        ≥{{ grupoPrecioSelectDetalle.escala_may2 }} und → <strong>S/{{ grupoPrecioSelectDetalle.precio_may2 }}</strong>
+                                        ≥{{ grupoPrecioSelectDetalle.escala_may2 }} und → <strong>S/{{
+                                            grupoPrecioSelectDetalle.precio_may2 }}</strong>
                                     </div>
                                 </v-col>
                             </v-row>
@@ -485,8 +532,8 @@
                     <div>
                         <div class="text-subtitle-2 mb-2">Grupo de Bonificación</div>
                         <v-autocomplete outlined dense clearable v-model="grupoBonoSelect" :items="grupoBonoItems"
-                            item-text="text" item-value="value" label="Seleccionar"
-                            prepend-inner-icon="mdi-magnify" no-data-text="No hay grupos disponibles">
+                            item-text="text" item-value="value" label="Seleccionar" prepend-inner-icon="mdi-magnify"
+                            no-data-text="No hay grupos disponibles">
                             <template v-slot:item="{ item }">
                                 <v-list-item-content>
                                     <v-list-item-title>{{ item.raw.nombre }}</v-list-item-title>
@@ -501,7 +548,8 @@
                             <div class="text-caption grey--text" v-if="grupoBonoSelectDetalle.fecha_vencimiento">
                                 Vence: {{ formatearFechaSimple(grupoBonoSelectDetalle.fecha_vencimiento) }}
                             </div>
-                            <v-simple-table dense v-if="grupoBonoSelectDetalle.data && grupoBonoSelectDetalle.data.length" class="mt-1">
+                            <v-simple-table dense
+                                v-if="grupoBonoSelectDetalle.data && grupoBonoSelectDetalle.data.length" class="mt-1">
                                 <template v-slot:default>
                                     <thead>
                                         <tr>
@@ -688,6 +736,12 @@
         <dial_categorias v-if="dial_categorias" @cierra="cerrarYActualizarCategorias" :tipo='tipo_tabla' />
         <dial_alerta_stock_minimo v-if="permisoAlertaStockActivo" v-model="dialogoAlertaStock" />
         <dial_alerta_stock_minimo v-model="dialogoAlertaStockManual" />
+        <dial_config_bono v-model="dial_bono_productos" :bono="bonoSeleccionadoProductos"
+            :proveedoresItems="proveedoresItemsProductos" :productos="productosItems" :editando="editandoBonoProductos"
+            @guardar="guardarBonoDesdeProductos" />
+
+        <VisorProductosBono v-model="dialVisorProductos" :bono="bonoParaVisor" @producto-agregado="onProductoAgregado"
+            @producto-quitado="onProductoQuitado" />
     </div>
 </template>
 
@@ -697,6 +751,9 @@ import dial_alerta_stock_minimo from './dialogos/dial_alerta_stock_minimo.vue';
 import lector from "@/components/lector";
 import moment from 'moment'
 import { imprime_codbarra } from './imprime_cod_barra'
+import { runMigracionBonosUnitariosToGlobales } from './migracion_bonos'
+import dial_config_bono from './dialogos/dial_config_bono.vue';
+import VisorProductosBono from './components/VisorProductosBono.vue';
 import {
     nuevoProducto,
     eliminaProducto,
@@ -704,7 +761,7 @@ import {
     sumaContador,
     allCategorias,
     allBono,
-    nuevoProductoOtraBase
+    nuevoProductoOtraBase,
 } from '../../db'
 import store from '@/store/index'
 import XLSX from 'xlsx'
@@ -715,7 +772,9 @@ export default {
     components: {
         lector,
         dial_categorias,
-        dial_alerta_stock_minimo
+        dial_alerta_stock_minimo,
+        dial_config_bono,
+        VisorProductosBono
     },
     data: () => ({
         dial_adicional: false,
@@ -826,6 +885,12 @@ export default {
         stock_minimo: 0,
         bonosGlobalesCache: [],
         tabBonos: 0,
+        dial_bono_productos: false,
+        bonoSeleccionadoProductos: {},
+        editandoBonoProductos: false,
+        tipoBonoActual: 'precio',
+        dialVisorProductos: false,
+        bonoParaVisor: {},
     }),
 
     async beforeCreate() {
@@ -948,9 +1013,72 @@ export default {
             if (this.grupoBonoAsignado) count++;
             return count;
         },
+        productosItems() {
+            return store.state.productos || [];
+        },
+        proveedoresItemsProductos() {
+            const provs = new Set();
+            (store.state.productos || []).forEach(p => {
+                if (p.proveedor) provs.add(p.proveedor);
+            });
+            return Array.from(provs).sort();
+        },
     },
 
     methods: {
+        abrirBonoGlobalTab(tipo) {
+            this.dial_bono_global = true;
+        },
+        analiza_gruposs() {
+            runMigracionBonosUnitariosToGlobales({ limpiarBonoUnitario: true })
+        },
+        analiza_grupos() {
+            try {
+                const productos = (store.state.productos || []).filter(Boolean);
+
+                const conBonos = productos.filter(p => p.tiene_bono === true); // SOLO true
+
+                const filas = conBonos.map(p => {
+                    const lista = Array.isArray(p.lista_bono) ? p.lista_bono.filter(Boolean) : [];
+
+                    // ordenar reglas por apartir_de numérico
+                    const ordenadas = lista.slice().sort((a, b) => (Number(a.apartir_de) || 0) - (Number(b.apartir_de) || 0));
+
+                    const resumen = ordenadas.slice(0, 5).map(r => {
+                        const a = Number(r?.apartir_de) || 0;
+                        const c = Number(r?.cantidad) || 0;
+                        const nom = r?.nom_producto || '';
+                        return `${a}→${c}x ${nom}`;
+                    }).join(' | ') + (ordenadas.length > 5 ? ' ...' : '');
+
+                    return {
+                        id: p.id,
+                        categoria: p.categoria,
+                        nombre: p.nombre,
+                        precio: Number(p.precio || 0).toFixed(2),
+                        reglas: ordenadas.length,
+                        resumen,
+                    };
+                });
+
+                filas.sort((a, b) => b.reglas - a.reglas);
+
+                this.itemsTablaBonos = filas;
+                this.dialTablaBonos = true;
+
+                console.log(`Productos con tiene_bono=true: ${filas.length}`);
+                console.table(filas);
+
+                return filas;
+            } catch (e) {
+                console.error('analiza_grupos error:', e);
+                this.itemsTablaBonos = [];
+                this.dialTablaBonos = true;
+                return [];
+            }
+        },
+
+
         mostrarAlertaStock() {
             this.dialogoAlertaStock = true;
         },
@@ -991,7 +1119,7 @@ export default {
             let arr = [];
             if (Array.isArray(val)) arr = val.filter(Boolean);
             else if (val && typeof val === "object") arr = Object.values(val);
-            
+
             const hoy = new Date();
             const activos = arr.filter(x => {
                 if (!x?.activo) return false;
@@ -1244,6 +1372,15 @@ export default {
                 return;
             }
             store.commit("dialogoprogress")
+            const tieneGrupoPrecio = !!this.grupoPrecioSelect;
+
+            // si hay grupo de precio global, limpia escalas locales
+            if (tieneGrupoPrecio) {
+                this.escala_may1 = 0;
+                this.precio_may1 = 0;
+                this.escala_may2 = 0;
+                this.precio_may2 = 0;
+            }
             var array = {
                 id: this.id,
                 activo: this.activo,
@@ -1276,7 +1413,7 @@ export default {
                 stock_minimo: Number(this.stock_minimo) || 0
             }
             await nuevoProducto(this.id, array)
-            
+
             if (this.sumacon == true) {
                 await this.copiarProductoATodasLasSedes(this.id, array);
                 this.sumacontador()
@@ -1285,17 +1422,17 @@ export default {
 
             store.commit("dialogoprogress")
         },
-        
+
         async copiarProductoATodasLasSedes(id, producto) {
             try {
                 const sedes = store.state.array_sedes || [];
                 const bdActual = store.state.baseDatos.bd;
-                const otrasSedes = sedes.filter(s => s.tipo === 'sede' && s.base !== bdActual);                
+                const otrasSedes = sedes.filter(s => s.tipo === 'sede' && s.base !== bdActual);
                 const promesas = otrasSedes.map(sede => {
                     const productoConStock0 = { ...producto, stock: 0 };
                     return nuevoProductoOtraBase(sede.base, id, productoConStock0);
                 });
-                
+
                 if (promesas.length > 0) {
                     await Promise.all(promesas);
                     console.log(`Producto ${id} copiado a ${promesas.length} sedes con stock 0`);
@@ -1304,7 +1441,7 @@ export default {
                 console.error('Error copiando producto a otras sedes:', error);
             }
         },
-        
+
         async eliminar() {
             if (confirm('seguro de eliminar?')) {
                 await eliminaProducto(this.id)
@@ -1451,6 +1588,106 @@ export default {
             });
         },
 
+        abrirNuevoBonoDesdeProductos(tipo) {
+            this.tipoBonoActual = tipo;
+            this.editandoBonoProductos = false;
+            this.bonoSeleccionadoProductos = {
+                tipo: tipo,
+                activo: true,
+                nombre: '',
+                observacion: '',
+                proveedor: null,
+                fecha_vencimiento: null,
+                ...(tipo === 'precio' ? {
+                    escala_may1: null,
+                    precio_may1: null,
+                    escala_may2: null,
+                    precio_may2: null
+                } : {
+                    data: []
+                })
+            };
+            this.dial_bono_productos = true;
+        },
+
+        editarBonoDesdeProductos(bono) {
+            this.tipoBonoActual = bono.tipo;
+            this.editandoBonoProductos = true;
+            this.bonoSeleccionadoProductos = { ...bono };
+            this.dial_bono_productos = true;
+        },
+
+        async guardarBonoDesdeProductos(bonoData) {
+            if (!bonoData.nombre?.trim()) {
+                store.commit("dialogosnackbar", "Escribe un nombre para el bono.");
+                return;
+            }
+
+            store.commit("dialogoprogress");
+
+            try {
+                const { nuevoBono } = await import('../../db');
+                let codigo;
+                if (this.editandoBonoProductos && this.bonoSeleccionadoProductos.codigo) {
+                    codigo = this.bonoSeleccionadoProductos.codigo;
+                } else {
+                    codigo = this._generarCodigoBono(bonoData.tipo);
+                }
+
+                const payload = {
+                    ...bonoData,
+                    codigo: codigo,
+                    creado: this.editandoBonoProductos ? (this.bonoSeleccionadoProductos.creado || Date.now()) : Date.now(),
+                    usuario: store?.state?.usuario || null,
+                };
+
+                await nuevoBono(codigo, payload);
+                if (bonoData.tipo === 'precio') {
+                    this.grupoPrecioSelect = codigo;
+                } else {
+                    this.grupoBonoSelect = codigo;
+                }
+                await this.cargarBonosGlobalesCache();
+                await this.cargarGruposBonos();
+
+                store.commit("dialogosnackbar", "Bono guardado y asignado correctamente");
+                this.dial_bono_productos = false;
+
+            } catch (e) {
+                console.error('Error guardando bono:', e);
+                store.commit("dialogosnackbar", "Error al guardar el bono");
+            } finally {
+                store.commit("dialogoprogress");
+            }
+        },
+
+        _generarCodigoBono(tipo) {
+            const prefix = tipo === 'precio' ? 'P' : 'B';
+            const existentes = this.bonosGlobalesCache
+                .filter(b => b.tipo === tipo && typeof b.codigo === 'string')
+                .map(b => {
+                    const match = b.codigo.match(/^[PB](\d+)$/i);
+                    return match ? Number(match[1]) : 0;
+                })
+                .filter(n => Number.isFinite(n));
+            const max = existentes.length ? Math.max(...existentes) : 0;
+            return `${prefix}${String(max + 1).padStart(5, '0')}`;
+        },
+
+        abrirVisorProductos(bono) {
+            this.bonoParaVisor = bono;
+            this.dialVisorProductos = true;
+        },
+
+        onProductoAgregado(producto) {
+            this.cargarBonosGlobalesCache();
+        },
+
+        onProductoQuitado(producto) {
+            this.cargarBonosGlobalesCache();
+        },
+
+
     },
 
 }
@@ -1498,5 +1735,33 @@ export default {
 
 .mobile-card {
     height: 70dvh;
+}
+
+.lh-tight {
+    line-height: 1.1 !important;
+}
+
+.lh-1 {
+    line-height: 1 !important;
+}
+
+.border-orange {
+    border: 1px solid #FF9800 !important;
+}
+
+.border-blue {
+    border: 1px solid #2196F3 !important;
+}
+
+.border-blue-light {
+    border: 1px solid #bbdefb !important;
+}
+
+.border-bottom-dashed {
+    border-bottom: 1px dashed #eee;
+}
+
+.border-bottom-subtle {
+    border-bottom: 1px solid #e3f2fd;
 }
 </style>
