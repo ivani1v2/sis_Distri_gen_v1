@@ -996,7 +996,7 @@ function tabla_A4(array, linea) {
 
   for (let item of array) {
     // precios
-    const precioBase = Number(item.precio_base ?? item.precio ?? 0); // P.Unitario base
+    const precioBase = Number(item.precio ?? 0); // P.Unitario base
     const precioNeto = Number(item.precio ?? 0);                     // P.Neto
 
     let totalLinea = Number(item.totalLinea ?? (precioNeto * item.cantidad) ?? 0);

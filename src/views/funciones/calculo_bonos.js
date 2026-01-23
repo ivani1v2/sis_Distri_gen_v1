@@ -55,7 +55,10 @@ export function analizaPrecios({
   inPlace = true,
 } = {}) {
   const res = _clonarSiNecesario(lineas, inPlace);
+const permite = store.state?.permisos?.permite_editar_precio === true;
+const disablePrecios = !permite;
 
+if (disablePrecios) return res;
   const toNum = (v, def = 0) => {
     const n = Number(v);
     return Number.isFinite(n) ? n : def;
