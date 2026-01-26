@@ -307,6 +307,7 @@
         <dialog_direcciones_cliente v-model="dial_direcciones"
             :cliente-id="numero || (cliente_s && cliente_s.documento) || ''" @seleccion="onDireccionSeleccionada" />
 
+        <dial_stock v-model="dialStock" :items="sinStock" @close="dialStock = false" />
 
         <dial_mapas v-model="dialogoMapa" :guardar_auto="true" @cierra="dialogoMapa = false" />
         <cronograma v-if="dialogoCronograma" :totalCredito="Number(sumaTotal())" @cierra="dialogoCronograma = false"
@@ -331,6 +332,8 @@ import axios from "axios"
 import CryptoJS from "crypto-js";
 import { allcuentaxcobrar } from '@/db'
 import { colClientes } from '@/db_firestore'
+import dial_stock from '../ventas/dialogos/dial_stock_insuficiente.vue' // ajusta ruta real
+
 export default {
     name: 'caja',
 
@@ -339,7 +342,8 @@ export default {
         dial_mapas,
         cronograma,
         dial_edita_prod,
-        dialog_direcciones_cliente
+        dialog_direcciones_cliente,
+        dial_stock
     },
 
     data() {
@@ -373,6 +377,8 @@ export default {
             lineaCreditoCliente: 0,
             deudaCliente: 0,
             cargandoCredito: false,
+            dialStock: false,
+            sinStock: [],
         }
     },
     created() {
@@ -610,7 +616,9 @@ export default {
         },
         grabar() {
             // Siempre recalcular antes de grabar
-            this.recalculoCompleto()
+           if (store.state.permisos.permite_editar_bono) {
+                this.recalculoCompleto()
+            }
             this.dial_guardar = true;
         },
         async confirmarGuardado() {
@@ -704,6 +712,10 @@ export default {
                 console.log('⏺️ Payload listo para enviar:', payload);
 
                 var resp = await this.api_rest(payload, "guardar_pedido");
+                if (!resp) {
+                    // ya se mostró el dial de stock insuficiente
+                    return;
+                }
                 if (this.imprime_orden) {
                     const id = resp?.data?.id || resp?.id || null;
                     cabecera.id = id;
@@ -716,10 +728,18 @@ export default {
 
                 this.$router.push("/lista"); // 🔹 redirige*/
             } catch (err) {
+                const status = err?.response?.status;
+                const body = err?.response?.data || {};
+
+                if (status === 409 && body?.code === "STOCK_INSUFICIENTE") {
+                    // ya se manejó en api_rest
+                    return;
+                }
+
                 console.error("❌ Error guardando:", err);
                 store.commit("dialogosnackbar", "Error al guardar el pedido");
             } finally {
-                this.loadingGuardar = false; // 🔹 siempre cerrar progress
+                this.loadingGuardar = false;
             }
         },
         resetFormulario() {
@@ -733,30 +753,43 @@ export default {
             this.fechaVencimiento = "";
         },
         async api_rest(data, metodo) {
-            console.log(data)
-            var idem = this.buildIdemKeyPedido({
-                bd: store.state.baseDatos.bd,
-                cabecera: data.cabecera,
-                detalle: data.detalle || []
-            });
-            var a = axios({
-                method: 'POST',
-                url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
-                //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
-                headers: {
-                    'X-Idempotency-Key': idem,    // <-- el server debe ignorar duplicados con la misma clave
-                },
-                data: {
-                    "bd": store.state.baseDatos.bd,
-                    "data": data,
-                    "metodo": metodo
+            try {
+                const idem = this.buildIdemKeyPedido({
+                    bd: store.state.baseDatos.bd,
+                    cabecera: data.cabecera,
+                    detalle: data.detalle || []
+                });
+
+                const resp = await axios({
+                    method: 'POST',
+                    url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
+                    //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
+                    headers: { 'X-Idempotency-Key': idem },
+                    data: {
+                        bd: store.state.baseDatos.bd,
+                        data,
+                        metodo
+                    }
+                });
+
+                return resp.data;
+
+            } catch (err) {
+                console.log(err)
+                const status = err?.response?.status;
+                const body = err?.response?.data || {};
+
+                // ✅ STOCK INSUFICIENTE
+                if (status === 409 && body?.code === "STOCK_INSUFICIENTE") {
+                    this.sinStock = Array.isArray(body.sinStock) ? body.sinStock : [];
+                    this.dialStock = true;
+                    return null; // 👈 importante
                 }
-            }).then(response => {
-                console.log('response', response.data)
-                return response.data
-            })
-            return a
+
+                throw err;
+            }
         },
+
         buildIdemKeyPedido({ bd, cabecera = {}, detalle = [] }) {
             const day = cabecera.fecha_emision
                 ? moment.unix(Number(cabecera.fecha_emision)).format("YYYY-MM-DD")
@@ -877,7 +910,9 @@ export default {
             var pos = this.listaproductos.map(e => e.uuid).indexOf(this.item_selecto.uuid)
             this.listaproductos.splice(pos, 1)
             this.dialogoProducto = false
-            this.recalculoCompleto()
+            if (store.state.permisos.permite_editar_bono) {
+                this.recalculoCompleto()
+            }
         },
         editaProductoFinal(lineaActualizada) {
             // ✅ si el usuario cambió el precio, marcamos como manual

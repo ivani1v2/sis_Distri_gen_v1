@@ -17,7 +17,7 @@
                     <div class="d-flex justify-space-between flex-wrap caption">
                         <span>Línea Crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2) }}</strong></span>
                         <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2)
-                                }}</strong></span>
+                        }}</strong></span>
                         <span>Disponible: <strong class="red--text">
                                 {{ moneda }} {{ saldoDisponible.toFixed(2) }}
                             </strong></span>
@@ -148,7 +148,7 @@
                                                     style="max-width: 70vw;">
                                                     <span class="font-weight-bold red--text">{{
                                                         Number(item.cantidad)
-                                                        }}×</span>
+                                                    }}×</span>
                                                     {{ item.nombre }}
                                                 </div>
                                             </div>
@@ -266,6 +266,7 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+        <dial_stock v-model="dialStock" :items="sinStock" @close="dialStock = false" />
 
         <cronograma v-if="dialogoCronograma" :totalCredito="Number(totalDetalle)" @cierra="dialogoCronograma = false"
             @emite_cronograma="guarda_cronograma($event)" :pagoInicial="0" :moneda="moneda"
@@ -283,13 +284,14 @@ import store from '@/store/index'
 import { colClientes } from '../../../db_firestore'
 import { allcuentaxcobrar } from '../../../db'
 import { aplicaPreciosYBonos, agregarLista, analizaPreciosParcial, analizaGruposParcial } from '@/views/funciones/calculo_bonos'
-
+import dial_stock from '../../ventas/dialogos/dial_stock_insuficiente.vue'
 export default {
     name: 'EditorDetallePedido',
     components: {
         cat_fijo,
         edita_producto,
-        cronograma
+        cronograma,
+        dial_stock
     },
     props: {
         value: { type: Boolean, default: false },
@@ -337,6 +339,8 @@ export default {
             clienteData: null,
             deudaCliente: 0,
             recalculandoBonos: false,
+            dialStock: false,
+            sinStock: [],
         }
     },
     watch: {
@@ -536,8 +540,9 @@ export default {
 
             this.recalcularLinea(linea);
             this.dialogoProducto = false;
-
-            this.$nextTick(() => this.recalcularSiPermiteBonos());
+            if (store.state.permisos.permite_editar_bono) {
+                this.$nextTick(() => this.recalcularSiPermiteBonos());
+            }
         },
 
 
@@ -560,10 +565,11 @@ export default {
                 this.lineas.splice(pos, 1);
             }
             this.dialogoProducto = false;
-
-            this.$nextTick(() => {
-                this.recalcularSiPermiteBonos()
-            })
+            if (store.state.permisos.permite_editar_bono) {
+                this.$nextTick(() => {
+                    this.recalcularSiPermiteBonos()
+                })
+            }
         },
 
         _cargarDesdeProps() {
@@ -732,25 +738,53 @@ export default {
             });
         },
 
-
         async api_rest(data, metodo) {
+            const bd = store.state.baseDatos.bd;
 
-            var a = axios({
-                method: 'POST',
-                url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
-                //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
-                headers: {},
-                data: {
-                    "bd": store.state.baseDatos.bd,
-                    "data": data,
-                    "metodo": metodo
+            // 👇 genera key estable para ESTE guardado
+            const pedidoId =
+                data?.cabecera?.pedido_id ||
+                data?.cabecera?.id ||
+                data?.cabecera?.numeracion ||
+                data?.cabecera?.doc_numero || "SIN_ID";
+
+            const ver = data?.cabecera?.updated_at || Date.now();
+
+            const idemKey = `${metodo}:${bd}:${pedidoId}:${ver}`;
+
+            try {
+                const resp = await axios({
+                    method: "POST",
+                    url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
+                    //url: "http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion",
+                    headers: {
+                        "x-idempotency-key": idemKey, // ✅ CLAVE
+                    },
+                    data: { bd, data, metodo },
+                });
+
+                if (resp.status === 202 || resp.data?.status === "processing") {
+                    const e = new Error("EN PROCESO");
+                    e.response = { status: 202, data: resp.data };
+                    throw e;
                 }
-            }).then(response => {
-                console.log(response.data)
-                return response
-            })
-            return a
+
+                return resp.data;
+            } catch (err) {
+                const status = err?.response?.status;
+                const body = err?.response?.data || {};
+
+                if (status === 409 && body?.code === "STOCK_INSUFICIENTE") {
+                    this.sinStock = Array.isArray(body.sinStock) ? body.sinStock : [];
+                    this.dialStock = true;
+                    return null;
+                }
+
+                throw err;
+            }
         },
+
+
         fix2(n) {
             const x = Number(n || 0);
             return Math.round(x * 100) / 100;
@@ -808,8 +842,13 @@ export default {
                     detalle_original: this.detalle,
                     control_stock: true
                 };
+                const r = await this.api_rest(payload, "guardar_pedido");
+                if (!r) {
+                    // ya se abrió el diálogo de stock insuficiente
+                    store.commit("dialogoprogress");
+                    return;
+                }
 
-                await this.api_rest(payload, "guardar_pedido");
                 store.commit("dialogoprogress")
                 store.commit("dialogosnackbar", "Documento guardado con éxito");
 

@@ -203,6 +203,7 @@
 
 
         <busca_clis v-if="dial_cliente" @cerrar="dial_cliente = false" @agregar="agregacliente($event)"></busca_clis>
+        <dial_stock v-model="dialStock" :items="sinStock" @close="onCloseStockDialog" />
     </v-dialog>
 
 </template>
@@ -214,6 +215,7 @@ import {
     nuevaCuentaxcobrar
 } from '../../db'
 import { crearOActualizarCliente as nuevoCliente, colClientes } from '../../db_firestore'
+import dial_stock from './dialogos/dial_stock_insuficiente.vue'
 import {
     pdfGenera
 } from '../../pdf_comprobantes'
@@ -236,7 +238,8 @@ export default {
     components: {
         dial_mapa,
         busca_clis,
-        dialog_direcciones_cliente
+        dialog_direcciones_cliente,
+        dial_stock
 
     },
     props: {
@@ -286,6 +289,8 @@ export default {
             calculavuelto: 0,
             dial_direcciones: false,
             cod_vendedor: store.state.sedeActual.codigo,
+            dialStock: false,
+            sinStock: [],
         }
     },
 
@@ -382,6 +387,10 @@ export default {
         window.removeEventListener("keydown", this.detectarTecla);
     },
     methods: {
+        onCloseStockDialog() {
+            // opcional: si quieres hacer algo al cerrar
+            // por ejemplo: enfocar input, limpiar loader, etc.
+        },
         onDireccionSeleccionada(dir) {
             if (!dir) return
 
@@ -620,32 +629,47 @@ export default {
             console.log(array)
             //await cobrar_js(arrayCabecera, array_item)
             array.genera_guia = this.genera_guia || false
-            await this.api_rest(array, 'cobrar_js')
+            const r = await this.api_rest(array, 'cobrar_js');
+            if (!r) {
+                // ya mostraste el diálogo de stock insuficiente
+                store.commit("dialogoprogress");
+                return;
+            }
             if (arrayCabecera.tipocomprobante != 'T') {
                 enviaDocumentoApiSunat(arrayCabecera, array_item)
             }
             this.$emit('terminar', array)
         },
-        api_rest(data, metodo) {
-            console.log(data.arrayCabecera.numeracion)
-            const idem = data.arrayCabecera.numeracion
-            var a = axios({
-                method: 'POST',
-                url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
-                //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
-                headers: {
-                    'X-Idempotency-Key': idem,    // <-- el server debe ignorar duplicados con la misma clave
-                },
-                data: {
-                    "bd": store.state.baseDatos.bd,
-                    "data": data,
-                    "metodo": metodo
+        async api_rest(data, metodo) {
+            try {
+                const resp = await axios({
+                    method: 'POST',
+                     url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
+                    //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
+                    headers: {
+                        'X-Idempotency-Key': data.arrayCabecera.numeracion,
+                    },
+                    data: {
+                        bd: store.state.baseDatos.bd,
+                        data,
+                        metodo
+                    }
+                });
+
+                return resp.data;
+
+            } catch (err) {
+                const status = err?.response?.status;
+                const body = err?.response?.data || {};
+
+                if (status === 409 && body?.code === "STOCK_INSUFICIENTE") {
+                    this.sinStock = Array.isArray(body.sinStock) ? body.sinStock : [];
+                    this.dialStock = true;
+                    return null;
                 }
-            }).then(response => {
-                console.log(response.data)
-                return response
-            })
-            return a
+
+                throw err;
+            }
         },
 
         otros() {
