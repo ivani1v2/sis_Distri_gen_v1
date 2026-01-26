@@ -158,6 +158,10 @@
                                     <v-text-field dense outlined v-model.trim="form.ruc_asociado"
                                         label="RUC ASOCIADO" />
                                 </v-col>
+                                  <v-col cols="6" sm="6" md="4">
+                                    <v-text-field dense outlined v-model.trim="form.num_usuarios"
+                                        label="Limite de usuarios" />
+                                </v-col>
                             </v-row>
                         </v-container>
                     </v-form>
@@ -231,6 +235,7 @@ export default {
             ruc_asociado: '',
             bigquery: false,
             kardex_avanzado: false,
+            num_usuarios:''
         },
 
         // reglas
@@ -313,6 +318,7 @@ export default {
                 ruc_asociado: '',
                 bigquery: false,
                 kardex_avanzado: false,
+                num_usuarios:''
             })
         },
 
@@ -396,7 +402,8 @@ export default {
                 reportes_operaciones: true,
                 es_admin: true,
                 es_master: true,
-                ruc: Number(this.form.ruc || 0)
+                ruc: Number(this.form.ruc || 0),
+                num_usuarios:''
             }
             await nuevoUsuario(usuario.token, usuario)
         },

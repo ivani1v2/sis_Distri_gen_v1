@@ -10,9 +10,14 @@
                 <v-spacer></v-spacer>
 
                 <!-- Contador de usuarios -->
+
                 <v-chip small label class="mr-3" v-if="desserts && desserts.length">
                     <v-icon left small>mdi-account-group</v-icon>
                     {{ desserts.length }} usuarios
+                </v-chip>
+                <v-chip small label class="mr-3">
+                    <v-icon left small>mdi-counter</v-icon>
+                    Límite: {{ textoLimiteUsuarios }}
                 </v-chip>
 
                 <!-- Botón oculto (mantengo funcionalidad original) -->
@@ -22,7 +27,8 @@
                 </v-btn>
 
                 <!-- Crear usuario -->
-                <v-btn color="success" small depressed @click.prevent="dialog = true">
+                <v-btn color="success" small depressed :disabled="!puedeCrearUsuario"
+                    @click.prevent="abrirCrearUsuario">
                     <v-icon left small>mdi-account-plus</v-icon>
                     Crear usuario
                 </v-btn>
@@ -105,7 +111,7 @@
                                                     @click="toggleGps(item, !item.gps_activo)">
                                                     <v-icon :color="item.gps_activo ? 'blue' : 'grey'">
                                                         {{ item.gps_activo ? 'mdi-map-marker-radius' :
-                                                        'mdi-map-marker-off' }}
+                                                            'mdi-map-marker-off' }}
                                                     </v-icon>
                                                 </v-btn>
                                             </template>
@@ -176,15 +182,15 @@
                         </v-row>
                     </v-form>
                 </v-card-text>
-     <v-card-actions class="px-4 pb-4">
-            
+                <v-card-actions class="px-4 pb-4">
+
                     <v-spacer></v-spacer>
-              
-                    <v-btn disabled small color="success" @click="dial_permitidos=!dial_permitidos">
+
+                    <v-btn disabled small color="success" @click="dial_permitidos = !dial_permitidos">
                         <v-icon left small>mdi-content-save</v-icon>
                         Productos Permitidos
                     </v-btn>
-                    
+
                 </v-card-actions>
                 <v-card-actions class="px-4 pb-4">
                     <v-btn text @click="dial_sett = false">Cancelar</v-btn>
@@ -197,7 +203,7 @@
                         <v-icon left small>mdi-content-save</v-icon>
                         Guardar
                     </v-btn>
-                    
+
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -237,7 +243,7 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
-        <dial_lista :vendedor="item_selecto"  v-if="dial_permitidos" @cerrar="dial_permitidos = false" />
+        <dial_lista :vendedor="item_selecto" v-if="dial_permitidos" @cerrar="dial_permitidos = false" />
     </div>
 </template>
 
@@ -261,7 +267,7 @@ export default {
     },
     data() {
         return {
-            dial_permitidos:false,
+            dial_permitidos: false,
             dial_contra: false,
             token: '',
             nombre: '',
@@ -297,7 +303,48 @@ export default {
     beforeDestroy() {
         allUsuarios().off("value", this.onDataChange);
     },
+    computed: {
+        maxUsuarios() {
+            const raw = this.$store?.state?.baseDatos?.num_usuarios;
+
+            // 0, null, undefined, '' => ilimitado
+            if (raw === 0 || raw === null || raw === undefined || raw === '') return null;
+
+            const n = Number(raw);
+            if (!Number.isFinite(n) || n <= 0) return null;
+
+            return Math.floor(n);
+        },
+
+        totalUsuarios() {
+            return Array.isArray(this.desserts) ? this.desserts.length : 0;
+        },
+
+        puedeCrearUsuario() {
+            // si es ilimitado => true
+            if (this.maxUsuarios === null) return true;
+
+            return this.totalUsuarios < this.maxUsuarios;
+        },
+
+        textoLimiteUsuarios() {
+            if (this.maxUsuarios === null) return 'Ilimitado';
+            return `${this.totalUsuarios}/${this.maxUsuarios}`;
+        }
+    },
+
     methods: {
+        abrirCrearUsuario() {
+            if (!this.puedeCrearUsuario) {
+                const max = this.maxUsuarios;
+                this.$store?.commit?.(
+                    'dialogosnackbar',
+                    `Límite de usuarios alcanzado (${this.totalUsuarios}/${max}). No puedes crear más usuarios.`
+                );
+                return;
+            }
+            this.dialog = true;
+        },
         async bloquear(user, value) {
             // user: objeto del v-for (item), value: true = bloquear, false = desbloquear
             if (!user || !user.token) {
@@ -429,7 +476,7 @@ export default {
         },
         async actualizarNombreEnMultiEmpresas(usuario) {
             if (!usuario || !usuario.codigo || !usuario.nombre) return;
-            
+
             const ruc = usuario.ruc || store.state.baseDatos?.ruc_asociado;
             if (!ruc) return;
 
@@ -455,26 +502,35 @@ export default {
                 path: "/accesos_usuarios/" + items.token
             })
         },
-
         async crearUsuario() {
+            // ✅ valida límite aquí también (por si alguien llama directo a crearUsuario)
+            if (!this.puedeCrearUsuario) {
+                const max = this.maxUsuarios;
+                this.$store?.commit?.(
+                    'dialogosnackbar',
+                    `Límite de usuarios alcanzado (${this.totalUsuarios}/${max}).`
+                );
+                return;
+            }
+
             if (this.email && this.password) {
-                store.commit("dialogoprogress")
-                var token = this.create_UUID()
-                var array = {
-                    token: token,
+                store.commit("dialogoprogress");
+                const token = this.create_UUID();
+
+                const array = {
+                    token,
                     nombre: this.nombre,
                     correo: this.email + "@domotica.com",
                     pass: this.password,
                     bd: store.state.baseDatos.bd,
                     ruc: Number(store.state.baseDatos.ruc_asociado)
-                }
-                console.log(array)
-                await nuevoUsuario(token, array)
-                this.dialog = false
-                this.nombre = ''
-                this.crearUsuarios()
-            } else {
+                };
 
+                await nuevoUsuario(token, array);
+                this.dialog = false;
+                this.nombre = '';
+                this.crearUsuarios();
+                store.commit("dialogoprogress");
             }
         },
         create_UUID() {

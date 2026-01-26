@@ -190,18 +190,20 @@
             </v-card>
         </v-dialog>
 
-        <v-dialog v-model="dial_catalogo" max-width="550">
+        <v-dialog v-model="dial_catalogo" max-width="550" persistent>
             <div>
                 <v-system-bar window dark>
                     <v-icon large color="red" @click="dial_catalogo = false">mdi-close</v-icon>
                 </v-system-bar>
             </div>
             <v-card class="pa-1">
-                <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event), dial_catalogo = false"
-                    :muestra_tabla="true" :x_categoria="false">
+                <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true"
+                    :x_categoria="false">
                 </cat_fijo>
             </v-card>
         </v-dialog>
+        <dial_stock v-model="dialStock" :items="sinStock" @close="dialStock = false" />
+
     </v-dialog>
 </template>
 
@@ -224,11 +226,14 @@ import store from '@/store/index'
 
 import axios from "axios"
 import cat_fijo from '@/components/catalogo_fijo'
+import dial_stock from '@/views/ventas/dialogos/dial_stock_insuficiente.vue'
+
 export default {
     name: 'caja',
     components: {
 
-        cat_fijo
+        cat_fijo,
+        dial_stock,
     },
     props: {
         cabecera: '',
@@ -258,7 +263,10 @@ export default {
             documentos: ['DNI', 'RUC', 'Pasaporte', 'Carnet de Extranjeria'],
             arrayOperacion: ['GRAVADA', 'GRATUITA'],
             direccion: '',
-            detalleOriginalSnapshot: []
+            detalleOriginalSnapshot: [],
+            dialStock: false,
+            sinStock: [],
+
         }
     },
     created() {
@@ -557,59 +565,125 @@ export default {
             return uuid;
         },
         async guardar() {
-            store.commit("dialogoprogress");
-            var resp = await procesar_items(this.listaproductos)
-            var cabecera = resp[0]
-            if (this.info_cabecera.forma_pago === 'CONTADO') {
-                this.info_cabecera.pendiente_pago = 0
-            } else if (Number(this.info_cabecera.pendiente_pago) === 0) {
-                this.info_cabecera.pendiente_pago = total.toFixed(2)
+            // snapshot para UI (por si quieres volver a pintar tal cual)
+            const cabeceraAntes = JSON.parse(JSON.stringify(this.info_cabecera));
+
+            try {
+                store.commit("dialogoprogress");
+
+                const resp = await procesar_items(this.listaproductos);
+                const cab = resp[0];
+                const detalleNuevo = resp[1];
+
+                // ✅ construye cabecera NUEVA en copia (NO mutar this.info_cabecera)
+                const nextCabecera = { ...this.info_cabecera };
+
+                // total y campos derivados
+                nextCabecera.total_op_gravadas = cab.total_op_gravadas;
+                nextCabecera.total_op_inafectas = cab.total_op_inafectas;
+                nextCabecera.total_op_gratuitas = cab.total_op_gratuitas;
+                nextCabecera.igv = cab.igv;
+                nextCabecera.total_op_exoneradas = cab.total_op_exoneradas;
+                nextCabecera.totalIGV_GRATUITA = cab.totalIGV_GRATUITA;
+                nextCabecera.total = (Number(cab.total_op_gravadas) + Number(cab.igv)).toFixed(2);
+
+                // pendiente pago (arregla el bug de "total" no definido)
+                if (nextCabecera.forma_pago === "CONTADO") {
+                    nextCabecera.pendiente_pago = 0;
+                } else if (Number(nextCabecera.pendiente_pago) === 0) {
+                    nextCabecera.pendiente_pago = Number(nextCabecera.total).toFixed(2);
+                }
+
+                // vencimiento válido (sin mutar this.info_cabecera)
+                nextCabecera.vencimientoDoc = this._normalizeVencimientoDocLocal(nextCabecera);
+
+                const payload = {
+                    detalle: detalleNuevo,
+                    detalle_original: this.detalleOriginalSnapshot,
+                    // 👇 opcional (recomendado) si tu backend quiere validar totales/cabecera
+                    cabecera: nextCabecera,
+                };
+
+                // 1) primero valida / aplica en backend
+                const r = await this.api_rest(payload, "edita_comprobante");
+
+                // ✅ si no procede (409 stock), no cambies nada en UI
+                if (!r) {
+                    this.info_cabecera = cabeceraAntes; // por si algo ya tocaste en otro lado
+                    store.commit("dialogoprogress");
+                    return;
+                }
+
+                // 2) recién aquí aplicas cambios locales
+                this.info_cabecera = nextCabecera;
+
+                await Promise.all([
+                    grabaCabecera_p(this.info_cabecera.id_grupo, this.info_cabecera.numeracion, this.info_cabecera),
+                    detalleCabecera_p(this.info_cabecera.id_grupo, this.info_cabecera.numeracion, detalleNuevo),
+                ]);
+
+                store.commit("dialogoprogress");
+                this.cierra();
+            } catch (e) {
+                console.error(e);
+                // rollback UI si algo falló
+                this.info_cabecera = cabeceraAntes;
+                store.commit("dialogoprogress");
+                store.commit("dialogosnackbar", "Error guardando el documento");
             }
-            this.info_cabecera.total_op_gravadas = cabecera.total_op_gravadas
-            this.info_cabecera.total_op_inafectas = cabecera.total_op_inafectas
-            this.info_cabecera.total_op_gratuitas = cabecera.total_op_gratuitas
-            this.info_cabecera.igv = cabecera.igv
-            this.info_cabecera.total_op_exoneradas = cabecera.total_op_exoneradas
-            this.info_cabecera.totalIGV_GRATUITA = cabecera.totalIGV_GRATUITA
-            this.info_cabecera.total = (Number(cabecera.total_op_gravadas) + Number(cabecera.igv)).toFixed(2)
-            this.normalizeVencimientoDoc()
-            const payload = {
-                detalle: resp[1],
-                detalle_original: this.detalleOriginalSnapshot, // <<—— agrega esto
-            };
-            await Promise.all([
-                await this.api_rest(payload, "edita_comprobante"),
-                await grabaCabecera_p(this.info_cabecera.id_grupo, this.info_cabecera.numeracion, this.info_cabecera),
-                await detalleCabecera_p(this.info_cabecera.id_grupo, this.info_cabecera.numeracion, resp[1])
-            ])
-            store.commit("dialogoprogress");
-            this.cierra()
         },
+        _normalizeVencimientoDocLocal(cab) {
+            let vd = Number(cab?.vencimientoDoc);
+            if (!Number.isFinite(vd) || vd <= 0) {
+                const f = Number(cab?.fecha);
+                vd = Number.isFinite(f) && f > 0 ? f : moment().unix();
+            }
+            return vd;
+        },
+
         async api_rest(data, metodo) {
-            console.log(data)
             const grupo = this.info_cabecera.id_grupo;
             const numeracion = this.info_cabecera.numeracion;
             const idem = this.makeIdemKey({ metodo, grupo, numeracion, payload: data });
 
-            // Ejemplo genérico:
-            var a = axios({
-                method: 'POST',
-                url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
-                //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
-                headers: {
-                    'X-Idempotency-Key': idem,    // <-- el server debe ignorar duplicados con la misma clave
-                },
-                data: {
-                    "bd": store.state.baseDatos.bd,
-                    "data": data,
-                    "metodo": metodo
+            try {
+                const resp = await axios({
+                    method: "POST",
+                    // url: "https://api-distribucion-6sfc6tum4a-rj.a.run.app",
+                    url: "http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion",
+                    headers: {
+                        // 👇 usa la MISMA cabecera que lee tu backend: req.get("x-idempotency-key")
+                        "x-idempotency-key": idem,
+                    },
+                    data: {
+                        bd: store.state.baseDatos.bd,
+                        data,
+                        metodo,
+                    },
+                });
+
+                // por si te devuelve 202 processing
+                if (resp.status === 202 || resp.data?.status === "processing") {
+                    const e = new Error("EN PROCESO");
+                    e.response = { status: 202, data: resp.data };
+                    throw e;
                 }
-            }).then(response => {
-                console.log(response.data)
-                return response
-            })
-            return a
+
+                return resp.data;
+            } catch (err) {
+                const status = err?.response?.status;
+                const body = err?.response?.data || {};
+
+                if (status === 409 && body?.code === "STOCK_INSUFICIENTE") {
+                    this.sinStock = Array.isArray(body.sinStock) ? body.sinStock : [];
+                    this.dialStock = true;
+                    return null; // ✅ corta flujo
+                }
+
+                throw err;
+            }
         },
+
         normalizaDetalle(arr = []) {
             const A = Array.isArray(arr) ? arr : []
             return A.map(it => ({
