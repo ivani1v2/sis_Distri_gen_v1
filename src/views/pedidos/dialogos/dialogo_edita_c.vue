@@ -649,8 +649,8 @@ export default {
             try {
                 const resp = await axios({
                     method: "POST",
-                    // url: "https://api-distribucion-6sfc6tum4a-rj.a.run.app",
-                    url: "http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion",
+                     url: "https://api-distribucion-6sfc6tum4a-rj.a.run.app",
+                    //url: "http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion",
                     headers: {
                         // 👇 usa la MISMA cabecera que lee tu backend: req.get("x-idempotency-key")
                         "x-idempotency-key": idem,
