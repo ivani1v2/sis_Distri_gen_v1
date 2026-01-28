@@ -1187,25 +1187,8 @@ function impresionA4(array, qr, arraycabecera) {
   doc.text("SEÑORES", 15, linea, "left");
   doc.text(" : ", 32, linea, "left");
   doc.setFont("Helvetica", "");
-
   var texto = doc.splitTextToSize(arraycabe.cliente, 85);
-
-  if (texto.length > 2) {
-    texto = texto.slice(0, 2);
-    var ultimalinea = texto[1];
-    var anchoConPuntos = doc.getStringUnitWidth(ultimalinea + "...") * doc.internal.getFontSize() / doc.internal.scaleFactor;
-
-    if (anchoConPuntos > 85) {
-      while (ultimalinea.length > 0 &&
-        doc.getStringUnitWidth(ultimalinea + "...") * doc.internal.getFontSize() / doc.internal.scaleFactor > 85) {
-        ultimalinea = ultimalinea.slice(0, -1);
-      }
-    }
-    texto[1] = ultimalinea + "...";
-  }
-
   doc.text(texto, 36, linea, "left");
-
   linea = linea + 4 * texto.length;
   console.log(arraycabe);
   doc.setFont("Helvetica", "Bold");
@@ -1280,7 +1263,7 @@ function impresionA4(array, qr, arraycabecera) {
       100
     );
     doc.text(texto, 10, lineaqr, "left");
-    lineaqr = lineaqr + 3;
+    lineaqr = lineaqr + 5;
   }
 
   doc.setFont("Helvetica", "");
@@ -1290,16 +1273,15 @@ function impresionA4(array, qr, arraycabecera) {
     100
   );
   doc.text(texto, 10, lineaqr, "left");
-  lineaqr = lineaqr + 3;
+  lineaqr = lineaqr + 6;
 
   let nextSection = 1;
   let currentSection;
-  const remainingVSpace =
-    doc.internal.pageSize.height - doc.lastAutoTable.finalY;
+  const remainingVSpace = doc.internal.pageSize.height - lineaqr;
   if (remainingVSpace > 50) {
     nextSection = currentSection;
-    linea = doc.lastAutoTable.finalY + 4;
-    lineaqr = doc.lastAutoTable.finalY + 10;
+    linea = lineaqr + 4;
+    lineaqr = lineaqr + 10;
   } else {
     linea = 10;
     lineaqr = 10;
@@ -1380,10 +1362,16 @@ function impresionA4(array, qr, arraycabecera) {
   doc.text(" : ", 159, linea, "left");
   doc.setFont("Helvetica", "");
   doc.text(moneda + total.toString(), 190, linea, "right");
-  linea = linea + 4;
+  linea = linea + 2;
 
   if ((arraycabe.forma_pago).toLowerCase() == "credito") {
+
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(8);
+    doc.text("DETALLE DE CRONOGRAMA", 10, lineaqr - 10);
+    lineaqr = lineaqr - 6;
     doc.autoTable({
+      startY: lineaqr,
       margin: { top: 10, left: 10 },
       styles: {
         fontSize: 8,
@@ -1393,7 +1381,7 @@ function impresionA4(array, qr, arraycabecera) {
         lineWidth: 0.2,
         lineColor: 1,
       },
-      headStyles: { lineWidth: 0.2, lineColor: 1 },
+      headStyles: { lineWidth: 0.2, lineColor: 1, fillColor: [220, 220, 220], textColor: [0, 0, 0], fontStyle: "bold" },
       columnStyles: {
         0: { columnWidth: 35, halign: "center", fontStyle: "bold" },
         1: { columnWidth: 35, halign: "center" },
@@ -1404,14 +1392,14 @@ function impresionA4(array, qr, arraycabecera) {
       body: cuotascredito(arraycabe.cuotas),
     });
     let finalY = doc.previousAutoTable.finalY;
-    lineaqr = finalY + 3;
+    lineaqr = finalY + 8;
   }
   if (
     arraycabe.detraccion &&
     Object.keys(arraycabe.detraccion).length > 0 &&
     arraycabe.detraccion !== ""
   ) {
-    var lineaqr2 = lineaqr + 7;
+    var lineaqr2 = lineaqr + 8;
     doc.setFontSize(9);
     doc.setFont("Helvetica", "bold");
     var texto = doc.splitTextToSize(
