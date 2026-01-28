@@ -64,7 +64,7 @@
             </thead>
             <tbody>
                 <template v-for="item in productosFiltrados">
-                    <tr v-for="prod in item.data" :key="prod.uuid">
+                    <tr v-for="prod in item.data" :key="prod.uuid" @click="ver_deta(item)">
                         <td style="font-size:75%;">{{ formatFecha(item.fecha_ingreso) }}</td>
                         <td style="font-size:75%;">{{ item.id }}</td>
                         <td style="font-size:75%;">{{ item.motivo }}</td>
@@ -144,6 +144,9 @@ export default {
     },
 
     methods: {
+        ver_deta(item){
+            console.log(item)
+        },
         async saldo_inicial_todos() {
             this.cargando = true
             this.progreso = 0

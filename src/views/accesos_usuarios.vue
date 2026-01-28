@@ -117,7 +117,7 @@ export default {
                         ],
                         [
                             { label: 'Flujo Caja', value: 'flujo_caja' },
-                            { label: 'Cuentas x cobrar', value: 'cuentas_cobrar' },
+                            { label: 'Cuentas x cobrar', value: 'modulocuentasxcobrar' },
                         ],
                     ],
                 },

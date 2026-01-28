@@ -68,7 +68,7 @@
 
                 <v-card class="mt-5">
                     <div class="tabla-scroll">
-                        <v-simple-table class="elevation-0" dense>
+                        <v-simple-table class="elevation-0" dense :class="{ 'tabla-dark': tablaOscura }">
                             <!-- Sin encabezado: usamos tarjetas -->
                             <thead class="d-none">
                                 <tr>
@@ -80,7 +80,9 @@
                                 <tr v-for="item in listaproductos" :key="item.uuid || item.id"
                                     @click.prevent="editaProducto(item)">
                                     <td class="pa-0 mt-n1 mb-n1">
-                                        <v-card class="ma-1 pa-2 " outlined :elevation="0" ripple>
+                                        <v-card class="ma-1 pa-2" outlined :elevation="0" ripple
+                                            :class="{ 'card-dark': tablaOscura }">
+
                                             <div class="d-flex align-center mt-n2 mb-n2">
                                                 <!-- Contenido -->
 
@@ -133,11 +135,13 @@
                                 </tr>
 
                                 <!-- Vacío -->
-                                <tr v-if="!listaproductos || listaproductos.length === 0">
-                                    <td class="py-6 text-center grey--text">
+                                <tr v-if="!listaproductos || listaproductos.length === 0" class="empty-full">
+                                    <td :class="['text-center', tablaOscura ? 'white--text' : 'grey--text']">
                                         No hay productos en la lista
                                     </td>
                                 </tr>
+
+
                             </tbody>
                         </v-simple-table>
                     </div>
@@ -235,6 +239,15 @@
                         de
                         bonos.
                     </p>
+                    <v-divider class="my-3"></v-divider>
+                    <v-subheader class="pl-0">Apariencia</v-subheader>
+
+                    <v-switch v-model="tablaOscura" inset label="Modo oscuro en la lista"
+                        prepend-icon="mdi-weather-night" />
+
+                    <p class="caption grey--text mt-2">
+                        Activa fondo negro y texto blanco solo en la tabla/lista de productos.
+                    </p>
                 </v-card-text>
 
                 <v-card-actions>
@@ -306,6 +319,7 @@ export default {
             lista_precios_selecta: ['1', '2', '3'],
             dial_config: false,
             modoOrdenProductos: 'push',
+            tablaOscura: false,
         }
     },
     created() {
@@ -351,6 +365,9 @@ export default {
         if (savedModo === 'push' || savedModo === 'top') {
             this.modoOrdenProductos = savedModo;
         }
+        const savedDark = localStorage.getItem('tablaOscura');
+        if (savedDark === '1') this.tablaOscura = true;
+        if (savedDark === '0') this.tablaOscura = false;
     },
     beforeDestroy() {
         window.removeEventListener("keydown", this.detectarTecla);
@@ -369,7 +386,9 @@ export default {
         window.addEventListener("keydown", this.detectarTecla);
     },
     watch: {
-
+        tablaOscura(n) {
+            localStorage.setItem('tablaOscura', n ? '1' : '0');
+        },
         listaproductos: {
             handler(nuevo) {
                 store.commit("lista_productos", nuevo);
@@ -704,5 +723,50 @@ export default {
     .venta-col {
         min-height: 100dvh;
     }
+}
+
+/* Fondo negro + texto blanco en tabla */
+.tabla-dark {
+    background: #000 !important;
+    color: #fff !important;
+}
+
+/* Afecta celdas y contenido */
+.tabla-dark td,
+.tabla-dark th {
+    background: #363535 !important;
+    color: #fff !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Card interno de cada fila */
+.card-dark {
+    background: #2e2d2d !important;
+    color: #fff !important;
+    border-color: rgba(255, 255, 255, 0.20) !important;
+}
+
+/* Ajuste para textos grises dentro del card */
+.card-dark .grey--text {
+    color: rgba(255, 255, 255, 0.70) !important;
+}
+
+.empty-full {
+    height: 100%;
+    min-height: 55vh;
+    /* fallback */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Quita el brillo blanco del ripple/overlay en modo oscuro */
+.card-dark .v-ripple__container {
+    opacity: 0 !important;
+}
+
+/* Evita el highlight blanco al tocar en móviles/navegador */
+.card-dark {
+    -webkit-tap-highlight-color: transparent !important;
 }
 </style>

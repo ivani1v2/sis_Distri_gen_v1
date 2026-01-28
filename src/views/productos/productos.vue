@@ -973,7 +973,7 @@ export default {
                 }
             }
             if (this.filtro_categoria == 'TODOS') {
-                return lista.filter((item) => (item.id + item.nombre)
+                return lista.filter((item) => (item.id + item.nombre+item.codbarra)
                     .toLowerCase().includes(this.buscar.toLowerCase()))
             } else {
                 return lista.filter(item => item.categoria == this.filtro_categoria && (item.id + item.nombre)

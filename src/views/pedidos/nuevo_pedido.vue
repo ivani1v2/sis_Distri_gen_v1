@@ -36,11 +36,11 @@
                     icon="mdi-alert-octagon">
                     <div class="d-flex flex-wrap justify-space-between align-center text-caption">
                         <span>Línea de crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2)
-                                }}</strong></span>
+                        }}</strong></span>
                         <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2)
-                                }}</strong></span>
+                        }}</strong></span>
                         <span>Disponible: <strong class="red--text">{{ moneda }} {{ saldoDisponible.toFixed(2)
-                                }}</strong></span>
+                        }}</strong></span>
                     </div>
                     <div class="mt-1 red--text text-caption font-weight-medium">
                         El monto del pedido ({{ moneda }} {{ totalDetalle.toFixed(2) }}) supera el saldo disponible
@@ -49,7 +49,7 @@
 
                 <v-card class="mt-5">
                     <div class="tabla-scroll">
-                        <v-simple-table class="elevation-0" dense>
+                        <v-simple-table class="elevation-0" dense :class="{ 'tabla-dark': tablaOscura }">
                             <!-- Sin encabezado: usamos tarjetas -->
                             <thead class="d-none">
                                 <tr>
@@ -61,7 +61,9 @@
                                 <tr v-for="item in listaproductos" :key="item.uuid || item.id"
                                     @click.prevent="editaProducto(item)">
                                     <td class="pa-0 mt-n1 mb-n1">
-                                        <v-card class="ma-1 pa-2 " outlined :elevation="0" ripple>
+                                        <v-card class="ma-1 pa-2" outlined :elevation="0" :ripple="!tablaOscura"
+                                            :class="{ 'card-dark': tablaOscura }">
+
                                             <div class="d-flex align-center mt-n2 mb-n2">
                                                 <!-- Contenido -->
                                                 <div class="flex-grow-1 mr-2">
@@ -93,7 +95,7 @@
                                                         style="max-width: 70vw;">
                                                         <span class="font-weight-bold red--text">{{
                                                             Number(item.cantidad)
-                                                            }}×</span>
+                                                        }}×</span>
                                                         {{ item.nombre }}
                                                     </div>
                                                 </div>
@@ -113,8 +115,8 @@
                                 </tr>
 
                                 <!-- Vacío -->
-                                <tr v-if="!listaproductos || listaproductos.length === 0">
-                                    <td class="py-6 text-center grey--text">
+                                <tr v-if="!listaproductos || listaproductos.length === 0" class="empty-full">
+                                    <td :class="['text-center', tablaOscura ? 'white--text' : 'grey--text']">
                                         No hay productos en la lista
                                     </td>
                                 </tr>
@@ -379,6 +381,8 @@ export default {
             cargandoCredito: false,
             dialStock: false,
             sinStock: [],
+            modoOrdenProductos: "push",
+            tablaOscura: false,
         }
     },
     created() {
@@ -425,10 +429,14 @@ export default {
             // clon simple para no mutar directamente el state
             this.listaproductos = JSON.parse(JSON.stringify(store.state.lista_productos));
         }
-        const savedModo = localStorage.getItem('modoOrdenProductos');
-        if (savedModo === 'push' || savedModo === 'top') {
+        const savedModo = localStorage.getItem("modoOrdenProductos");
+        if (savedModo === "push" || savedModo === "top") {
             this.modoOrdenProductos = savedModo;
         }
+
+        const savedDark = localStorage.getItem("tablaOscura");
+        if (savedDark === "1") this.tablaOscura = true;
+        if (savedDark === "0") this.tablaOscura = false;
     },
     beforeDestroy() {
         store.commit("emision", '')
@@ -468,6 +476,12 @@ export default {
         }
     },
     watch: {
+        modoOrdenProductos(nv) {
+            localStorage.setItem("modoOrdenProductos", nv);
+        },
+        tablaOscura(nv) {
+            localStorage.setItem("tablaOscura", nv ? "1" : "0");
+        },
         formaPago(nv) {
             if (nv === 'CREDITO') {
                 // Fecha actual + 7 días
@@ -616,7 +630,7 @@ export default {
         },
         grabar() {
             // Siempre recalcular antes de grabar
-           if (store.state.permisos.permite_editar_bono) {
+            if (store.state.permisos.permite_editar_bono) {
                 this.recalculoCompleto()
             }
             this.dial_guardar = true;
@@ -1006,5 +1020,41 @@ export default {
     .venta-col {
         min-height: 100dvh;
     }
+}
+
+.tabla-dark {
+    background: #000 !important;
+    color: #fff !important;
+}
+
+.tabla-dark td,
+.tabla-dark th {
+    background: #363535 !important;
+    color: #fff !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.card-dark {
+    background: #2e2d2d !important;
+    color: #fff !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.card-dark .grey--text {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* vacío centrado y alto */
+.empty-full {
+    height: 100%;
+    min-height: 55vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* evita flash blanco al tocar */
+.card-dark {
+    -webkit-tap-highlight-color: transparent !important;
 }
 </style>
