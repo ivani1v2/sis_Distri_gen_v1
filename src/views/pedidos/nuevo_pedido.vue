@@ -199,8 +199,8 @@
                     <v-col cols="12">
                         <v-radio-group v-model="tipocomprobante" row dense>
                             <v-radio label="Nota" value="T"></v-radio>
-                            <v-radio label="Boleta" value="B"></v-radio>
-                            <v-radio label="Factura" value="F"></v-radio>
+                            <v-radio v-if="$store.state.permisos.es_admin" label="Boleta" value="B"></v-radio>
+                            <v-radio v-if="$store.state.permisos.es_admin" label="Factura" value="F"></v-radio>
                         </v-radio-group>
                     </v-col>
                 </v-row>
@@ -629,9 +629,11 @@ export default {
             this.dial_direcciones = false;
         },
         grabar() {
-            // Siempre recalcular antes de grabar
             if (store.state.permisos.permite_editar_bono) {
                 this.recalculoCompleto()
+            }
+            if (!store.state.permisos.es_admin) {
+                this.tipocomprobante = 'T';
             }
             this.dial_guardar = true;
         },

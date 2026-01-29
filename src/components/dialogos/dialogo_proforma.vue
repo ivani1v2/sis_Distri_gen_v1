@@ -349,10 +349,15 @@ export default {
                     ? Number(producto.precioedita)
                     : Number(producto.precio || 0)
 
+                const precioBase = producto.precio_base != null
+                    ? Number(producto.precio_base)
+                    : Number(producto.precio || producto.precioedita || 0)
+
                 return {
                     ...producto,
                     precioedita: precioFinal,
                     precio: precioFinal,
+                    precio_base: precioBase,
                 }
             })
 

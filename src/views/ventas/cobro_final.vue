@@ -13,10 +13,10 @@
             </v-system-bar>
         </div>
         <v-card class="pa-3">
-            <v-radio-group class="mt-n1 mx-auto " v-model="tipocomprobante" row>
-                <v-radio label="Nota" value="T"></v-radio>
-                <v-radio label="Boleta" value="B"></v-radio>
-                <v-radio label="Factura" value="F"></v-radio>
+            <v-radio-group class="mt-n1 mx-auto" v-model="tipocomprobante" row>
+                <v-radio label="Nota" value="T" :color="$store.state.permisos.es_admin ? '' : 'primary'"></v-radio>
+                <v-radio v-if="$store.state.permisos.es_admin" label="Boleta" value="B" color="success"></v-radio>
+                <v-radio v-if="$store.state.permisos.es_admin" label="Factura" value="F" color="indigo"></v-radio>
             </v-radio-group>
             <template>
                 <v-row class="mt-n3" dense>
@@ -309,12 +309,15 @@ export default {
             this.direccion = this.cliente.dir
         }
         const usarDefecto = store.state.configuracion.usar_comprobante_defecto === true
-        if (usarDefecto) {
-            this.tipocomprobante = store.state.configuracion.defecto || 'T'
+
+        if (!this.$store.state.permisos.es_admin) {
+            this.tipocomprobante = 'T';
+        } else if (usarDefecto) {
+            this.tipocomprobante = store.state.configuracion.defecto || 'T';
         } else {
             this.tipocomprobante = store.state.cliente_selecto?.tipocomprobante
                 || store.state.cliente?.tipocomprobante
-                || 'T'
+                || 'T';
         }
 
         this.total = this.cabecera.total - this.cabecera.descuentos
@@ -510,6 +513,12 @@ export default {
         async cobrar() {
 
             store.commit("dialogoprogress")
+            if (!this.$store.state.permisos.es_admin) {
+                if (this.tipocomprobante === 'F' || this.tipocomprobante === 'B') {
+                    this.tipocomprobante = 'T';
+                }
+            }
+
             if (this.valida_pagos() != parseFloat(this.total)) {
                 alert('Debe ingresar monto correcto')
                 store.commit("dialogoprogress")
@@ -644,7 +653,7 @@ export default {
             try {
                 const resp = await axios({
                     method: 'POST',
-                     url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
+                    url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
                     //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
                     headers: {
                         'X-Idempotency-Key': data.arrayCabecera.numeracion,
@@ -831,14 +840,17 @@ export default {
             if (data.telefono) {
                 this.telfcliente = data.telefono;
             }
-            const usarDefecto = store.state.configuracion.usar_comprobante_defecto === true
-
-            if (usarDefecto) {
-                this.tipocomprobante = store.state.configuracion.defecto || 'T'
+            if (!this.$store.state.permisos.es_admin) {
+                this.tipocomprobante = 'T';
             } else {
-                this.tipocomprobante = (data.tipocomprobante || data.tipo_comprobante)
-                    ? (data.tipocomprobante || data.tipo_comprobante)
-                    : 'T'
+                const usarDefecto = store.state.configuracion.usar_comprobante_defecto === true;
+                if (usarDefecto) {
+                    this.tipocomprobante = store.state.configuracion.defecto || 'T';
+                } else {
+                    this.tipocomprobante = (data.tipocomprobante || data.tipo_comprobante)
+                        ? (data.tipocomprobante || data.tipo_comprobante)
+                        : 'T';
+                }
             }
 
             this.dial_cliente = false;
@@ -871,6 +883,12 @@ export default {
         },
         async visualizar() {
             store.commit("dialogoprogress")
+
+            if (!this.$store.state.permisos.es_admin) {
+                if (this.tipocomprobante === 'F' || this.tipocomprobante === 'B') {
+                    this.tipocomprobante = 'T';
+                }
+            }
             if (this.valida_pagos() != parseFloat(this.total)) {
                 alert('Debe ingresar monto correcto')
                 store.commit("dialogoprogress")

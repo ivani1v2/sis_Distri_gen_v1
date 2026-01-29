@@ -1,5 +1,5 @@
 <template>
-    <v-row class="mx-auto text-center" dense v-show="visible">
+    <v-row class="mx-auto text-center mt-n4" dense v-show="visible">
         <v-col cols="4">
             <v-text-field dense outlined type="number" label="% Desc 1" v-model.number="desc_1"
                 @input="calculaDescuentos()" hide-details min="0" max="100" />

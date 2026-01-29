@@ -216,16 +216,16 @@ function impresion58(arrays) {
   const headConDesc = [["Cant", "Descripcion", "%Desc", "P.T"]];
   
   const columnStylesSinDesc = {
-    0: { columnWidth: 8, halign: "center" },
-    1: { columnWidth: 30, halign: "left" },
-    2: { columnWidth: 11, halign: "right" },
+    0: { cellWidth: 8, halign: "center" },
+    1: { cellWidth: 30, halign: "left" },
+    2: { cellWidth: 11, halign: "right" },
   };
   
   const columnStylesConDesc = {
-    0: { columnWidth: 7, halign: "center" },
-    1: { columnWidth: 23, halign: "left" },
-    2: { columnWidth: 12, halign: "center" },
-    3: { columnWidth: 9, halign: "right" },
+    0: { cellWidth: 7, halign: "center" },
+    1: { cellWidth: 23, halign: "left" },
+    2: { cellWidth: 12, halign: "center" },
+    3: { cellWidth: 9, halign: "right" },
   };
 
   doc.autoTable({
@@ -502,18 +502,18 @@ function impresion80(arrays) {
   const headConDesc = [["Cant", "Descripcion", "P.U", "%Desc", "P.T"]];
   
   const columnStylesSinDesc = {
-    0: { columnWidth: 8, halign: "center" },
-    1: { columnWidth: 35, halign: "left" },
-    2: { columnWidth: 12, halign: "right" },
-    3: { columnWidth: 12, halign: "right" },
+    0: { cellWidth: 8, halign: "center" },
+    1: { cellWidth: 35, halign: "left" },
+    2: { cellWidth: 12, halign: "right" },
+    3: { cellWidth: 12, halign: "right" },
   };
   
   const columnStylesConDesc = {
-    0: { columnWidth: 8, halign: "center" },
-    1: { columnWidth: 27, halign: "left" },
-    2: { columnWidth: 10, halign: "right" },
-    3: { columnWidth: 14, halign: "center" },
-    4: { columnWidth: 10, halign: "right" },
+    0: { cellWidth: 8, halign: "center" },
+    1: { cellWidth: 27, halign: "left" },
+    2: { cellWidth: 10, halign: "right" },
+    3: { cellWidth: 14, halign: "center" },
+    4: { cellWidth: 10, halign: "right" },
   };
 
   doc.autoTable({
@@ -825,6 +825,10 @@ function impresionA4(arrays) {
     }
     var descuento = parseFloat(array[i].preciodescuento || 0);
     
+    const precioBase = parseFloat(array[i].precio_base ?? array[i].precioedita ?? 0);
+    const precioNeto = parseFloat(array[i].precioedita ?? array[i].precio ?? 0);
+    const totalLinea = parseFloat(precioNeto * array[i].cantidad).toFixed(2);
+    
     var textoDescuento = existeDescuento
       ? `${array[i].desc_1 || 0} / ${array[i].desc_2 || 0} / ${array[i].desc_3 || 0}`
       : null;
@@ -834,52 +838,54 @@ function impresionA4(arrays) {
         array[i].cantidad,
         array[i].nombre,
         array[i].medida,
-        array[i].precioedita,
-        parseFloat(array[i].precioedita * array[i].cantidad).toFixed(2)
+        precioBase.toFixed(2),
+        totalLinea
       ]);
     } else {
       nuevoArray.push([
         array[i].cantidad,
         array[i].nombre,
         array[i].medida,
-        array[i].precioedita,
+        precioBase.toFixed(2),
         textoDescuento,
-        parseFloat(array[i].precioedita * array[i].cantidad).toFixed(2)
+        precioNeto.toFixed(2),
+        totalLinea
       ]);
     }
     
     if (array[i].operacion == "EXONERADA") {
       operacionexonerada =
         parseFloat(operacionexonerada) +
-        parseFloat(array[i].precioedita * array[i].cantidad) -
+        parseFloat(precioNeto * array[i].cantidad) -
         descuento;
     }
     if (array[i].operacion == "GRAVADA") {
       operaciongravada =
         parseFloat(operaciongravada) +
-        parseFloat(array[i].precioedita * array[i].cantidad) -
+        parseFloat(precioNeto * array[i].cantidad) -
         descuento;
     }
   }
   
   const headSinDesc = [["Cantidad", "Descripcion", "Medida", "P.Unitario", "P.Total"]];
-  const headConDesc = [["Cant", "Descripcion", "Medida", "P.Unitario", "%Desc", "P.Total"]];
+  const headConDesc = [["Cant", "Descripcion", "Medida", "P.Unitario", "%Desc", "P.Neto", "P.Total"]];
   
   const columnStylesSinDesc = {
-    0: { columnWidth: 20, halign: "center", fontStyle: "bold" },
-    1: { columnWidth: 110, halign: "left" },
-    2: { columnWidth: 20, halign: "center" },
-    3: { columnWidth: 20, halign: "center" },
-    4: { columnWidth: 20, halign: "center", fontStyle: "bold" },
+    0: { cellWidth: 20, halign: "center", fontStyle: "bold" },
+    1: { cellWidth: 110, halign: "left" },
+    2: { cellWidth: 20, halign: "center" },
+    3: { cellWidth: 20, halign: "center" },
+    4: { cellWidth: 20, halign: "center", fontStyle: "bold" },
   };
   
   const columnStylesConDesc = {
-    0: { columnWidth: 15, halign: "center", fontStyle: "bold" },
-    1: { columnWidth: 90, halign: "left" },
-    2: { columnWidth: 18, halign: "center" },
-    3: { columnWidth: 20, halign: "center" },
-    4: { columnWidth: 22, halign: "center" },
-    5: { columnWidth: 20, halign: "center", fontStyle: "bold" },
+    0: { cellWidth: 12, halign: "center", fontStyle: "bold" },
+    1: { cellWidth: 75, halign: "left" },
+    2: { cellWidth: 18, halign: "center" },
+    3: { cellWidth: 20, halign: "center" },  // P.Unitario
+    4: { cellWidth: 20, halign: "center" },  // %Desc
+    5: { cellWidth: 20, halign: "center" },  // P.Neto
+    6: { cellWidth: 20, halign: "center", fontStyle: "bold" },  // P.Total
   };
 
   doc.autoTable({
@@ -995,10 +1001,10 @@ function impresionA4(arrays) {
       },
       headStyles: { lineWidth: 0.2, lineColor: 1 },
       columnStyles: {
-        0: { columnWidth: 25, halign: "center", fontStyle: "bold" },
-        1: { columnWidth: 25, halign: "center" },
-        2: { columnWidth: 30, halign: "center" },
-        3: { columnWidth: 30, halign: "center" },
+        0: { cellWidth: 25, halign: "center", fontStyle: "bold" },
+        1: { cellWidth: 25, halign: "center" },
+        2: { cellWidth: 30, halign: "center" },
+        3: { cellWidth: 30, halign: "center" },
       },
       theme: ["plain"],
       head: [["BANCO", "MONEDA", "CUENTA", "CCI"]],
