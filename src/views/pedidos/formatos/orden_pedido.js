@@ -485,17 +485,14 @@ async function impresion80_ordenPedido(cabecera, items = []) {
   // --- Tabla de ítems ---
   const body = (items || []).map(it => {
     const cant = Number(it.cantidad || 0);
-
-    // Precio original
-    let pu = Number(it.precio ?? 0);
+    let pu = Number(it.precio_base ?? it.precioedita ?? it.precio ?? 0);
 
     // Si NO se deben mostrar precios en operaciones GRATUITAS
     if (!store.state.configuracion.mostrar_ope_gratuitas &&
       String(it.operacion || "").toUpperCase() === "GRATUITA") {
       pu = 0;
     }
-
-    const pt = Number(it.totalLinea ?? (pu * cant));
+    const pt = Number(it.totalLinea ?? (Number(it.precio ?? 0) * cant));
 
     const descLinea =
       `${it.nombre || ""}\n- ${String(it.medida || "").toUpperCase()}`;
@@ -807,7 +804,7 @@ async function impresion58_ordenPedido(cabecera, items = []) {
   });
   const body = (items || []).map(it => {
     const cant = Number(it.cantidad || 0);
-    const pu = Number((it.precio ?? 0));
+    const pu = Number(it.precio_base ?? it.precioedita ?? it.precio ?? 0);
 
     const pt = Number(it.total_linea || it.totalLinea);
     const esBono = String(it.operacion || '').toUpperCase() === 'GRATUITA';
@@ -1009,8 +1006,8 @@ function tabla_A4(array, linea) {
 
   for (let item of array) {
     // precios
-    const precioBase = Number(item.precio ?? 0); // P.Unitario base
-    const precioNeto = Number(item.precio ?? 0);                     // P.Neto
+    const precioBase = Number(item.precio_base ?? item.precioedita ?? item.precio ?? 0);
+    const precioNeto = Number(item.precio ?? item.precioedita ?? 0);
 
     let totalLinea = Number(item.totalLinea ?? (precioNeto * item.cantidad) ?? 0);
 

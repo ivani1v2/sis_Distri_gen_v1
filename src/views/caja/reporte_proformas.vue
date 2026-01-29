@@ -52,7 +52,8 @@
                             <td style="font-family:verdana;font-size:75%;">{{ conviertefecha(item.fecha_emision) }}</td>
                             <td style="font-family:verdana;font-size:75%;">{{ item.num_cliente }} - {{ item.nom_cliente
                                 }}</td>
-                            <td style="font-family:verdana;font-size:75%;">{{item.moneda || 'S/'}} {{ item.total }}</td>
+                            <td style="font-family:verdana;font-size:75%;">{{ item.moneda || 'S/' }} {{ item.total }}
+                            </td>
                             <td>
                                 <v-menu>
                                     <template v-slot:activator="{ on, attrs }">
@@ -203,34 +204,93 @@
                 </v-row>
             </v-card>
         </v-dialog>
-        <v-dialog v-model="dialogo_emite" max-width="490px">
-            <div>
-                <v-system-bar window dark>
-                    <v-icon @click="dialogo_emite = !dialogo_emite">mdi-close</v-icon>
+        <v-dialog v-model="dialogo_emite" max-width="500px" persistent>
+            <v-card rounded="lg" elevation="10">
+                <v-toolbar color="primary" dark flat dense>
+                    <v-toolbar-title class="text-subtitle-1 font-weight-medium">
+                        <v-icon left small>mdi-file-document-outline</v-icon>
+                        Emitir Documento
+                    </v-toolbar-title>
                     <v-spacer></v-spacer>
-                </v-system-bar>
-            </div>
-            <v-card class="pa-3">
-                <v-row dense>
-                    <v-col cols="6">
-                        <v-card @click.prevent="doc('FACTURA')">
-                            <v-container>
-                                <v-img class="mx-auto" height="35" width="35" src="/pdf.png"></v-img>
-                                <h5 block class="text-center pa-1">FACTURA/BOLETA</h5>
-                            </v-container>
-                        </v-card>
-                    </v-col>
-                    <v-col cols="6">
-                        <v-card @click.prevent="doc('GUIA')">
-                            <v-container>
-                                <v-img class="mx-auto" height="35" width="35" src="/pdf.png"></v-img>
-                                <h5 block class="text-center pa-1">GUIA REM</h5>
-                            </v-container>
-                        </v-card>
-                    </v-col>
-                </v-row>
+                    <v-btn icon small @click="dialogo_emite = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-toolbar>
+
+                <v-card-text class="pa-4">
+                    <v-row dense class="ma-0">
+                        <v-col cols="12" sm="6" class="pa-2">
+                            <v-hover v-slot="{ hover }">
+                                <v-card @click="doc('FACTURA')" :elevation="hover ? 8 : 2"
+                                    :class="['transition-swing', hover ? 'primary lighten-5' : '']" height="120"
+                                    rounded="lg" class="d-flex flex-column justify-center cursor-pointer">
+                                    <v-container class="pa-3 text-center">
+                                        <v-icon size="40" color="primary" class="mb-2">
+                                            mdi-receipt
+                                        </v-icon>
+                                        <div class="text-subtitle-2 font-weight-medium text-primary">
+                                            FACTURA/BOLETA
+                                        </div>
+                                        <v-chip x-small color="primary" text-color="white" class="mt-1">
+                                            Emitir como venta directa
+                                        </v-chip>
+                                    </v-container>
+                                </v-card>
+                            </v-hover>
+                        </v-col>
+
+                        <v-col cols="12" sm="6" class="pa-2">
+                            <v-hover v-slot="{ hover }">
+                                <v-card @click="doc('GUIA')" :elevation="hover ? 8 : 2"
+                                    :class="['transition-swing', hover ? 'success lighten-5' : '']" height="120"
+                                    rounded="lg" class="d-flex flex-column justify-center cursor-pointer">
+                                    <v-container class="pa-3 text-center">
+                                        <v-icon size="40" color="success" class="mb-2">
+                                            mdi-truck-delivery
+                                        </v-icon>
+                                        <div class="text-subtitle-2 font-weight-medium text-success">
+                                            GUÍA REMISIÓN
+                                        </div>
+                                        <v-chip x-small color="success" text-color="white" class="mt-1">
+                                            Emitir con guía de remisión
+                                        </v-chip>
+                                    </v-container>
+                                </v-card>
+                            </v-hover>
+                        </v-col>
+                        <v-col cols="12" class="pa-2">
+                            <v-hover v-slot="{ hover }">
+                                <v-card @click="convertirAPreventa()" :elevation="hover ? 8 : 2"
+                                    :class="['transition-swing', hover ? 'warning lighten-5' : '']" height="120"
+                                    rounded="lg" class="d-flex flex-column justify-center cursor-pointer">
+                                    <v-container class="pa-3 text-center">
+                                        <v-icon size="40" color="warning" class="mb-2">
+                                            mdi-cart
+                                        </v-icon>
+                                        <div class="text-subtitle-2 font-weight-medium text-warning">
+                                            PRE-VENTA
+                                        </div>
+                                        <v-chip x-small color="warning" text-color="white" class="mt-1">
+                                            Emitir como pedido
+                                        </v-chip>
+                                    </v-container>
+                                </v-card>
+                            </v-hover>
+                        </v-col>
+                    </v-row>
+                </v-card-text>
+
+                <v-divider></v-divider>
+                <v-card-actions class="pa-3">
+                    <v-spacer></v-spacer>
+                    <v-btn variant="text" text @click="dialogo_emite = false" size="small">
+                        Cancelar
+                    </v-btn>
+                </v-card-actions>
             </v-card>
         </v-dialog>
+        <dial_deudas_cliente v-model="dial_deudas_cliente" :cliente="cliente_deuda" :accion-pendiente="'pre_venta'"
+            @continuar="continuarAPreventa" @cerrar="dial_deudas_cliente = false" />
         <proforma v-if="dial_proforma" @cierra="dial_proforma = false" :data="data_proforma" />
     </div>
 </template>
@@ -243,16 +303,20 @@ import {
 import moment from 'moment'
 import store from '@/store/index'
 import proforma from '@/components/dialogos/dialogo_proforma'
+import dial_deudas_cliente from '@/views/clientes/dialogos/dial_deudas_cliente'
 import {
     generaproforma
 } from '../../pdf_proforma'
 export default {
     components: {
-        proforma
+        proforma,
+        dial_deudas_cliente
     },
     data: () => ({
         dial_proforma: false,
         dialogo_emite: false,
+        dial_deudas_cliente: false,
+        cliente_deuda: null,
         date1: moment(String(new Date)).format('YYYY-MM-DD'),
         date2: moment(String(new Date)).format('YYYY-MM-DD'),
         desserts: [],
@@ -345,6 +409,45 @@ export default {
             console.log(this.selecto)
             eliminaProformas(this.selecto.id)
             this.dialogo_elimina = false
+        },
+        convertirAPreventa() {
+            const proforma = this.selecto
+            this.cliente_deuda = {
+                documento: proforma.num_cliente || '',
+                nombre: proforma.nom_cliente || '',
+                direccion: proforma.dir_cliente || '',
+                permite_credito: true,
+                linea_credito: 0
+            }
+            this.dialogo_emite = false
+            this.dial_deudas_cliente = true
+        },
+        continuarAPreventa(payload) {
+            this.dial_deudas_cliente = false
+            const proforma = this.selecto
+            const clienteData = {
+                documento: proforma.num_cliente || '',
+                nombre: proforma.nom_cliente || '',
+                direccion: proforma.dir_cliente || '',
+                telefono: proforma.telefono || ''
+            }
+
+            const productos = (proforma.data || []).map(item => ({
+                ...item,
+                precio: Number(item.precioedita ?? item.precio ?? 0),
+                precio_base: Number(item.precio_base ?? item.precioedita ?? item.precio ?? 0),
+                cantidad: Number(item.cantidad || 0),
+                desc_1: Number(item.desc_1 || 0),
+                desc_2: Number(item.desc_2 || 0),
+                desc_3: Number(item.desc_3 || 0),
+                operacion: item.operacion || 'GRAVADA',
+                totalLinea: Number(item.precioedita ?? item.precio ?? 0) * Number(item.cantidad || 0)
+            }))
+            store.commit("cliente_selecto", clienteData)
+            store.commit("lista_productos", productos)
+            this.$router.push({
+                name: 'nuevo_pedido'
+            })
         }
 
     }
