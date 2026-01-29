@@ -96,405 +96,272 @@
 
     </div>
 </template>
-
 <script>
-import { allMovimientos, allCabecera, consultaDetalle } from '../../db'
-import { fs, colempresa } from '../../db_firestore'
-import moment from 'moment'
-import store from '@/store'
-import axios from "axios"
+import moment from "moment";
+import store from "@/store";
+import axios from "axios";
+import { colempresa } from "../../db_firestore";
+
 export default {
-    data: () => ({
-        periodo: moment().format('MM-YYYY'),
-        periodos: [
-            '2026',
-            '01-2026', '02-2026', '03-2026', '04-2026', '05-2026', '06-2026',
-            '07-2026', '08-2026', '09-2026', '10-2026', '11-2026', '12-2026',
-            '2025',
-            '01-2025', '02-2025', '03-2025', '04-2025', '05-2025', '06-2025',
-            '07-2025', '08-2025', '09-2025', '10-2025', '11-2025', '12-2025'
-        ],
-        listafiltrada: [],
-        buscar: '',
-        saldoInicial: 0,
-        saldoFinal: 0,
-        cargando: false,
-        factorConv: 1,
-        progreso: 0,
-        estadoTexto: 'Procesando kardex…',
-        last_sync_unix: 0,
-    }),
+  data: () => ({
+    periodo: moment().format("MM-YYYY"),
+    periodos: [
+      "2026",
+      "01-2026","02-2026","03-2026","04-2026","05-2026","06-2026",
+      "07-2026","08-2026","09-2026","10-2026","11-2026","12-2026",
+      "2025",
+      "01-2025","02-2025","03-2025","04-2025","05-2025","06-2025",
+      "07-2025","08-2025","09-2025","10-2025","11-2025","12-2025"
+    ],
+    listafiltrada: [],
+    buscar: "",
+    saldoInicial: 0,
+    saldoFinal: 0,
+    cargando: false,
+    factorConv: 1,
 
-    computed: {
-        productosFiltrados() {
-            if (!this.buscar) return this.listafiltrada
-            return this.listafiltrada
-                .map(item => {
-                    const data = (item.data || []).filter(p => String(p.id) === String(this.buscar))
-                    return data.length ? { ...item, data } : null
-                })
-                .filter(Boolean)
-        }
+    // UI loader
+    progreso: 0,
+    estadoTexto: "Cargando…",
+  }),
 
+  computed: {
+    productosFiltrados() {
+      if (!this.buscar) return this.listafiltrada;
+      return this.listafiltrada
+        .map((item) => {
+          const data = (item.data || []).filter(
+            (p) => String(p.id) === String(this.buscar),
+          );
+          return data.length ? { ...item, data } : null;
+        })
+        .filter(Boolean);
+    },
+  },
+
+  created() {
+    // no buscar automático si no hay producto seleccionado
+    // si quieres conservarlo, déjalo. Yo lo dejo pero no hace nada si buscar está vacío.
+    this.inicio();
+  },
+
+  methods: {
+    ver_deta(item) {
+      console.log(item);
     },
 
-    created() {
-        this.inicio()
-
+    rangoDesdePeriodo(periodo) {
+      const [mm, yyyy] = String(periodo || "").split("-");
+      const ini = moment(`${yyyy}-${mm}-01`).startOf("month").unix();
+      const fin = moment(`${yyyy}-${mm}-01`).endOf("month").unix();
+      return [ini, fin];
     },
 
-    methods: {
-        ver_deta(item){
-            console.log(item)
-        },
-        async saldo_inicial_todos() {
-            this.cargando = true
-            this.progreso = 0
-            this.estadoTexto = "Creando saldos iniciales…"
+    eqStr(saldo, f) {
+      const s = Number(saldo) || 0;
+      const k = Number(f) || 1;
+      return k > 1 ? `${Math.floor(s / k)}/${s % k}` : "-";
+    },
 
-            const prods = store.state.productos || []
-            let hechos = 0
+    esGratuita(op) {
+      if (!op) return false;
+      const s = String(op).toUpperCase();
+      return s.includes("GRAT");
+    },
 
-            for (const p of prods) {
-                await this.creaSaldoInicialProducto(p.id)
-                hechos++
-                // opcional: barra de progreso
-                this.progreso = Math.round((hechos / prods.length) * 100)
-            }
+    formatFecha(segundos) {
+      return segundos ? moment.unix(segundos).format("YYYY-MM-DD") : "";
+    },
 
-            this.cargando = false
-            alert("Ajuste inicial procesado para todos los productos.")
+    // ==========================
+    // ✅ NUEVO FLUJO OPTIMIZADO
+    // ==========================
+    async inicio() {
+      try {
+        // reset básico
+        this.listafiltrada = [];
+        this.saldoInicial = 0;
+        this.saldoFinal = 0;
 
-            // refresca vista actual
-            this.inicio()
-        },
-        async creaSaldoInicialProducto(productoId) {
-            try {
-                // 1. buscamos el producto en el store para saber stock actual
-                const prod = store.state.productos.find(p => String(p.id) === String(productoId))
-                if (!prod) {
-                    console.warn("Producto no encontrado en store:", productoId)
-                    return { ok: false, error: "Producto no encontrado" }
-                }
+        if (!this.buscar) return;
 
-                const stockReal = Number(prod.stock) || 0  // <-- stock que tú confías como verdad
+        this.cargando = true;
+        this.progreso = 0;
+        this.estadoTexto = "Leyendo cierre del periodo…";
 
-                // 2. leemos TODOS los movimientos actuales del kardex en Firestore
-                //    ruta: /kardex/historial/{productoId}/detalle
-                const prodRef = colempresa()
-                    .doc("kardex")
-                    .collection("historial")
-                    .doc(String(productoId))
+        const prodId = String(this.buscar);
+        const prodSel = (this.$store.state.productos || []).find(
+          (p) => String(p.id) === prodId,
+        );
+        const nombreProd = prodSel ? prodSel.nombre : "(sin nombre)";
+        this.factorConv = Number(
+          prodSel?.factor ??
+            prodSel?.factor_paquete ??
+            prodSel?.factor_conversion ??
+            1,
+        );
 
-                const detalleRef = prodRef.collection("detalle")
-                const snapMov = await detalleRef.orderBy("f").get()
+        const [ini, fin] = this.rangoDesdePeriodo(this.periodo);
 
-                // reconstruimos saldoFinal actual recorriendo movimientos en orden
-                // OJO: ignoramos líneas con op === "INICIAL" porque son ajustes viejos
-                let saldoSimulado = 0
-                const movimientosOrd = []
-                snapMov.forEach(doc => {
-                    const x = doc.data()
-                    movimientosOrd.push({
-                        id: doc.id,
-                        f: x.f || 0,
-                        op: (x.op || "").toString().toUpperCase(),
-                        cant: Number(x.cant || 0),
-                    })
-                })
+        // 🔸 Refs Firestore
+        const raiz = colempresa().doc("kardex");
 
-                movimientosOrd
-                    .sort((a, b) => (a.f || 0) - (b.f || 0))
-                    .forEach(m => {
-                        if (m.op === "INICIAL") {
-                            // ignoramos INICIAL existente para este cálculo
-                            return
-                        }
-                        saldoSimulado += m.cant
-                    })
+        // 1) ✅ leer saldo inicial del cierre
+   const cierreRef = raiz
+  .collection("cierres")
+  .doc(this.periodo)
+  .collection("productos")
+  .doc(prodId);
 
-                const saldoFinalKardex = saldoSimulado
+        const cierreSnap = await cierreRef.get();
 
-                // 3. calculamos cuánto saldo inicial necesitamos para cuadrar
-                //    fórmula: inicial = stockReal - saldoFinalKardex
-                const saldoInicialNecesario = stockReal - saldoFinalKardex
-                // ejemplo: stockReal=11, saldoFinalKardex=-9 -> inicial=20
+        // si no existe cierre, no recalculamos histórico aquí (por performance)
+        // solo avisamos y mostramos el mes con saldo inicial 0.
+        let saldoInicialBase = 0;
 
-                // si ya cuadra no hacemos nada
-                if (saldoInicialNecesario === 0) {
-                    console.log("Este producto ya está cuadrado, no se crea saldo inicial.")
-                    return {
-                        ok: true,
-                        mensaje: "Sin diferencias. No se creó asiento INICIAL.",
-                        stockReal,
-                        saldoFinalKardex,
-                        saldoInicialNecesario,
-                    }
-                }
-
-                // 4. grabamos un movimiento "INICIAL" con esa cantidad
-                // usamos un line_id único
-                const lineId = `INICIAL_${productoId}_${Date.now()}`
-                const ahoraUnix = moment().unix()
-
-                await detalleRef.doc(lineId).set({
-                    line_id: lineId,
-                    f: ahoraUnix,                 // fecha del asiento inicial (ahora mismo)
-                    op: "INICIAL",
-                    doc: "SALDO INICIAL AUTO",
-                    rs: "SISTEMA",
-                    cant: saldoInicialNecesario,  // ESTE es el ajuste
-                    saldo: saldoInicialNecesario, // opcional: puedes guardar saldo base aquí
-                    costo: Number(prod.costo) || 0,
-                    med: prod.medida || "UNIDAD",
-                    updated_unix: ahoraUnix,
-                    doc_src: "saldo_inicial",
-                }, { merge: true })
-
-                // 5. opcional: actualizar metadata del producto en kardex/historial/{id}
-                await prodRef.set({
-                    producto_id: String(productoId),
-                    producto: prod.nombre || "",
-                    last_update_unix: ahoraUnix,
-                }, { merge: true })
-
-                console.log("✅ Saldo inicial creado para", productoId,
-                    "ajuste:", saldoInicialNecesario)
-
-                return {
-                    ok: true,
-                    mensaje: "Saldo inicial creado",
-                    stockReal,
-                    saldoFinalKardex,
-                    saldoInicialNecesario,
-                }
-
-            } catch (err) {
-                console.error("❌ Error creando saldo inicial:", err)
-                return { ok: false, error: String(err) }
-            }
-        },
-        muestraFecha(unix) {
-            if (!unix || unix === 0) return '— nunca —'
-            return moment.unix(unix).format('DD/MM/YYYY HH:mm')
-        },
-        esGratuita(op) {
-            if (!op) return false
-            const s = String(op).toUpperCase()
-            return s.includes('GRAT') // cubre "GRATUITA", "GRAT", etc.
-        },
-
-        rangoDesdePeriodo(periodo) {
-            if (periodo.length === 7) {
-                const [mm, yyyy] = periodo.split('-')
-                const inicio = moment(`${yyyy}-${mm}-01`).startOf('month').unix()
-                const fin = moment(`${yyyy}-${mm}-01`).endOf('month').unix()
-                return [inicio, fin]
-            } else {
-                const inicio = moment(`${periodo}-01-01`).unix()
-                const fin = moment(`${periodo}-12-31`).endOf('day').unix()
-                return [inicio, fin]
-            }
-        },
-        eqStr(saldo, f) {                 // ← NUEVO: helper reutilizable
-            const s = Number(saldo) || 0
-            const k = Number(f) || 1
-            return (k > 1) ? `${Math.floor(s / k)}/${s % k}` : '-'
-        },
-
-        async inicio() {
-            try {
-                if (!this.buscar) {
-                    this.listafiltrada = []
-                    this.saldoInicial = 0
-                    this.saldoFinal = 0
-                    this.factorConv = 1
-                    return
-                }
-
-                const prodId = String(this.buscar)
-                const prodSel = (this.$store.state.productos || []).find(p => String(p.id) === prodId)
-                const nombreProd = prodSel ? prodSel.nombre : '(sin nombre)'
-                this.factorConv = Number(
-                    prodSel?.factor ??
-                    prodSel?.factor_paquete ??
-                    prodSel?.factor_conversion ??
-                    1
-                )
-
-                // 🔸 Rango unix del periodo elegido
-                const [ini, fin] = this.rangoDesdePeriodo(this.periodo)
-
-                // 🔸 Refs Firestore
-                const raiz = colempresa().doc('kardex')
-                const prodRef = raiz.collection('historial').doc(prodId)
-                const movCol = prodRef.collection('detalle')
-
-                // 🔸 Leer todos los movimientos
-                const snapAll = await movCol.orderBy('f').get()
-                const movimientosTodos = []
-
-                snapAll.forEach(doc => {
-                    const x = doc.data()
-                    movimientosTodos.push({
-                        uuid: doc.id,
-                        f: x.f || 0,
-                        op: (x.op || '').toUpperCase(),
-                        docref: x.doc || doc.id,
-                        rs: x.rs || '',
-                        cant: Number(x.cant || 0),
-                        costo: x.costo ?? 0,
-                        med: x.med || '',
-                    })
-                })
-
-                // 🔹 Buscar saldo inicial base
-                let saldoInicialBase = 0
-
-                const inicialAntes = movimientosTodos
-                    .filter(m => m.op === 'INICIAL' && m.f < ini)
-                    .sort((a, b) => a.f - b.f)
-
-                const inicialDentro = movimientosTodos
-                    .filter(m => m.op === 'INICIAL' && m.f >= ini && m.f <= fin)
-                    .sort((a, b) => a.f - b.f)
-
-                if (inicialAntes.length > 0) {
-                    const ultima = inicialAntes[inicialAntes.length - 1]
-                    saldoInicialBase = Number(ultima.cant || 0)
-                } else if (inicialDentro.length > 0) {
-                    const primera = inicialDentro[0]
-                    saldoInicialBase = Number(primera.cant || 0)
-                } else {
-                    movimientosTodos
-                        .filter(m => m.f < ini)
-                        .forEach(m => { saldoInicialBase += Number(m.cant || 0) })
-                }
-
-                // 🔹 Filtrar movimientos del periodo (ocultando INICIAL)
-                const movimientosPeriodo = movimientosTodos
-                    .filter(m => m.f >= ini && m.f <= fin && m.op !== 'INICIAL')
-                    .sort((a, b) => a.f - b.f)
-
-                // 🔹 Calcular saldos paso a paso
-                let saldoAcum = saldoInicialBase
-                const rows = []
-
-                // === NUEVO: insertar una fila inicial independiente ===
-                rows.push({
-                    id: 'SALDO INICIAL',
-                    modo_ajuste: 'INICIAL',
-                    // uso el inicio del periodo para que quede primero
-                    fecha_ingreso: ini,
-                    motivo: 'Saldo inicial del periodo',
-                    equivalente: this.eqStr(saldoInicialBase, this.factorConv),
-                    data: [{
-                        uuid: `INICIAL_${prodId}_${ini}`,
-                        id: prodId,
-                        nombre: nombreProd,
-                        cantidad: 0,                  // movimiento informativo
-                        costo: 0,
-                        stock_inicial: saldoInicialBase,
-                        saldo_final: saldoInicialBase,
-                    }]
-                })
-                // === FIN NUEVO ===
-
-                movimientosPeriodo.forEach(mov => {
-                    const stockInicialFila = saldoAcum
-                    saldoAcum += mov.cant
-                    const saldoFinalFila = saldoAcum
-
-                    rows.push({
-                        id: mov.docref,
-                        modo_ajuste: mov.op,
-                        fecha_ingreso: mov.f,
-                        motivo: mov.rs,
-                        equivalente: this.eqStr(saldoFinalFila, this.factorConv),
-                        data: [{
-                            uuid: mov.uuid,
-                            id: prodId,
-                            nombre: nombreProd,
-                            cantidad: mov.cant,
-                            costo: mov.costo ?? 0,
-                            stock_inicial: stockInicialFila,
-                            saldo_final: saldoFinalFila,
-                        }]
-                    })
-                })
-
-                // 🔹 Actualizar cabecera
-                this.saldoInicial = saldoInicialBase
-                this.saldoFinal = saldoAcum
-                this.listafiltrada = rows
-
-            } catch (e) {
-                console.error('Error cargando historial:', e)
-                this.listafiltrada = []
-                this.saldoInicial = 0
-                this.saldoFinal = 0
-                this.factorConv = 1
-            }
-        },
-
-
-
-
-        async api_rest(data, metodo) {
-            console.log(data)
-            var a = axios({
-                method: 'POST',
-                url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
-                //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
-                headers: {},
-                data: {
-                    "bd": store.state.baseDatos.bd,
-                    "data": data,
-                    "metodo": metodo
-                }
-            }).then(response => {
-                console.log(response.data)
-                return response
-            })
-            return a
-        },
-
-        async procesaKardex() {
-            try {
-                store.commit("dialogoprogress", 1) // si ya usas este loader
-
-                const bd = store.state.baseDatos.bd// o como llames tu bd actual
-
-                // payload NUEVO: sin periodo
-                const payload = {
-                    bd,
-                    periodo: this.periodo,
-                }
-
-                var json = await this.api_rest(payload, 'genera_historial')
-
-                if (!json) {
-                    alert('Error: ' + (json.error || 'no se pudo procesar kardex'))
-                } else {
-                    alert('Kardex actualizado.')
-                }
-
-                // refrescar la última sync mostrada en pantalla
-                //  await this.cargaLastSync()
-
-                store.commit("dialogoprogress", 1)
-            } catch (e) {
-                console.error(e)
-                alert('Error interno procesando kardex')
-                store.commit("dialogoprogress", 1)
-            }
-        },
-
-
-
-        formatFecha(segundos) {
-            return segundos ? moment.unix(segundos).format('YYYY-MM-DD') : ''
+        if (cierreSnap.exists) {
+          const c = cierreSnap.data() || {};
+          // prioridad: saldo_inicial del cierre
+          saldoInicialBase = Number(c.saldo_inicial ?? 0);
+        } else {
+          // puedes mostrar alerta si quieres
+          // alert("No existe cierre para este periodo. Ejecuta cierra_periodo.");
+          saldoInicialBase = 0;
         }
-    }
-}
+
+        this.saldoInicial = saldoInicialBase;
+
+        // 2) ✅ leer SOLO movimientos del mes (historial/detalle)
+        this.estadoTexto = "Cargando movimientos del mes…";
+        this.progreso = 30;
+
+        const movCol = raiz.collection("historial").doc(prodId).collection("detalle");
+
+        // consulta por rango del mes (necesita índice compuesto si lo pide)
+        const snapMes = await movCol
+          .where("f", ">=", ini)
+          .where("f", "<=", fin)
+          .orderBy("f")
+          .get();
+
+        const movimientosPeriodo = [];
+        snapMes.forEach((doc) => {
+          const x = doc.data() || {};
+          movimientosPeriodo.push({
+            uuid: doc.id,
+            f: Number(x.f || 0),
+            op: String(x.op || "").toUpperCase(),
+            docref: x.doc || doc.id,
+            rs: x.rs || "",
+            cant: Number(x.cant || 0),
+            costo: x.costo ?? 0,
+            med: x.med || "",
+            // si viene saldo desde backend, lo guardamos (no dependemos de él)
+            saldo_backend: x.saldo ?? null,
+          });
+        });
+
+        // 3) armar filas y calcular saldo final usando saldoInicialBase + sum(cant)
+        this.estadoTexto = "Calculando saldos…";
+        this.progreso = 70;
+
+        let saldoAcum = saldoInicialBase;
+        const rows = [];
+
+        // fila inicial informativa
+        rows.push({
+          id: "SALDO INICIAL",
+          modo_ajuste: "INICIAL",
+          fecha_ingreso: ini,
+          motivo: "Saldo inicial del periodo (cierre)",
+          equivalente: this.eqStr(saldoInicialBase, this.factorConv),
+          data: [
+            {
+              uuid: `INICIAL_${prodId}_${ini}`,
+              id: prodId,
+              nombre: nombreProd,
+              cantidad: 0,
+              costo: 0,
+              stock_inicial: saldoInicialBase,
+              saldo_final: saldoInicialBase,
+            },
+          ],
+        });
+
+        movimientosPeriodo
+          .filter((m) => m.op !== "INICIAL") // por si hubiera uno mal metido
+          .sort((a, b) => a.f - b.f)
+          .forEach((mov) => {
+            const stockInicialFila = saldoAcum;
+            saldoAcum += mov.cant;
+            const saldoFinalFila = saldoAcum;
+
+            rows.push({
+              id: mov.docref,
+              modo_ajuste: mov.op,
+              fecha_ingreso: mov.f,
+              motivo: mov.rs,
+              equivalente: this.eqStr(saldoFinalFila, this.factorConv),
+              data: [
+                {
+                  uuid: mov.uuid,
+                  id: prodId,
+                  nombre: nombreProd,
+                  cantidad: mov.cant,
+                  costo: mov.costo ?? 0,
+                  stock_inicial: stockInicialFila,
+                  saldo_final: saldoFinalFila,
+                },
+              ],
+            });
+          });
+
+        this.saldoFinal = saldoAcum;
+        this.listafiltrada = rows;
+
+        this.progreso = 100;
+        this.estadoTexto = "Listo";
+      } catch (e) {
+        console.error("Error cargando kardex por periodo:", e);
+        this.listafiltrada = [];
+        this.saldoInicial = 0;
+        this.saldoFinal = 0;
+      } finally {
+        this.cargando = false;
+        // si quieres dejar el 100 visible un momento, no lo reinicies
+        // this.progreso = 0
+      }
+    },
+
+    // ==========================
+    // API REST (igual)
+    // ==========================
+    async api_rest(data, metodo) {
+      const r = await axios({
+        method: "POST",
+        url: "https://api-distribucion-6sfc6tum4a-rj.a.run.app",
+        headers: {},
+        data: {
+          bd: store.state.baseDatos.bd,
+          data,
+          metodo,
+        },
+      });
+      return r?.data;
+    },
+
+    async procesaKardex() {
+      try {
+        const payload = { periodo: this.periodo };
+        const json = await this.api_rest(payload, "genera_historial");
+        if (!json?.ok) alert("Error procesando kardex");
+        else alert("Kardex actualizado.");
+      } catch (e) {
+        console.error(e);
+        alert("Error interno procesando kardex");
+      }
+    },
+  },
+};
 </script>
+
