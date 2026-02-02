@@ -32,6 +32,11 @@
                         <v-textarea v-model="observacion" label="Observación" outlined dense rows="1"
                             prepend-inner-icon="mdi-note-text" hide-details auto-grow></v-textarea>
                     </v-col>
+                    <v-col cols="12" v-if="periodoCerrado" class="mt-n2">
+                        <v-alert type="warning" dense outlined class="mb-0 mt-2 caption">
+                            El período seleccionado está cerrado. No se pueden registrar transferencias.
+                        </v-alert>
+                    </v-col>
                 </v-row>
             </v-card>
             <v-card outlined class="pa-2 mb-2" :disabled="!sede_origen">
@@ -347,6 +352,7 @@ import {
     graba_transferencia,
     nuevoProductoOtraBase,
     actualiza_transferencia,
+    all_periodos,
 } from '@/db';
 import { registrarMovimientosTransferencia, rehacerMovimientosTransferencia } from '../help_mov_tranferencia';
 import store from '@/store/index';
@@ -384,6 +390,7 @@ export default {
             dialogoConfirmar: false,
             transferenciaKey: null,
             productosOriginales: [],
+            periodosBD: {},
 
 
             headersTransferencia: [
@@ -399,6 +406,7 @@ export default {
     created() {
         this.dial = true;
         this.inicializar();
+        this.cargarPeriodos();
     },
     computed: {
         esAdmin() {
@@ -406,6 +414,12 @@ export default {
         },
         modoEdicion() {
             return !!this.transferencia;
+        },
+        periodoCerrado() {
+            const periodoKey = moment(this.fecha_transferencia, 'YYYY-MM-DDTHH:mm').format('YYYY-MM');
+            const periodo = this.periodosBD[periodoKey];
+            if (!periodo) return false;
+            return periodo.estado === 'close';
         },
         sedesDestino() {
             return this.sedes.filter(s => s.base !== this.sede_origen);
@@ -647,6 +661,15 @@ export default {
             }
         },
 
+        async cargarPeriodos() {
+            try {
+                const snapshot = await all_periodos().once('value');
+                this.periodosBD = snapshot.val() || {};
+            } catch (error) {
+                console.error('Error al cargar períodos:', error);
+            }
+        },
+
 
         confirmarTransferencia() {
             if (!this.sede_origen || !this.sede_destino) {
@@ -659,6 +682,12 @@ export default {
             }
             if (this.lista_transferencia.length === 0) {
                 this.muestraMsg('Agregue productos a transferir', 'error');
+                return;
+            }
+            // Validar si el período está cerrado
+            if (this.periodoCerrado) {
+                const periodoKey = moment(this.fecha_transferencia, 'YYYY-MM-DDTHH:mm').format('YYYY-MM');
+                this.muestraMsg(`El período ${periodoKey} está cerrado. No se pueden registrar movimientos.`, 'error');
                 return;
             }
             this.dialogoConfirmar = true;

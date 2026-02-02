@@ -465,6 +465,25 @@ const routes = [
     },
   },
   {
+    path: "/stock_x_periodo/",
+    name: "stock_x_periodo",
+    component: () => import("../views/movi_kardex/reportes/stock_x_productos.vue"),
+    meta: {
+      requireAuth: true,
+    },
+    beforeEnter: (to, from, next) => {
+      if (to.matched.some((ruta) => ruta.meta.requireAuth)) {
+        if (store.state.permisos.modulokardex) {
+          next();
+        } else {
+          next({
+            name: "panel",
+          });
+        }
+      }
+    },
+  },
+  {
     path: "/reporte_Guia",
     name: "reporte_Guia",
     // route level code-splitting

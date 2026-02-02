@@ -6,7 +6,7 @@
           hide-details label="Sede" prepend-inner-icon="mdi-store" />
       </v-col>
 
-      <v-col cols="12" sm="6" md="4">
+      <v-col cols="12" sm="6" md="4" class="mt-n3 mb-n4">
         <v-switch v-model="soloConStock" color="primary" label="Mostrar solo productos con stock" hide-details
           dense></v-switch>
       </v-col>

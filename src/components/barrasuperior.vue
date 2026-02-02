@@ -210,6 +210,10 @@
                         <v-list-item-icon><v-icon small>mdi-counter</v-icon></v-list-item-icon>
                         <v-list-item-title>Stock Actual</v-list-item-title>
                     </v-list-item>
+                    <v-list-item v-if="$store.state.permisos.modulokardex" link @click.prevent="router('stock_x_periodo')">
+                        <v-list-item-icon><v-icon small>mdi-calendar-clock</v-icon></v-list-item-icon>
+                        <v-list-item-title>Stock x Período</v-list-item-title>
+                    </v-list-item>
                 </v-list-group>
 
                 <v-list-group v-if="$store.state.permisos.modulosunat" :value="listaMenu" prepend-icon="mdi-receipt"
