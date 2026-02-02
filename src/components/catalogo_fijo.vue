@@ -13,7 +13,7 @@
                         <span class="text-caption grey--text text--darken-2">
                             {{ (item.categoria || '').slice(0, 4).toUpperCase() }}
                         </span>
-                        — {{ item.nombre }}
+                        — <strong class="red--text">{{ item.cod_interno}}</strong> / {{ item.nombre }}
                         <small v-if="$store.state.configuracion && $store.state.configuracion.mostrar_codigo"
                             class="grey--text text--darken-1">
                             ({{ item.id }})
@@ -73,8 +73,8 @@
                         </thead>
                         <tbody>
                             <tr v-for="item in listafiltrada" :key="item.id" @click="prod_selecto2(item)">
-                                <td class=" text-body-2"><span v-if="$store.state.configuracion.mostrar_codigo">{{
-                                    item.id }}-</span>{{ item.nombre }}</td>
+                                <td class=" text-body-2"><span>{{
+                                    item.cod_interno }}-</span>{{ item.nombre }}</td>
                                 <td class="text-body-2">{{ convierte_stock(item.stock, item.factor) }}</td>
                                 <td class="text-body-2">{{ item.precio }}</td>
                             </tr>
@@ -102,8 +102,8 @@
                         </thead>
                         <tbody>
                             <tr v-for="item in listafiltrada" :key="item.id" @click="prod_selecto2(item)">
-                                <td style="font-size:75%;"><span v-if="$store.state.configuracion.mostrar_codigo">{{
-                                    item.id }}-</span> {{ item.nombre }}</td>
+                                <td style="font-size:75%;"><span > 
+                                    <Strong class="red--text">{{item.cod_interno }} </Strong> - </span> {{ item.nombre }}</td>
                                 <td style="font-size:75%;">{{ convierte_stock(item.stock, item.factor) }}</td>
                                 <td style="font-size:75%;">{{ item.precio }}</td>
                             </tr>
@@ -335,26 +335,19 @@ export default {
                 (item.activo) == true)
                 .filter((item) => (item.categoria)
                     .toLowerCase().includes(this.categoriaselecta.toLowerCase()))
-                .filter((item) => (item.nombre + item.id)
+                .filter((item) => (item.cod_interno+item.nombre + item.id)
                     .toLowerCase().includes(this.buscar.toLowerCase()))
 
         },
         productosFiltrados() {
-            if (store.state.configuracion.mostrar_codigo) {
-                return store.state.productos
-                    .filter(item => item.activo)
-                    .map(item => ({
-                        ...item,
-                        displayText: `${item.id} ${item.nombre} (${item.codbarra})`
-                    }));
-            } else {
+           
                 return store.state.productos
                     .filter(item => item.activo) // Solo productos activos
                     .map(item => ({
                         ...item,
-                        displayText: `${item.nombre} (${item.codbarra})` // Concatenamos nombre y código de barras
+                        displayText: `${item.cod_interno} ${item.nombre} (${item.codbarra})` // Concatenamos nombre y código de barras
                     }));
-            }
+            
 
         },
         tierVisual() {

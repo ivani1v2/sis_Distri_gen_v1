@@ -71,7 +71,7 @@
                     <tr>
                         <td style="font-size:80%;">{{ item.id }}</td>
                         <td style="font-size:80%;">{{ item.categoria }}</td>
-                        <td style="font-size:80%;">{{ item.nombre }}</td>
+                        <td style="font-size:80%;">{{item.cod_interno}} - {{ item.nombre }}</td>
                         <td style="font-size:80%;">{{ item.medida }}</td>
                         <td style="font-size:80%;">{{ convierte_stock(item.stock, item.factor) }}</td>
                         <td style="font-size:80%;">{{ Number(item.precio).toFixed(2) }}</td>
@@ -232,6 +232,12 @@
                 </v-row>
                 <v-row class="mt-n7">
                     <v-col cols="12">
+                        <v-text-field outlined dense v-model="cod_interno"
+                            label="Codigo interno"></v-text-field>
+                    </v-col>
+                </v-row>
+                <v-row class="mt-n9">
+                    <v-col cols="12">
                         <v-textarea :disabled="!$store.state.permisos.productos_edita" dense outlined v-model="nombre"
                             auto-grow filled label="Descripcion" rows="1"></v-textarea>
                     </v-col>
@@ -389,7 +395,7 @@
                                                     </div>
                                                     <div class="text-overline grey--text lh-1">Límite: {{ r.cantidad_max
                                                         || '∞'
-                                                        }}</div>
+                                                    }}</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -891,6 +897,7 @@ export default {
         tipoBonoActual: 'precio',
         dialVisorProductos: false,
         bonoParaVisor: {},
+        cod_interno:''
     }),
 
     async beforeCreate() {
@@ -973,7 +980,7 @@ export default {
                 }
             }
             if (this.filtro_categoria == 'TODOS') {
-                return lista.filter((item) => (item.id + item.nombre+item.codbarra)
+                return lista.filter((item) => (item.id + item.nombre + item.codbarra)
                     .toLowerCase().includes(this.buscar.toLowerCase()))
             } else {
                 return lista.filter(item => item.categoria == this.filtro_categoria && (item.id + item.nombre)
@@ -1299,6 +1306,7 @@ export default {
                 this.marca = ''
                 this.obs1 = ''
                 this.stock_minimo = 0
+                this.cod_interno = ''
 
                 if (Boolean(store.state.configuracion.operacion)) {
                     this.operacion = store.state.configuracion.operacion
@@ -1339,6 +1347,7 @@ export default {
             this.grupoBonoSelect = data.grupo_bono || null;
             this.obs1 = data.obs1 || '';
             this.stock_minimo = Number(data.stock_minimo) || 0;
+            this.cod_interno = data.cod_interno || '';
 
             this.dialogo = true;
         },
@@ -1410,7 +1419,9 @@ export default {
                 grupo_precio: this.grupoPrecioSelect,
                 grupo_bono: this.grupoBonoSelect,
                 obs1: this.obs1,
-                stock_minimo: Number(this.stock_minimo) || 0
+                stock_minimo: Number(this.stock_minimo) || 0,
+                cod_interno: this.cod_interno || ''
+
             }
             await nuevoProducto(this.id, array)
 

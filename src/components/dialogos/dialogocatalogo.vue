@@ -50,7 +50,7 @@
                         label="Buscar" single-line hide-details :autofocus='!$store.state.esmovil'></v-text-field>
                 </v-card-title>
 
-                <v-simple-table fixed-header height="60vh">
+                <v-simple-table fixed-header height="60vh" dense>
                     <template v-slot:default>
                         <thead>
                             <tr>
@@ -67,7 +67,7 @@
                         </thead>
                         <tbody>
                             <tr v-for="item in listafiltrada" :key="item.id" @click="abre_cantidad(item)">
-                                <td>{{ item.nombre }}</td>
+                                <td><Strong>{{item.cod_interno}} </Strong> - {{ item.nombre }}</td>
                                 <td>{{ item.stock }}</td>
                                 <td>{{ item.precio }}</td>
                             </tr>

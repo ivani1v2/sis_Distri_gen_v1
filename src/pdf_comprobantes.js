@@ -2282,7 +2282,7 @@ function tabla_A4(array, linea) {
       // SIN DESCUENTOS
       nuevoArray.push([
         item.cantidad,
-        item.nombre + tg,
+        item.id + ' - ' +item.nombre + tg,
         item.medida,
         precioBase.toFixed(2),
         totalLinea.toFixed(2) + obs,
@@ -2291,7 +2291,7 @@ function tabla_A4(array, linea) {
       // CON DESCUENTOS
       nuevoArray.push([
         item.cantidad,
-        item.nombre + tg,
+        item.id + ' - ' +item.nombre + tg,
         item.medida,
         precioBase.toFixed(2),
         textoDescuento,

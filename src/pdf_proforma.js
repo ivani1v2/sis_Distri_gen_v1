@@ -836,7 +836,7 @@ function impresionA4(arrays) {
     if (!existeDescuento) {
       nuevoArray.push([
         array[i].cantidad,
-        array[i].nombre,
+        array[i].id +' - ' +array[i].nombre,
         array[i].medida,
         precioBase.toFixed(2),
         totalLinea
@@ -844,7 +844,7 @@ function impresionA4(arrays) {
     } else {
       nuevoArray.push([
         array[i].cantidad,
-        array[i].nombre,
+        array[i].id +' - ' +array[i].nombre,
         array[i].medida,
         precioBase.toFixed(2),
         textoDescuento,

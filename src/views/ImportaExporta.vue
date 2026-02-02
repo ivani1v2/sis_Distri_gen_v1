@@ -142,9 +142,9 @@ export default {
     esquemaPorDefecto() {
       if (this.target === 'productos') {
         return [
-          'id', 'activo', 'codbarra', 'nombre', 'categoria', 'medida', 'stock', 'stock_minimo', 'factor',
+          'id', 'cod_interno', 'activo', 'codbarra', 'nombre', 'categoria', 'medida', 'stock', 'stock_minimo', 'factor',
           'precio', 'escala_may1', 'precio_may1', 'escala_may2', 'precio_may2',
-          'peso', 'costo', 'margen', 'tipoproducto', 'operacion', 'icbper', 'controstock',  'marca', 'proveedor', 'obs1'
+          'peso', 'costo', 'margen', 'tipoproducto', 'operacion', 'icbper', 'controstock', 'marca', 'proveedor', 'obs1'
         ]
       }
       if (this.target === 'clientes') {
@@ -166,6 +166,7 @@ export default {
       if (this.target === 'productos') {
         plantilla = [{
           id: '10001',
+          cod_interno: '',
           activo: true,
           codbarra: '',
           nombre: '',
@@ -240,6 +241,7 @@ export default {
         const productos = (store.state.productos || [])
         filas = productos.map(p => ({
           id: p.id,
+          cod_interno: p.cod_interno || '',
           activo: !!p.activo,
           codbarra: p.codbarra || '',
           nombre: (p.nombre || '').trim(),
@@ -376,6 +378,7 @@ export default {
 
       return {
         id: this._toStr(o.id),
+        cod_interno: this._toStr(o.cod_interno), // <-- NUEVO
         activo: this._toBool(o.activo, true),
         codbarra: this._toStr(o.codbarra),
         nombre: this._toStr(o.nombre),
@@ -507,6 +510,7 @@ export default {
           tasks = this.importRows.map(r => () => {
             const payload = {
               id: r.id,
+              cod_interno: r.cod_interno || '', // <-- NUEVO
               activo: !!r.activo,
               codbarra: r.codbarra || '',
               nombre: String(r.nombre || '').trim(),
