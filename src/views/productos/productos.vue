@@ -1415,7 +1415,7 @@ export default {
             await nuevoProducto(this.id, array)
 
             if (this.sumacon == true) {
-                await this.copiarProductoATodasLasSedes(this.id, array);
+            //    await this.copiarProductoATodasLasSedes(this.id, array);
                 this.sumacontador()
             }
             this.dialogo = cerrar

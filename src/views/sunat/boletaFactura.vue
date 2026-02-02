@@ -15,6 +15,7 @@
             </v-col>
         </v-row>
         <v-btn color="success" v-if="false" @click='modificafechas()'>text</v-btn>
+        <v-btn color="success" v-if="false" @click='reenvio_masivo()'>masivo</v-btn>
 
         <v-row class="mt-n8">
             <v-col cols="5" v-if="$store.state.esmovil">
@@ -419,6 +420,80 @@ export default {
             }
             return array
         },
+            async reenvio_masivo() {
+            // Evita doble clic loco
+            if (this._reenviando) {
+                store.commit('dialogosnackbar', 'Ya se está procesando el reenvío masivo');
+                return;
+            }
+            this._reenviando = true;
+
+            try {
+                // Filtrar solo documentos que:
+                // - no estén aprobados
+                // - estén dentro de la ventana de 50 días (comparafecha)
+                const pendientes = this.desserts.filter(doc => {
+                    const estado = String(doc.estado || '').toLowerCase();
+                    const noAprobado = estado !== 'aprobado' && estado !== 'aceptado';
+                    const fechaValida = this.comparafecha(doc.fecha);
+                    return noAprobado && fechaValida;
+                });
+
+                console.log('Documentos a reenviar:', pendientes.map(p => p.numeracion));
+
+                for (let i = 0; i < pendientes.length; i++) {
+                    const cabecera = pendientes[i];
+                    try {
+                        // reutilizamos tu lógica existente
+                        await this.reenvio_mas(cabecera);
+
+                        // feedback opcional por cada doc reenviado
+                        console.log(
+                            `✅ Reenviado ${cabecera.numeracion} (${i + 1} de ${pendientes.length})`
+                        );
+                    } catch (err) {
+                        console.error(
+                            `❌ Error reenviando ${cabecera.numeracion}:`,
+                            err
+                        );
+                        // avisar pero sin romper el bucle
+                        store.commit(
+                            'dialogosnackbar',
+                            `Error reenviando ${cabecera.numeracion}`
+                        );
+                    }
+                }
+
+                // al final refrescamos la lista
+                this.busca();
+                store.commit(
+                    'dialogosnackbar',
+                    'Reenvío masivo terminado'
+                );
+            } finally {
+                this._reenviando = false;
+            }
+        },
+        async reenvio_mas(cabecera) {
+            console.log('REENVIO →', cabecera.numeracion);
+
+            // seguridad por si viene vacío
+            if (!cabecera || !cabecera.numeracion) {
+                console.warn('cabecera inválida en reenvio_mas');
+                return false;
+            }
+
+            const items = [];
+            const snap = await consultaDetalle(cabecera.numeracion).once('value');
+            snap.forEach(item => {
+                items.push(item.val());
+            });
+
+            const r = await enviaDocumentoApiSunat(cabecera, items);
+            console.log('RESPUESTA SUNAT', cabecera.numeracion, r);
+
+            return true;
+        },
         ejecutaConsolida(value) {
             store.commit("dialogoprogress", 1)
             this.arrayConsolidar = []
@@ -546,8 +621,8 @@ export default {
             for (var i = 0; i < this.desserts.length; i++) {
                 console.log(this.desserts[i].numeracion)
                 grabaDatoC(this.desserts[i].numeracion, "automata", '')
-                grabaDatoC(this.desserts[i].numeracion, "fecha", 1768539600)
-                grabaDatoC(this.desserts[i].numeracion, "vencimientoDoc", 1768539600)
+                grabaDatoC(this.desserts[i].numeracion, "fecha", 1769727425)
+                grabaDatoC(this.desserts[i].numeracion, "vencimientoDoc", 1769727425)
                 // if (this.desserts[i].estado == 'RECHAZADO') {
                 //console.log("rechazado")
                 // if (this.desserts[i].tipocomprobante == 'F') {
@@ -643,12 +718,13 @@ export default {
         normalizaGratuitas() {
             if (!Array.isArray(this.arrayConsolidar) || !this.seleccionado?.numeracion) return;
             this.arrayConsolidar = this.arrayConsolidar.map(it => {
-                const esGrat = String(it.operacion || '').toUpperCase() === 'GRATUITA';
+                const esGrat = it.igv== 0;
                 if (!esGrat) return it;
 
                 return {
                     ...it,
                     precio: 1,
+                    operacion: 'GRATUITA',
                     precioVentaUnitario: "1.00",
                     precioedita: 1,
                     total_antes_impuestos: "1.00",

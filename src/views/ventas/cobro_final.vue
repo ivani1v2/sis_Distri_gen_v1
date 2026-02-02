@@ -833,13 +833,13 @@ export default {
             }
             const usarDefecto = store.state.configuracion.usar_comprobante_defecto === true
 
-            if (usarDefecto) {
+          /*  if (usarDefecto) {
                 this.tipocomprobante = store.state.configuracion.defecto || 'T'
             } else {
                 this.tipocomprobante = (data.tipocomprobante || data.tipo_comprobante)
                     ? (data.tipocomprobante || data.tipo_comprobante)
                     : 'T'
-            }
+            }*/
 
             this.dial_cliente = false;
         },
