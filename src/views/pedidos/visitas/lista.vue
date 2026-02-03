@@ -774,7 +774,6 @@ export default {
             var fecha = moment(this.date).format('DDMMYYYY')
             data.fecha = fecha
             store.commit("cliente_selecto", data)
-            store.commit("setOrigenPedido", "visitas")
             this.$router.push({
                 name: 'caja2'
             })
