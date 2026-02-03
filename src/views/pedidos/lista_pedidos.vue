@@ -1019,21 +1019,13 @@ export default {
         },
 
         iniciarNuevoPedido(payload) {
-            const { accion, cliente, formaPago, diasCredito, porcentajeRecargo, aplicarRecargo } = payload;
-            store.commit('setRecargoCredito', {
-                formaPago: formaPago || 'CONTADO',
-                diasCredito: diasCredito || 0,
-                porcentajeRecargo: porcentajeRecargo || 0,
-                aplicarRecargo: aplicarRecargo || false,
-                origen: 'lista_pedidos'
-            });
+            const { cliente } = payload;
             store.commit("cliente_selecto", cliente);
             store.commit("setOrigenPedido", "lista_pedidos");
             this.$router.push({
                 name: 'nuevo_pedido'
             });
         },
-
     },
 };
 </script>
