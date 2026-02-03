@@ -239,32 +239,91 @@ async function impresion58(arraydatos, qr, cabecera) {
   doc.text(separacion, pageCenter, linea, "center");
 
   //-----------------productos-----------------------
-  //-----------------productos-----------------------
-  var nuevoArray = new Array(array.length);
-  for (var i = 0; i < array.length; i++) {
+  const permisoDescuento = store.state.configuracion && store.state.configuracion.desc_porcentaje_catalogo;
+  const existeDescuento = permisoDescuento && arraydatos.some(
+    (item) =>
+      item.descuentos &&
+      (Number(item.descuentos.desc_1) > 0 ||
+        Number(item.descuentos.desc_2) > 0 ||
+        Number(item.descuentos.desc_3) > 0)
+  );
+
+  var nuevoArray = new Array(arraydatos.length);
+  
+  for (var i = 0; i < arraydatos.length; i++) {
     var obs = "";
     var tg = "";
     var totals = (
-      Number(array[i].total_antes_impuestos) + Number(array[i].total_impuestos)
+      Number(arraydatos[i].total_antes_impuestos) + Number(arraydatos[i].total_impuestos)
     ).toFixed(2);
-    if (array[i].operacion == "GRATUITA") {
+
+    const descuentos = arraydatos[i].descuentos || {};
+    const precioActual = Number(arraydatos[i].precio || 0);
+    
+    // Usar precio_base del item si existe, sino calcular reverso
+    let precioBase = Number(arraydatos[i].precio_base || arraydatos[i].precio_catalogo || 0);
+    if (!precioBase && existeDescuento && descuentos) {
+      const d1 = Number(descuentos.desc_1 || 0) / 100;
+      const d2 = Number(descuentos.desc_2 || 0) / 100;
+      const d3 = Number(descuentos.desc_3 || 0) / 100;
+      const factorDescuento = (1 - d1) * (1 - d2) * (1 - d3);
+      if (factorDescuento > 0) {
+        precioBase = Math.round((precioActual / factorDescuento) * 100) / 100;
+      }
+    }
+    if (!precioBase) precioBase = precioActual;
+    
+    const textoDescuento = existeDescuento
+      ? `${descuentos.desc_1 || 0} / ${descuentos.desc_2 || 0} / ${descuentos.desc_3 || 0}`
+      : null;
+
+    if (arraydatos[i].operacion == "GRATUITA") {
       obs = "*";
       tg = " / Bonificacion";
       totals = "0.00";
       if (!store.state.configuracion.mostrar_ope_gratuitas) {
-        array[i].precio = "0.00";
+        arraydatos[i].precio = "0.00";
       }
     }
-    nuevoArray[i] = new Array(4);
-    nuevoArray[i][0] = array[i].cantidad;
-    //nuevoArray[i][1] = array[i].nombre + "\n" + "-" + array[i].medida + tg;
-    nuevoArray[i][1] = array[i].nombre + tg;
-    nuevoArray[i][2] = Number(array[i].precio).toFixed(2);
-    nuevoArray[i][3] = totals + obs;
+
+    if (!existeDescuento) {
+      nuevoArray[i] = new Array(4);
+      nuevoArray[i][0] = arraydatos[i].cantidad;
+      nuevoArray[i][1] = arraydatos[i].nombre + tg;
+      nuevoArray[i][2] = Number(arraydatos[i].precio).toFixed(2);
+      nuevoArray[i][3] = totals + obs;
+    } else {
+      nuevoArray[i] = new Array(6);
+      nuevoArray[i][0] = arraydatos[i].cantidad;
+      nuevoArray[i][1] = arraydatos[i].nombre + tg;
+      nuevoArray[i][2] = precioBase.toFixed(2); 
+      nuevoArray[i][3] = textoDescuento;
+      nuevoArray[i][4] = precioActual.toFixed(2);
+      nuevoArray[i][5] = totals + obs; 
+    }
   }
   if (!store.state.configuracion.mostrar_ope_gratuitas) {
     arraycabe.total_op_gratuitas = "0.00";
   }
+
+  const headSinDesc = [["Ca", "Descrip.", "P.U", "P.T"]];
+  const headConDesc = [["Ca", "Descrip.", "P.U", "%Desc", "P.N", "P.T"]];
+  const columnStylesSinDesc = {
+    0: { cellWidth: 7, halign: "center", valign: "top" },
+    1: { cellWidth: 24, halign: "left" },
+    2: { cellWidth: 11, halign: "right" },
+    3: { cellWidth: 11, halign: "right" },
+  };
+
+  const columnStylesConDesc = {
+    0: { cellWidth: 5, halign: "center", valign: "top" },
+    1: { cellWidth: 14, halign: "left" },
+    2: { cellWidth: 8, halign: "right" },
+    3: { cellWidth: 9, halign: "center" },
+    4: { cellWidth: 8, halign: "right" },
+    5: { cellWidth: 8, halign: "right" },
+  };
+
   doc.autoTable({
     margin: { top: linea - 9, left: 1 },
     styles: {
@@ -275,14 +334,9 @@ async function impresion58(arraydatos, qr, cabecera) {
       textColor: [0, 0, 0],
     },
     headStyles: { lineWidth: 0, minCellHeight: 9 },
-    columnStyles: {
-      0: { columnWidth: 7, halign: "center", valign: "top" },
-      1: { columnWidth: 24, halign: "left" },
-      2: { columnWidth: 11, halign: "right" },
-      3: { columnWidth: 11, halign: "right" },
-    },
+    columnStyles: existeDescuento ? columnStylesConDesc : columnStylesSinDesc,
     theme: ["plain"],
-    head: [["Ca", "Descrip.", "P.U", "P.T"]],
+    head: existeDescuento ? headConDesc : headSinDesc,
     body: nuevoArray,
     didParseCell: (data) => {
       if (data.section !== "body" || data.column.index !== 1) return; // solo Descripción
@@ -468,9 +522,9 @@ async function impresion58(arraydatos, qr, cabecera) {
       },
       headStyles: { lineWidth: 0.2, lineColor: 1 },
       columnStyles: {
-        0: { columnWidth: 11, halign: "center", fontStyle: "bold" },
-        1: { columnWidth: 22, halign: "center" },
-        2: { columnWidth: 17, halign: "center" },
+        0: { cellWidth: 11, halign: "center", fontStyle: "bold" },
+        1: { cellWidth: 22, halign: "center" },
+        2: { cellWidth: 17, halign: "center" },
       },
       theme: ["plain"],
       head: [["CUOTA", "IMPORTE", "VENCE"]],
@@ -727,8 +781,18 @@ async function impresion80(arraydatos, qr, cabecera) {
   doc.text(separacion, pageCenter, linea, "center");
   linea = linea + 7;
   doc.text(separacion, pageCenter, linea, "center");
+
+  const permisoDescuento = store.state.configuracion && store.state.configuracion.desc_porcentaje_catalogo;
+  const existeDescuento = permisoDescuento && array.some(
+    (item) =>
+      item.descuentos &&
+      (Number(item.descuentos.desc_1) > 0 ||
+        Number(item.descuentos.desc_2) > 0 ||
+        Number(item.descuentos.desc_3) > 0)
+  );
   var descuentos = 0;
   //-----------------productos-----------------------
+
   var nuevoArray = new Array(array.length);
   for (var i = 0; i < array.length; i++) {
     descuentos += Number(array[i].preciodescuento);
@@ -737,6 +801,27 @@ async function impresion80(arraydatos, qr, cabecera) {
     var totals = (
       Number(array[i].total_antes_impuestos) + Number(array[i].total_impuestos)
     ).toFixed(2);
+
+    const descuentosItem = array[i].descuentos || {};
+    const precioActual = Number(array[i].precio || 0);
+    
+    // Usar precio_base del item si existe, sino calcular reverso
+    let precioBase = Number(array[i].precio_base || array[i].precio_catalogo || 0);
+    if (!precioBase && existeDescuento && descuentosItem) {
+      const d1 = Number(descuentosItem.desc_1 || 0) / 100;
+      const d2 = Number(descuentosItem.desc_2 || 0) / 100;
+      const d3 = Number(descuentosItem.desc_3 || 0) / 100;
+      const factorDescuento = (1 - d1) * (1 - d2) * (1 - d3);
+      if (factorDescuento > 0) {
+        precioBase = Math.round((precioActual / factorDescuento) * 100) / 100;
+      }
+    }
+    if (!precioBase) precioBase = precioActual;
+    
+    const textoDescuento = existeDescuento
+      ? `${descuentosItem.desc_1 || 0} / ${descuentosItem.desc_2 || 0} / ${descuentosItem.desc_3 || 0}`
+      : null;
+
     if (array[i].operacion == "GRATUITA") {
       obs = "*";
       tg = " / Bonificacion";
@@ -745,12 +830,41 @@ async function impresion80(arraydatos, qr, cabecera) {
         array[i].precio = "0.00";
       }
     }
-    nuevoArray[i] = new Array(4);
-    nuevoArray[i][0] = array[i].cantidad;
-    nuevoArray[i][1] = array[i].nombre + "\n" + "-" + array[i].medida + tg;
-    nuevoArray[i][2] = Number(array[i].precio).toFixed(2);
-    nuevoArray[i][3] = totals + obs;
+
+    if (!existeDescuento) {
+      nuevoArray[i] = new Array(4);
+      nuevoArray[i][0] = array[i].cantidad;
+      nuevoArray[i][1] = array[i].nombre + "\n" + "-" + array[i].medida + tg;
+      nuevoArray[i][2] = Number(array[i].precio).toFixed(2);
+      nuevoArray[i][3] = totals + obs;
+    } else {
+      nuevoArray[i] = new Array(6);
+      nuevoArray[i][0] = array[i].cantidad;
+      nuevoArray[i][1] = array[i].nombre + "\n" + "-" + array[i].medida + tg;
+      nuevoArray[i][2] = precioBase.toFixed(2);
+      nuevoArray[i][3] = textoDescuento;
+      nuevoArray[i][4] = precioActual.toFixed(2);
+      nuevoArray[i][5] = totals + obs;
+    }
   }
+  const headSinDesc = [["Cant", "Descripcion", "P.U", "P.T"]];
+  const headConDesc = [["Cant", "Descripcion", "P.U", "%Desc", "P.N", "P.T"]];
+
+  const columnStylesSinDesc = {
+    0: { cellWidth: 8, halign: "center", valign: "top" },
+    1: { cellWidth: 35, halign: "left" },
+    2: { cellWidth: 12, halign: "right" },
+    3: { cellWidth: 12, halign: "right" },
+  };
+
+  const columnStylesConDesc = {
+    0: { cellWidth: 6, halign: "center", valign: "top" },
+    1: { cellWidth: 21, halign: "left" },
+    2: { cellWidth: 9, halign: "right" },
+    3: { cellWidth: 10, halign: "center" },
+    4: { cellWidth: 9, halign: "right" },
+    5: { cellWidth: 9, halign: "right" },
+  };
   if (!store.state.configuracion.mostrar_ope_gratuitas) {
     arraycabe.total_op_gratuitas = "0.00";
   }
@@ -764,14 +878,9 @@ async function impresion80(arraydatos, qr, cabecera) {
       textColor: [0, 0, 0],
     },
     headStyles: { lineWidth: 0, minCellHeight: 9 },
-    columnStyles: {
-      0: { columnWidth: 8, halign: "center", valign: "top" },
-      1: { columnWidth: 35, halign: "left" },
-      2: { columnWidth: 12, halign: "right" },
-      3: { columnWidth: 12, halign: "right" },
-    },
+    columnStyles: existeDescuento ? columnStylesConDesc : columnStylesSinDesc,
     theme: ["plain"],
-    head: [["Cant", "Descripcion", "P.U", "P.T"]],
+    head: existeDescuento ? headConDesc : headSinDesc,
     body: nuevoArray,
   });
 
@@ -964,9 +1073,9 @@ async function impresion80(arraydatos, qr, cabecera) {
       },
       headStyles: { lineWidth: 0.2, lineColor: 1 },
       columnStyles: {
-        0: { columnWidth: 15, halign: "center", fontStyle: "bold" },
-        1: { columnWidth: 26, halign: "center" },
-        2: { columnWidth: 25, halign: "center" },
+        0: { cellWidth: 15, halign: "center", fontStyle: "bold" },
+        1: { cellWidth: 26, halign: "center" },
+        2: { cellWidth: 25, halign: "center" },
       },
       theme: ["plain"],
       head: [["CUOTA", "IMPORTE", "VENCE"]],
@@ -1243,6 +1352,14 @@ function impresionA4(array, qr, arraycabecera) {
 
   //-----------------productos-----------------------
   var respuesta = tabla_A4(array, linea);
+  const permisoDescuento = store.state.configuracion && store.state.configuracion.desc_porcentaje_catalogo;
+  const existeDescuento = permisoDescuento && array.some(
+    (it) =>
+      it.descuentos &&
+      (Number(it.descuentos.desc_1) > 0 ||
+        Number(it.descuentos.desc_2) > 0 ||
+        Number(it.descuentos.desc_3) > 0)
+  );
 
   arraycabe.total_op_gratuitas = respuesta.ope_grat.toFixed(2);
   if (!store.state.configuracion.mostrar_ope_gratuitas) {
@@ -1383,9 +1500,9 @@ function impresionA4(array, qr, arraycabecera) {
       },
       headStyles: { lineWidth: 0.2, lineColor: 1, fillColor: [220, 220, 220], textColor: [0, 0, 0], fontStyle: "bold" },
       columnStyles: {
-        0: { columnWidth: 35, halign: "center", fontStyle: "bold" },
-        1: { columnWidth: 35, halign: "center" },
-        2: { columnWidth: 40, halign: "center" },
+        0: { cellWidth: 35, halign: "center", fontStyle: "bold" },
+        1: { cellWidth: 35, halign: "center" },
+        2: { cellWidth: 40, halign: "center" },
       },
       theme: ["plain"],
       head: [["CUOTA", "IMPORTE", "VENCE"]],
@@ -1478,10 +1595,10 @@ function impresionA4(array, qr, arraycabecera) {
       },
       headStyles: { lineWidth: 0.2, lineColor: 1 },
       columnStyles: {
-        0: { columnWidth: 50, halign: "center", fontStyle: "bold" },
-        1: { columnWidth: 25, halign: "center" },
-        2: { columnWidth: 50, halign: "center" },
-        3: { columnWidth: 50, halign: "center" },
+        0: { cellWidth: 50, halign: "center", fontStyle: "bold" },
+        1: { cellWidth: 25, halign: "center" },
+        2: { cellWidth: 50, halign: "center" },
+        3: { cellWidth: 50, halign: "center" },
       },
       theme: ["plain"],
       head: [["BANCO", "MONEDA", "CUENTA", "CCI"]],
@@ -1745,39 +1862,64 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
 
   // --- Tabla de productos ---
   linea = yHeaderBottom + 18;
+  const permisoDescuento = store.state.configuracion && store.state.configuracion.desc_porcentaje_catalogo;
+  const existeDescuento = permisoDescuento && array.some(
+    (item) =>
+      item.descuentos &&
+      (Number(item.descuentos.desc_1) > 0 ||
+        Number(item.descuentos.desc_2) > 0 ||
+        Number(item.descuentos.desc_3) > 0)
+  );
 
   const nuevoArray = new Array(array.length);
   for (let i = 0; i < array.length; i++) {
     let obs = "",
       tg = "";
+
+    const descuentos = array[i].descuentos || {};
+    const textoDescuento = existeDescuento
+      ? `${descuentos.desc_1 || 0} / ${descuentos.desc_2 || 0} / ${descuentos.desc_3 || 0}`
+      : null;
+
     if (array[i].operacion === "GRATUITA") {
       obs = "*";
       tg = " / TG: " + moneda + (array[i].valor_total || 0);
       array[i].precioedita = "0.00";
     }
-    nuevoArray[i] = new Array(5);
-    nuevoArray[i][0] = array[i].cantidad || 0;
-    nuevoArray[i][1] = (array[i].nombre || "") + tg;
-    nuevoArray[i][2] = array[i].medida || "";
-    nuevoArray[i][3] =
-      array[i].precioedita ||
+
+    const precio = array[i].precioedita ||
       array[i].precio ||
       array[i].precioVentaUnitario ||
       "0.00";
-    nuevoArray[i][4] =
-      (
-        parseFloat(
-          array[i].precioedita ||
-          array[i].precio ||
-          array[i].precioVentaUnitario ||
-          0
-        ) * (array[i].cantidad || 0)
-      ).toFixed(2) + obs;
+
+    const totalLinea = (
+      parseFloat(precio) * (array[i].cantidad || 0)
+    ).toFixed(2) + obs;
+
+    if (!existeDescuento) {
+      nuevoArray[i] = new Array(5);
+      nuevoArray[i][0] = array[i].cantidad || 0;
+      nuevoArray[i][1] = (array[i].nombre || "") + tg;
+      nuevoArray[i][2] = array[i].medida || "";
+      nuevoArray[i][3] = precio;
+      nuevoArray[i][4] = totalLinea;
+    } else {
+      nuevoArray[i] = new Array(6); 
+      nuevoArray[i][0] = array[i].cantidad || 0;
+      nuevoArray[i][1] = (array[i].nombre || "") + tg;
+      nuevoArray[i][2] = array[i].medida || "";
+      nuevoArray[i][3] = precio;
+      nuevoArray[i][4] = textoDescuento;
+      nuevoArray[i][5] = totalLinea;
+    }
   }
 
-  // Con más ancho disponible en horizontal
-  const colW = { c0: 18, c2: 22, c3: 20, c4: 22 };
-  const descW = usable - (colW.c0 + colW.c2 + colW.c3 + colW.c4); // ~118 mm aprox.
+  const headSinDesc = [["Cantidad", "Descripcion", "Medida", "P.Unitario", "P.Total"]];
+  const headConDesc = [["Cantidad", "Descripcion", "Medida", "P.Unitario", "%Desc", "P.Total"]];
+
+  const colW = existeDescuento
+    ? { c0: 15, c1: 90, c2: 18, c3: 18, c4: 15, c5: 20 } 
+    : { c0: 18, c1: 100, c2: 22, c3: 20, c4: 22 };
 
   doc.autoTable({
     startY: linea,
@@ -1796,15 +1938,22 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
       fontStyle: "bold",
       fillColor: [184, 184, 184],
     },
-    columnStyles: {
-      0: { columnWidth: colW.c0, halign: "center" },
-      1: { columnWidth: descW, halign: "left" },
-      2: { columnWidth: colW.c2, halign: "center" },
-      3: { columnWidth: colW.c3, halign: "right" },
-      4: { columnWidth: colW.c4, halign: "right" },
+    columnStyles: existeDescuento ? {
+      0: { cellWidth: colW.c0, halign: "center" },
+      1: { cellWidth: colW.c1, halign: "left" },
+      2: { cellWidth: colW.c2, halign: "center" },
+      3: { cellWidth: colW.c3, halign: "right" },
+      4: { cellWidth: colW.c4, halign: "center" },
+      5: { cellWidth: colW.c5, halign: "right" },
+    } : {
+      0: { cellWidth: colW.c0, halign: "center" },
+      1: { cellWidth: colW.c1, halign: "left" },
+      2: { cellWidth: colW.c2, halign: "center" },
+      3: { cellWidth: colW.c3, halign: "right" },
+      4: { cellWidth: colW.c4, halign: "right" },
     },
     theme: "plain",
-    head: [["Cantidad", "Descripcion", "Medida", "P.Unitario", "P.Total"]],
+    head: existeDescuento ? headConDesc : headSinDesc,
     body: nuevoArray,
   });
 
@@ -1971,9 +2120,9 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
       },
       headStyles: { lineWidth: 0.2, lineColor: 1, fontStyle: "bold" },
       columnStyles: {
-        0: { columnWidth: 20, halign: "center", fontStyle: "bold" }, // CUOTA
-        1: { columnWidth: 22, halign: "center" }, // IMPORTE
-        2: { columnWidth: totBoxW - (20 + 22), halign: "center" }, // VENCE
+        0: { cellWidth: 20, halign: "center", fontStyle: "bold" }, // CUOTA
+        1: { cellWidth: 22, halign: "center" }, // IMPORTE
+        2: { cellWidth: totBoxW - (20 + 22), halign: "center" }, // VENCE
       },
       theme: "plain",
       head: [["CUOTA", "IMPORTE", "VENCE"]],
@@ -2241,8 +2390,9 @@ function isElectronEnv() {
 }
 
 function tabla_A4(array, linea) {
-  // Detectar si existe algún descuento
-  const existeDescuento = array.some(
+  // Detectar si existe algún descuento Y el permiso está activo
+  const permisoDescuento = store.state.configuracion && store.state.configuracion.desc_porcentaje_catalogo;
+  const existeDescuento = permisoDescuento && array.some(
     (it) =>
       it.descuentos &&
       (Number(it.descuentos.desc_1) > 0 ||
@@ -2256,14 +2406,26 @@ function tabla_A4(array, linea) {
   for (let item of array) {
     const descuentos = item.descuentos || {};
 
-    const precioBase = Number(item.precio || 0); // P.Unitario
-    const precioNeto = Number(item.precio || 0); // P.Neto
+    const precioActual = Number(item.precio || 0);
+    
+    // Usar precio_base del item si existe, sino calcular reverso
+    let precioBase = Number(item.precio_base || item.precio_catalogo || 0);
+    if (!precioBase && existeDescuento && descuentos) {
+      const d1 = Number(descuentos.desc_1 || 0) / 100;
+      const d2 = Number(descuentos.desc_2 || 0) / 100;
+      const d3 = Number(descuentos.desc_3 || 0) / 100;
+      const factorDescuento = (1 - d1) * (1 - d2) * (1 - d3);
+      if (factorDescuento > 0) {
+        precioBase = Math.round((precioActual / factorDescuento) * 100) / 100;
+      }
+    }
+    if (!precioBase) precioBase = precioActual;
+    
+    const precioNeto = precioActual;
     let totalLinea = precioNeto * item.cantidad;
 
-    // Texto descuentos combinados en una sola celda
     const textoDescuento = existeDescuento
-      ? `${descuentos.desc_1 || 0} / ${descuentos.desc_2 || 0} / ${descuentos.desc_3 || 0
-      }`
+      ? `${descuentos.desc_1 || 0} / ${descuentos.desc_2 || 0} / ${descuentos.desc_3 || 0}`
       : null;
 
     let obs = "";
@@ -2277,21 +2439,18 @@ function tabla_A4(array, linea) {
       totalLinea = 0;
     }
 
-    // Estructura según exista o no descuento
     if (!existeDescuento) {
-      // SIN DESCUENTOS
       nuevoArray.push([
         item.cantidad,
-        item.id + ' - ' +item.nombre + tg,
+        item.id + ' - ' + item.nombre + tg,
         item.medida,
         precioBase.toFixed(2),
         totalLinea.toFixed(2) + obs,
       ]);
     } else {
-      // CON DESCUENTOS
       nuevoArray.push([
         item.cantidad,
-        item.id + ' - ' +item.nombre + tg,
+        item.id + ' - ' + item.nombre + tg,
         item.medida,
         precioBase.toFixed(2),
         textoDescuento,
@@ -2320,21 +2479,21 @@ function tabla_A4(array, linea) {
 
   // COLUMNAS SIMPLES Y LIMPIAS
   const columnStylesSinDesc = {
-    0: { columnWidth: 20 },
-    1: { columnWidth: 110, halign: "left" },
-    2: { columnWidth: 20 },
-    3: { columnWidth: 20 },
-    4: { columnWidth: 20 },
+    0: { cellWidth: 20 },
+    1: { cellWidth: 110, halign: "left" },
+    2: { cellWidth: 20 },
+    3: { cellWidth: 20 },
+    4: { cellWidth: 20 },
   };
 
   const columnStylesConDesc = {
-    0: { columnWidth: 12 },
-    1: { columnWidth: 80, halign: "left" },
-    2: { columnWidth: 18 },
-    3: { columnWidth: 20 },
-    4: { columnWidth: 20 }, // %Desc
-    5: { columnWidth: 20 }, // P.Neto
-    6: { columnWidth: 20 }, // Total
+    0: { cellWidth: 12 },
+    1: { cellWidth: 80, halign: "left" },
+    2: { cellWidth: 18 },
+    3: { cellWidth: 20 },
+    4: { cellWidth: 20 }, // %Desc
+    5: { cellWidth: 20 }, // P.Neto
+    6: { cellWidth: 20 }, // Total
   };
 
   // TABLA A DEVOLVER
