@@ -77,6 +77,7 @@ export default new Vuex.Store({
     data_caja_cabecera: "",
     data_caja: "",
     array_guia: "",
+    origen_pedido_nuevo: "",
     lista_modos: [
       "EFECTIVO",
       "YAPE",
@@ -695,8 +696,22 @@ export default new Vuex.Store({
     data_caja_cabecera(state, n) {
       state.data_caja_cabecera = n;
     },
+    setOrigenPedido(state, origen) {
+        state.origen_pedido_nuevo = origen;
+    },
+    
+    clearOrigenPedido(state) {
+        state.origen_pedido_nuevo = null;
+    },
   },
   actions: {
+    setOrigenPedido({ commit }, origen) {
+        commit('setOrigenPedido', origen);
+    },
+    
+    clearOrigenPedido({ commit }) {
+        commit('clearOrigenPedido');
+    },
     async busca_cliente({ commit }, { documento, numero }) {
       try {
         var cliente = store.state.clientes.find(

@@ -36,11 +36,11 @@
                     icon="mdi-alert-octagon">
                     <div class="d-flex flex-wrap justify-space-between align-center text-caption">
                         <span>Línea de crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2)
-                        }}</strong></span>
+                                }}</strong></span>
                         <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2)
-                        }}</strong></span>
+                                }}</strong></span>
                         <span>Disponible: <strong class="red--text">{{ moneda }} {{ saldoDisponible.toFixed(2)
-                        }}</strong></span>
+                                }}</strong></span>
                     </div>
                     <div class="mt-1 red--text text-caption font-weight-medium">
                         El monto del pedido ({{ moneda }} {{ totalDetalle.toFixed(2) }}) supera el saldo disponible
@@ -95,7 +95,7 @@
                                                         style="max-width: 70vw;">
                                                         <span class="font-weight-bold red--text">{{
                                                             Number(item.cantidad)
-                                                        }}×</span>
+                                                            }}×</span>
                                                         {{ item.nombre }}
                                                     </div>
                                                 </div>
@@ -738,9 +738,20 @@ export default {
                 store.commit("dialogosnackbar", "Documento guardado con éxito ✅");
                 this.dial_guardar = false;
 
-                this.resetFormulario(); // 🔹 limpia campos
+                this.resetFormulario();
 
-                this.$router.push("/lista"); // 🔹 redirige*/
+                const origen = store.state.origen_pedido_nuevo;
+                store.commit("clearOrigenPedido");
+
+                if (origen === 'visitas') {
+                    this.$router.push({
+                        name: 'lista'
+                    });
+                } else {
+                    this.$router.push({
+                        name: 'lista_pedidos'
+                    });
+                }
             } catch (err) {
                 const status = err?.response?.status;
                 const body = err?.response?.data || {};

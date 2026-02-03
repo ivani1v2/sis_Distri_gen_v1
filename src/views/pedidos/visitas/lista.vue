@@ -767,12 +767,14 @@ export default {
             console.log(data)
             this.cliente_deuda = data
             this.accion_pendiente = 'vender'
+            store.commit("setOrigenPedido", "visitas");
             this.dialog_deudas = true
         },
         ejecutarVenta(data) {
             var fecha = moment(this.date).format('DDMMYYYY')
             data.fecha = fecha
             store.commit("cliente_selecto", data)
+            store.commit("setOrigenPedido", "visitas")
             this.$router.push({
                 name: 'caja2'
             })
@@ -780,12 +782,14 @@ export default {
         async pre_venta(data) {
             this.cliente_deuda = data
             this.accion_pendiente = 'pre_venta'
+            store.commit("setOrigenPedido", "visitas");
             this.dialog_deudas = true
         },
         ejecutarPreVenta(data) {
             var fecha = moment(this.date).format('DDMMYYYY')
             data.fecha = fecha
             store.commit("cliente_selecto", data)
+            store.commit("setOrigenPedido", "visitas")
             this.$router.push({
                 name: 'nuevo_pedido'
             })
@@ -803,7 +807,6 @@ export default {
         onContinuarDeudas(payload) {
             const { accion, cliente } = payload
             this.cerrarDialogDeudas()
-
             if (accion === 'vender') {
                 this.ejecutarVenta(cliente)
             } else if (accion === 'pre_venta') {
