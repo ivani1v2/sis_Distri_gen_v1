@@ -56,16 +56,22 @@
                         </v-row>
                     </v-card>
                 </v-bottom-sheet>
+                <v-col cols="6" sm="4" class="mt-n4">
+                    <v-btn color="primary" block x-small @click="abrirNuevoPedido">
+                        <v-icon left small>mdi-archive-plus-outline</v-icon>
+                        <span class="d-none d-sm-inline">Nuevo Pedido</span>
+                        <span class="d-sm-none">Nuevo</span>
+                    </v-btn>
+                </v-col>
 
-                <v-col cols="4" class="mt-n4">
+                <!-- Fila de botones - vista móvil mejorada -->
+                <v-col cols="6" sm="4" class="mt-n4">
                     <v-menu bottom offset-y>
                         <template v-slot:activator="{ on, attrs }">
                             <v-btn color="success" block x-small v-bind="attrs" v-on="on">
-                                Opciones
-                                <v-spacer></v-spacer>
-                                <v-icon left>
-                                    mdi-arrow-down-bold
-                                </v-icon>
+                                <v-icon left small>mdi-cog</v-icon>
+                                <span class="d-none d-sm-inline">Opciones</span>
+                                <span class="d-sm-none">Opciones</span>
                             </v-btn>
                         </template>
                         <v-list dense>
@@ -101,20 +107,19 @@
                         </v-list>
                     </v-menu>
                 </v-col>
-                <v-col cols="4" class="mt-n4">
-                    <div class="body-2">
+
+                <v-col cols="4" class="ml-2">
+                    <div class="caption">
                         <strong class="red--text"># Ped:</strong> {{ resumen.totalPedidos }}
                     </div>
                 </v-col>
 
-                <v-col cols="4" class="mt-n4">
-                    <div class="body-2">
-                        <strong class="red--text">Total:</strong> {{moneda}} {{ number2(resumen.totalSoles) }}
+                <v-col cols="4" class="mr-1">
+                    <div class="caption">
+                        <strong class="red--text">Total:</strong> {{ moneda }} {{ number2(resumen.totalSoles) }}
                     </div>
                 </v-col>
             </v-row>
-
-
         </v-card>
 
         <v-card v-if="$vuetify.breakpoint.mdAndUp">
@@ -335,7 +340,11 @@
         <anular_p v-if="dial_anular" @cerrar="dial_anular = false" />
         <dial_imprime_ped_masivo v-if="dial_imprime_masivo" @cerrar="dial_imprime_masivo = false"
             :pedidosFiltrados="pedidosFiltrados" />
+        <BuscaClientesPedido v-if="dialogBuscaClientes" @cerrar="dialogBuscaClientes = false"
+            @seleccionar="onClienteSeleccionado" @crear-cliente="crearNuevoCliente" />
 
+        <dial_deudas_cliente v-model="dialogDeudasCliente" :cliente="clienteParaNuevoPedido"
+            :accion-pendiente="'pre_venta'" @cerrar="cerrarDialogDeudas" @continuar="iniciarNuevoPedido" />
     </div>
 </template>
 
@@ -349,6 +358,8 @@ import dial_detalle_ped from './dialogos/dialogo_detalle_ped.vue'
 import dial_imprime_ped_masivo from './dialogos/dial_imprime_ped_masivo.vue'
 import dial_consolidado from "./dialogos/dialogo_rep_consolidado.vue"
 import dial_rep_avance from "./reportes/reporte_avance.vue"
+import BuscaClientesPedido from './dialogos/dialogo_cliente_pedido.vue'
+import dial_deudas_cliente from '@/views/clientes/dialogos/dial_deudas_cliente.vue'
 import store from '@/store/index'
 import { pdfGenera } from './formatos/orden_pedido.js'
 import anular_p from './anular_pedido.vue'
@@ -361,7 +372,9 @@ export default {
         dial_detalle_ped,
         dial_consolidado,
         dial_imprime_ped_masivo,
-        anular_p
+        anular_p,
+        BuscaClientesPedido,
+        dial_deudas_cliente
     },
     data() {
         return {
@@ -397,7 +410,11 @@ export default {
             loadingMore: false,
             observer: null,
             dialFiltroMovil: false,
-            moneda:'S/'
+            moneda: 'S/',
+            dialogBuscaClientes: false,
+            dialogDeudasCliente: false,
+            clienteParaNuevoPedido: null,
+            dialogNuevoCliente: false
         };
     },
     created() {
@@ -707,10 +724,10 @@ export default {
                 // 3) Llama a tu endpoint con metodo "anular_pedido"
                 //    Usa tu helper de axios según tu arquitectura
                 //    Ejemplo genérico:
-                //'https://api-distribucion-6sfc6tum4a-rj.a.run.app'
+                //'https://us-central1-distri-365.cloudfunctions.net/api_distribucion'
                 //   'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion'
                 var idem = `anula-${pedido.id}`; // clave única para evitar duplicados
-                await axios.post('https://api-distribucion-6sfc6tum4a-rj.a.run.app', {
+                await axios.post('https://us-central1-distri-365.cloudfunctions.net/api_distribucion', {
 
                     bd: this.$store.state.baseDatos.bd,
                     data: payload,
@@ -865,7 +882,7 @@ export default {
                 const items = Array.isArray(val) ? val : Object.values(val);
                 const doc = await colClientes().doc(String(pedido.doc_numero)).get()
                 pedido.referencia = this.getReferenciaPrincipal(doc.data())
-                
+
                 pdfGenera(pedido, items, store.state.configImpresora.tamano || '80', 'descarga');
             } catch (e) {
                 console.error('Error al descargar:', e)
@@ -976,8 +993,46 @@ export default {
             } finally {
                 store.commit && store.commit("dialogoprogress");
             }
-        }
+        },
+        abrirNuevoPedido() {
+            this.dialogBuscaClientes = true;
+        },
 
+        async onClienteSeleccionado(cliente) {
+            this.clienteParaNuevoPedido = cliente;
+            this.dialogBuscaClientes = false;
+            await this.$nextTick();
+            this.dialogDeudasCliente = true;
+        },
+
+        crearNuevoCliente() {
+            this.dialogBuscaClientes = false;
+            this.$router.push({
+                name: 'crear_cliente',
+                query: { origen: 'lista_pedidos' }
+            });
+        },
+
+        cerrarDialogDeudas() {
+            this.dialogDeudasCliente = false;
+            this.clienteParaNuevoPedido = null;
+        },
+
+        iniciarNuevoPedido(payload) {
+            const { accion, cliente, formaPago, diasCredito, porcentajeRecargo, aplicarRecargo } = payload;
+            store.commit('setRecargoCredito', {
+                formaPago: formaPago || 'CONTADO',
+                diasCredito: diasCredito || 0,
+                porcentajeRecargo: porcentajeRecargo || 0,
+                aplicarRecargo: aplicarRecargo || false,
+                origen: 'lista_pedidos'
+            });
+            store.commit("cliente_selecto", cliente);
+            store.commit("setOrigenPedido", "lista_pedidos");
+            this.$router.push({
+                name: 'nuevo_pedido'
+            });
+        },
 
     },
 };

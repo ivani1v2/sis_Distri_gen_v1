@@ -767,6 +767,7 @@ export default {
             console.log(data)
             this.cliente_deuda = data
             this.accion_pendiente = 'vender'
+            store.commit("setOrigenPedido", "visitas");
             this.dialog_deudas = true
         },
         ejecutarVenta(data) {
@@ -780,6 +781,7 @@ export default {
         async pre_venta(data) {
             this.cliente_deuda = data
             this.accion_pendiente = 'pre_venta'
+            store.commit("setOrigenPedido", "visitas");
             this.dialog_deudas = true
         },
         ejecutarPreVenta(data) {

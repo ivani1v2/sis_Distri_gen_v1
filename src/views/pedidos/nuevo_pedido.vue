@@ -740,9 +740,20 @@ export default {
                 store.commit("dialogosnackbar", "Documento guardado con éxito ✅");
                 this.dial_guardar = false;
 
-                this.resetFormulario(); // 🔹 limpia campos
+                this.resetFormulario();
 
-                this.$router.push("/lista"); // 🔹 redirige*/
+                const origen = store.state.origen_pedido_nuevo;
+                store.commit("clearOrigenPedido");
+
+                if (origen === 'visitas') {
+                    this.$router.push({
+                        name: 'lista'
+                    });
+                } else {
+                    this.$router.push({
+                        name: 'lista_pedidos'
+                    });
+                }
             } catch (err) {
                 const status = err?.response?.status;
                 const body = err?.response?.data || {};
