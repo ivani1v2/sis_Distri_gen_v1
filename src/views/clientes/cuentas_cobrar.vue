@@ -1,43 +1,51 @@
 <template>
   <div class="pa-4">
     <v-card class="elevation-3 rounded-lg">
-<v-card-title class="pa-4 blue-grey lighten-5 d-block">
-        
+      <v-card-title class="pa-4 blue-grey lighten-5 d-block">
         <div class="d-flex align-center mb-3">
           <v-icon :large="$vuetify.breakpoint.mdAndUp" left color="blue-grey darken-3">mdi-cash-multiple</v-icon>
-          <span :class="{'text-h5': $vuetify.breakpoint.mdAndUp, 'text-h6': $vuetify.breakpoint.smAndDown}" 
-                class="font-weight-bold blue-grey--text text--darken-3">Cx Cobrar</span>
+          <span :class="{ 'text-h5': $vuetify.breakpoint.mdAndUp, 'text-h6': $vuetify.breakpoint.smAndDown }"
+            class="font-weight-bold blue-grey--text text--darken-3">Cx Cobrar</span>
           <v-spacer></v-spacer>
-          
           <v-btn color="info" small @click="exportarExcel" class="ml-2 font-weight-medium">
             <v-icon left small>mdi-file-excel</v-icon>
             <span>Exportar</span>
-        
+
           </v-btn>
         </div>
 
         <v-row dense>
-          <v-col cols="12" sm="6">
-            <v-select outlined v-model="cuenta_estado" :items="array_estado" label="Estado"
-              prepend-inner-icon="mdi-list-status" dense hide-details @change="filtra"></v-select>
+          <v-col cols="12" md="3">
+            <v-select outlined dense hide-details v-model="cuenta_estado" :items="array_estado" label="Estado"
+              prepend-inner-icon="mdi-list-status" @change="filtra" />
           </v-col>
+          <v-col cols="12" md="3">
+            <v-autocomplete outlined dense hide-details label="Buscar Cliente" :items="arra_empleados"
+              item-text="nombre" item-value="documento" prepend-inner-icon="mdi-account-search" v-model="busca_p"
+              clearable />
 
-          <v-col cols="12" sm="6" class="d-flex align-center">
-            <v-autocomplete class="flex-grow-1" outlined dense label="Buscar Cliente" :items="arra_empleados"
-              prepend-inner-icon="mdi-account-search" v-model="busca_p" hide-details clearable></v-autocomplete>
-
-            <v-btn small icon color="primary" class="ml-2 elevation-2" @click="filtra" title="Aplicar filtro">
-              <v-icon>mdi-filter</v-icon>
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-select v-model="vendedoresSeleccionados" :items="vendedoresItems" item-text="nombre" item-value="codigo"
+              label="Vendedor" multiple outlined dense chips small-chips deletable-chips clearable
+              :menu-props="{ closeOnContentClick: true }" @change="onVendedorChange" class="mb-n6" />
+          </v-col>
+          <v-col cols="12" md="3" class="d-flex align-center">
+            <v-btn block color="primary" class="elevation-2" @click="filtra">
+              <v-icon left>mdi-filter</v-icon>
+              Aplicar filtros
             </v-btn>
           </v-col>
         </v-row>
+
       </v-card-title>
 
       <v-divider></v-divider>
       <v-card-text class="py-4">
         <v-row align="center">
           <h4 class="text-h6">
-            Total Pendiente: <span class="red--text text--darken-3">{{monedaSimbolo}} {{ suma_total().toFixed(2) }}</span>
+            Total Pendiente: <span class="red--text text--darken-3">{{ monedaSimbolo }} {{ suma_total().toFixed(2)
+            }}</span>
           </h4>
         </v-row>
       </v-card-text>
@@ -48,8 +56,16 @@
         :sort-by.sync="sortBy" :sort-desc.sync="sortDesc" dense fixed-header height="65vh" mobile-breakpoint="1"
         no-data-text="No hay cuentas por cobrar disponibles">
         <template v-slot:item.cliente="{ item }">
-          <div class="font-weight-medium">{{ item.nombre }}</div>
-          <div class="caption grey--text">{{ item.documento }}</div>
+          <div class="font-weight-medium">
+            {{ item.nombre }}
+          </div>
+          <div class="caption grey--text d-flex align-center">
+            <span>{{ item.documento }}</span>
+            <v-divider vertical class="mx-2"></v-divider>
+            <span class=" caption blue--text text--darken-1">
+              {{ item.doc_ref }}
+            </span>
+          </div>
         </template>
 
         <template v-slot:item.fecha="{ item }">
@@ -131,14 +147,15 @@
                   <v-list-item-subtitle class="caption"
                     v-text="`${monedaSimbolo}${item.precio} x ${item.medida}`"></v-list-item-subtitle>
                   <v-list-item-subtitle v-if="item.preciodescuento != 0" class="red--text caption font-weight-bold">
-                    Descuento ({{monedaSimbolo}}{{ redondear(item.preciodescuento) }})
+                    Descuento ({{ monedaSimbolo }}{{ redondear(item.preciodescuento) }})
                   </v-list-item-subtitle>
                 </v-list-item-content>
                 <v-list-item-action>
                   <v-chip color="blue-grey lighten-5" small>{{ item.cantidad }} Uds.</v-chip>
                 </v-list-item-action>
                 <v-list-item-action>
-                  <span class="font-weight-bold primary--text">{{ monedaSimbolo }}{{ redondear((item.precioedita * item.cantidad) -
+                  <span class="font-weight-bold primary--text">{{ monedaSimbolo }}{{ redondear((item.precioedita *
+                    item.cantidad) -
                     item.preciodescuento) }}</span>
                 </v-list-item-action>
               </v-list-item>
@@ -283,7 +300,9 @@
         <v-card-text class="pa-4">
           <h4>Modificado: {{ conviertefecha(detalle.fecha_modificacion) || 'N/A' }} </h4>
           <h4>Responsable: {{ detalle.vendedor || 'N/A' }} </h4>
-          <h4 v-if="detalle.amortizado != undefined">Monto Amortiza: {{ monedaSimbolo }}{{ redondear(detalle.amortizado) }} </h4>
+          <h4 v-if="detalle.amortizado != undefined">Monto Amortiza: {{ monedaSimbolo }}{{ redondear(detalle.amortizado)
+          }}
+          </h4>
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -330,6 +349,7 @@ import {
   pdf_liquida_prestamo
 } from '../../pdf_reportes'
 import XLSX from 'xlsx'
+
 export default {
   components: {
     imprime,
@@ -344,18 +364,17 @@ export default {
       { text: 'Emision', value: 'fecha', sortable: true },
       { text: 'Venci.', value: 'fecha_vence', sortable: true },
       { text: 'Estado', value: 'estado', sortable: true },
+      { text: 'Vendedor', value: 'vendedor_nombre', sortable: true },
       { text: 'Total', value: 'monto_total', sortable: true, align: 'end' },
       { text: 'Pendiente', value: 'monto_pendiente', sortable: true, align: 'end' },
       { text: 'Pagado', value: 'pagado', sortable: true, align: 'end' },
       { text: 'Accion', value: 'accion', sortable: false, align: 'center' },
     ],
 
-    // tabla principal
     desserts: [],
     sortBy: ['cliente'],
     sortDesc: [false],
 
-    // diálogos
     dialog: false,
     dialog_liquidacion: false,
     dialog_detalle_cuota: false,
@@ -363,50 +382,66 @@ export default {
     dialog_editar_cuota: false,
     genera_pdf: false,
 
-    // selección actual (comprobante / cuota)
     item_selecto: [],
     item_selecto_cuota_index: null,
     detalle: [],
 
-    // datos para editar cuota
     cuota_edit_monto: '',
     cuota_edit_fecha_str: '',
     cuota_edit_index: null,
 
-    // consolidado de productos
     arrayConsolidar: [],
 
-    // filtros
     array_estado: ['PENDIENTE', 'LIQUIDADO'],
     cuenta_estado: 'PENDIENTE',
     buscar: '',
     busca_p: '',
     arra_empleados: [],
 
-    // otros
+    vendedoresSeleccionados: ['TODOS'],
+    vendedoresPrevios: ['TODOS'],
+    dialFiltroMovil: false,
+    allCuentasRaw: [],
+
     date1: moment(String(new Date)).format('YYYY-MM-DD'),
     seleccionado: '',
     a_cuenta: 0,
     dialog_nueva_cuota: false,
+
   }),
+
   created() {
-    this.filtra()
+    this.inicializarVendedores();
+    this.filtra();
   },
+
   computed: {
     listafiltrada() {
+      const texto = (this.busca_p || '').toLowerCase().trim()
 
-      if (this.cuenta_estado == 'LIQUIDADO') {
-        var array = this.desserts.filter((item) => (item.documento + item.nombre)
-          .toLowerCase().includes(this.buscar.toLowerCase()))
-      } else {
-        var array = this.desserts.filter((item) => (item.documento + item.nombre)
-          .toLowerCase().includes(this.buscar.toLowerCase()))
-      }
-      return array
+      if (!texto) return this.desserts
+
+      return this.desserts.filter(item => {
+        return (
+          item.nombre?.toLowerCase().includes(texto) ||
+          item.documento?.toLowerCase().includes(texto) ||
+          item.doc_ref?.toLowerCase().includes(texto)
+        )
+      })
     },
+    vendedoresItems() {
+      const base = Array.isArray(this.$store.state.array_sedes)
+        ? this.$store.state.array_sedes
+        : [];
+      const tieneTodos = base.some(it => (it.codigo || '').toString().toUpperCase() === 'TODOS');
+      const items = tieneTodos ? base : [{ nombre: 'TODOS', codigo: 'TODOS' }, ...base];
+      return items;
+    },
+
     moneda() {
       return this.item_selecto?.moneda || 'S/'
     },
+
     sumaCuotas() {
       if (!this.item_selecto || !Array.isArray(this.item_selecto.datos)) return 0
       return this.item_selecto.datos.reduce(
@@ -415,272 +450,346 @@ export default {
       )
     },
 
-    // 🔹 ¿El cronograma NO cuadra con el monto_total del crédito?
     descuadreCronograma() {
       if (!this.item_selecto) return false
       const totalCredito = parseFloat(this.item_selecto.monto_total) || 0
       return Math.abs(totalCredito - this.sumaCuotas) > 0.01
     },
+
     monedaSimbolo() {
       return this.$store.state.moneda.find(m => m.codigo == this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/ ';
     }
-
   },
+
   watch: {
     '$store.state.clientessearch': {
       immediate: true,
       handler(nuevo) {
         const base = Array.isArray(nuevo) ? nuevo : []
-        this.arra_empleados = base.map(it => `${it.id} / ${it.nombre}`)
+        this.arra_empleados = base.map(it => ({
+          documento: it.id,
+          nombre: it.nombre,
+        }))
       }
     },
+    vendedoresSeleccionados() {
+      this.applyVendorFilter();
+    },
+    cuenta_estado() {
+      this.applyVendorFilter();
+    },
   },
+
   methods: {
+    inicializarVendedores() {
+      if (!store.state.permisos?.es_admin) {
+        this.vendedoresSeleccionados = [store.state.sedeActual?.codigo || 'TODOS'];
+      } else {
+        this.vendedoresSeleccionados = ['TODOS'];
+      }
+    },
+
+    aplicarFiltroMovil() {
+      this.dialFiltroMovil = false;
+      this.applyVendorFilter();
+    },
+
+    onVendedorChange(val = []) {
+      const TODOS = 'TODOS'
+      const antes = this.vendedoresPrevios
+      const ahora = val
+      if (
+        antes.includes(TODOS) &&
+        ahora.length > 1 &&
+        ahora.some(v => v !== TODOS)
+      ) {
+        this.vendedoresSeleccionados = ahora.filter(v => v !== TODOS)
+      }
+      else if (
+        ahora.includes(TODOS) &&
+        ahora.length > 1
+      ) {
+        this.vendedoresSeleccionados = [TODOS]
+      }
+      this.vendedoresPrevios = [...this.vendedoresSeleccionados]
+    },
+
+    applyVendorFilter() {
+      const seleccionados = this.vendedoresSeleccionados || [];
+
+      if (seleccionados.length === 0) {
+        this.desserts = [];
+        return;
+      }
+
+      if (seleccionados.includes('TODOS')) {
+        this.desserts = this.allCuentasRaw.filter(item =>
+          item.estado === this.cuenta_estado
+        );
+        return;
+      }
+
+      const codigosNormalizados = seleccionados.map(c => String(c).toUpperCase().trim());
+
+      this.desserts = this.allCuentasRaw.filter(p => {
+        if (p.estado !== this.cuenta_estado) return false;
+        const codVendedor = (p.vendedor != null ? String(p.vendedor) : '').toUpperCase().trim();
+        return codigosNormalizados.includes(codVendedor);
+      });
+    },
+
+    async filtra() {
+      try {
+        var array = [];
+        this.busca_p = this.busca_p || '';
+        var cli = this.busca_p.split('/')[0].trim();
+
+        let snap;
+
+        if (this.busca_p == '') {
+          snap = await allcuentaxcobrar()
+            .orderByChild("estado")
+            .equalTo(this.cuenta_estado)
+            .once("value");
+        } else {
+          snap = await allcuentaxcobrar()
+            .orderByChild("documento")
+            .equalTo(cli)
+            .once("value");
+        }
+
+        if (snap.exists()) {
+          snap.forEach(item => {
+            const data = item.val();
+            if (this.busca_p !== '' && data.estado !== this.cuenta_estado) {
+              return;
+            }
+
+            let vendedor_nombre = 'Sin vendedor';
+            if (data.vendedor && Array.isArray(this.$store.state.array_sedes)) {
+              const vendedorInfo = this.$store.state.array_sedes.find(s =>
+                s.codigo === data.vendedor
+              );
+              if (vendedorInfo) {
+                vendedor_nombre = vendedorInfo.nombre;
+              }
+            }
+
+            const nom = data.nombre || data.cliente || '';
+            array.push({
+              ...data,
+              nombre: nom,
+              cliente: nom,
+              vendedor_nombre: vendedor_nombre
+            });
+          });
+        }
+
+        this.allCuentasRaw = array;
+        this.applyVendorFilter();
+
+      } catch (error) {
+        console.error('Error en filtra:', error);
+        this.allCuentasRaw = [];
+        this.desserts = [];
+      }
+    },
 
     imprime_constancia(cuota, index) {
       if (!this.item_selecto) {
         alert('No hay un crédito seleccionado.')
         return
       }
-      // si la cuota tiene los métodos de pago guardados, los usamos
       const pagos = Array.isArray(cuota.pagos) ? cuota.pagos : []
+      reporte_liquidacion_cuota(this.item_selecto, cuota, pagos);
+    },
 
-      reporte_liquidacion_cuota(
-        this.item_selecto, // cuenta completa
-        cuota,             // cuota específica
-        pagos              // métodos de pago usados
-      )
-    },
     verCronogramaPDF(item) {
-      reporte_cronograma(item)   // item es el objeto que muestras en la vista de liquidación
+      reporte_cronograma(item);
     },
+
     actualizarItem(nuevo) {
-      this.dialog_amortiza = false
-      this.item_selecto = nuevo
-      this.item_selecto_cuota_index = null
-      this.filtra()
+      this.dialog_amortiza = false;
+      this.item_selecto = nuevo;
+      this.item_selecto_cuota_index = null;
+      this.filtra();
     },
+
     abrirNuevaCuota() {
       if (!this.item_selecto) {
-        alert('No hay un crédito seleccionado.')
-        return
+        alert('No hay un crédito seleccionado.');
+        return;
       }
-      this.dialog_nueva_cuota = true
-    },
-    editarCuota(item, index) {
-      this.cuota_edit_index = index
-      this.cuota_edit_monto = item.monto
-      this.cuota_edit_fecha_str = moment.unix(item.fecha_vence).format('YYYY-MM-DD')
-      this.dialog_editar_cuota = true
+      this.dialog_nueva_cuota = true;
     },
 
+    editarCuota(item, index) {
+      this.cuota_edit_index = index;
+      this.cuota_edit_monto = item.monto;
+      this.cuota_edit_fecha_str = moment.unix(item.fecha_vence).format('YYYY-MM-DD');
+      this.dialog_editar_cuota = true;
+    },
 
     abonarCuota(item, index) {
-      this.item_selecto_cuota_index = index
-
-      // por defecto, el abono = monto de la cuota
-      this.a_cuenta = item.monto
-
-      const total = Number(this.a_cuenta || 0)
-
-      // inicializa métodos de pago: el primero lleno con el total
+      this.item_selecto_cuota_index = index;
+      this.a_cuenta = item.monto;
+      const total = Number(this.a_cuenta || 0);
       this.pagosEntrega = (this.$store?.state?.modopagos || []).map((n, idx) => ({
         nombre: n,
         monto: idx === 0 && total > 0 ? total.toFixed(2) : ''
-      }))
-
-      this.dialog_amortiza = true
+      }));
+      this.dialog_amortiza = true;
     },
 
-
     eliminarCuota(item, index) {
-      console.log("Eliminar", item, index)
-      if (!this.item_selecto || !Array.isArray(this.item_selecto.datos)) return
+      if (!this.item_selecto || !Array.isArray(this.item_selecto.datos)) return;
 
-      const confirmado = confirm(`¿Eliminar esta cuota de ${this.monedaSimbolo}${this.redondear(item.monto)}?`)
-      if (!confirmado) return
+      const confirmado = confirm(`¿Eliminar esta cuota de ${this.monedaSimbolo}${this.redondear(item.monto)}?`);
+      if (!confirmado) return;
 
-      const datos = [...this.item_selecto.datos]
-      datos.splice(index, 1)
-
-      // Actualizamos en Firebase
-      editaCuentaxCobrar(this.item_selecto.doc_ref, 'datos', datos)
+      const datos = [...this.item_selecto.datos];
+      datos.splice(index, 1);
+      editaCuentaxCobrar(this.item_selecto.doc_ref, 'datos', datos);
       this.item_selecto = {
         ...this.item_selecto,
         datos
-      }
+      };
     },
-
-    // 🔹 GUARDAR EDICIÓN DE CUOTA (valida totales y alerta saldo)
 
     async ejecutaConsolida(value) {
-      console.log(value)
-      store.commit("dialogoprogress", 1)
-      this.arrayConsolidar = []
-      this.seleccionado = value
-      var snap = await consultaDetalle(value.doc_ref).once("value")
+      store.commit("dialogoprogress", 1);
+      this.arrayConsolidar = [];
+      this.seleccionado = value;
+      var snap = await consultaDetalle(value.doc_ref).once("value");
       snap.forEach((item) => {
-        this.arrayConsolidar.push(item.val())
-      })
-      store.commit("dialogoprogress", 1)
-      this.dialog = true
-
+        this.arrayConsolidar.push(item.val());
+      });
+      store.commit("dialogoprogress", 1);
+      this.dialog = true;
     },
 
-    async filtra() {
-      var array = []
-      this.busca_p = this.busca_p || ''
-      var cli = this.busca_p.split('/')[0].trim()
-
-      let snap
-      if (this.busca_p == '') {
-        snap = await allcuentaxcobrar().once("value")
-      } else {
-        snap = await allcuentaxcobrar()
-          .orderByChild("documento")
-          .equalTo(cli)
-          .once("value")
-      }
-      console.log(snap.val())
-      if (snap.exists()) {
-        snap.forEach(item => {
-          const data = item.val()
-
-          if (data.estado === this.cuenta_estado) {
-            // normalizamos nombre / cliente
-            const nom = data.nombre || data.cliente || ''
-            array.push({
-              ...data,
-              nombre: nom,
-              cliente: nom, // 👈 clave nueva usada para ordenar en la tabla
-            })
-          }
-        })
-      }
-
-      this.desserts = array
-    },
     async eliminar(item) {
-      const confirmado = confirm(`¿Eliminar la cuenta por cobrar del cliente ${item.nombre} con comprobante ${item.doc_ref}? Esta acción no se puede deshacer.`)
-      if (!confirmado) {
-        return
-      }
-      store.commit("dialogoprogress", 1)
+      const confirmado = confirm(`¿Eliminar la cuenta por cobrar del cliente ${item.nombre} con comprobante ${item.doc_ref}?`);
+      if (!confirmado) return;
+
+      store.commit("dialogoprogress", 1);
       try {
-        await editaCuentaxCobrar(item.doc_ref, 'estado', 'ELIMINADO')
-        this.filtra()
-        this.dialog_liquidacion = false
-        alert('Cuenta por cobrar eliminada correctamente.')
+        await editaCuentaxCobrar(item.doc_ref, 'estado', 'ELIMINADO');
+        this.filtra();
+        this.dialog_liquidacion = false;
+        alert('Cuenta por cobrar eliminada correctamente.');
       } catch (error) {
-        console.error('Error al eliminar la cuenta por cobrar:', error)
-        alert('Ocurrió un error al eliminar la cuenta por cobrar. Por favor, inténtelo de nuevo.')
+        console.error('Error al eliminar:', error);
+        alert('Ocurrió un error al eliminar.');
       } finally {
-        store.commit("dialogoprogress", 1)
+        store.commit("dialogoprogress", 1);
       }
     },
+
     async imprime_cuenta() {
-      store.commit("dialogoprogress", 1)
-      var array = []
-      var aa = this.desserts
+      store.commit("dialogoprogress", 1);
+      var array = [];
+      var aa = this.desserts;
       for (var i = 0; i < aa.length; i++) {
-        var data = aa[i]
-        var snapshot = await consultaDetalle(data.doc_ref).once("value")
+        var data = aa[i];
+        var snapshot = await consultaDetalle(data.doc_ref).once("value");
         snapshot.forEach((item) => {
-          var datas = item.val()
-          array.push(datas)
-        })
+          var datas = item.val();
+          array.push(datas);
+        });
       }
-      pdfGenera_resumen(array)
-      store.commit("dialogoprogress", 1)
-      return true
+      pdfGenera_resumen(array);
+      store.commit("dialogoprogress", 1);
+      return true;
     },
 
     ejecutareporte() {
-      var fecha = this.date1
-      pdf_cuentas_cobrar(this.desserts, fecha)
-
+      var fecha = this.date1;
+      pdf_cuentas_cobrar(this.desserts, fecha);
     },
+
     suma_total() {
-      var aa = this.desserts
-      var suma = 0
+      var aa = this.desserts;
+      var suma = 0;
       for (var i = 0; i < aa.length; i++) {
-        var data = aa[i]
-        suma = suma + parseFloat(data.monto_pendiente)
+        var data = aa[i];
+        suma = suma + parseFloat(data.monto_pendiente);
       }
-      return suma
+      return suma;
     },
 
     async imprime_liquidacion(abonos) {
-      var array = []
-      var aa = this.desserts
+      var array = [];
+      var aa = this.desserts;
       for (var i = 0; i < aa.length; i++) {
-        var data = aa[i]
-        var snapshot = await consultaDetalle(data.doc_ref).once("value")
+        var data = aa[i];
+        var snapshot = await consultaDetalle(data.doc_ref).once("value");
         snapshot.forEach((item) => {
-          var datas = item.val()
-          array.push(datas)
-        })
+          var datas = item.val();
+          array.push(datas);
+        });
       }
-      pdf_liquida_prestamo(array, abonos)
-
-      return true
+      pdf_liquida_prestamo(array, abonos);
+      return true;
     },
 
     conviertefecha(date) {
-      return moment.unix(date).format('DD/MM/YY')
+      return moment.unix(date).format('DD/MM/YY');
     },
+
     redondear(valor) {
-      return parseFloat(valor).toFixed(store.state.configuracion.decimal)
+      return parseFloat(valor).toFixed(store.state.configuracion.decimal);
     },
+
     async verPDF(item) {
-      var a = await consulta_Cabecera(item.doc_ref).once('value')
+      var a = await consulta_Cabecera(item.doc_ref).once('value');
       if (!a.exists()) {
-        alert('COMPROBANTE NO EXISTE')
-        return
+        alert('COMPROBANTE NO EXISTE');
+        return;
       }
-      this.seleccionado = a.val()
-      this.genera_pdf = true
+      this.seleccionado = a.val();
+      this.genera_pdf = true;
     },
+
     ejecuta_liquidacion(value) {
-      console.log(value)
-      this.item_selecto = value
-      this.dialog_liquidacion = true
-
+      this.item_selecto = value;
+      this.dialog_liquidacion = true;
     },
-    analiza_fecha(datas) {
-      var hoy = moment(String(this.date1))
-      var data = moment.unix(datas)
 
-      var result = false
+    analiza_fecha(datas) {
+      var hoy = moment(String(this.date1));
+      var data = moment.unix(datas);
+      var result = false;
       if (data.isBefore(hoy, 'days')) {
-        result = true
+        result = true;
       }
       if (data.isSame(hoy, 'days')) {
-        result = true
+        result = true;
       }
-      return result
+      return result;
     },
+
     exportarExcel() {
       const filas = this.listafiltrada.map(item => ({
         Cliente: item.nombre,
         Documento: item.documento,
+        Comprobante: item.doc_ref,
         Emision: this.conviertefecha(item.fecha),
         Vencimiento: this.conviertefecha(item.fecha_vence),
         Estado: item.estado,
+        Vendedor: item.vendedor_nombre || 'Sin vendedor',
+        'Código Vendedor': item.vendedor || '',
         Moneda: item.moneda || 'S/',
         'Monto total': Number(item.monto_total || 0),
         'Monto pendiente': Number(item.monto_pendiente || 0),
         Pagado: Number((item.monto_total - item.monto_pendiente) || 0),
-      }))
+      }));
 
-      const ws = XLSX.utils.json_to_sheet(filas)
-      const wb = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb, ws, 'CuentasXCobrar')
-      XLSX.writeFile(wb, 'cuentas_x_cobrar.xlsx')
+      const ws = XLSX.utils.json_to_sheet(filas);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'CuentasXCobrar');
+      XLSX.writeFile(wb, 'cuentas_x_cobrar.xlsx');
     },
-
-
-
   }
 }
 </script>
