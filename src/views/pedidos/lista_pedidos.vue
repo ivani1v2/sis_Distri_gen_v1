@@ -727,7 +727,7 @@ export default {
                 //'https://us-central1-distri-365.cloudfunctions.net/api_distribucion'
                 //   'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion'
                 var idem = `anula-${pedido.id}`; // clave única para evitar duplicados
-                await axios.post('https://us-central1-distri-365.cloudfunctions.net/api_distribucion', {
+                await axios.post('https://api-distribucion-6sfc6tum4a-rj.a.run.app', {
 
                     bd: this.$store.state.baseDatos.bd,
                     data: payload,
