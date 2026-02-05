@@ -9,9 +9,6 @@
         </div>
 
         <v-card class="pa-6">
-            <v-col>
-                <v-text-field dense v-model="ip_cocina" label="IP HOST IMPRESORA"></v-text-field>
-            </v-col>
             <v-row class="mt-n5" dense>
                 <v-col cols="6">
                     <v-checkbox dense v-model="guardadocumento" label="Guardar Auto"></v-checkbox>
@@ -21,9 +18,6 @@
                 </v-col>
                 <v-col cols="6">
                     <v-checkbox dense v-model="nom_comercial" label="Nom Comercial"></v-checkbox>
-                </v-col>
-                <v-col cols="6">
-                    <v-checkbox dense v-model="impresora_auto" label="Imp. Automatica"></v-checkbox>
                 </v-col>
                 <v-col cols="6">
                     <v-select dense v-model="tamano" :items="tamanos" label="Impresora Caja" outlined></v-select>
@@ -43,7 +37,7 @@
                 <v-col cols="6">
                     <v-text-field type="number" dense v-model="minferior" label="Margen logo inferior"></v-text-field>
                 </v-col>
-                <v-col cols="12">
+                <v-col cols="6">
                     <v-text-field dense v-model="telefono" label="Telefono"></v-text-field>
                 </v-col>
                 <v-col cols="6">

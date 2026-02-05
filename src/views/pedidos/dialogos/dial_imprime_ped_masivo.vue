@@ -2,7 +2,8 @@
     <v-dialog v-model="dial" max-width="600" persistent>
         <div>
             <v-system-bar window dark>
-
+                <v-icon v-if="tiene_permiso_host" small color="orange" class="mr-2" @click="dial_config_host = true"
+                    title="Configurar Impresión Host">mdi-cog</v-icon>
                 <v-spacer></v-spacer>
                 <v-btn x-small color="success" class="ml-2" @click="imprimirMasivo('A4')"
                     :disabled="!pedidosArray.length">
@@ -56,7 +57,9 @@
             </div>
 
         </v-card>
+        <impresorahost v-if="dial_config_host" @cierra="dial_config_host = false" />
     </v-dialog>
+    
 </template>
 
 <script>
@@ -65,9 +68,13 @@ import { detalle_pedido } from "../../../db";
 import store from "@/store/index";
 import { colClientes } from "../../../db_firestore";
 import { pdfGenera } from "../formatos/orden_pedido.js"; // AJUSTA RUTA si es diferente
+import impresorahost from '@/components/configEmpresa/impresorahost.vue'
 
 export default {
     name: "dial_imprime_ped_masivo",
+    components: {
+        impresorahost
+    },
     props: {
         pedidosFiltrados: { type: Array, default: () => [] },
     },
@@ -86,6 +93,7 @@ export default {
             // control
             selectedIds: [],
             imprimiendo: false,
+            dial_config_host: false,
         };
     },
     created() {
@@ -112,6 +120,9 @@ export default {
         pedidosSeleccionados() {
             const set = new Set(this.selectedIds.map(String));
             return this.pedidosArray.filter(p => set.has(String(p.id)));
+        },
+        tiene_permiso_host() {
+            return store.state.permisos?.permite_impresion_host === true;
         }
     },
 

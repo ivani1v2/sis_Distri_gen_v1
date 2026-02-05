@@ -4,6 +4,8 @@
             <v-system-bar window dark>
                 <v-icon @click="cierra()">mdi-close</v-icon>
                 <v-spacer></v-spacer>
+                <v-icon v-if="tiene_permiso_host" small color="orange" class="mr-2" @click="dial_config_host = true"
+                    title="Configurar Impresión Host">mdi-cog</v-icon>
                 <v-radio-group class="" v-model="medida_comprobante" row dense>
                     <v-radio label="A4" value="A4"></v-radio>
                     <v-radio label="A5" value="A5"></v-radio>
@@ -104,6 +106,8 @@
                 </v-progress-linear>
             </v-card>
         </v-dialog>
+
+        <impresorahost v-if="dial_config_host" @cierra="dial_config_host = false" />
     </v-dialog>
 </template>
 
@@ -124,9 +128,13 @@ import axios from "axios"
 import store from '@/store/index'
 import moment from 'moment'
 import { colClientes } from '../../db_firestore'
+import impresorahost from '../configEmpresa/impresorahost.vue'
+
 export default {
     name: 'caja',
-
+    components: {
+        impresorahost
+    },
     props: {
         data: [],
         detalle: {
@@ -137,6 +145,7 @@ export default {
     data() {
         return {
             dial: false,
+            dial_config_host: false,
             valid: true,
             emailRules: [
                 v => !!v || 'E-mail is required',
@@ -150,6 +159,11 @@ export default {
             seleccionado: '',
             datos_cliente: [],
             medida_comprobante: store.state.configImpresora.tamano
+        }
+    },
+    computed: {
+        tiene_permiso_host() {
+            return store.state.permisos?.permite_impresion_host === true;
         }
     },
     async created() {
@@ -283,15 +297,27 @@ export default {
             console.log(this.datos_cliente)
             item.referencia = this.getReferenciaPrincipal(this.datos_cliente) || this.datos_cliente.referencia || '';
             item.telefono = this.numero || ''
-            if (item.encomienda) {
-                pdfGenera_encomienda(arraydatos, item, this.medida_comprobante, modo === 'descarga' ? 'descarga' : 'abre');
-            } else if (item.pasajeros) {
-                pdfGenera_pasaje(arraydatos, item, this.medida_comprobante, modo === 'descarga' ? 'descarga' : 'abre');
+            let modoFinal = modo;
+            if (modo === 'imprime') {
+                modoFinal = 'abre';
+            } else if (modo === 'descarga') {
+                modoFinal = 'descarga';
             } else {
-                pdfGenera(arraydatos, item, this.medida_comprobante, modo === 'descarga' ? 'descarga' : 'abre');
+                modoFinal = 'abre';
             }
 
-            //this.imprime(resp)
+            if (item.encomienda) {
+                pdfGenera_encomienda(arraydatos, item, this.medida_comprobante, modoFinal);
+            } else if (item.pasajeros) {
+                pdfGenera_pasaje(arraydatos, item, this.medida_comprobante, modoFinal);
+            } else {
+                pdfGenera(arraydatos, item, this.medida_comprobante, modoFinal);
+            }
+
+            if (modo === 'imprime') {
+                store.commit('dialogosnackbar', 'Enviando a impresión...');
+            }
+
             this.progress = false
             this.cierra()
         },

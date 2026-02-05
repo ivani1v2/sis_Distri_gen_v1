@@ -3,9 +3,110 @@ import "jspdf-autotable";
 import store from "@/store/index";
 import moment from "moment";
 import { NumerosALetras } from "numero-a-letras";
+import axios from "axios";
 
 let moneda = "S/";
 let modo_genera = "abre";
+
+function permite_impresion_host() {
+  if (store?.state?.esmovil) return false;
+  const tienePermiso = store?.state?.permisos?.permite_impresion_host === true;
+  const tieneConfig = store?.state?.permisos?.config_impresion_host?.ip_dispositivo;
+  return tienePermiso && tieneConfig;
+}
+
+async function abre_dialogo_impresion_host(doc) {
+  try {
+    const configHost = store?.state?.permisos?.config_impresion_host || {};
+    const IP_PC = configHost.ip_dispositivo || "192.168.1.19";
+    const PORT = configHost.puerto_dispositivo || 8090;
+    const BRIDGE_URL = `http://${IP_PC}:${PORT}/bridge-pdf`;
+    const token = store?.state?.configImpresora?.token_host || configHost.token || "1234";
+    
+    const buffer = doc.output("arraybuffer");
+    const ventana = window.open(
+      BRIDGE_URL, 
+      "_blank", 
+      "width=500,height=400,menubar=no,toolbar=no,location=no,status=no"
+    );
+    
+    if (!ventana) {
+      alert("Permite ventanas emergentes para imprimir.");
+      abre_dialogo_impresion_original(doc);
+      return;
+    }
+
+    const meta = {
+      bd: store?.state?.baseDatos?.bd || "",
+      usuario: store?.state?.permisos?.nombre || "",
+      tipo: "pedido",
+      ts: Date.now(),
+    };
+
+    const mensaje = { 
+      type: "PRINT_PDF", 
+      token, 
+      printer: configHost.nombre_impresora || "POS-80-Series", 
+      meta,
+      pdf: buffer 
+    };
+
+    const timer = setInterval(() => {
+      try {
+        ventana.postMessage(mensaje, "*", [buffer]);
+        clearInterval(timer);
+        setTimeout(() => {
+          try { ventana.close(); } catch (_) {}
+        }, 2000);
+      } catch (e) {}
+    }, 250);
+
+  } catch (e) {
+    console.error("Error impresión host:", e);
+    abre_dialogo_impresion_original(doc);
+  }
+}
+
+
+async function abre_dialogo_impresion_original(doc) {
+  if (store.state.configImpresora.impresora_auto && isElectronEnv()) {
+    axios_imp(doc.output("arraybuffer"));
+    return;
+  }
+  
+  var blob = doc.output("bloburi");
+  var Ancho = screen.width;
+  var Alto = screen.height;
+  var A = (Ancho * 50) / 100;
+  var H = (Alto * 50) / 100;
+  var difA = Ancho - A;
+  var difH = Alto - H;
+  var tope = difH / 2;
+  var lado = difA / 2;
+  var Opciones =
+    "status=no, menubar=no, directories=no, location=no, toolbar=no, scrollbars=yes, resizable=no, width=" +
+    A +
+    ", height=" +
+    H +
+    ", top=" +
+    tope +
+    ", left=" +
+    lado +
+    "";
+  
+  var w = window.open(blob, "_blank", Opciones);
+  if (w) {
+    w.print();
+  }
+}
+
+async function abre_dialogo_impresion(doc) {
+  if (permite_impresion_host()) {
+    await abre_dialogo_impresion_host(doc);
+  } else {
+    await abre_dialogo_impresion_original(doc);
+  }
+}
 
 export const pdfGenera = (cabecera, arraydatos, medida = "80", modo = "abre") => {
   moneda = cabecera?.moneda || "S/";
@@ -971,7 +1072,7 @@ async function impresion58_ordenPedido(cabecera, items = []) {
 
 
 
-function abre_dialogo_impresion(data) {
+/* function abre_dialogo_impresion(data) {
 
   var blob = (data.output("bloburi"))
   var Ancho = screen.width;
@@ -994,7 +1095,7 @@ function abre_dialogo_impresion(data) {
     "";
   var w = window.open(blob, "_blank", Opciones);
   w.print();
-}
+} */
 
 function tabla_A4(array, linea) {
   // Detectar si existe algún descuento en algún ítem

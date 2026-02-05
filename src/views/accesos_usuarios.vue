@@ -18,14 +18,23 @@
         </v-row>
 
         <v-card class="pa-4" v-for="(seccion, index) in secciones" :key="index">
-            <v-card-title class="mt-n6">{{ seccion.titulo }}</v-card-title>
+            <v-card-title class="mt-n6">
+                {{ seccion.titulo }}
+                <v-icon v-if="seccion.titulo === 'Impresión Host' && tiene_permiso_host" small color="orange"
+                    class="ml-2" @click="dial_config_host = true" title="Configurar Impresión Host"
+                    style="cursor: pointer;">
+                    mdi-cog
+                </v-icon>
+            </v-card-title>
+
             <v-row dense v-for="(item, idx) in seccion.items" :key="idx" class="mt-n8">
                 <v-col cols="6" v-for="(permiso, pIdx) in item" :key="pIdx">
                     <div class="d-flex align-center">
                         <v-checkbox dense v-model="permisosususario[permiso.value]" :label="permiso.label" />
                         <v-tooltip v-if="permiso.tooltip" top>
                             <template v-slot:activator="{ on, attrs }">
-                                <v-icon small class="ml-1" color="red" v-bind="attrs" v-on="on">mdi-information-outline</v-icon>
+                                <v-icon small class="ml-1" color="red" v-bind="attrs"
+                                    v-on="on">mdi-information-outline</v-icon>
                             </template>
                             <span>{{ permiso.tooltip }}</span>
                         </v-tooltip>
@@ -33,14 +42,21 @@
                 </v-col>
             </v-row>
         </v-card>
+        <v-dialog v-model="dial_config_host" max-width="600" persistent>
+            <impresorahost @cierra="dial_config_host = false" />
+        </v-dialog>
     </v-container>
 </template>
 
 <script>
 import { buscarUsuarios, nuevoUsuario } from '../db';
 import store from '@/store';
+import impresorahost from '@/components/configEmpresa/impresorahost.vue';
 
 export default {
+    components: {
+        impresorahost
+    },
     data() {
         return {
             permisosususario: {},
@@ -61,6 +77,14 @@ export default {
                             { label: 'BONO AUTOMATICO ESTRICTO', value: 'permite_editar_bono', tooltip: 'Si esta activo, los bonos automaticos son estaticos no permite agregar mas o quitar. calculo Estricto de la logica' },
                             { label: 'PRECIO AUTOMATICO ESTRICTO', value: 'permite_editar_precio', tooltip: 'Si esta activo, los precios por escala son estaticos. No permite modificar cantidad ni eliminar productos con precio mayorista aplicado' },
                         ]
+                    ],
+                },
+                {
+                    titulo: 'Impresión Host',
+                    items: [
+                        [
+                            { label: 'Activar Impresión Host', value: 'permite_impresion_host', tooltip: 'Permite imprimir directamente desde el bridge instalado en la PC del usuario. Cada usuario configura su propia IP, puerto e impresora.' },
+                        ],
                     ],
                 },
                 {
@@ -167,10 +191,10 @@ export default {
                             { label: 'Edita Fecha', value: 'edita_fecha' },
                             { label: 'Proformas', value: 'proforma' },
                         ],
-                           [
+                        [
                             { label: 'Agregar Producto ', value: 'agrega_producto' },
 
-                            { label: 'Edita Bono', value: 'edita_bono' ,tooltip: 'Permite al momento de pedido o venta, convertir un producto en bono o tambien quitarlo.'},
+                            { label: 'Edita Bono', value: 'edita_bono', tooltip: 'Permite al momento de pedido o venta, convertir un producto en bono o tambien quitarlo.' },
                         ],
                     ],
                 },
@@ -207,15 +231,21 @@ export default {
                         ],
                         [
                             { label: 'Avance de Ventas', value: 'reporte_avance' },
-                           
+
                         ],
                     ],
                 },
             ],
+            dial_config_host: false,
         };
     },
     created() {
         this.inicio();
+    },
+    computed: {
+        tiene_permiso_host() {
+            return this.permisosususario?.permite_impresion_host === true;
+        }
     },
     methods: {
         inicio() {

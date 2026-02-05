@@ -59,9 +59,9 @@
                     </template>
                     <v-list dense class="py-1">
                         <v-list-item @click="envia_sunat" :disabled="periodoCerrado">
-    <v-list-item-icon><v-icon color="green">mdi-cloud-upload</v-icon></v-list-item-icon>
-    <v-list-item-title>Enviar a Sunat</v-list-item-title>
-</v-list-item>
+                            <v-list-item-icon><v-icon color="green">mdi-cloud-upload</v-icon></v-list-item-icon>
+                            <v-list-item-title>Enviar a Sunat</v-list-item-title>
+                        </v-list-item>
                         <v-list-item @click="abare_guias()">
                             <v-list-item-icon><v-icon color="cyan darken-2">mdi-file-send</v-icon></v-list-item-icon>
                             <v-list-item-title>Generar Guía</v-list-item-title>
@@ -101,9 +101,10 @@
                     </v-col>
                     <v-col cols="12" sm="4">
                         <h4 class="text-subtitle-1">
-                            TOTAL VENTA: <span class="green--text text--darken-2">{{moneda}} {{ t_general }}</span>
+                            TOTAL VENTA: <span class="green--text text--darken-2">{{ moneda }} {{ t_general }}</span>
                         </h4>
-                        <span class="caption">Contado: {{moneda}}  {{ t_contado }} | Crédito: {{moneda}} {{ t_credito }}</span>
+                        <span class="caption">Contado: {{ moneda }} {{ t_contado }} | Crédito: {{ moneda }} {{ t_credito
+                        }}</span>
                     </v-col>
                 </v-row>
             </v-card-text>
@@ -325,7 +326,11 @@
             <v-card class="rounded-lg">
                 <v-toolbar color="teal darken-2" dense dark><v-toolbar-title>Seleccionar
                         Formato</v-toolbar-title><v-spacer></v-spacer><v-btn icon
-                        @click="dialogo_imprime = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                        @click="dialogo_imprime = false">
+                        <v-icon>mdi-close</v-icon></v-btn>
+                    <v-icon v-if="tiene_permiso_host" small color="orange" class="mr-2" @click="dial_config_host = true"
+                        title="Configurar Impresión Host">mdi-cog</v-icon>
+                </v-toolbar>
                 <v-card-text class="pa-4">
                     <v-row dense>
                         <v-col cols="12" md="4">
@@ -386,11 +391,11 @@
                 </div>
             </v-card>
         </v-dialog>
-
         <genera_guias v-if="dialogo_guia" @cierra="dialogo_guia = false" @graba="carga_Guia()" :data_guia="data_guia" />
         <dialogo_edita_c v-if="dialogo_edita_" @cierra="dialogo_edita_ = false, recalcula_cabecera()"
             :cabecera="cabecera_selecta" :detalle="detalle_selecto" />
         <imprime v-if="genera_pdf" :data="seleccionado" :detalle="detalle_selecto" @cierra="genera_pdf = $event" />
+        <impresorahost v-if="dial_config_host" @cierra="dial_config_host = false" />
     </div>
 </template>
 
@@ -408,13 +413,13 @@ import {
     nueva_cabecera_reparto,
     all_periodos
 } from '../../db'
-
 import store from '@/store/index'
 import fab_periodos from '@/components/fab_periodos'
 import XLSX from 'xlsx'
 import moment from 'moment'
 import dialogo_edita_c from './dialogos/dialogo_edita_c'
 import genera_guias from './dialogos/genera_guias.vue'
+import impresorahost from '@/components/configEmpresa/impresorahost.vue'
 import {
     pdfGenera
 } from '../../pdf_comprobantes'
@@ -437,6 +442,7 @@ export default {
         dialogo_edita_c,
         imprime,
         genera_guias,
+        impresorahost
     },
     data() {
         return {
@@ -508,11 +514,12 @@ export default {
             formato_descarga: 'F1', // 👈 NUEVO: formato por defecto
             moneda: 'S/',
             periodosBD: {},
-            _periodoRef: null
+            _periodoRef: null,
+            dial_config_host: false,
         }
     },
     created() {
-this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
+        this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         this.router_grupo = this.$route.params.id
         this.inicio()
 
@@ -533,28 +540,31 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
         }
     },
     computed: {
+        tiene_permiso_host() {
+            return store.state.permisos?.permite_impresion_host === true;
+        },
         printPercent() {
             return this.printTotal ? (this.printDone / this.printTotal) * 100 : 0;
         },
         periodoCerrado() {
-        const fechaRef = this.cabecera_total?.fecha_comprobantes || this.cabecera_total?.fecha_traslado;
-        if (!fechaRef) return false;
-        
-        const periodoKey = moment.unix(fechaRef).format('YYYY-MM');
-        const periodo = this.periodosBD[periodoKey];
-        
-        if (!periodo) {
-            console.warn(`No se encontró período ${periodoKey} en periodosBD:`, this.periodosBD);
-            return false;
-        }
-        
-        return periodo.estado === 'close';
-    },
+            const fechaRef = this.cabecera_total?.fecha_comprobantes || this.cabecera_total?.fecha_traslado;
+            if (!fechaRef) return false;
+
+            const periodoKey = moment.unix(fechaRef).format('YYYY-MM');
+            const periodo = this.periodosBD[periodoKey];
+
+            if (!periodo) {
+                console.warn(`No se encontró período ${periodoKey} en periodosBD:`, this.periodosBD);
+                return false;
+            }
+
+            return periodo.estado === 'close';
+        },
         periodoActualKey() {
-        const fechaRef = this.cabecera_total?.fecha_comprobantes || this.cabecera_total?.fecha_traslado;
-        if (!fechaRef) return '';
-        return moment.unix(fechaRef).format('YYYY-MM');
-    },
+            const fechaRef = this.cabecera_total?.fecha_comprobantes || this.cabecera_total?.fecha_traslado;
+            if (!fechaRef) return '';
+            return moment.unix(fechaRef).format('YYYY-MM');
+        },
         suma_pedidos() {
             let total = 0;
             let sum_soles = 0;
@@ -603,7 +613,7 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
     methods: {
         async genera_guia(data) {
             store.commit("dialogoprogress", 1)
-            const snapshot = await all_detalle_p(this.router_grupo,data.numeracion).once("value");
+            const snapshot = await all_detalle_p(this.router_grupo, data.numeracion).once("value");
             var array = {
                 arrayCabecera: data,
                 array_item: snapshot.val()
@@ -1058,7 +1068,7 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
                     snapshot.forEach((item) => {
                         const producto = item.val();
                         const invet = store.state.productos.find((id) => String(id.id) === String(producto.id));
-                        console.log(producto.id,invet)
+                        console.log(producto.id, invet)
                         if (!invet) return;
 
                         let cantidad = parseFloat(producto.cantidad) * parseFloat(invet.factor);
@@ -1124,25 +1134,11 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
                 return;
             }
 
-            // Si estás en navegador de escritorio y NO en Electron y usas deep-link → lanzas y no puedes trackear progreso real
-            if (this.esEscritorioNavegador && this.esEscritorioNavegador()) {
-                // Opción: muestra diálogo corto informativo (no progreso real) o solo un snackbar
-                this.$store.commit('dialogosnackbar', 'Enviando a la app de escritorio…');
-                this.abrirElectronDeepLink && this.abrirElectronDeepLink({
-                    accion: 'imprimir_comprobantes',
-                    id_reparto: this.router_grupo,
-                    cantidad: array.length
-                });
-                return;
-            }
-
-            // Flujo local (web/Electron): mostramos progreso real
             this.printTotal = array.length;
             this.printDone = 0;
             this.printError = '';
             this.printDialog = true;
 
-            // Arranca impresión recursiva
             this.impresion_comp(array, 0, tamano);
         },
 
@@ -1152,34 +1148,25 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
                     const data = array[i];
                     const snapshot = await all_detalle_p(this.router_grupo, data.numeracion).once("value");
                     const arraydatos = snapshot.val();
-
                     if (snapshot.exists()) {
-                        // Llama tu generador de PDF (sin cambios de lógica)
                         const doc = await colClientes().doc(String(data.dni)).get();
                         if (doc.exists) {
                             const datas = doc.data() || {}
                             data.referencia = this.getReferenciaPrincipal(datas) || datas.referencia || '';
-                            console.log(data.referencia)
                         }
                         await pdfGenera(arraydatos, data, tamano, 'abre');
                     }
-
-                    // ✔️ Avanza el progreso
                     this.printDone = i + 1;
-
-                    // Pequeño delay para no bloquear UI; ajusta si necesitas más/menos tiempo
-                    setTimeout(() => this.impresion_comp(array, i + 1, tamano), 300);
+                    await this.impresion_comp(array, i + 1, tamano);
                 } else {
-                    // ✔️ Terminado
                     this.$store.commit('dialogosnackbar', 'Impresión finalizada.');
                     this.printDialog = false;
                 }
             } catch (e) {
                 console.error(e);
                 this.printError = 'Ocurrió un error durante la impresión.';
-                // Avanzamos igualmente para no colgar el proceso y continuar con el siguiente
                 this.printDone = Math.min(i + 1, this.printTotal);
-                setTimeout(() => this.impresion_comp(array, i + 1, tamano), 300);
+                await this.impresion_comp(array, i + 1, tamano);
             }
         },
         getReferenciaPrincipal(cliente) {
