@@ -42,9 +42,9 @@
                 </v-col>
             </v-row>
         </v-card>
-        <v-dialog v-model="dial_config_host" max-width="600" persistent>
-            <impresorahost @cierra="dial_config_host = false" />
-        </v-dialog>
+
+        <impresorahost v-if="dial_config_host" @cierra="dial_config_host = false" />
+
     </v-container>
 </template>
 

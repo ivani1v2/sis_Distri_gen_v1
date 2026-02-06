@@ -6,7 +6,7 @@
                 <div class="d-flex align-center mb-3">
                     <v-icon :large="$vuetify.breakpoint.mdAndUp" left color="blue-grey darken-3">mdi-cash-multiple</v-icon>
                     <span :class="{'text-h5': $vuetify.breakpoint.mdAndUp, 'text-h6': $vuetify.breakpoint.smAndDown}"
-                          class="font-weight-bold blue-grey--text text--darken-3">Cuentas por Cobrar</span>
+                          class="font-weight-bold blue-grey--text text--darken-3">Reporte Ventas General</span>
                     <v-spacer></v-spacer>
 
                     <v-btn color="success" small @click="exportToExcel" class="ml-2 font-weight-medium">

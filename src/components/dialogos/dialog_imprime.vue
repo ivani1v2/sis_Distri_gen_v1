@@ -4,8 +4,10 @@
             <v-system-bar window dark>
                 <v-icon @click="cierra()">mdi-close</v-icon>
                 <v-spacer></v-spacer>
-                <v-icon v-if="tiene_permiso_host" small color="orange" class="mr-2" @click="dial_config_host = true"
-                    title="Configurar Impresión Host">mdi-cog</v-icon>
+                <v-btn  v-if="!isMobile" x-small color="orange" dark  @click="dial_config_host = true">
+                    Config
+                </v-btn>       
+                <v-spacer></v-spacer>
                 <v-radio-group class="" v-model="medida_comprobante" row dense>
                     <v-radio label="A4" value="A4"></v-radio>
                     <v-radio label="A5" value="A5"></v-radio>
@@ -162,9 +164,9 @@ export default {
         }
     },
     computed: {
-        tiene_permiso_host() {
-            return store.state.permisos?.permite_impresion_host === true;
-        }
+        isMobile() {
+            return this.$vuetify && this.$vuetify.breakpoint.smAndDown;
+        },
     },
     async created() {
         this.seleccionado = this.data
@@ -305,15 +307,7 @@ export default {
             } else {
                 modoFinal = 'abre';
             }
-
-            if (item.encomienda) {
-                pdfGenera_encomienda(arraydatos, item, this.medida_comprobante, modoFinal);
-            } else if (item.pasajeros) {
-                pdfGenera_pasaje(arraydatos, item, this.medida_comprobante, modoFinal);
-            } else {
-                pdfGenera(arraydatos, item, this.medida_comprobante, modoFinal);
-            }
-
+            pdfGenera(arraydatos, item, this.medida_comprobante, modoFinal);
             if (modo === 'imprime') {
                 store.commit('dialogosnackbar', 'Enviando a impresión...');
             }
@@ -321,42 +315,7 @@ export default {
             this.progress = false
             this.cierra()
         },
-        imprime(datas) {
-            // pc_print(data)
-            var nom_impresora = 'Microsoft Print to PDF'
-            console.log(datas)
-            const form = new FormData()
-            //var nom_impresora = 'ZDesigner GT800 (EPL)' 
 
-            // fileInputElement
-            let file = new File([datas], "img.pdf", { type: "application/pdf", lastModified: new Date().getTime() });
-            let container = new DataTransfer();
-            container.items.add(file);
-            console.log(container.files)
-            document.getElementById("id_file").files = container.files;
-            //document.getElementById("id_file").value = data
-            document.getElementById("id_impresora").value = nom_impresora
-            var a = window.open('', 'TheWindow', 'left=5000,top=5000,width=0,height=0')
-            document.getElementById('id_form').submit()
-            /* setTimeout(function () {
-                 a.close();
-                 //  resolve(true)
-             }, 1000);* /
- 
-             /*     const ff = document.getElementById('id_form')
-                  document.getElementById("id_file").value = data
-                  document.getElementById("id_impresora").value = nom_impresora
-                  ff.addEventListener('submit', function (event) {
-                      event.preventDefault()
-                      const fi = document.getElementById('id_file')
-                      const uf = fi.files[0]
-                      const bd = new Blob([uf], { type: uf.type })
-                      const bu = URL.createObjectURL(bd)
-                      window.open(bu, '_blank')
-                      URL.revokeObjectURL(bu)
-                  })*/
-
-        },
         getReferenciaPrincipal(cliente) {
             if (!cliente || !Array.isArray(cliente.direcciones) || cliente.direcciones.length === 0) return '';
             const dir = cliente.direcciones.find(d => d && d.principal) || cliente.direcciones[0];

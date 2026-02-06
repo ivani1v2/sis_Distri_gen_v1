@@ -53,6 +53,7 @@ async function abre_dialogo_impresion(doc) {
       type: "PRINT_PDF", 
       token, 
       printer: configHost.nombre_impresora || "POS-80-Series", 
+      copies: 1,
       meta, 
       pdf: buffer 
     };
@@ -61,9 +62,7 @@ async function abre_dialogo_impresion(doc) {
       try {
         ventana.postMessage(mensaje, "*", [buffer]);
         clearInterval(timer);
-        setTimeout(() => {
-          try { ventana.close(); } catch (_) {}
-        }, 2000);
+
       } catch (e) {}
     }, 250);
     
@@ -1083,29 +1082,30 @@ async function impresion80(arraydatos, qr, cabecera) {
 
   switch (modo_genera) {
     case "abre":
-    if (store.state.esmovil) {
-      // Generar el PDF como blob
+ if (store.state.esmovil) {
       const arrayBuffer = doc.output("arraybuffer");
-      const blob = new Blob([arrayBuffer], { type: "application/pdf" });
-      const file = new File(
-        [blob],
-        `${arraycabe.serie}-${arraycabe.correlativoDocEmitido}.pdf`,
-        {
-          type: "application/pdf",
-        }
-      );
+        const blob = new Blob([arrayBuffer], { type: "application/pdf" });
+        const file = new File(
+          [blob],
+          `${arraycabe.serie}-${arraycabe.correlativoDocEmitido}.pdf`,
+          {
+            type: "application/pdf",
+          }
+        );
 
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({
-            title: "Enviar comprobante",
-            text: "Selecciona una app para compartir o imprimir",
-            files: [file],
-          });
-        } catch (err) {
-          // alert("No se pudo compartir el archivo: " + err.message);
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              title: "Enviar comprobante",
+              text: "Selecciona una app para compartir o imprimir",
+              files: [file],
+            });
+          } catch (err) {
+          }
+        } else {
+          const url = URL.createObjectURL(blob);
+          window.open(url, "_blank");
         }
-      }
       } else {
         abre_dialogo_impresion(doc);
       }

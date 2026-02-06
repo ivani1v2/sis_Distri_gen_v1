@@ -169,7 +169,29 @@
                         <v-list-item-title>Catalogo</v-list-item-title>
                     </v-list-item>
                 </v-list-group>
-
+                <v-list-group :value="listaMenu" prepend-icon="mdi-account-convert">
+                    <template v-slot:activator>
+                        <v-list-item-title>Empleados</v-list-item-title>
+                    </template>
+                    <v-container>
+                        <v-list-item disabled link @click.prevent="router('clientes')">
+                            <v-list-item-icon>
+                                <v-icon>mdi-clipboard-list</v-icon>
+                            </v-list-item-icon>
+                            <v-list-item-content>
+                                <v-list-item-title>Lista Empleados</v-list-item-title>
+                            </v-list-item-content>
+                        </v-list-item>
+                        <v-list-item disabled link @click.prevent="router('comprasClientes')">
+                            <v-list-item-icon>
+                                <v-icon>mdi-list-status</v-icon>
+                            </v-list-item-icon>
+                            <v-list-item-content>
+                                <v-list-item-title>Control Asistencia</v-list-item-title>
+                            </v-list-item-content>
+                        </v-list-item>
+                    </v-container>
+                </v-list-group>
                 <v-list-group v-if="$store.state.permisos.moduloFinanzas" :value="listaMenu" prepend-icon="mdi-finance"
                     color="primary">
                     <template v-slot:activator>
@@ -179,7 +201,7 @@
                         <v-list-item-icon><v-icon small>mdi-bank</v-icon></v-list-item-icon>
                         <v-list-item-title>Tesoreria</v-list-item-title>
                     </v-list-item>
-                    <v-list-item v-if="$store.state.permisos.cuentas_cobrar" link
+                    <v-list-item v-if="$store.state.permisos.modulocuentasxcobrar" link
                         @click.prevent="router('cuentas_cobrar')">
                         <v-list-item-icon><v-icon small>mdi-cash-remove</v-icon></v-list-item-icon>
                         <v-list-item-title>C x Cobrar</v-list-item-title>
@@ -206,11 +228,12 @@
                         <v-list-item-icon><v-icon small>mdi-truck-fast-outline</v-icon></v-list-item-icon>
                         <v-list-item-title>Transferencias</v-list-item-title>
                     </v-list-item>
-                    <v-list-item link @click.prevent="router('reporte_stock')">
+                    <v-list-item link @click.prevent="router('reporte_stock')" v-if="$store.state.baseDatos.kardex_avanzado">
                         <v-list-item-icon><v-icon small>mdi-counter</v-icon></v-list-item-icon>
                         <v-list-item-title>Stock Actual</v-list-item-title>
                     </v-list-item>
-                    <v-list-item v-if="$store.state.permisos.modulokardex" link @click.prevent="router('stock_x_periodo')">
+                    <v-list-item v-if="$store.state.baseDatos.kardex_avanzado"" link
+                        @click.prevent="router('stock_x_periodo')">
                         <v-list-item-icon><v-icon small>mdi-calendar-clock</v-icon></v-list-item-icon>
                         <v-list-item-title>Stock x Período</v-list-item-title>
                     </v-list-item>
@@ -507,11 +530,15 @@ export default {
     computed: {
         esCaja2() {
             return this.$route.path === "/caja2";
-        }
+        },
+         isMobile() {
+            return this.$vuetify && this.$vuetify.breakpoint.smAndDown;
+        },
     },
     created() {
 
     },
+    
     methods: {
         abrir_flujo() {
             this.$router.push('/flujocaja'); // Redirige a la ruta flujocaja
@@ -560,7 +587,7 @@ export default {
             store.commit('BD', snapshot.val())
             localStorage.setItem('ruc_asociado', snapshot.val().ruc_asociado);
 
-            store.commit('esmovil', isMobile.isAndroid)
+            store.commit('esmovil', this.isMobile)
             if (snapshot.exists()) {
                 this.obtenconfiguracion()
                 this.notificaciones(snapshot.val())
