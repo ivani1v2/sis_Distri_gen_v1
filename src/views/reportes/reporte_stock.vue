@@ -70,7 +70,7 @@
             <v-btn small class="mr-2" color="green darken-1" dark @click="exportarExcel">
               <v-icon left>mdi-file-excel</v-icon> Excel
             </v-btn>
-            <v-btn small color="red darken-1" dark @click="exportarPDF">
+            <v-btn small color="red darken-1" dark @click="dialogoPDF = true">
               <v-icon left>mdi-file-pdf-box</v-icon> PDF
             </v-btn>
           </v-toolbar>
@@ -97,6 +97,31 @@
         </template>
       </v-data-table>
     </v-card>
+    <v-dialog v-model="dialogoPDF" max-width="490px">
+      <v-card class="pa-1">
+        <v-system-bar window dark>
+          <v-icon @click="dialogoPDF = false">mdi-close</v-icon>
+          <v-spacer></v-spacer>
+          <span>Seleccionar formato</span>
+        </v-system-bar>
+        <v-row dense class="pa-3">
+          <v-col cols="6">
+            <v-card @click="exportarPDF('A4')" class="hover-card text-center pa-3" style="cursor: pointer;">
+              <v-icon size="40" color="red">mdi-file-pdf-box</v-icon>
+              <h5 class="pa-1">PDF A4</h5>
+              <div class="caption grey--text">Formato completo</div>
+            </v-card>
+          </v-col>
+          <v-col cols="6">
+            <v-card @click="exportarPDF('80')" class="hover-card text-center pa-3" style="cursor: pointer;">
+              <v-icon size="40" color="red">mdi-file-pdf-box</v-icon>
+              <h5 class="pa-1">PDF 80mm</h5>
+              <div class="caption grey--text">Formato ticket</div>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -124,6 +149,7 @@ export default {
     sede_filtro: null,
     soloConStock: false,
     productosPorSede: [],
+    dialogoPDF: false,
   }),
 
   computed: {
@@ -143,7 +169,7 @@ export default {
         esPrincipal: s.base === store.state.sedeActual?.codigo
       }))
     },
-    
+
     sedePrincipal() {
       return store.state.sedeActual?.codigo || null
     },
@@ -160,7 +186,7 @@ export default {
         { text: 'ID', value: 'id', align: 'start' },
         { text: 'Categoría', value: 'categoria' },
         { text: 'Nombre', value: 'nombre' },
-        { text: 'Medida', value: 'medida'},
+        { text: 'Medida', value: 'medida' },
         { text: `Costo (${simbolo})`, value: 'costo' },
         { text: 'Stock', value: 'stock' },
         { text: `Precio V (${simbolo})`, value: 'precio' },
@@ -381,18 +407,18 @@ export default {
 
         const filtrosInfo = []
         filtrosInfo.push(`Sede: ${this.nombreSedeActual}`)
-        
+
         if (this.filtro_categoria && this.filtro_categoria !== 'TODOS') {
           filtrosInfo.push(`Categoría: ${this.filtro_categoria}`)
         }
-                
+
         if (this.soloConStock) {
           filtrosInfo.push('Solo con stock ≥ 1')
         }
 
         const libro = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(libro, hoja, 'Productos')
-      
+
         if (filtrosInfo.length > 0) {
           const infoSheet = XLSX.utils.aoa_to_sheet([
             ['REPORTE DE PRODUCTOS'],
@@ -403,139 +429,242 @@ export default {
             ['Fecha de exportación:', new Date().toLocaleString('es-PE')],
             ['Total registros:', data.length]
           ])
-          
+
           XLSX.utils.book_append_sheet(libro, infoSheet, 'Información')
         }
 
         let nombreBase = 'productos'
-        
+
         const sedeNombre = this.nombreSedeActual.replace(/\s+/g, '_')
         nombreBase += `_${sedeNombre}`
-        
+
         if (this.filtro_categoria && this.filtro_categoria !== 'TODOS') {
           const catNombre = this.filtro_categoria.replace(/\s+/g, '_')
           nombreBase += `_${catNombre}`
         }
-        
+
         if (this.soloConStock) {
           nombreBase += '_con-stock'
         }
-        
+
         const nombre = `${nombreBase}_${this.nowString()}.xlsx`
         XLSX.writeFile(libro, nombre)
         let msg = `Exportado: ${data.length} productos de ${this.nombreSedeActual}`
         if (this.filtro_categoria !== 'TODOS') msg += `, categoría ${this.filtro_categoria}`
         if (this.soloConStock) msg += ' (solo con stock)'
-        
+
         console.log(msg)
-        
+
       } catch (e) {
         console.error('Error exportando a Excel', e)
         alert('No se pudo exportar a Excel.')
       }
     },
 
-    // ——— Exportar a PDF ———
-    async exportarPDF() {
+    async exportarPDF(formato = null) {
       try {
+        if (!formato) {
+          this.dialogoPDF = true
+          return
+        }
+
         const { jsPDF } = await import('jspdf')
         await import('jspdf-autotable')
 
-        const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'A4' })
+        const isTicket = formato === '80'
 
-        doc.setFontSize(14)
-        doc.text(`Reporte de Productos - ${this.nombreSedeActual}`, 40, 32)
-        
-        doc.setFontSize(10)
-        doc.text(`Fecha: ${new Date().toLocaleString('es-PE')}`, 40, 48)
+        const config = isTicket
+          ? { orientation: 'portrait', unit: 'mm', format: [80, 297] }
+          : { orientation: 'landscape', unit: 'mm', format: 'a4' }
 
-        let filtrosText = ''
+        const doc = new jsPDF(config)
+
+        const marginLeft = isTicket ? 2 : 10
+        const fontSizeTitle = isTicket ? 9 : 14
+        const fontSizeNormal = isTicket ? 7 : 10
+        const fontSizeSmall = isTicket ? 6 : 9
+        const lineHeight = isTicket ? 4 : 6
+
+        let currentY = 10
+
+        doc.setFontSize(fontSizeTitle)
+        doc.setFont('helvetica', 'bold')
+        doc.text(`INVENTARIO - ${this.nombreSedeActual}`, marginLeft, currentY)
+        currentY += lineHeight * 1.5
+
+        doc.setFontSize(fontSizeNormal)
+        doc.setFont('helvetica', 'normal')
+        doc.text(`Fecha: ${new Date().toLocaleDateString('es-PE')}`, marginLeft, currentY)
+        currentY += lineHeight
+
+        const filtros = []
         if (this.filtro_categoria && this.filtro_categoria !== 'TODOS') {
-          filtrosText += `Categoría: ${this.filtro_categoria} | `
+          filtros.push(`Categoría: ${this.filtro_categoria}`)
         }
         if (this.soloConStock) {
-          filtrosText += 'Solo con stock | '
-        }
-        filtrosText = filtrosText.replace(/\s\|\s$/, '')
-        
-        if (filtrosText) {
-          doc.text(filtrosText, 40, 64)
+          filtros.push('Solo con stock')
         }
 
-        doc.setFontSize(10)
-        const k1 = `Suma Stock: ${this.formatNumber(this.kpi.sumaStock)}`
-        const k2 = `Suma Total Costo: ${this.monedaSimbolo} ${this.formatMoney(this.kpi.sumaTotalCosto)}`
-        const k3 = `Suma Total Venta: ${this.monedaSimbolo} ${this.formatMoney(this.kpi.sumaTotalVenta)}`
-        doc.text(`${k1}   |   ${k2}   |   ${k3}`, 40, filtrosText ? 80 : 64)
+        if (filtros.length > 0) {
+          doc.setFontSize(fontSizeSmall)
+          doc.text(`Filtros: ${filtros.join(', ')}`, marginLeft, currentY)
+          currentY += lineHeight
+        }
 
-        const rows = this.filasExport().map(r => ([
-          r.ID,
-          r.Categoria,
-          r.Nombre,
-          r.Medida,
-          `${this.monedaSimbolo} ${this.formatMoney(r.Costo)}`,
-          r.Stock,
-          `${this.monedaSimbolo} ${this.formatMoney(r.PrecioVenta)}`,
-          `${this.monedaSimbolo} ${this.formatMoney(r.TotalCosto)}`,
-          `${this.monedaSimbolo} ${this.formatMoney(r.TotalVenta)}`
-        ]))
+        if (!isTicket) {
+          doc.setFontSize(fontSizeSmall)
+          doc.text(`Total productos: ${this.listafiltrada.length} | Stock total: ${this.formatNumber(this.kpi.sumaStock)}`, marginLeft, currentY)
+          currentY += lineHeight
+          doc.text(`Costo total: ${this.monedaSimbolo}${this.formatMoney(this.kpi.sumaTotalCosto)} | Venta total: ${this.monedaSimbolo}${this.formatMoney(this.kpi.sumaTotalVenta)}`, marginLeft, currentY)
+          currentY += lineHeight * 1.5
+        } else {
+          doc.setFontSize(fontSizeSmall)
+          doc.text(`Prod: ${this.listafiltrada.length} | Stock: ${this.formatNumber(this.kpi.sumaStock)}`, marginLeft, currentY)
+          currentY += lineHeight * 1.5
+        }
 
-        const head = [[
-          'ID', 'Categoría', 'Nombre', 'Medida', `Costo (${this.monedaSimbolo})`, 'Stock',
-          `Precio V (${this.monedaSimbolo})`, `Total Costo (${this.monedaSimbolo})`, `Total Venta (${this.monedaSimbolo})`
-        ]]
+        const headers = isTicket
+          ? [['ID', 'PRODUCTO', 'MED', 'STOCK']]
+          : [['ID', 'CATEGORÍA', 'NOMBRE', 'MEDIDA', `COSTO (${this.monedaSimbolo})`, 'STOCK', `P. VENTA (${this.monedaSimbolo})`, `T. COSTO (${this.monedaSimbolo})`, `T. VENTA (${this.monedaSimbolo})`]]
 
-        const startY = filtrosText ? 96 : 80
-        
-        doc.autoTable({
-          head,
-          body: rows,
-          startY: startY,
-          styles: { fontSize: 8, cellPadding: 4 },
-          headStyles: { fillColor: [33, 150, 243] },
-          columnStyles: {
-            0: { cellWidth: 50 },
-            1: { cellWidth: 80 },
-            2: { cellWidth: 180 },
-            3: { cellWidth: 60 },
-            4: { halign: 'right', cellWidth: 70 },
-            5: { halign: 'right', cellWidth: 60 },
-            6: { halign: 'right', cellWidth: 70 },
-            7: { halign: 'right', cellWidth: 70 },
-            8: { halign: 'right', cellWidth: 70 },
-          },
-          didDrawPage: (data) => {
-            const footerText = `Página ${doc.internal.getNumberOfPages()} - ${this.nombreSedeActual}`
-            doc.setFontSize(8)
-            doc.text(footerText, doc.internal.pageSize.getWidth() - 60, doc.internal.pageSize.getHeight() - 10)
+        const rows = this.listafiltrada.map(item => {
+          if (isTicket) {
+            let nombre = item.nombre || ''
+            let medida = item.medida || ''
+
+            return [
+              item.id || '',
+              nombre,
+              medida,
+              this.convierte_stock(item.stock, item.factor)
+            ]
+          } else {
+            const costoN = this.toNumber(item.costo)
+            const precioN = this.toNumber(item.precio)
+            const stockN = this.toNumber(item.stock)
+
+            return [
+              item.id || '',
+              item.categoria || '',
+              item.nombre || '',
+              item.medida || '',
+              this.formatMoney(costoN),
+              this.convierte_stock(item.stock, item.factor),
+              this.formatMoney(precioN),
+              this.formatMoney(costoN * stockN),
+              this.formatMoney(precioN * stockN)
+            ]
           }
         })
 
-        let nombreBase = 'productos'
+        const columnStyles = isTicket
+          ? {
+            0: { cellWidth: 10, fontSize: 6 },
+            1: { cellWidth: 45, fontSize: 6 },
+            2: { cellWidth: 8, fontSize: 6 },
+            3: { cellWidth: 10, fontSize: 6, halign: 'right' }
+          }
+          : {
+            0: { cellWidth: 20, fontSize: fontSizeSmall },
+            1: { cellWidth: 30, fontSize: fontSizeSmall },
+            2: { cellWidth: 50, fontSize: fontSizeSmall },
+            3: { cellWidth: 25, fontSize: fontSizeSmall },
+            4: { cellWidth: 25, fontSize: fontSizeSmall, halign: 'right' },
+            5: { cellWidth: 25, fontSize: fontSizeSmall, halign: 'right' },
+            6: { cellWidth: 30, fontSize: fontSizeSmall, halign: 'right' },
+            7: { cellWidth: 30, fontSize: fontSizeSmall, halign: 'right' },
+            8: { cellWidth: 30, fontSize: fontSizeSmall, halign: 'right' }
+          }
+
+        const styles = isTicket
+          ? {
+            fontSize: 6,
+            cellPadding: 1,
+            lineColor: [0, 0, 0],
+            lineWidth: 0.1,
+            font: 'helvetica',
+            overflow: 'linebreak'
+          }
+          : {
+            fontSize: fontSizeSmall,
+            cellPadding: 2,
+            lineColor: [0, 0, 0],
+            lineWidth: 0.1,
+            font: 'helvetica'
+          }
+
+        doc.autoTable({
+          head: headers,
+          body: rows,
+          startY: currentY,
+          margin: { left: marginLeft, right: marginLeft },
+          styles: styles,
+          headStyles: {
+            fillColor: [255, 255, 255],
+            textColor: [0, 0, 0],
+            fontSize: isTicket ? 6 : fontSizeSmall,
+            fontStyle: 'bold',
+            lineWidth: 0.1
+          },
+          columnStyles: columnStyles,
+          tableWidth: isTicket ? 'wrap' : 'auto',
+          theme: 'grid',
+          didDrawPage: (data) => {
+            const pageCount = doc.internal.getNumberOfPages()
+            const pageWidth = doc.internal.pageSize.getWidth()
+            const pageHeight = doc.internal.pageSize.getHeight()
+
+            doc.setFontSize(6)
+            doc.setFont('helvetica', 'normal')
+            const footerText = `Página ${data.pageNumber} de ${pageCount} - ${this.nombreSedeActual}`
+
+            if (isTicket) {
+              doc.text(footerText, pageWidth / 2, pageHeight - 5, { align: 'center' })
+            } else {
+              doc.text(footerText, pageWidth - marginLeft, pageHeight - 10, { align: 'right' })
+            }
+          }
+        })
+
+        let nombreBase = 'inventario'
         const sedeNombre = this.nombreSedeActual.replace(/\s+/g, '_')
         nombreBase += `_${sedeNombre}`
-        
+
         if (this.filtro_categoria && this.filtro_categoria !== 'TODOS') {
           nombreBase += `_${this.filtro_categoria.replace(/\s+/g, '_')}`
         }
         if (this.soloConStock) {
           nombreBase += '_con-stock'
         }
-        
-        const nombre = `${nombreBase}_${this.nowString()}.pdf`
+
+        const nombre = `${nombreBase}_${formato}_${this.nowString()}.pdf`
         doc.save(nombre)
-        
+
+        this.dialogoPDF = false
+
       } catch (e) {
         console.error('Error exportando a PDF', e)
         alert('No se pudo exportar a PDF.')
+        this.dialogoPDF = false
       }
-    },
-  },
+    }
+  }
 }
 </script>
 
 <style scoped>
 .v-data-table td {
   vertical-align: middle !important;
+}
+
+.hover-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 8px;
+}
+
+.hover-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  background-color: #f5f5f5;
 }
 </style>

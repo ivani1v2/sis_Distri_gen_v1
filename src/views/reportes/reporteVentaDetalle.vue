@@ -123,8 +123,7 @@
           :items-per-page="50" mobile-breakpoint="0" height="60vh" class="elevation-1">
           <template v-slot:item.cantidad="{ item }">
             <span>{{ format0(item.cantidad) }}</span>
-            <v-chip v-if="false" x-small class="ml-1" color="green" text-color="white"
-              title="Unidades gravadas">
+            <v-chip v-if="false" x-small class="ml-1" color="green" text-color="white" title="Unidades gravadas">
               {{ format0(item.cantidad_gravada) }} GRV
             </v-chip>
             <v-chip v-if="item.cantidad_gratuita" x-small class="ml-1" color="orange" text-color="white"
@@ -136,6 +135,9 @@
           <template v-slot:item.costo="{ item }">
             <span>{{ monedaSimbolo }} {{ format2(item.costo) }}</span>
           </template>
+          <template v-slot:item.costo_tot="{ item }">
+            <span>{{ monedaSimbolo }} {{ format2(item.costo_tot) }}</span>
+          </template>
 
           <template v-slot:item.precio_prom="{ item }">
             <span>{{ monedaSimbolo }} {{ format2(item.precio_prom) }}</span>
@@ -146,10 +148,19 @@
           </template>
 
           <template v-slot:item.utilidad="{ item }">
-            <span :class="{ 'text--success': item.utilidad >= 0, 'red--text': item.utilidad < 0 }">
-              {{ monedaSimbolo }} {{ format2(item.utilidad) }}
-            </span>
+            <template v-if="item.costo === 0">
+              <span class="grey--text text--darken-1 font-italic">
+                sin costo unitario
+              </span>
+            </template>
+
+            <template v-else>
+              <span :class="{ 'text--success': item.utilidad >= 0, 'red--text': item.utilidad < 0 }">
+                {{ monedaSimbolo }} {{ format2(item.utilidad) }}
+              </span>
+            </template>
           </template>
+
 
           <template v-slot:no-data>
             <v-alert color="grey lighten-3" dense>Sin datos para el criterio seleccionado.</v-alert>
@@ -298,7 +309,7 @@ export default {
         { text: 'Unidades', value: 'cantidad' },
         { text: 'Utilidad', value: 'utilidad' },
         { text: 'Venta total', value: 'total' },
-        { text: 'Precio promedio', value: 'precio_prom' },
+        { text: 'P. Promedio', value: 'precio_prom' },
         { text: 'Costo total', value: 'costo_tot' },
         { text: 'Nombre', value: 'nombre' },
       ],
@@ -307,11 +318,14 @@ export default {
         { text: 'Cantidad', value: 'cantidad', align: 'start', sortable: false },
         { text: 'Nombre', value: 'nombre', sortable: false },
         { text: 'Medida', value: 'medida', sortable: false },
-        { text: 'Costo', value: 'costo', sortable: false },
-        { text: 'P.Prom.', value: 'precio_prom', sortable: false },
-        { text: 'Total V.', value: 'total', sortable: false },
+
+        { text: 'Costo Unit.', value: 'costo', sortable: false },
+        { text: 'Costo Total', value: 'costo_tot', sortable: false },
+
+        { text: 'P. Promedio', value: 'precio_prom', sortable: false },
+        { text: 'Venta Total', value: 'total', sortable: false },
         { text: 'Utilidad', value: 'utilidad', sortable: false },
-      ],
+      ]
     }
   },
 
@@ -350,9 +364,14 @@ export default {
     },
 
     suma_utilidad() {
-      const u = this.itemsFiltrados.reduce((acc, i) => acc + Number(i.utilidad || 0), 0)
+      const u = this.itemsFiltrados.reduce((acc, i) => {
+        if (Number(i.costo || 0) === 0) return acc
+        return acc + Number(i.utilidad || 0)
+      }, 0)
+
       return this.format2(u)
     },
+
 
     total_unidades() {
       return this.itemsFiltrados.reduce((acc, i) => acc + Number(i.cantidad || 0), 0)
@@ -390,7 +409,7 @@ export default {
       return [...this.itemsFiltrados].sort((a, b) => (b.utilidad || 0) - (a.utilidad || 0)).slice(0, 5)
     },
     monedaSimbolo() {
-      return this.$store.state.moneda.find( m => m.codigo == this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/ ';
+      return this.$store.state.moneda.find(m => m.codigo == this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/ ';
     }
   },
 
@@ -427,7 +446,6 @@ export default {
     },
 
     async consulta_detalle_masiva(cabeceras = []) {
-      // Agregación por producto utilizando Map para performance
       const map = new Map()
 
       await Promise.all(
@@ -438,64 +456,67 @@ export default {
             const key = String(p.id)
             const esGratuita = String(p.operacion).toUpperCase() === 'GRATUITA'
 
-            // Costo catálogo (si existe)
             let costoCatalogo = 0
             const catalogo = store.state.productos.find(x => String(x.id) === key)
             if (catalogo && this.costo_catalogo) {
               costoCatalogo = Number(catalogo.costo || 0)
             }
-            
+
             const cantidad = Number(p.cantidad || 0)
             const descuento = Number(p.preciodescuento || 0)
             const precioUnit = Number(p.precio || 0)
+            const factor = Number(p.factor || 1)
+            const medida = p.medida || ''
 
-            // Para GRAVADA computa venta; para GRATUITA, venta = 0 (pero sí costo si está habilitado)
+            let costoUnitarioMostrar = costoCatalogo
+            let costoUnitarioParaCalculo = costoCatalogo
+
+            if (factor > 1) {
+              if (medida.toUpperCase().includes('CAJA')) {
+                costoUnitarioParaCalculo = costoCatalogo * factor
+              }
+            }
+
             const ventaLinea = esGratuita
               ? 0
               : Number((precioUnit * cantidad - descuento).toFixed(2))
 
-            const costoLinea = Number((costoCatalogo * cantidad).toFixed(2))
+            const costoLinea = Number((costoUnitarioParaCalculo * cantidad).toFixed(2))
 
             if (!map.has(key)) {
               map.set(key, {
                 id: key,
-                nombre: p.id+'-'+p.nombre,
+                nombre: p.id + '-' + p.nombre,
                 medida: p.medida,
-                cantidad: 0,                 // totales (grav+grat)
+                cantidad: 0,
                 cantidad_gravada: 0,
                 cantidad_gratuita: 0,
-                costo: costoCatalogo,        // último costo catálogo visto
-                costo_tot: 0,                // solo para gravadas + (opcional) gratis si se desea ver costo
-                costo_gratuitas: 0,          // costo de las gratuitas (para el resumen)
+                costo: costoUnitarioMostrar,
+                costo_tot: 0,
+                costo_gratuitas: 0,
                 precio_prom: 0,
-                total: 0,                    // solo ventas gravadas
-                utilidad: 0,                 // total - costo_tot (solo gravadas)
+                total: 0,
+                utilidad: 0,
               })
             }
 
             const acc = map.get(key)
-            acc.costo = costoCatalogo // actualizar al último conocido
+            acc.costo = costoUnitarioMostrar
 
             acc.cantidad += cantidad
             if (esGratuita) {
               acc.cantidad_gratuita += cantidad
-              // Sumamos costo de gratuitas a un campo aparte y opcionalmente al costo_tot si quieres “ver el costo asumido”
               acc.costo_gratuitas += costoLinea
-              // Si decides que costo_tot incluya gratuitas para utilidad global, descomenta:
-              // acc.costo_tot += costoLinea
             } else {
               acc.cantidad_gravada += cantidad
               acc.total = Number((acc.total + ventaLinea).toFixed(2))
               acc.costo_tot = Number((acc.costo_tot + costoLinea).toFixed(2))
             }
 
-            // Precio promedio: por defecto sobre gravadas; opcionalmente incluye gratuitas
             const divisor = this.incluirGratuitasEnPromedio
               ? (acc.cantidad || 1)
               : (acc.cantidad_gravada || 1)
             acc.precio_prom = Number(((acc.total || 0) / divisor).toFixed(2))
-
-            // Utilidad solo para gravadas (ventas - costo gravado)
             acc.utilidad = Number(((acc.total || 0) - (acc.costo_tot || 0)).toFixed(2))
           })
         })
