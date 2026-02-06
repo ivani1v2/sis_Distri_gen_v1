@@ -218,7 +218,7 @@
                         <v-list-item-icon><v-icon small>mdi-swap-horizontal-bold</v-icon></v-list-item-icon>
                         <v-list-item-title>Movimientos</v-list-item-title>
                     </v-list-item>
-                    <v-list-item v-if="$store.state.permisos.modulokardex" link
+                    <v-list-item v-if="$store.state.permisos.modulokardex && $store.state.baseDatos.kardex_avanzado" link
                         @click.prevent="router('rep_mov_producto')">
                         <v-list-item-icon><v-icon small>mdi-file-chart-outline</v-icon></v-list-item-icon>
                         <v-list-item-title>Mov x Producto</v-list-item-title>
@@ -228,7 +228,7 @@
                         <v-list-item-icon><v-icon small>mdi-truck-fast-outline</v-icon></v-list-item-icon>
                         <v-list-item-title>Transferencias</v-list-item-title>
                     </v-list-item>
-                    <v-list-item link @click.prevent="router('reporte_stock')" v-if="$store.state.baseDatos.kardex_avanzado">
+                    <v-list-item link @click.prevent="router('reporte_stock')" >
                         <v-list-item-icon><v-icon small>mdi-counter</v-icon></v-list-item-icon>
                         <v-list-item-title>Stock Actual</v-list-item-title>
                     </v-list-item>
