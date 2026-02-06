@@ -1,67 +1,125 @@
 <template>
-    <v-dialog v-model="$store.state.dialogoImpresora" max-width="460px">
-        <div>
-            <v-system-bar window dark>
-                <v-icon @click="$store.commit('dialogoImpresora')">mdi-close</v-icon>
-                <v-spacer></v-spacer>
-                <v-icon large color="green" @click="grabaContador()">mdi-content-save</v-icon>
-            </v-system-bar>
-        </div>
+    <v-dialog v-model="$store.state.dialogoImpresora" max-width="520px" persistent>
+        <v-card class="rounded-lg d-flex flex-column" style="max-height: 90vh;">
 
-        <v-card class="pa-6">
-            <v-row class="mt-n5" dense>
-                <v-col cols="6">
-                    <v-checkbox dense v-model="guardadocumento" label="Guardar Auto"></v-checkbox>
-                </v-col>
-                <v-col cols="6">
-                    <v-checkbox dense v-model="vendedor" label="Muestra Vendedor"></v-checkbox>
-                </v-col>
-                <v-col cols="6">
-                    <v-checkbox dense v-model="nom_comercial" label="Nom Comercial"></v-checkbox>
-                </v-col>
-                <v-col cols="6">
-                    <v-select dense v-model="tamano" :items="tamanos" label="Impresora Caja" outlined></v-select>
-                </v-col>
-                <v-col cols="6">
-                    <v-text-field type="number" dense v-model="mizquierdo" label="Margen Izquierdo"></v-text-field>
-                </v-col>
-                <v-col cols="6">
-                    <v-text-field type="number" dense v-model="mderecho" label="Margen Derecho"></v-text-field>
-                </v-col>
-                <v-col cols="6">
-                    <v-text-field type="number" dense v-model="msuperior" label="Margen Superior"></v-text-field>
-                </v-col>
-                <v-col cols="6">
-                    <v-text-field type="number" dense v-model="minferiorgeneral" label="Margen Inferior"></v-text-field>
-                </v-col>
-                <v-col cols="6">
-                    <v-text-field type="number" dense v-model="minferior" label="Margen logo inferior"></v-text-field>
-                </v-col>
-                <v-col cols="6">
-                    <v-text-field dense v-model="telefono" label="Telefono"></v-text-field>
-                </v-col>
-                <v-col cols="6">
-                    <v-checkbox dense v-model="log_largo" label="Logo largo A4"></v-checkbox>
-                </v-col>
-                <v-col cols="6">
-                    <v-checkbox dense v-model="mostrar_logo_pedido" label="Logo en Orden Pedido A4"></v-checkbox>
-                </v-col>
-                <v-col cols="12" class="mt-n4">
-                    <v-textarea dense outlined auto-grow filled v-model="cabecera" label="Cabecera"
-                        rows="1"></v-textarea>
-                </v-col>
-                <v-col cols="12" class="mt-n6">
-                    <v-textarea dense outlined auto-grow filled v-model="piepagina" label="Mensaje final"
-                        rows="1"></v-textarea>
-                </v-col>
-                <v-col cols="12" class="mt-n6">
-                    <v-textarea dense outlined auto-grow filled v-model="mensaje_final_proforma"
-                        label="Mensaje final Proforma" rows="1"></v-textarea>
-                </v-col>
-            </v-row>
+            <!-- Header fijo -->
+            <v-system-bar window dark class="px-2" style="position: sticky; top: 0; z-index: 10;">
+                <v-btn icon small @click="$store.commit('dialogoImpresora')">
+                    <v-icon>mdi-close</v-icon>
+                </v-btn>
+
+                <v-spacer></v-spacer>
+
+                <div class="white--text font-weight-medium">
+                    Configuración de impresión
+                </div>
+
+                <v-spacer></v-spacer>
+
+                <v-btn icon small color="green" @click="grabaContador()">
+                    <v-icon color="green">mdi-content-save</v-icon>
+                </v-btn>
+            </v-system-bar>
+
+            <!-- Contenido con scroll -->
+            <v-card-text class="pt-4" style="overflow-y: auto;">
+                <!-- Básico -->
+                <v-card outlined class="mb-3 rounded-lg">
+
+                    <v-card-text class="py-3 mb-n4">
+
+                        <v-row dense>
+                            <v-col cols="6">
+                                <v-select dense outlined v-model="tamano" :items="tamanos" label="Impresora caja" />
+                            </v-col>
+
+                            <v-col cols="6">
+                                <v-text-field dense outlined v-model="telefono" label="Teléfono"
+                                    prepend-inner-icon="mdi-phone" />
+                            </v-col>
+                        </v-row>
+
+                    </v-card-text>
+                </v-card>
+
+                <!-- Márgenes -->
+                <v-card outlined class="mb-3 rounded-lg">
+                    <v-card-title class="py-2 text-subtitle-2">
+                        Márgenes (mm)
+                    </v-card-title>
+                    <v-divider></v-divider>
+                    <v-card-text class="py-3 mb-n4">
+
+                        <v-row dense class="mt-n2">
+                            <v-col cols="6">
+                                <v-text-field type="number" dense outlined v-model="mizquierdo" label="Izquierdo" />
+                            </v-col>
+                            <v-col cols="6">
+                                <v-text-field type="number" dense outlined v-model="mderecho" label="Derecho" />
+                            </v-col>
+
+                            <v-col cols="6" class="mt-n6">
+                                <v-text-field type="number" dense outlined v-model="msuperior" label="Superior" />
+                            </v-col>
+                            <v-col cols="6" class="mt-n6">
+                                <v-text-field type="number" dense outlined v-model="minferiorgeneral"
+                                    label="Inferior" />
+                            </v-col>
+
+                            <v-col cols="12" class="mt-n6">
+                                <v-text-field type="number" dense outlined v-model="minferior"
+                                    label="Margen logo inferior" />
+                            </v-col>
+                        </v-row>
+
+                    </v-card-text>
+                </v-card>
+
+                <!-- Opciones -->
+                <v-card outlined class="mb-3 rounded-lg">
+                    <v-card-title class="py-2 text-subtitle-2">
+                        Opciones Extra
+                    </v-card-title>
+                    <v-divider></v-divider>
+                    <v-card-text class="py-3 mb-n4">
+
+                        <v-row dense class="mt-n4">
+                            <v-col cols="6">
+                                <v-switch inset dense v-model="vendedor" label="Mostrar vendedor" />
+                            </v-col>
+                            <v-col cols="6">
+                                <v-switch inset dense v-model="nom_comercial" label="Nombre comercial" />
+                            </v-col>
+                            <v-col cols="6" class="mt-n6">
+                                <v-switch inset dense v-model="log_largo" label="Logo largo A4" />
+                            </v-col>
+                            <v-col cols="6" class="mt-n6">
+                                <v-switch inset dense v-model="mostrar_logo_pedido" label="Logo en pedido A4" />
+                            </v-col>
+                        </v-row>
+
+                        <v-row dense>
+                            <v-col cols="12">
+                                <v-textarea dense outlined auto-grow rows="1" v-model="cabecera" label="Cabecera" />
+                            </v-col>
+
+                            <v-col cols="12" class="mt-n6">
+                                <v-textarea dense outlined auto-grow rows="1" v-model="piepagina"
+                                    label="Mensaje final" />
+                            </v-col>
+
+                            <v-col cols="12" class="mt-n6">
+                                <v-textarea dense outlined auto-grow rows="1" v-model="mensaje_final_proforma"
+                                    label="Mensaje final proforma" />
+                            </v-col>
+                        </v-row>
+
+                    </v-card-text>
+                </v-card>
+
+            </v-card-text>
 
         </v-card>
-
     </v-dialog>
 </template>
 
