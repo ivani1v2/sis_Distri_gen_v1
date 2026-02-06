@@ -58,7 +58,7 @@
                         </v-btn>
                     </template>
                     <v-list dense class="py-1">
-                        <v-list-item @click="envia_sunat">
+                        <v-list-item @click="envia_sunat" :disabled="periodoCerrado">
                             <v-list-item-icon><v-icon color="green">mdi-cloud-upload</v-icon></v-list-item-icon>
                             <v-list-item-title>Enviar a Sunat</v-list-item-title>
                         </v-list-item>
@@ -79,6 +79,9 @@
                 </v-menu>
 
             </v-card-title>
+            <v-alert v-if="periodoCerrado" type="warning" dense class="mx-4 mb-1 mt-2 caption" outlined>
+                El período <strong>{{ periodoActualKey }}</strong> está cerrado. No se puede enviar a Sunat.
+            </v-alert>
 
             <v-card-text class="py-3">
                 <v-row dense>
@@ -401,7 +404,8 @@ import {
     all_serv_imp,
     grabaCabecera_p,
     modifica_pedidos,
-    nueva_cabecera_reparto
+    nueva_cabecera_reparto,
+    all_periodos
 } from '../../db'
 
 import store from '@/store/index'
@@ -409,6 +413,7 @@ import XLSX from 'xlsx'
 import moment from 'moment'
 import dialogo_edita_c from './dialogos/dialogo_edita_c'
 import genera_guias from './dialogos/genera_guias.vue'
+import fab_periodos from '@/components/fab_periodos'
 import {
     pdfGenera
 } from '../../pdf_comprobantes'
@@ -500,7 +505,9 @@ export default {
             observacion_reporte: '',
             observacion_reporte: '',
             formato_descarga: 'F1', // 👈 NUEVO: formato por defecto
-            moneda: 'S/'
+            moneda: 'S/',
+            periodosBD: {},
+            _periodoRef: null
         }
     },
     created() {
@@ -511,9 +518,11 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
     },
     mounted() {
         all_Cabecera_p(this.router_grupo).on("value", this.onDataChange);
+         this.suscribirPeriodos();
     },
     beforeDestroy() {
         all_Cabecera_p(this.router_grupo).off("value", this.onDataChange);
+        if (this._periodoRef) this._periodoRef.off('value', this.onPeriodoChange);
 
     },
     watch: {
@@ -527,6 +536,25 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
         printPercent() {
             return this.printTotal ? (this.printDone / this.printTotal) * 100 : 0;
         },
+        periodoCerrado() {
+        const fechaRef = this.cabecera_total?.fecha_comprobantes || this.cabecera_total?.fecha_traslado;
+        if (!fechaRef) return false;
+        
+        const periodoKey = moment.unix(fechaRef).format('YYYY-MM');
+        const periodo = this.periodosBD[periodoKey];
+        
+        if (!periodo) {
+            console.warn(`No se encontró período ${periodoKey} en periodosBD:`, this.periodosBD);
+            return false;
+        }
+        
+        return periodo.estado === 'close';
+    },
+        periodoActualKey() {
+        const fechaRef = this.cabecera_total?.fecha_comprobantes || this.cabecera_total?.fecha_traslado;
+        if (!fechaRef) return '';
+        return moment.unix(fechaRef).format('YYYY-MM');
+    },
         suma_pedidos() {
             let total = 0;
             let sum_soles = 0;
@@ -879,7 +907,8 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
                         guia: data.guia,
                         pedidos: data.pedidos,
                         fecha_traslado: data.fecha_traslado,
-                        envio_stock: data.envio_stock
+                        envio_stock: data.envio_stock,
+                        fecha_comprobantes: data.fecha_comprobantes
                     }
                     this.total_peso = data.peso
                 })
@@ -1604,13 +1633,15 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
                 // 7. Cerrar loader SIEMPRE
                 this.$store.commit("dialogoprogress");
             }
+        },
+        onPeriodoChange(snapshot) {
+            this.periodosBD = snapshot.val() || {};
+        },
+        suscribirPeriodos() {
+            if (this._periodoRef) this._periodoRef.off('value', this.onPeriodoChange);
+            this._periodoRef = all_periodos();
+            this._periodoRef.on('value', this.onPeriodoChange);
         }
-
-
-
-
-
-
     }
 }
 </script>

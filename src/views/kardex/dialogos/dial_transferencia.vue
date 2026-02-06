@@ -32,6 +32,11 @@
                         <v-textarea v-model="observacion" label="Observación" outlined dense rows="1"
                             prepend-inner-icon="mdi-note-text" hide-details auto-grow></v-textarea>
                     </v-col>
+                    <v-col cols="12" v-if="periodoCerrado" class="mt-n2">
+                        <v-alert type="warning" dense outlined class="mb-0 mt-2 caption">
+                            El período seleccionado está cerrado. No se pueden registrar transferencias.
+                        </v-alert>
+                    </v-col>
                 </v-row>
             </v-card>
             <v-card outlined class="pa-2 mb-2" :disabled="!sede_origen">

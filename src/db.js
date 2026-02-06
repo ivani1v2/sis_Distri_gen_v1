@@ -1830,3 +1830,32 @@ export const elimina_datos_tienda = (tabla,id) => {
     .remove()
 
 };
+
+
+export const all_periodos = () => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("almacen")
+    .child("periodos");
+}
+
+// Consultar cierres de kardex por período
+export const all_cierres_periodo = (periodo) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("kardex")
+    .child("cierres")
+    .child(periodo)
+    .child("productos");
+}
+
+export const consulta_cierre_periodo = (periodo) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("kardex")
+    .child("cierres")
+    .child(periodo);
+}

@@ -10,12 +10,15 @@
                 </v-col>
                 <v-col class="text-right">
                     <v-btn depressed color="primary" class="text-none rounded-lg"
-                        @click="mostrarDialogo = !mostrarDialogo">
+                        @click="mostrarDialogo = !mostrarDialogo" :disabled="periodoCerrado">
                         <v-icon left>mdi-plus</v-icon>
                         Nuevo <span class="d-none d-sm-inline ml-1">Movimiento</span>
                     </v-btn>
                 </v-col>
             </v-row>
+            <v-alert v-if="periodoCerrado" type="warning" dense class="mt-2 mb-2 caption" outlined>
+                El período <strong>{{ periodoActualKey }}</strong> está cerrado. No se pueden registrar movimientos.
+            </v-alert>
 
             <v-card flat class="pa-2 rounded-lg white border-subtle">
                 <v-row dense align="center">
@@ -91,11 +94,11 @@
                                 <v-list-item-icon><v-icon color="blue">mdi-eye</v-icon></v-list-item-icon>
                                 <v-list-item-content>Ver Detalle</v-list-item-content>
                             </v-list-item>
-                            <v-list-item @click="editarTransferencia(item)">
+                            <v-list-item @click="editarTransferencia(item)" :disabled="esPeriodoCerradoItem(item)">
                                 <v-list-item-icon><v-icon color="orange">mdi-pencil</v-icon></v-list-item-icon>
                                 <v-list-item-content>Editar</v-list-item-content>
                             </v-list-item>
-                            <v-list-item @click="anularTransferencia(item)">
+                            <v-list-item @click="anularTransferencia(item)" :disabled="esPeriodoCerradoItem(item)">
                                 <v-list-item-icon><v-icon color="red">mdi-cancel</v-icon></v-list-item-icon>
                                 <v-list-item-content>Anular</v-list-item-content>
                             </v-list-item>
@@ -169,12 +172,12 @@
                                         <v-list-item-content><v-list-item-title>Ver
                                                 Detalle</v-list-item-title></v-list-item-content>
                                     </v-list-item>
-                                    <v-list-item @click="editarTransferencia(item)">
+                                    <v-list-item @click="editarTransferencia(item)" :disabled="esPeriodoCerradoItem(item)">
                                         <v-list-item-icon><v-icon small
                                                 color="orange">mdi-pencil</v-icon></v-list-item-icon>
                                         <v-list-item-content><v-list-item-title>Editar</v-list-item-title></v-list-item-content>
                                     </v-list-item>
-                                    <v-list-item @click="anularTransferencia(item)">
+                                    <v-list-item @click="anularTransferencia(item)" :disabled="esPeriodoCerradoItem(item)">
                                         <v-list-item-icon><v-icon small
                                                 color="red">mdi-cancel</v-icon></v-list-item-icon>
                                         <v-list-item-content><v-list-item-title>Anular</v-list-item-title></v-list-item-content>
@@ -366,15 +369,17 @@ import {
     exportarTransferenciaExcel as exportarExcelItem,
     exportarListaTransferenciasExcel
 } from "@/views/kardex/formatos/form_transferencia";
-import { all_transferencia, allProductoOtraBase, grabarStockOtraBase, actualiza_transferencia } from '@/db'
+import { all_transferencia, allProductoOtraBase, grabarStockOtraBase, actualiza_transferencia, all_periodos } from '@/db'
 import { anularMovimientosTransferencia } from '@/views/kardex/help_mov_tranferencia'
 import moment from 'moment'
 import store from '@/store'
+import fab_periodos from '@/components/fab_periodos'
 
 
 export default {
     components: {
-        dial_mov
+        dial_mov,
+        fab_periodos
     },
     data() {
         return {
@@ -403,7 +408,9 @@ export default {
             detalleEditar: {},
             sede_destino: '',
             sedesDestino: [],
-            moneda: "S/"
+            moneda: "S/",
+            periodosBD: {},
+            _periodoRef: null
         }
     },
     computed: {
@@ -415,12 +422,25 @@ export default {
         },
         sedeActualBase() {
             return store.state.sedeActual?.base || store.state.sedeActual?.codigo || '';
+        },
+        periodoCerrado() {
+            const periodoKey = moment(this.date1, 'YYYY-MM-DD').format('YYYY-MM');
+            const periodo = this.periodosBD[periodoKey];
+            if (!periodo) return false;
+            return periodo.estado === 'close';
+        },
+        periodoActualKey() {
+            return moment(this.date1, 'YYYY-MM-DD').format('YYYY-MM');
         }
     },
     mounted() {
         this.prepararSedesDestino()
         this.inicializarSedeFiltro()
         this.cargarMovimientos()
+        this.suscribirPeriodos()
+    },
+    beforeDestroy() {
+        if (this._periodoRef) this._periodoRef.off('value', this.onPeriodoChange);
     },
     methods: {
         inicializarSedeFiltro() {
@@ -582,6 +602,21 @@ export default {
             this.colorMensaje = color;
             this.mensaje = true;
         },
+        onPeriodoChange(snapshot) {
+            this.periodosBD = snapshot.val() || {};
+        },
+        suscribirPeriodos() {
+            if (this._periodoRef) this._periodoRef.off('value', this.onPeriodoChange);
+            this._periodoRef = all_periodos();
+            this._periodoRef.on('value', this.onPeriodoChange);
+        },
+        esPeriodoCerradoItem(item) {
+            // Verificar si el período de un item específico está cerrado
+            const periodoKey = moment.unix(item.fecha_unix).format('YYYY-MM');
+            const periodo = this.periodosBD[periodoKey];
+            if (!periodo) return false;
+            return periodo.estado === 'close';
+        }
     }
 }
 </script>

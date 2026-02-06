@@ -28,20 +28,28 @@
             <v-divider></v-divider>
 
             <v-card-text class="py-3">
+                 <v-alert v-if="periodoCerrado" type="warning" dense class="mb-3 caption" outlined>
+                    El período <strong>{{ periodoActualKey }}</strong> está cerrado. No se pueden registrar movimientos.
+                </v-alert>
                 <v-row dense>
                     <v-col cols="12" md="3">
-                        <v-btn small color="success" block @click="abre_creador_documento()">
+                        <v-btn small color="success" block @click="abre_creador_documento()" :disabled="periodoCerrado">
                             <v-icon left>mdi-package-variant-closed</v-icon> REGISTRO COMPRA
                         </v-btn>
                     </v-col>
                     <v-col cols="12" md="3">
-                        <v-btn small color="info" block @click="(crea_ajuste = true)">
+                        <v-btn small color="info" block @click="(crea_ajuste = true)" :disabled="periodoCerrado">
                             <v-icon left>mdi-swap-horizontal</v-icon> ENTRADAS / SALIDAS
                         </v-btn>
                     </v-col>
                     <v-col cols="12" md="3">
-                        <v-btn small color="error" block @click="registro_merma">
+                        <v-btn small color="error" block @click="registro_merma" :disabled="periodoCerrado">
                             <v-icon left>mdi-delete-sweep</v-icon> REGISTRO MERMA
+                        </v-btn>
+                    </v-col>
+                    <v-col cols="12" md="3">
+                        <v-btn small color="#26C6DA" class="white--text" block @click="abrirGestionPeriodos">
+                            <v-icon left>mdi-calendar-clock</v-icon> GEST. PERIODOS
                         </v-btn>
                     </v-col>
                     <v-col cols="12" md="3" class="text-right">
@@ -299,7 +307,9 @@
 
         <compras v-if="dialo_compras" :data="data_edita" @cierra_compra="dialo_compras = $event" />
         <ajuste_inv v-if="dialo_ajuste" :data="data_edita" @cierra_compra="dialo_ajuste = $event" />
-
+ <dialog_periodos v-model="dial_periodos" @cerrar="dial_periodos = false"
+            @periodo-actualizado="onPeriodoActualizado" />
+        <fab_periodos @periodo-actualizado="suscribirPeriodos" />
     </div>
 </template>
 
@@ -309,12 +319,15 @@ import {
     obtenContador,
     nuevoMovimiento,
     sumaContador,
+    all_periodos,
 } from '../../db'
 import store from '@/store/index'
 import { generarPDFCompra } from "./formatos/form_kardex";
 import moment from 'moment'
 import compras from '@/views/movi_kardex/compras'
 import ajuste_inv from '@/views/movi_kardex/ajuste_inventario'
+import dialog_periodos from '@/components/dialogos/dialog_periodos'
+import fab_periodos from '@/components/fab_periodos'
 
 import tabla_proveedor from '@/components/configEmpresa/tabla_proveedor'
 
@@ -323,6 +336,8 @@ export default {
         compras,
         tabla_proveedor,
         ajuste_inv,
+        dialog_periodos,
+        fab_periodos,
     },
     data: () => ({
         dial_proveedor: false,
@@ -331,6 +346,7 @@ export default {
         date1: moment(String(new Date)).format('YYYY-MM-DD'),
         date2: moment(String(new Date)).format('YYYY-MM-DD'),
         crea_ajuste: false,
+        mesSeleccionado: moment().format('YYYY - MM'),
         crea_transferencia: false,
         dialo_ajuste: false,
         crea_nc: false,
@@ -371,13 +387,18 @@ export default {
         item_selecto: [],
         _subRef: null,
         moneda: store.state.moneda.find(m => m.codigo === 'PEN'),
+        dial_periodos: false,
+        periodosBD: {},
+        _periodoRef: null,
     }),
     mounted() {
         this.inicio();
         this.suscribir();
+        this.suscribirPeriodos();
     },
     beforeDestroy() {
         if (this._subRef) this._subRef.off('value', this.onDataChange);
+        if (this._periodoRef) this._periodoRef.off('value', this.onPeriodoChange);
     },
     computed: {
         listafiltrada() {
@@ -385,11 +406,43 @@ export default {
         },
         monedaSimbolo(){
             return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
+        },
+        periodoCerrado() {
+            const periodo = this.periodosBD[this.mesSeleccionado];
+            if (!periodo) return false;
+            return periodo.estado === 'close';
+        },
+
+        periodoActualKey() {
+            return this.mesSeleccionado;
+        },
+        mesesDisponibles() {
+            const meses = [];
+
+            for (let i = 11; i >= 0; i--) {
+                const fecha = moment().subtract(i, 'months');
+                const anio = fecha.year();
+                const mes = fecha.month() + 1;
+                const mesStr = mes.toString().padStart(2, '0');
+                const valor = `${anio}-${mesStr}`;
+                const labelNumerico = `${mesStr}-${anio}`;
+                const nombreMesCorto = fecha.format('MMM');
+                const labelCorto = `${nombreMesCorto} ${anio}`;
+                meses.push({
+                    label: labelCorto,
+                    labelNumerico: labelNumerico,
+                    value: valor,
+                    anio: anio,
+                    mes: mes
+                });
+            }
+            return meses;
         }
     },
     watch: {
-        date1() { this.suscribir(); },
-        date2() { this.suscribir(); },
+        mesSeleccionado() {
+            this.suscribir();
+        }
     },
 
     created() {
@@ -402,9 +455,7 @@ export default {
             this.modo_ajuste = 'SALIDA'
         },
         inicio() {
-            var dia = moment(String(new Date)).format('DD')
-            this.date1 = moment().subtract(parseFloat(dia) - 1, 'd').format('YYYY-MM-DD')
-            this.date2 = moment(String(new Date)).format('YYYY-MM-DD')
+            this.mesSeleccionado = moment().format('YYYY-MM');
 
         },
         abre_creador_documento() {
@@ -570,13 +621,26 @@ export default {
             const m = moment(d, 'YYYY-MM-DD', true);
             return m.isValid() ? m.endOf('day').unix() : 4102444799; // 2099-12-31
         },
+        cambiarMes() {
+            this.suscribir();
+        },
+        mesAnterior() {
+            const fechaActual = moment(this.mesSeleccionado, 'YYYY-MM');
+            const mesAnterior = fechaActual.subtract(1, 'month').format('YYYY-MM');
+            this.mesSeleccionado = mesAnterior;
+        },
 
+        mesActual() {
+            this.mesSeleccionado = moment().format('YYYY-MM');
+        },
         suscribir() {
             // corta cualquier suscripción previa
             if (this._subRef) this._subRef.off('value', this.onDataChange);
+            const fechaInicio = moment(this.mesSeleccionado, 'YYYY-MM').startOf('month');
+            const fechaFin = moment(this.mesSeleccionado, 'YYYY-MM').endOf('month');
 
-            const ini = this.unixInicio(this.date1);
-            const fin = this.unixFin(this.date2);
+            const ini = fechaInicio.unix();
+            const fin = fechaFin.unix();
 
             this._subRef = allMovimientos()
                 .orderByChild('fecha_emision')
@@ -591,6 +655,20 @@ export default {
             const sedes = store.state.array_sedes.filter(e => e.tipo == 'sede') || [];
             const s = sedes.find(s => s.base == base);
             return s ? s.nombre : base;
+        },
+        abrirGestionPeriodos() {
+            this.dial_periodos = true;
+        },
+        onPeriodoChange(snapshot) {
+            this.periodosBD = snapshot.val() || {};
+        },
+        suscribirPeriodos() {
+            if (this._periodoRef) this._periodoRef.off('value', this.onPeriodoChange);
+            this._periodoRef = all_periodos();
+            this._periodoRef.on('value', this.onPeriodoChange);
+        },
+        onPeriodoActualizado(data) {
+            console.log('Período actualizado desde dialog:', data);
         },
     }
 
