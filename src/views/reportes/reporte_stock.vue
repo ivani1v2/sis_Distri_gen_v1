@@ -474,7 +474,7 @@ export default {
         const isTicket = formato === '80'
 
         const config = isTicket
-          ? { orientation: 'portrait', unit: 'mm', format: [80, 297] }
+          ? { orientation: 'portrait', unit: 'mm', format: [80, 3276] }
           : { orientation: 'landscape', unit: 'mm', format: 'a4' }
 
         const doc = new jsPDF(config)
@@ -485,7 +485,7 @@ export default {
         const fontSizeSmall = isTicket ? 6 : 9
         const lineHeight = isTicket ? 4 : 6
 
-        let currentY = 10
+        let currentY = 5
 
         doc.setFontSize(fontSizeTitle)
         doc.setFont('helvetica', 'bold')
@@ -524,18 +524,16 @@ export default {
         }
 
         const headers = isTicket
-          ? [['ID', 'PRODUCTO', 'MED', 'STOCK']]
+          ? [['ID', 'PRODUCTO', 'STOCK']]
           : [['ID', 'CATEGORÍA', 'NOMBRE', 'MEDIDA', `COSTO (${this.monedaSimbolo})`, 'STOCK', `P. VENTA (${this.monedaSimbolo})`, `T. COSTO (${this.monedaSimbolo})`, `T. VENTA (${this.monedaSimbolo})`]]
 
         const rows = this.listafiltrada.map(item => {
           if (isTicket) {
             let nombre = item.nombre || ''
-            let medida = item.medida || ''
 
             return [
               item.id || '',
               nombre,
-              medida,
               this.convierte_stock(item.stock, item.factor)
             ]
           } else {
@@ -559,10 +557,9 @@ export default {
 
         const columnStyles = isTicket
           ? {
-            0: { cellWidth: 10, fontSize: 6 },
-            1: { cellWidth: 45, fontSize: 6 },
-            2: { cellWidth: 8, fontSize: 6 },
-            3: { cellWidth: 10, fontSize: 6, halign: 'right' }
+            0: { cellWidth: 12, fontSize: 8 },
+            1: { cellWidth: 46, fontSize: 8 },
+            3: { cellWidth: 8, fontSize: 8, halign: 'right' }
           }
           : {
             0: { cellWidth: 20, fontSize: fontSizeSmall },
@@ -578,7 +575,7 @@ export default {
 
         const styles = isTicket
           ? {
-            fontSize: 6,
+            fontSize: 8,
             cellPadding: 1,
             lineColor: [0, 0, 0],
             lineWidth: 0.1,
@@ -604,7 +601,7 @@ export default {
           headStyles: {
             fillColor: [255, 255, 255],
             textColor: [0, 0, 0],
-            fontSize: isTicket ? 6 : fontSizeSmall,
+            fontSize: isTicket ? 8 : fontSizeSmall,
             fontStyle: 'bold',
             lineWidth: 0.1
           },
@@ -616,12 +613,12 @@ export default {
             const pageWidth = doc.internal.pageSize.getWidth()
             const pageHeight = doc.internal.pageSize.getHeight()
 
-            doc.setFontSize(6)
+            doc.setFontSize(9)
             doc.setFont('helvetica', 'normal')
             const footerText = `Página ${data.pageNumber} de ${pageCount} - ${this.nombreSedeActual}`
 
             if (isTicket) {
-              doc.text(footerText, pageWidth / 2, pageHeight - 5, { align: 'center' })
+              //doc.text(footerText, pageWidth / 2, pageHeight - 5, { align: 'center' })
             } else {
               doc.text(footerText, pageWidth - marginLeft, pageHeight - 10, { align: 'right' })
             }
