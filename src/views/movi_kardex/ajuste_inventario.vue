@@ -8,7 +8,13 @@
                     Ajuste de Inventario ({{ arra_cabe_doC.modo_ajuste }})
                 </v-toolbar-title>
                 <v-spacer></v-spacer>
+                <v-btn icon color="amber lighten-2" @click="$refs.fileExcel.click()" small
+                    title="Importar Excel (Código y Cantidad)">
+                    Carga masiva<v-icon>mdi-file-excel</v-icon>
+                </v-btn>
 
+                <input ref="fileExcel" type="file" accept=".xlsx,.xls" style="display:none" @change="onExcelSelected" />
+                <v-spacer></v-spacer>
                 <v-btn icon color="info lighten-2" @click="dial_lista = true" title="Buscar y Añadir Producto">
                     <v-icon>mdi-magnify</v-icon>
                 </v-btn>
@@ -32,12 +38,12 @@
                             <v-divider class="mb-2"></v-divider>
                             <h5 class="text-caption">
                                 **DOCUMENTO:** {{ arra_cabe_doC.tipodocumento }} / {{ arra_cabe_doC.sreferencia }}-{{
-                                arra_cabe_doC.creferencia }}
+                                    arra_cabe_doC.creferencia }}
                             </h5>
                             <h5 class="text-caption">
                                 **MODO:** <span
                                     :class="arra_cabe_doC.modo_ajuste === 'ENTRADA' ? 'info--text' : 'error--text'">{{
-                                    arra_cabe_doC.modo_ajuste }}</span>
+                                        arra_cabe_doC.modo_ajuste }}</span>
                                 | **MOTIVO:** {{ arra_cabe_doC.motivo }}
                             </h5>
                             <h5 class="text-caption">
@@ -254,6 +260,7 @@ import {
     modifica_stock_unitario
 } from '../../control_stock'
 import { fs, colempresa } from '../../db_firestore'
+import * as XLSX from "xlsx";
 export default {
     name: 'caja',
 
@@ -602,7 +609,182 @@ export default {
             this.progress = false
             this.dial_anula = false
             this.cierra()
+        },
+        async onExcelSelected(e) {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+
+            // 🔧 Ajustes de control
+            const MAX_CONCURRENCY = 4;   // 3-6 recomendado
+            const MAX_ROWS = 3000;       // evita cargar excels gigantes
+            const SLEEP_EVERY = 25;      // cada N items descansa un poco
+            const SLEEP_MS = 40;
+
+            const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+            // Pool simple para limitar concurrencia
+            async function runPool(items, worker, concurrency) {
+                let idx = 0;
+                let ok = 0, fail = 0;
+                const errors = [];
+
+                const runners = Array.from({ length: Math.max(1, concurrency) }, async () => {
+                    while (idx < items.length) {
+                        const my = idx++;
+                        try {
+                            await worker(items[my], my);
+                            ok++;
+                        } catch (err) {
+                            fail++;
+                            errors.push({ item: items[my], err: err?.message || String(err) });
+                        }
+                    }
+                });
+
+                await Promise.all(runners);
+                return { ok, fail, errors };
+            }
+
+            try {
+                this.progress = true;
+
+                const buf = await file.arrayBuffer();
+                const wb = XLSX.read(buf, { type: "array" });
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true });
+
+                if (!rows || rows.length < 2) {
+                    this.$store.commit("dialogosnackbar", "El Excel está vacío.");
+                    return;
+                }
+
+                // Detecta columnas
+                const head = rows[0].map(x => String(x || "").toLowerCase().trim());
+                const idxCod = head.findIndex(h => ["codigo", "código", "id", "cod"].includes(h));
+                const idxCant = head.findIndex(h => ["cantidad", "cant", "qty"].includes(h));
+
+                if (idxCod === -1 || idxCant === -1) {
+                    this.$store.commit("dialogosnackbar", "El Excel debe tener cabecera: codigo | cantidad");
+                    return;
+                }
+
+                if (rows.length - 1 > MAX_ROWS) {
+                    this.$store.commit("dialogosnackbar", `El Excel tiene demasiadas filas (${rows.length - 1}). Máximo: ${MAX_ROWS}`);
+                    return;
+                }
+
+                const mapaProductos = new Map((store.state.productos || []).map(p => [String(p.id), p]));
+
+                // ✅ 1) AGRUPAR POR CÓDIGO (para no hacer 200 updates del mismo producto)
+                const agrupado = new Map(); // codigo -> unidades
+                let invalidos = 0;
+                let noEncontrados = 0;
+
+                for (let i = 1; i < rows.length; i++) {
+                    const r = rows[i] || [];
+                    const codigo = String(r[idxCod] ?? "").trim();
+                    const cant = Number(r[idxCant] ?? 0);
+
+                    if (!codigo) { invalidos++; continue; }
+                    if (!Number.isFinite(cant) || cant <= 0) { invalidos++; continue; }
+
+                    if (!mapaProductos.has(codigo)) {
+                        noEncontrados++;
+                        continue;
+                    }
+
+                    agrupado.set(codigo, (Number(agrupado.get(codigo) || 0) + cant));
+                }
+
+                const items = Array.from(agrupado.entries()).map(([codigo, unidades]) => {
+                    const prod = mapaProductos.get(codigo);
+                    return { prod, unidades };
+                });
+
+                if (!items.length) {
+                    this.$store.commit("dialogosnackbar", "No hay filas válidas para importar.");
+                    return;
+                }
+
+                const esSalida = this.arra_cabe_doC.modo_ajuste === "SALIDA";
+                const modoStock = esSalida ? "RESTA" : "SUMA";
+
+                // ✅ 2) APLICAR STOCK CONTROLADO + ACTUALIZAR LISTA
+                let agregadosLista = 0;
+                let saltadosStock = 0;
+
+                const { ok, fail } = await runPool(
+                    items,
+                    async ({ prod, unidades }, index) => {
+                        // mini descanso cada cierto número
+                        if (index > 0 && index % SLEEP_EVERY === 0) await sleep(SLEEP_MS);
+
+                        // Validación stock si es SALIDA (opcional)
+                        const stockDisp = Number(prod.stock) || 0;
+                        if (esSalida && unidades > stockDisp) {
+                            saltadosStock++;
+                            return;
+                        }
+
+                        const costoUnit = Number(prod.costo) || 0;
+
+                        // Item para stock (tu control_stock usa data.cantidad + data.medida)
+                        const itemStock = {
+                            id: prod.id,
+                            cantidad: unidades,   // ✅ unidades base
+                            medida: "UNIDAD",     // ✅ fuerza UNIDAD para que no multiplique factor
+                            factor: Number(prod.factor) || 1,
+                        };
+
+                        // ✅ actualiza stock en Firebase de forma controlada
+                        await modifica_stock_unitario(modoStock, itemStock);
+
+                        // ✅ actualiza UI lista_productos (sumar si existe)
+                        const idxExist = this.lista_productos.findIndex(x => String(x.id) === String(prod.id));
+                        if (idxExist !== -1) {
+                            this.lista_productos[idxExist].cantidad =
+                                Number(this.lista_productos[idxExist].cantidad || 0) + unidades;
+                            this.lista_productos[idxExist].cant_ingresada =
+                                Number(this.lista_productos[idxExist].cant_ingresada || 0) + unidades;
+                        } else {
+                            this.lista_productos.push({
+                                uuid: (crypto?.randomUUID ? crypto.randomUUID() : this.create_UUID()),
+                                id: prod.id,
+                                nombre: prod.nombre,
+                                medida: "UNIDAD",
+                                operacion: "GRAVADA",
+                                costo: costoUnit,
+                                costo_nuevo: costoUnit,
+                                stock: stockDisp,
+                                factor: Number(prod.factor) || 1,
+                                modo_cant: "fraccion",
+                                cant_ingresada: unidades,
+                                cantidad: unidades,
+                            });
+                        }
+                        agregadosLista++;
+                    },
+                    MAX_CONCURRENCY
+                );
+
+                // ✅ guarda ajuste sin cerrar
+                await this.genera_compra(false);
+
+                this.$store.commit(
+                    "dialogosnackbar",
+                    `Excel OK. Productos: ${items.length} | Actualizados: ${ok} | Fallidos: ${fail} | Lista: ${agregadosLista} | No encontrados: ${noEncontrados} | Inválidos: ${invalidos} | Saltados stock: ${saltadosStock}`
+                );
+
+            } catch (err) {
+                console.error("Error importando Excel:", err);
+                this.$store.commit("dialogosnackbar", "Error al importar Excel (revisa consola).");
+            } finally {
+                this.progress = false;
+            }
         }
+
+
     },
 
 }

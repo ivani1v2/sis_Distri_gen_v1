@@ -160,6 +160,9 @@ export const actualizaSeries = (tipo, dato) => {
 };
 
 //----------------productos---------------------
+export function getProductoRef(id) {
+  return db.database().ref(store.state.baseDatos.bd).child(`productos/${id}`);
+}
 export const allProductos = () => {
   return db.database().ref(store.state.baseDatos.bd).child("productos");
 };
