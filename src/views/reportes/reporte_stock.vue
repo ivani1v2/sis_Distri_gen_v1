@@ -583,14 +583,16 @@ export default {
             lineColor: [0, 0, 0],
             lineWidth: 0.1,
             font: 'helvetica',
-            overflow: 'linebreak'
+            overflow: 'linebreak',
+            textColor: [0, 0, 0]
           }
           : {
             fontSize: fontSizeSmall,
             cellPadding: 2,
             lineColor: [0, 0, 0],
             lineWidth: 0.1,
-            font: 'helvetica'
+            font: 'helvetica',
+            textColor: [0, 0, 0]
           }
 
         doc.autoTable({
