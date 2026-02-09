@@ -232,8 +232,7 @@
                 </v-row>
                 <v-row class="mt-n7">
                     <v-col cols="12">
-                        <v-text-field outlined dense v-model="cod_interno"
-                            label="Codigo interno"></v-text-field>
+                        <v-text-field outlined dense v-model="cod_interno" label="Codigo interno"></v-text-field>
                     </v-col>
                 </v-row>
                 <v-row class="mt-n9">
@@ -768,6 +767,7 @@ import {
     allCategorias,
     allBono,
     nuevoProductoOtraBase,
+    editaProducto
 } from '../../db'
 import store from '@/store/index'
 import XLSX from 'xlsx'
@@ -897,7 +897,7 @@ export default {
         tipoBonoActual: 'precio',
         dialVisorProductos: false,
         bonoParaVisor: {},
-        cod_interno:''
+        cod_interno: ''
     }),
 
     async beforeCreate() {
@@ -1033,6 +1033,28 @@ export default {
     },
 
     methods: {
+
+        async resetStockTodosA0() {
+            const productos = store.state.productos || [];
+
+            // límite de concurrencia para no “reventar” Firebase
+            const CONC = 15;
+
+            for (let i = 0; i < productos.length; i += CONC) {
+                const batch = productos.slice(i, i + CONC);
+
+                await Promise.all(
+                    batch.map(p => {
+                        const id = p?.id;
+                        if (!id) return Promise.resolve();
+                        return editaProducto(id, 'stock', 0);
+                    })
+                );
+            }
+
+            return true;
+        },
+
         abrirBonoGlobalTab(tipo) {
             this.dial_bono_global = true;
         },
