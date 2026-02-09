@@ -69,11 +69,7 @@ async function abre_dialogo_impresion_host(doc) {
 
 
 async function abre_dialogo_impresion_original(doc) {
-  if (store.state.configImpresora.impresora_auto && isElectronEnv()) {
-    axios_imp(doc.output("arraybuffer"));
-    return;
-  }
-  
+
   var blob = doc.output("bloburi");
   var Ancho = screen.width;
   var Alto = screen.height;
