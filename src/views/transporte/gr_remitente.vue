@@ -558,7 +558,8 @@ import {
     nuevo_transporte,
     buscaGuiaremision,
     grabaConfigura,
-    nuevo_tablas_transporte
+    nuevo_tablas_transporte,
+    grabaCabecera_p
 } from '../../db'
 import vehiculos from '@/views/transporte/vehiculos'
 import choferes from '@/views/transporte/choferes'
@@ -676,7 +677,9 @@ export default {
         cascadaLock: false,
         dialogo_dire: false,
         modo_direccion: '',
-        numero: ''
+        numero: '',
+        id_grupo_pedido: '',
+        numeracion_pedido: ''
     }),
     watch: {
         'departamento_p'(depa) {
@@ -792,6 +795,9 @@ export default {
             this.ruc_destinatario = cabecera.dni
             this.documento_dest = cabecera.tipoDocumento
             this.razonsocial_destinatario = cabecera.cliente
+            
+            this.id_grupo_pedido = cabecera.id_grupo || ''
+            this.numeracion_pedido = cabecera.numeracion || ''
 
             for (let i = 0; i < detalle.length; i++) {
                 const data = detalle[i]
@@ -1351,6 +1357,16 @@ export default {
                 doc_relacionados: this.array_relacionados
             }
             await nuevaGuiaremision(array.id, array)
+            
+            // Guardar guia_id en el pedido si viene desde liquida_reparto
+            if (this.id_grupo_pedido && this.numeracion_pedido) {
+                await grabaCabecera_p(
+                    this.id_grupo_pedido,
+                    `${this.numeracion_pedido}/guia_id`,
+                    array.id
+                )
+            }
+            
             await this.guarda_empresa_t()
             guia_remision(array, array.data)
             if (this.tipo_guia == 'GUIA REMITENTE') {
@@ -1418,9 +1434,15 @@ export default {
             }
         },
         regresa() {
-            this.$router.push({
-                path: '/reporte_Guia'
-            })
+            if (this.id_grupo_pedido) {
+                this.$router.push({
+                    path: `/liquida_reparto/${this.id_grupo_pedido}`
+                })
+            } else {
+                this.$router.push({
+                    path: '/reporte_Guia'
+                })
+            }
         },
         conviertefecha_unix(date) {
             return moment(String(date)) / 1000

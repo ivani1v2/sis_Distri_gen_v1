@@ -1,23 +1,25 @@
 <template>
-    <v-dialog v-model="show" max-width="750" persistent>
-        <v-card class="rounded-lg elevation-8">
+    <v-dialog v-model="show" max-width="730" persistent>
+        <v-card class="rounded-lg elevation-8 w-100">
             <v-toolbar dense flat color="indigo" dark>
-                <v-icon left>mdi-map-marker-multiple</v-icon>
-                <v-toolbar-title class="font-weight-medium">
-                    Direcciones de entrega
+                <v-toolbar-title class="font-weight-medium"
+                    :class="$vuetify.breakpoint.smAndDown ? 'subtitle-2' : 'subtitle-1'">
+                    Direcciones de Entrega
                 </v-toolbar-title>
-                <v-spacer></v-spacer>
-                <v-chip v-if="direcciones.length" small color="white" text-color="indigo" class="mr-2 font-weight-bold">
+                <v-chip v-if="direcciones.length" small color="white" text-color="indigo" class="ml-2">
                     <v-icon left small>mdi-map-marker</v-icon>
-                    {{ direcciones.length }} dirección(es)
+                    {{ direcciones.length }}
                 </v-chip>
-                <v-btn icon @click="abrirDialogDireccion()" title="Agregar dirección">
-                    <v-icon>mdi-plus-circle</v-icon>
+                <v-spacer></v-spacer>
+                <v-btn small color="white" outlined @click="abrirDialogDireccion()">
+                    <v-icon left>mdi-plus-circle</v-icon>
+                    dirección
                 </v-btn>
                 <v-btn icon @click="cerrar" title="Cerrar">
                     <v-icon>mdi-close</v-icon>
                 </v-btn>
             </v-toolbar>
+
 
             <v-card-text class="py-2 px-4 grey lighten-5" v-if="cliente">
                 <div class="caption font-weight-bold grey--text text--darken-3">CLIENTE:</div>
@@ -98,10 +100,10 @@
                                 </v-list-item-title>
                                 <v-list-item-subtitle class="wrap caption text--secondary mt-1">
                                     <span v-if="dir.referencia" class="font-weight-medium mr-1">{{ dir.referencia
-                                        }}</span>
+                                    }}</span>
                                     ({{ nombreDist(dir) }} - {{ nombreProv(dir) }})
                                     <span v-if="dir.ubigeo" class="ml-1 indigo--text text--lighten-3"> • {{ dir.ubigeo
-                                        }}</span>
+                                    }}</span>
                                 </v-list-item-subtitle>
                             </v-list-item-content>
 
@@ -124,101 +126,102 @@
             </v-card-actions>
         </v-card>
 
-        <!-- Diálogo para agregar/editar dirección -->
         <v-dialog v-model="dialDireccion" max-width="680" persistent>
-            <v-card class="pa-3">
-                <div class="d-flex align-center">
-                    <h3 class="subtitle-1 mb-0">{{ editIndex === null ? 'Agregar dirección' : 'Editar dirección' }}</h3>
+            <v-card class="pa-4" elevation="8" shaped>
+                <v-card-title class="d-flex align-center px-0 pt-0">
+                    <v-icon color="primary" class="mr-2">
+                        {{ editIndex === null ? 'mdi-map-marker-plus' : 'mdi-map-marker-edit' }}
+                    </v-icon>
+                    <span class="text-h6 font-weight-medium">
+                        {{ editIndex === null ? 'Nueva Dirección' : 'Editar Dirección' }}
+                    </span>
                     <v-spacer></v-spacer>
-                    <v-btn icon @click="cerrarDialogDireccion"><v-icon color="red">mdi-close</v-icon></v-btn>
-                </div>
+                    <v-btn icon small @click="cerrarDialogDireccion" class="ml-2">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-card-title>
 
-                <v-row dense class="mt-1">
-                    <v-col cols="12">
-                        <v-textarea outlined dense v-model="direccionForm.direccion" auto-grow filled label="Dirección"
-                            rows="1" />
-                    </v-col>
-                    <v-col cols="12" class="mt-n4">
-                        <v-textarea outlined dense v-model="direccionForm.referencia" auto-grow filled
-                            label="Referencia" rows="1" />
-                    </v-col>
-                </v-row>
+                <v-divider class="my-4"></v-divider>
 
-                <v-row dense class="mt-n2">
-                    <v-col cols="6">
-                        <v-autocomplete outlined dense clearable v-model="direccionForm.departamento"
-                            :items="arrayDepas" item-text="nombre" return-object label="DEPARTAMENTO"
-                            @change="onDepChange">
-                            <template v-slot:item="{ item }">
-                                <div class="d-flex justify-space-between" style="width:100%">
-                                    <span>{{ item.nombre }}</span>
-                                    <small class="grey--text">{{ item.ubigeo_sunat || item.ubigeo }}</small>
-                                </div>
-                            </template>
-                        </v-autocomplete>
-                    </v-col>
+                <v-card-text class="px-0">
+                    <v-row dense>
+                        <v-col cols="12">
+                            <v-text-field outlined dense v-model="direccionForm.direccion" label="Dirección principal"
+                                placeholder="Ej: Av. Los Rosales 123" prepend-inner-icon="mdi-road" hide-details
+                                class="mb-3"></v-text-field>
+                        </v-col>
 
-                    <v-col cols="6">
-                        <v-autocomplete outlined dense clearable :disabled="!direccionForm.departamento"
-                            v-model="direccionForm.provincia" :items="arrayProvs" item-text="nombre" return-object
-                            label="PROVINCIA" @change="onProvChange">
-                            <template v-slot:item="{ item }">
-                                <div class="d-flex justify-space-between" style="width:100%">
-                                    <span>{{ item.nombre }}</span>
-                                    <small class="grey--text">{{ item.ubigeo_sunat || item.ubigeo }}</small>
-                                </div>
-                            </template>
-                        </v-autocomplete>
-                    </v-col>
-                </v-row>
+                        <v-col cols="12">
+                            <v-textarea outlined dense v-model="direccionForm.referencia" label="Referencia"
+                                placeholder="Ej: Frente al parque, casa color azul"
+                                prepend-inner-icon="mdi-map-marker-radius" rows="2" hide-details auto-grow></v-textarea>
+                        </v-col>
+                    </v-row>
 
-                <v-row dense class="mt-n2">
-                    <v-col cols="6">
-                        <v-autocomplete outlined dense clearable :disabled="!direccionForm.provincia"
-                            v-model="direccionForm.distrito" :items="arrayDists" item-text="nombre" return-object
-                            label="DISTRITO" @change="onDistChange">
-                            <template v-slot:item="{ item }">
-                                <div class="d-flex justify-space-between" style="width:100%">
-                                    <span>{{ item.nombre }}</span>
-                                    <small class="grey--text">{{ item.ubigeo_sunat || item.ubigeo }}</small>
-                                </div>
-                            </template>
-                        </v-autocomplete>
-                    </v-col>
+                    <v-row dense class="mt-4">
+                        <v-col cols="12" sm="4">
+                            <v-autocomplete outlined dense v-model="direccionForm.departamento" :items="arrayDepas"
+                                item-text="nombre" return-object label="Departamento" prepend-inner-icon="mdi-home-city"
+                                @change="onDepChange" hide-details clearable></v-autocomplete>
+                        </v-col>
 
-                    <v-col cols="6">
-                        <v-text-field outlined dense v-model="direccionForm.ubigeo" label="UBIGEO" readonly />
-                    </v-col>
-                </v-row>
+                        <v-col cols="12" sm="4">
+                            <v-autocomplete outlined dense :disabled="!direccionForm.departamento"
+                                v-model="direccionForm.provincia" :items="arrayProvs" item-text="nombre" return-object
+                                label="Provincia" prepend-inner-icon="mdi-city" @change="onProvChange" hide-details
+                                clearable></v-autocomplete>
+                        </v-col>
 
-                <v-row dense class="mt-n2">
-                    <v-col cols="6">
-                        <v-text-field outlined dense v-model="direccionForm.latitud" label="Latitud" />
-                    </v-col>
-                    <v-col cols="6">
-                        <v-text-field outlined dense v-model="direccionForm.longitud" label="Longitud" />
-                    </v-col>
-                </v-row>
+                        <v-col cols="12" sm="4">
+                            <v-autocomplete outlined dense :disabled="!direccionForm.provincia"
+                                v-model="direccionForm.distrito" :items="arrayDists" item-text="nombre" return-object
+                                label="Distrito" prepend-inner-icon="mdi-map-marker" @change="onDistChange" hide-details
+                                clearable></v-autocomplete>
+                        </v-col>
+                    </v-row>
 
-                <div class="text-right mt-2">
-                    <v-btn text @click="cerrarDialogDireccion">Cancelar</v-btn>
-                    <v-btn color="primary" :loading="guardando" @click="guardarDireccion">Guardar</v-btn>
-                </div>
+                    <v-row dense class="mt-2">
+                        <v-col cols="12" sm="6">
+                            <v-text-field outlined dense v-model="direccionForm.ubigeo" label="Código Ubigeo"
+                                prepend-inner-icon="mdi-numeric" readonly hide-details
+                                class="bg-grey-lighten-4"></v-text-field>
+                        </v-col>
+
+                        <v-col cols="12" sm="6" class="d-flex align-center">
+                            <v-chip v-if="direccionForm.ubigeo" color="green" text-color="white" small class="ml-2">
+                                <v-icon left small>mdi-check-circle</v-icon>
+                                Ubigeo válido
+                            </v-chip>
+                        </v-col>
+                    </v-row>
+                </v-card-text>
+
+                <v-divider class="my-2"></v-divider>
+
+                <v-card-actions class="px-0 pb-0">
+                    <v-spacer></v-spacer>
+                    <v-btn text @click="cerrarDialogDireccion" class="mr-2" color="grey darken-1">
+                        Cancelar
+                    </v-btn>
+                    <v-btn color="primary" :loading="guardando" @click="guardarDireccion"
+                        :disabled="!direccionForm.direccion" depressed class="px-4">
+                        <v-icon left>{{ editIndex === null ? 'mdi-content-save' : 'mdi-check' }}</v-icon>
+                        {{ editIndex === null ? 'Guardar Dirección' : 'Actualizar' }}
+                    </v-btn>
+                </v-card-actions>
             </v-card>
         </v-dialog>
     </v-dialog>
 </template>
 <script>
-// 👇 igual que tu otro diálogo: leemos desde colClientes
+
 import { colClientes } from '../../../db_firestore'
 import { departamento, provincia, distrito } from '../../../ubigeos'
 
 export default {
     name: 'DialogDireccionesCliente',
     props: {
-        // v-model del diálogo
         value: { type: Boolean, default: false },
-        // id del cliente (RUC/DNI)
         clienteId: { type: String, required: true }
     },
     data() {
@@ -252,7 +255,6 @@ export default {
         this.arrayDepas = departamento() || []
     },
     watch: {
-        // cuando se abre el diálogo, carga el cliente
         show(nv) {
             if (nv) {
                 this.cargarCliente()
@@ -278,7 +280,7 @@ export default {
                 principal: false,
             }
         },
-        
+
         abrirDialogDireccion(index = null) {
             this.editIndex = index
             this.direccionForm = index === null
@@ -298,12 +300,12 @@ export default {
 
             this.dialDireccion = true
         },
-        
+
         cerrarDialogDireccion() {
             this.dialDireccion = false
             this.editIndex = null
         },
-        
+
         onDepChange(depa) {
             this.direccionForm.provincia = null
             this.direccionForm.distrito = null
@@ -311,32 +313,44 @@ export default {
             this.arrayProvs = depa ? (provincia(depa.ubigeo || depa.ubigeo_sunat) || []) : []
             this.arrayDists = []
         },
-        
+
         onProvChange(prov) {
             this.direccionForm.distrito = null
             this.direccionForm.ubigeo = ''
             this.arrayDists = prov ? (distrito(prov.ubigeo || prov.ubigeo_sunat) || []) : []
         },
-        
+
         onDistChange(dist) {
             if (dist) {
-                this.direccionForm.ubigeo = dist.ubigeo_sunat || dist.ubigeo || ''
+                this.direccionForm.ubigeo = this.generarUbigeo(
+                    this.direccionForm.departamento,
+                    this.direccionForm.provincia,
+                    dist
+                )
             } else {
                 this.direccionForm.ubigeo = ''
             }
         },
-        
+
+        generarUbigeo(depObj, provObj, distObj) {
+            const dep = depObj ? (depObj.ubigeo_sunat || depObj.ubigeo || '').toString().padStart(2, '0') : '';
+            const prov = provObj ? (provObj.ubigeo_sunat || provObj.ubigeo || '').toString().padStart(2, '0') : '';
+            const dist = distObj ? (distObj.ubigeo_sunat || distObj.ubigeo || '').toString().padStart(2, '0') : '';
+            if (dep && prov && dist) return `${dep}${prov}${dist}`;
+            return '';
+        },
+
         async guardarDireccion() {
             if (!this.direccionForm.direccion) {
                 this.$toast?.error?.('Ingrese la dirección') || alert('Ingrese la dirección')
                 return
             }
-            
+
             this.guardando = true
             try {
                 const payload = JSON.parse(JSON.stringify(this.direccionForm))
                 const direcciones = [...(this.cliente.direcciones || [])]
-                
+
                 if (this.editIndex === null) {
                     if (direcciones.length === 0) {
                         payload.principal = true
@@ -345,12 +359,12 @@ export default {
                 } else {
                     direcciones[this.editIndex] = payload
                 }
-                
+
                 await colClientes().doc(this.cliente.id).update({ direcciones })
                 this.$set(this.cliente, 'direcciones', direcciones)
-                
+
                 this.cerrarDialogDireccion()
-                this.$toast?.success?.('Dirección guardada') 
+                this.$toast?.success?.('Dirección guardada')
             } catch (e) {
                 console.error('Error guardando dirección:', e)
                 this.$toast?.error?.('Error al guardar') || alert('Error al guardar')
@@ -373,15 +387,12 @@ export default {
 
                 let doc = null
                 console.log(id)
-                // 1) Intento rápido desde caché (igual patrón que tu otro diálogo)
                 try {
                     doc = await colClientes().doc(id).get()
                 } catch (e) {
-                    // si falla cache, seguimos abajo con server
                     console.warn('Cache cliente no disponible, leyendo desde servidor…', e)
                 }
 
-                // 2) Si no hay doc o no existe, prueba desde servidor
                 if (!doc || !doc.exists) {
                     doc = await colClientes().doc(id).get()
                 }
@@ -432,19 +443,17 @@ export default {
 </script>
 
 <style scoped>
-/* Asegura que las direcciones largas se ajusten en cualquier elemento de lista o tabla */
 .wrap {
     white-space: normal !important;
     word-break: break-word;
 }
 
-/* Estilo para dar efecto visual de selección en la tabla (Desktop) */
 .direccion-row:hover {
-    background-color: #e8eaf6; /* Indigo lighten-5 */
+    background-color: #e8eaf6;
+    /* Indigo lighten-5 */
     transition: background-color 0.2s;
 }
 
-/* Asegura que los íconos de lista tengan espacio adecuado en móvil */
 .v-list-item__icon {
     margin-top: 8px !important;
     margin-bottom: 8px !important;

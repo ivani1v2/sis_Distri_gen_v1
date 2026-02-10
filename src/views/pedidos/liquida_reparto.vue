@@ -610,7 +610,7 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
             store.commit("dialogoprogress", 1)
             const snapshot = await all_detalle_p(this.router_grupo,data.numeracion).once("value");
             var array = {
-                arrayCabecera: data,
+                arrayCabecera: { ...data, id_grupo: this.router_grupo },
                 array_item: snapshot.val()
             }
             store.commit("array_guia", array)
