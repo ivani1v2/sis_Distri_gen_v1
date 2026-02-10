@@ -53,6 +53,9 @@
                             <h5 class="text-caption">
                                 **RESPONSABLE:** {{ arra_cabe_doC.responsable }}
                             </h5>
+                            <h5 class="text-caption" v-if="arra_cabe_doC.observacion">
+                                **OBSERVACIÓN:** {{ arra_cabe_doC.observacion }}
+                            </h5>
                         </v-card>
                     </v-col>
 

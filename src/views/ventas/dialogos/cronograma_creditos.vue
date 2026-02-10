@@ -13,8 +13,8 @@
         <v-card class="pa-3">
 
             <v-row dense>
-                <v-col cols="12">
-                    <v-text-field readonly v-model.number="totalCredito" label="Monto total (crédito)" type="number"
+                <v-col cols="12"> 
+                    <v-text-field readonly :value="redondear(totalCredito)" label="Monto total (crédito)" type="text"
                         dense outlined hide-details="auto" :prefix="moneda + ' '" />
                 </v-col>
             </v-row>
@@ -389,7 +389,11 @@ export default {
         cierra() {
             this.dial = false
             this.$emit("cierra", false)
-        }
+        },
+        redondear(valor) {
+            const dec = this.$store?.state?.configuracion?.decimal ?? 2;
+            return parseFloat(valor).toFixed(dec);
+        },
     }
 }
 </script>

@@ -44,10 +44,13 @@
                                 Descripcion
                             </th>
                             <th class="text-left">
-                                Medidad
+                                Medida
                             </th>
                             <th class="text-left">
                                 Precio
+                            </th>
+                            <th class="text-left" v-if="$store.state.configuracion?.desc_porcentaje_catalogo">
+                                % Desc
                             </th>
                             <th class="text-left">
                                 Total
@@ -57,15 +60,22 @@
 
                     <tbody>
 
-                        <tr v-for="item in lista_productos" :key="item.id" @click.prevent="editaProducto(item)">
+                        <tr v-for="item in lista_productos" :key="item.uuid || item.id"
+                            @click.prevent="editaProducto(item)">
                             <td>{{ item.cantidad }}</td>
-                            <td>{{ item.id + "-" + item.nombre }} <Span v-if="item.operacion == 'GRATUITA'"
+                            <td>{{ item.id + "-" + item.nombre }} <span v-if="item.operacion == 'GRATUITA'"
                                     class="red--text"> -
-                                    TG</Span></td>
+                                    TG</span></td>
                             <td>{{ item.medida }}</td>
-                            <td>S/.{{ item.precio }} <strong v-if="item.preciodescuento != 0" class="red--text"> - {{
-                                item.preciodescuento }}</strong></td>
-                            <td>S/.{{ redondear((Number(item.total_antes_impuestos) + Number(item.total_impuestos))) }}
+                            <td>S/.{{ redondear(item.precio || item.precioedita) }}</td>
+                            <td v-if="$store.state.configuracion?.desc_porcentaje_catalogo">
+                                <span v-if="item.desc_1 || item.desc_2 || item.desc_3" class="orange--text">
+                                    {{ item.desc_1 || 0 }}/{{ item.desc_2 || 0 }}/{{ item.desc_3 || 0 }}
+                                </span>
+                                <span v-else>-</span>
+                            </td>
+                            <td>S/.{{ redondear(item.operacion === 'GRATUITA' ? 0 : (Number(item.cantidad) *
+                                Number(item.precio || item.precioedita))) }}
                             </td>
                         </tr>
                     </tbody>
@@ -80,7 +90,7 @@
                     <v-icon @click="dialogoProducto = false">mdi-close</v-icon>
                 </v-system-bar>
             </div>
-            <v-card class="pa-3">
+            <v-card class="pa-3" :key="editKey">
                 <v-select :items="arrayOperacion" label="Operacion" dense outlined v-model="operacion_edita"></v-select>
                 <v-row class="mx-auto text-center" dense>
                     <v-col cols="12" class="mb-n4 mt-n1">
@@ -89,7 +99,7 @@
                     </v-col>
                     <v-col cols="6" xs="6">
                         <v-text-field dense @keyup.enter="grabaEdita()" type="number" class="pa-3" v-model="precioedita"
-                            label="Precio"></v-text-field>
+                            label="Precio Base" @input="onPrecioEditaChange"></v-text-field>
                     </v-col>
                     <v-col cols="6" xs="6">
                         <v-text-field dense @keyup.enter="grabaEdita()" type="number" class="pa-3"
@@ -97,12 +107,18 @@
                     </v-col>
                 </v-row>
 
-                <v-card-actions class="mt-n6">
+                <v-alert v-if="precioCambiado" type="warning" dense text class="mt-2 mb-0" style="font-size: 11px;">
+                    El precio fue modificado. Ajuste los descuentos si es necesario.
+                </v-alert>
+                <descuentos-porcentaje v-if="dialogoProducto" :key="'desc-edit-' + editKey" ref="descEditaRef"
+                    :precio-base="precioBaseEdita" :descuentos-iniciales="descuentosInicialesEdita"
+                    :es-bono="operacion_edita === 'GRATUITA'" :decimales="decimales" @cambio="onDescEditaCambio"
+                    class="my-3" />
 
+                <v-card-actions class="mt-n2">
                     <v-btn color="red darken-1" text @click="eliminaedita()">
                         Elimina
                     </v-btn>
-
                     <v-spacer></v-spacer>
                     <v-btn color="green darken-1" text @click="grabaEdita()">
                         Graba
@@ -227,13 +243,14 @@ import store from '@/store/index'
 import axios from "axios"
 import cat_fijo from '@/components/catalogo_fijo'
 import dial_stock from '@/views/ventas/dialogos/dial_stock_insuficiente.vue'
+import DescuentosPorcentaje from '@/components/descuentos_porcentaje.vue'
 
 export default {
     name: 'caja',
     components: {
-
         cat_fijo,
         dial_stock,
+        DescuentosPorcentaje,
     },
     props: {
         cabecera: '',
@@ -266,7 +283,11 @@ export default {
             detalleOriginalSnapshot: [],
             dialStock: false,
             sinStock: [],
-
+            // Para descuentos
+            editKey: 0,
+            precioCambiado: false,
+            precioOriginalEdita: 0,
+            descEdita: { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 },
         }
     },
     created() {
@@ -280,6 +301,19 @@ export default {
         lista_productos() {
             return this.listaproductos
         },
+        precioBaseEdita() {
+            return Number(this.item_selecto?.precio_base) || Number(this.precioedita) || 0;
+        },
+        descuentosInicialesEdita() {
+            return {
+                desc_1: Number(this.item_selecto?.desc_1) || 0,
+                desc_2: Number(this.item_selecto?.desc_2) || 0,
+                desc_3: Number(this.item_selecto?.desc_3) || 0
+            };
+        },
+        decimales() {
+            return this.$store?.state?.configuracion?.decimal ?? 2;
+        }
     },
     methods: {
         cierra() {
@@ -501,7 +535,8 @@ export default {
 
         editaProducto(id) {
             console.log(id);
-            this.dialogoProducto = true;
+            this.editKey++;
+            this.precioCambiado = false;
 
             const producto = this.listaproductos.find(
                 (p) =>
@@ -511,13 +546,45 @@ export default {
             );
 
             if (producto) {
-                this.item_selecto = producto;
+                this.item_selecto = {
+                    ...producto,
+                    precio_base: Number(producto.precio_base) || Number(producto.precioedita) || Number(producto.precio) || 0,
+                    desc_1: Number(producto.desc_1) || 0,
+                    desc_2: Number(producto.desc_2) || 0,
+                    desc_3: Number(producto.desc_3) || 0
+                };
                 this.codigoedita = this.listaproductos.indexOf(producto);
                 this.cantidadEdita = producto.cantidad;
-                this.precioedita = producto.precioedita;
+                // Usar precio_base si existe, sino precioedita
+                this.precioedita = Number(producto.precio_base) || Number(producto.precioedita) || Number(producto.precio) || 0;
+                this.precioOriginalEdita = this.precioedita;
                 this.preciodescuento = producto.preciodescuento;
                 this.nombreEdita = producto.nombre;
                 this.operacion_edita = producto.operacion;
+                // Reset descEdita
+                this.descEdita = {
+                    desc_1: Number(producto.desc_1) || 0,
+                    desc_2: Number(producto.desc_2) || 0,
+                    desc_3: Number(producto.desc_3) || 0,
+                    precioFinal: Number(producto.precioedita) || Number(producto.precio) || 0,
+                    montoDescuento: 0
+                };
+            }
+            this.dialogoProducto = true;
+        },
+        onPrecioEditaChange() {
+            const precioActual = Number(this.precioedita) || 0;
+            this.precioCambiado = precioActual !== this.precioOriginalEdita;
+            if (this.item_selecto) {
+                this.item_selecto.precio_base = precioActual;
+            }
+        },
+        onDescEditaCambio(data) {
+            this.descEdita = data;
+            if (this.item_selecto && data.precioFinal !== undefined) {
+                this.item_selecto.desc_1 = data.desc_1 || 0;
+                this.item_selecto.desc_2 = data.desc_2 || 0;
+                this.item_selecto.desc_3 = data.desc_3 || 0;
             }
         },
         async grabaEdita() {
@@ -529,15 +596,25 @@ export default {
 
             store.commit("dialogoprogress");
 
-            if (parseFloat(this.item_selecto.cantidad) !== parseFloat(this.cantidadEdita)) {
-                this.listaproductos[this.codigoedita].cantidad = this.cantidadEdita;
-            } else {
-                const producto = this.listaproductos[this.codigoedita];
-                producto.precioedita = this.redondear(this.precioedita);
-                producto.operacion = this.operacion_edita.trim();
-                producto.precio = this.redondear(this.precioedita);
-                producto.nombre = this.nombreEdita.trim();
-            }
+            const producto = this.listaproductos[this.codigoedita];
+            const tieneDescuentos = (this.descEdita.desc_1 > 0 || this.descEdita.desc_2 > 0 || this.descEdita.desc_3 > 0);
+            const precioFinal = tieneDescuentos && this.operacion_edita !== 'GRATUITA'
+                ? this.descEdita.precioFinal
+                : Number(this.precioedita);
+
+            producto.cantidad = Number(this.cantidadEdita);
+            producto.precio_base = Number(this.precioedita); 
+            producto.precioedita = this.redondear(precioFinal);
+            producto.precio = this.redondear(precioFinal);
+            producto.operacion = this.operacion_edita.trim();
+            producto.nombre = this.nombreEdita.trim();
+
+            producto.desc_1 = this.descEdita.desc_1 || 0;
+            producto.desc_2 = this.descEdita.desc_2 || 0;
+            producto.desc_3 = this.descEdita.desc_3 || 0;
+
+            const esGratuita = this.operacion_edita === 'GRATUITA';
+            producto.totalLinea = esGratuita ? 0 : Number(producto.cantidad) * Number(producto.precio);
 
             store.commit("dialogoprogress");
             this.dialogoProducto = false;
@@ -649,7 +726,7 @@ export default {
             try {
                 const resp = await axios({
                     method: "POST",
-                     url: "https://api-distribucion-6sfc6tum4a-rj.a.run.app",
+                    url: "https://api-distribucion-6sfc6tum4a-rj.a.run.app",
                     //url: "http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion",
                     headers: {
                         // 👇 usa la MISMA cabecera que lee tu backend: req.get("x-idempotency-key")

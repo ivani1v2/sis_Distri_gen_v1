@@ -68,6 +68,7 @@
                         <tr class="blue-grey lighten-5">
                             <th class="text-left font-weight-bold">ID</th>
                             <th class="text-left font-weight-bold">Proveedor / Motivo</th>
+                            <th class="text-left font-weight-bold">Observación</th>
                             <th class="text-left font-weight-bold">Documento / Tipo</th>
                             <th class="text-left font-weight-bold">Referencia</th>
                             <th class="text-left font-weight-bold">Emisión / Ingreso</th>
@@ -87,6 +88,10 @@
                                     {{ item.motivo || item.tipodocumento }}
                                 </span>
                                 <div class="caption grey--text">{{ item.num_doc }}</div>
+                            </td>
+
+                            <td>
+                                <span class="caption">{{ item.observacion || '-' }}</span>
                             </td>
 
                             <td>

@@ -11,6 +11,9 @@
                     <v-icon left small>mdi-map-marker</v-icon>
                     {{ direcciones.length }} dirección(es)
                 </v-chip>
+                <v-btn icon @click="abrirDialogDireccion()" title="Agregar dirección">
+                    <v-icon>mdi-plus-circle</v-icon>
+                </v-btn>
                 <v-btn icon @click="cerrar" title="Cerrar">
                     <v-icon>mdi-close</v-icon>
                 </v-btn>
@@ -120,11 +123,95 @@
                 </v-btn>
             </v-card-actions>
         </v-card>
+
+        <!-- Diálogo para agregar/editar dirección -->
+        <v-dialog v-model="dialDireccion" max-width="680" persistent>
+            <v-card class="pa-3">
+                <div class="d-flex align-center">
+                    <h3 class="subtitle-1 mb-0">{{ editIndex === null ? 'Agregar dirección' : 'Editar dirección' }}</h3>
+                    <v-spacer></v-spacer>
+                    <v-btn icon @click="cerrarDialogDireccion"><v-icon color="red">mdi-close</v-icon></v-btn>
+                </div>
+
+                <v-row dense class="mt-1">
+                    <v-col cols="12">
+                        <v-textarea outlined dense v-model="direccionForm.direccion" auto-grow filled label="Dirección"
+                            rows="1" />
+                    </v-col>
+                    <v-col cols="12" class="mt-n4">
+                        <v-textarea outlined dense v-model="direccionForm.referencia" auto-grow filled
+                            label="Referencia" rows="1" />
+                    </v-col>
+                </v-row>
+
+                <v-row dense class="mt-n2">
+                    <v-col cols="6">
+                        <v-autocomplete outlined dense clearable v-model="direccionForm.departamento"
+                            :items="arrayDepas" item-text="nombre" return-object label="DEPARTAMENTO"
+                            @change="onDepChange">
+                            <template v-slot:item="{ item }">
+                                <div class="d-flex justify-space-between" style="width:100%">
+                                    <span>{{ item.nombre }}</span>
+                                    <small class="grey--text">{{ item.ubigeo_sunat || item.ubigeo }}</small>
+                                </div>
+                            </template>
+                        </v-autocomplete>
+                    </v-col>
+
+                    <v-col cols="6">
+                        <v-autocomplete outlined dense clearable :disabled="!direccionForm.departamento"
+                            v-model="direccionForm.provincia" :items="arrayProvs" item-text="nombre" return-object
+                            label="PROVINCIA" @change="onProvChange">
+                            <template v-slot:item="{ item }">
+                                <div class="d-flex justify-space-between" style="width:100%">
+                                    <span>{{ item.nombre }}</span>
+                                    <small class="grey--text">{{ item.ubigeo_sunat || item.ubigeo }}</small>
+                                </div>
+                            </template>
+                        </v-autocomplete>
+                    </v-col>
+                </v-row>
+
+                <v-row dense class="mt-n2">
+                    <v-col cols="6">
+                        <v-autocomplete outlined dense clearable :disabled="!direccionForm.provincia"
+                            v-model="direccionForm.distrito" :items="arrayDists" item-text="nombre" return-object
+                            label="DISTRITO" @change="onDistChange">
+                            <template v-slot:item="{ item }">
+                                <div class="d-flex justify-space-between" style="width:100%">
+                                    <span>{{ item.nombre }}</span>
+                                    <small class="grey--text">{{ item.ubigeo_sunat || item.ubigeo }}</small>
+                                </div>
+                            </template>
+                        </v-autocomplete>
+                    </v-col>
+
+                    <v-col cols="6">
+                        <v-text-field outlined dense v-model="direccionForm.ubigeo" label="UBIGEO" readonly />
+                    </v-col>
+                </v-row>
+
+                <v-row dense class="mt-n2">
+                    <v-col cols="6">
+                        <v-text-field outlined dense v-model="direccionForm.latitud" label="Latitud" />
+                    </v-col>
+                    <v-col cols="6">
+                        <v-text-field outlined dense v-model="direccionForm.longitud" label="Longitud" />
+                    </v-col>
+                </v-row>
+
+                <div class="text-right mt-2">
+                    <v-btn text @click="cerrarDialogDireccion">Cancelar</v-btn>
+                    <v-btn color="primary" :loading="guardando" @click="guardarDireccion">Guardar</v-btn>
+                </div>
+            </v-card>
+        </v-dialog>
     </v-dialog>
 </template>
 <script>
 // 👇 igual que tu otro diálogo: leemos desde colClientes
 import { colClientes } from '../../../db_firestore'
+import { departamento, provincia, distrito } from '../../../ubigeos'
 
 export default {
     name: 'DialogDireccionesCliente',
@@ -138,7 +225,14 @@ export default {
         return {
             cliente: null,
             cargando: false,
-            error: null
+            error: null,
+            dialDireccion: false,
+            guardando: false,
+            editIndex: null,
+            direccionForm: this.nuevaDireccion(),
+            arrayDepas: [],
+            arrayProvs: [],
+            arrayDists: [],
         }
     },
     computed: {
@@ -154,6 +248,9 @@ export default {
             return this.cliente?.direcciones || []
         }
     },
+    created() {
+        this.arrayDepas = departamento() || []
+    },
     watch: {
         // cuando se abre el diálogo, carga el cliente
         show(nv) {
@@ -168,6 +265,100 @@ export default {
         }
     },
     methods: {
+        nuevaDireccion() {
+            return {
+                direccion: '',
+                referencia: '',
+                departamento: null,
+                provincia: null,
+                distrito: null,
+                ubigeo: '',
+                latitud: null,
+                longitud: null,
+                principal: false,
+            }
+        },
+        
+        abrirDialogDireccion(index = null) {
+            this.editIndex = index
+            this.direccionForm = index === null
+                ? this.nuevaDireccion()
+                : JSON.parse(JSON.stringify(this.cliente.direcciones[index]))
+
+            this.arrayDepas = departamento() || []
+            if (this.direccionForm.departamento) {
+                const depUb = this.direccionForm.departamento.ubigeo || this.direccionForm.departamento.ubigeo_sunat
+                this.arrayProvs = provincia(depUb) || []
+            } else this.arrayProvs = []
+
+            if (this.direccionForm.provincia) {
+                const provUb = this.direccionForm.provincia.ubigeo || this.direccionForm.provincia.ubigeo_sunat
+                this.arrayDists = distrito(provUb) || []
+            } else this.arrayDists = []
+
+            this.dialDireccion = true
+        },
+        
+        cerrarDialogDireccion() {
+            this.dialDireccion = false
+            this.editIndex = null
+        },
+        
+        onDepChange(depa) {
+            this.direccionForm.provincia = null
+            this.direccionForm.distrito = null
+            this.direccionForm.ubigeo = ''
+            this.arrayProvs = depa ? (provincia(depa.ubigeo || depa.ubigeo_sunat) || []) : []
+            this.arrayDists = []
+        },
+        
+        onProvChange(prov) {
+            this.direccionForm.distrito = null
+            this.direccionForm.ubigeo = ''
+            this.arrayDists = prov ? (distrito(prov.ubigeo || prov.ubigeo_sunat) || []) : []
+        },
+        
+        onDistChange(dist) {
+            if (dist) {
+                this.direccionForm.ubigeo = dist.ubigeo_sunat || dist.ubigeo || ''
+            } else {
+                this.direccionForm.ubigeo = ''
+            }
+        },
+        
+        async guardarDireccion() {
+            if (!this.direccionForm.direccion) {
+                this.$toast?.error?.('Ingrese la dirección') || alert('Ingrese la dirección')
+                return
+            }
+            
+            this.guardando = true
+            try {
+                const payload = JSON.parse(JSON.stringify(this.direccionForm))
+                const direcciones = [...(this.cliente.direcciones || [])]
+                
+                if (this.editIndex === null) {
+                    if (direcciones.length === 0) {
+                        payload.principal = true
+                    }
+                    direcciones.push(payload)
+                } else {
+                    direcciones[this.editIndex] = payload
+                }
+                
+                await colClientes().doc(this.cliente.id).update({ direcciones })
+                this.$set(this.cliente, 'direcciones', direcciones)
+                
+                this.cerrarDialogDireccion()
+                this.$toast?.success?.('Dirección guardada') 
+            } catch (e) {
+                console.error('Error guardando dirección:', e)
+                this.$toast?.error?.('Error al guardar') || alert('Error al guardar')
+            } finally {
+                this.guardando = false
+            }
+        },
+
         async cargarCliente() {
             try {
                 this.error = null

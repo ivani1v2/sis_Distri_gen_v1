@@ -18,7 +18,7 @@
                             class="grey--text text--darken-1">
                             ({{ item.id }})
                         </small>
-                        — <strong class="red--text"> {{ moneda }} {{ Number(item.precio || 0).toFixed(2) }}</strong>
+                        — <strong class="red--text"> {{ monedaSimbolo }} {{ Number(item.precio || 0).toFixed(2) }}</strong>
                     </v-list-item-title>
                     <v-list-item-subtitle class="mt-n1 mb-n2">
                         <span class="text-caption"
@@ -160,7 +160,7 @@
                                     :color="tierVisual === 1 ? 'red' : 'grey lighten-2'"
                                     :text-color="tierVisual === 1 ? 'black' : 'black'" :input-value="tierVisual === 1"
                                     @click="!esPrecioEstricto && (precioSeleccionado = 1)" :disabled="esPrecioEstricto">
-                                    S/ {{ fmt(precioChip(producto_selecto, 1)) }}
+                                    {{ monedaSimbolo }} {{ fmt(precioChip(producto_selecto, 1)) }}
                                     <span class="ml-1 caption grey--text text--darken-1"
                                         v-if="tieneMay1(producto_selecto)">
                                         (&lt; {{ producto_selecto.escala_may1 }})
@@ -208,7 +208,7 @@
                                 <v-chip class="ma-1" outlined :color="tierVisual === 3 ? 'red' : 'grey lighten-2'"
                                     :text-color="tierVisual === 3 ? 'black' : 'black'" :input-value="tierVisual === 3"
                                     @click="!esPrecioEstricto && (precioSeleccionado = 3)" :disabled="esPrecioEstricto">
-                                    S/ {{ fmt(precioChip(producto_selecto, 3)) }}
+                                    {{monedaSimbolo}} {{ fmt(precioChip(producto_selecto, 3)) }}
                                     <span class="ml-1 caption grey--text text--darken-1">
                                         (desde {{ producto_selecto.escala_may2 }})
                                     </span>
@@ -246,7 +246,7 @@
                             <span
                                 v-if="descuentoAplicado.precioFinal && descuentoAplicado.precioFinal !== precioBaseParaDescuento"
                                 class="ml-2 green--text">
-                                | Precio final: S/ {{ descuentoAplicado.precioFinal }}
+                                | Precio final: {{ monedaSimbolo }} {{ descuentoAplicado.precioFinal }}
                             </span>
                         </div>
                     </div>
@@ -316,6 +316,9 @@ export default {
         }
     },
     computed: {
+        monedaSimbolo(){
+            return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/';
+        },
         precioBaseParaDescuento() {
             if (!this.producto_selecto) return 0;
             const tier = this.precioSeleccionado ?? this.sugerirTier(this.producto_selecto, this.totalUnidades);

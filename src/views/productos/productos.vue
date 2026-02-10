@@ -70,6 +70,7 @@
                 <template v-slot:item="{ item }">
                     <tr>
                         <td style="font-size:80%;">{{ item.id }}</td>
+                        <td style="font-size:80%;">{{ item.codbarra || '-' }}</td>
                         <td style="font-size:80%;">{{ item.categoria }}</td>
                         <td style="font-size:80%;">{{item.cod_interno}} - {{ item.nombre }}</td>
                         <td style="font-size:80%;">{{ item.medida }}</td>
@@ -793,6 +794,10 @@ export default {
             align: 'start',
             sortable: false,
             value: 'id',
+        },
+        {
+            text: 'Cod. Barra',
+            value: 'codbarra',
         },
         {
             text: 'Categoria',

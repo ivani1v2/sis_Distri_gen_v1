@@ -14,12 +14,17 @@
         </v-row>
 
         <v-row class="text-center pa-2 mb-n7">
-            <v-col cols="6">
+            <v-col cols="4">
                 <v-text-field type="date" outlined dense v-model="date1" label="INICIO"></v-text-field>
             </v-col>
 
-            <v-col cols="6">
+            <v-col cols="4">
                 <v-text-field type="date" outlined dense v-model="date2" label="FIN"></v-text-field>
+            </v-col>
+
+            <v-col cols="4" v-if="esAdmin">
+                <v-select outlined dense v-model="vendedor_filtro" :items="vendedoresItems" 
+                    item-text="text" item-value="value" label="Vendedor" clearable hide-details></v-select>
             </v-col>
 
         </v-row>
@@ -38,6 +43,9 @@
                             <th class="text-left">
                                 Cliente
                             </th>
+                            <th class="text-left" v-if="esAdmin">
+                                Vendedor
+                            </th>
                             <th class="text-left">
                                 Total
                             </th>
@@ -52,6 +60,9 @@
                             <td style="font-family:verdana;font-size:75%;">{{ conviertefecha(item.fecha_emision) }}</td>
                             <td style="font-family:verdana;font-size:75%;">{{ item.num_cliente }} - {{ item.nom_cliente
                                 }}</td>
+                            <td style="font-family:verdana;font-size:75%;" v-if="esAdmin">
+                                {{ getNombreVendedor(item.responsable) }}
+                            </td>
                             <td style="font-family:verdana;font-size:75%;">{{ item.moneda || 'S/' }} {{ item.total }}
                             </td>
                             <td>
@@ -135,8 +146,8 @@
                             <tr v-for="item in lista_productos" :key="item.id">
                                 <td>{{ item.nombre }}</td>
                                 <td width="100">{{ item.cantidad }}</td>
-                                <td width="100">S/.{{ item.precioedita }}</td>
-                                <td width="100">S/.{{ redondear(item.cantidad * item.precio) }}</td>
+                                <td width="100">{{monedaSimbolo}}.{{ item.precioedita }}</td>
+                                <td width="100">{{monedaSimbolo}} {{ redondear(item.cantidad * item.precio) }}</td>
                             </tr>
                         </tbody>
                     </template>
@@ -219,7 +230,7 @@
 
                 <v-card-text class="pa-4">
                     <v-row dense class="ma-0">
-                        <v-col cols="12" sm="6" class="pa-2">
+                        <v-col cols="12" sm="6" class="pa-2" v-if="esAdmin">
                             <v-hover v-slot="{ hover }">
                                 <v-card @click="doc('FACTURA')" :elevation="hover ? 8 : 2"
                                     :class="['transition-swing', hover ? 'primary lighten-5' : '']" height="120"
@@ -239,7 +250,7 @@
                             </v-hover>
                         </v-col>
 
-                        <v-col cols="12" sm="6" class="pa-2">
+                        <v-col cols="12" sm="6" class="pa-2" v-if="esAdmin">
                             <v-hover v-slot="{ hover }">
                                 <v-card @click="doc('GUIA')" :elevation="hover ? 8 : 2"
                                     :class="['transition-swing', hover ? 'success lighten-5' : '']" height="120"
@@ -327,24 +338,79 @@ export default {
         observacion: '',
         selecto: [],
         item_selecto: [],
-        data_proforma: []
+        data_proforma: [],
+        vendedor_filtro: ''
     }),
     mounted() {
-        allProformas().orderByChild('fecha_emision').startAt(moment(String(this.date1)) / 1000).endAt(moment(String(this.date1)).add(23, 'h').add(59, 'm').add(59, 's') / 1000).on("value", this.onDataChange);
+        this.cargarProformas();
     },
     beforeDestroy() {
-        allProformas().orderByChild('fecha_emision').startAt(moment(String(this.date1)) / 1000).endAt(moment(String(this.date2)).add(23, 'h').add(59, 'm').add(59, 's') / 1000).off("value", this.onDataChange);
+        allProformas().off("value", this.onDataChange);
+    },
+    watch: {
+        date1() {
+            this.cargarProformas();
+        },
+        date2() {
+            this.cargarProformas();
+        }
     },
     computed: {
+        esAdmin() {
+            return this.$store.state.permisos.es_admin;
+        },
+        usuarioActual() {
+            const correo = this.$store.state.permisos.correo || '';
+            return correo.slice(0, -13); // Quita @dominio.com
+        },
+        vendedoresItems() {
+            // Construir lista de responsables únicos desde las proformas
+            const responsables = [...new Set(this.desserts.map(p => p.responsable).filter(r => r))];
+            // Mapear a objetos con nombre legible y valor del código
+            const items = responsables.sort().map(codigo => {
+                const sede = this.$store.state.array_sedes?.find(s => s.codigo === codigo);
+                return {
+                    text: sede?.nombre || codigo,
+                    value: codigo
+                };
+            });
+            return [{ text: 'TODOS', value: 'TODOS' }, ...items];
+        },
         listafiltrada() {
-            allProformas().orderByChild('fecha_emision').startAt(moment(String(this.date1)) / 1000).endAt(moment(String(this.date2)).add(23, 'h').add(59, 'm').add(59, 's') / 1000).on("value", this.onDataChange);
-            return this.desserts.reverse()
+            let lista = this.desserts;
+            
+            // Si NO es admin, filtrar solo sus proformas
+            if (!this.esAdmin) {
+                lista = lista.filter(item => item.responsable === this.usuarioActual);
+            } else if (this.vendedor_filtro && this.vendedor_filtro !== 'TODOS') {
+                // Si es admin y hay filtro de vendedor seleccionado
+                lista = lista.filter(item => item.responsable === this.vendedor_filtro);
+            }
+            
+            return lista.reverse();
+        },
+        monedaSimbolo(){
+            return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/';
         }
     },
     created() {
         this.inicio()
     },
     methods: {
+        cargarProformas() {
+            // Remover listener anterior
+            allProformas().off("value", this.onDataChange);
+            // Establecer nuevo listener
+            const start = moment(String(this.date1)) / 1000;
+            const end = moment(String(this.date2)).add(23, 'h').add(59, 'm').add(59, 's') / 1000;
+            allProformas().orderByChild('fecha_emision').startAt(start).endAt(end).on("value", this.onDataChange);
+        },
+        getNombreVendedor(codigo) {
+            if (!codigo) return '-';
+            // Buscar en array_sedes por codigo
+            const sede = this.$store.state.array_sedes?.find(s => s.codigo === codigo);
+            return sede?.nombre || codigo; // Si no encuentra, muestra el código
+        },
         editar(data) {
             if (confirm('seguro de querer editar?')) {
                 this.item_selecto = data

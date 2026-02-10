@@ -8,9 +8,9 @@
                 <v-col cols="6" sm="4">
                     <v-text-field class="mx-1" outlined dense type="date" v-model="date2" label="Fin" />
                 </v-col>
-                <v-col cols="12" sm="4">
-                    <v-select v-model="sede_actual" :items="$store.state.array_sedes" item-text="nombre"
-                        item-value="codigo" label="Vendedor" outlined dense clearable />
+                <v-col cols="12" sm="4" v-if="esAdmin">
+                    <v-select v-model="sede_actual" :items="vendedoresItems" 
+                        label="Vendedor" outlined dense clearable />
                 </v-col>
             </v-row>
 
@@ -105,6 +105,19 @@ export default {
         ],
     }),
     computed: {
+        esAdmin() {
+            return this.$store.state.permisos.es_admin;
+        },
+        usuarioActual() {
+            const correo = this.$store.state.permisos.correo || '';
+            return correo.slice(0, -13); // Quita @dominio.com
+        },
+        vendedoresItems() {
+            // Lista de vendedores desde array_sedes
+            const sedes = this.$store.state.array_sedes || [];
+            const vendedores = sedes.map(s => s.codigo).filter(v => v);
+            return ['TODOS', ...vendedores.sort()];
+        },
         moneda() {
             return (store.state?.moneda?.[0]?.simbolo) || 'S/'
         },
@@ -198,13 +211,20 @@ export default {
                     return
                 }
 
-                // 2) Filtra ANULADOS y por sede (si se eligió)
+                // 2) Filtra ANULADOS y por vendedor
                 const cabeceras = []
                 snap.forEach((child) => {
                     const c = child.val()
                     if (String(c.estado || '').toLowerCase() === 'anulado') return
-                    console.log(c, this.sede_actual)
-                    if (this.sede_actual && c.vendedor && String(c.vendedor) !== String(this.sede_actual)) return
+                    
+                    // Si NO es admin, filtrar solo sus ventas
+                    if (!this.esAdmin) {
+                        if (c.vendedor && String(c.vendedor) !== String(this.usuarioActual)) return
+                    } else if (this.sede_actual && this.sede_actual !== 'TODOS') {
+                        // Si es admin y hay filtro de vendedor seleccionado
+                        if (c.vendedor && String(c.vendedor) !== String(this.sede_actual)) return
+                    }
+                    
                     cabeceras.push(c)
                 })
 

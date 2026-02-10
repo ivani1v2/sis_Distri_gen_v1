@@ -230,18 +230,19 @@
                         <tbody>
                             <tr v-for="d in pedidoSeleccionado" :key="`${d.id}-${d.nombre}`">
                                 <td class="caption">
-                                    <strong class="red--text mr-1">{{ d.cantidad }}</strong> x {{ d.nombre }}
+                                    <strong class="red--text mr-1">{{ d.cantidad }}</strong> x ({{ d.id }}) {{ d.nombre }} 
                                     <v-chip v-if="d.operacion == 'GRATUITA'" x-small color="teal" dark
                                         class="ml-1">GRATUITA</v-chip>
                                 </td>
                                 <td class="caption">{{ d.medida }}</td>
                                 <td class="text-right caption">
-                                    S/.{{ d.precio }}
-                                    <strong v-if="d.preciodescuento != 0" class="red--text ml-1">(-S/.{{
+                                    {{ monedaSimbolo }}{{ d.precio }}
+                                    <strong v-if="d.preciodescuento != 0" class="red--text ml-1">(-{{ monedaSimbolo }}{{
                                         d.preciodescuento
                                         }})</strong>
                                 </td>
-                                <td class="text-right caption font-weight-bold">S/.{{
+                                <td class="text-right caption font-weight-bold">{{ monedaSimbolo }}{{
+
                                     redondear((Number(d.total_antes_impuestos)
                                         + Number(d.total_impuestos))) }}</td>
                             </tr>
@@ -439,6 +440,7 @@ export default {
     },
     data() {
         return {
+            
             dialogo_imprime: false,
             dialogDetalle: false,
             pedidoSeleccionado: null,
@@ -533,6 +535,9 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
         }
     },
     computed: {
+        monedaSimbolo(){
+            return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/';
+        },
         printPercent() {
             return this.printTotal ? (this.printDone / this.printTotal) * 100 : 0;
         },
