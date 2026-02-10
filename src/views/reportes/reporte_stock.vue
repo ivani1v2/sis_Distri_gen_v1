@@ -78,7 +78,7 @@
 
         <template v-slot:item="{ item }">
           <tr>
-            <td style="font-size:80%;">{{ item.id }}</td>
+            <td style="font-size:80%;">{{ item.codbarra }}</td>
             <td style="font-size:80%;">{{ item.categoria }}</td>
             <td style="font-size:80%;">{{ item.nombre }}</td>
             <td style="font-size:80%;">{{ item.medida }}</td>
@@ -143,7 +143,7 @@ export default {
         esPrincipal: s.base === store.state.sedeActual?.codigo
       }))
     },
-    
+
     sedePrincipal() {
       return store.state.sedeActual?.codigo || null
     },
@@ -160,7 +160,7 @@ export default {
         { text: 'ID', value: 'id', align: 'start' },
         { text: 'Categoría', value: 'categoria' },
         { text: 'Nombre', value: 'nombre' },
-        { text: 'Medida', value: 'medida'},
+        { text: 'Medida', value: 'medida' },
         { text: `Costo (${simbolo})`, value: 'costo' },
         { text: 'Stock', value: 'stock' },
         { text: `Precio V (${simbolo})`, value: 'precio' },
@@ -336,7 +336,7 @@ export default {
         const costoN = this.toNumber(it.costo)
         const precioN = this.toNumber(it.precio)
         return {
-          ID: it.id || '',
+          CodBarra: it.codbarra || '',
           Categoria: it.categoria || '',
           Nombre: it.nombre || '',
           Medida: it.medida || '',
@@ -360,7 +360,7 @@ export default {
 
         const hoja = XLSX.utils.json_to_sheet(data, {
           header: [
-            'ID', 'Categoria', 'Nombre', 'Medida', 'Costo', 'Stock', 'PrecioVenta',
+            'CodBarra', 'Categoria', 'Nombre', 'Medida', 'Costo', 'Stock', 'PrecioVenta',
             'TotalCosto', 'TotalVenta', 'Observacion', 'Sede'
           ]
         })
@@ -381,18 +381,18 @@ export default {
 
         const filtrosInfo = []
         filtrosInfo.push(`Sede: ${this.nombreSedeActual}`)
-        
+
         if (this.filtro_categoria && this.filtro_categoria !== 'TODOS') {
           filtrosInfo.push(`Categoría: ${this.filtro_categoria}`)
         }
-                
+
         if (this.soloConStock) {
           filtrosInfo.push('Solo con stock ≥ 1')
         }
 
         const libro = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(libro, hoja, 'Productos')
-      
+
         if (filtrosInfo.length > 0) {
           const infoSheet = XLSX.utils.aoa_to_sheet([
             ['REPORTE DE PRODUCTOS'],
@@ -403,32 +403,32 @@ export default {
             ['Fecha de exportación:', new Date().toLocaleString('es-PE')],
             ['Total registros:', data.length]
           ])
-          
+
           XLSX.utils.book_append_sheet(libro, infoSheet, 'Información')
         }
 
         let nombreBase = 'productos'
-        
+
         const sedeNombre = this.nombreSedeActual.replace(/\s+/g, '_')
         nombreBase += `_${sedeNombre}`
-        
+
         if (this.filtro_categoria && this.filtro_categoria !== 'TODOS') {
           const catNombre = this.filtro_categoria.replace(/\s+/g, '_')
           nombreBase += `_${catNombre}`
         }
-        
+
         if (this.soloConStock) {
           nombreBase += '_con-stock'
         }
-        
+
         const nombre = `${nombreBase}_${this.nowString()}.xlsx`
         XLSX.writeFile(libro, nombre)
         let msg = `Exportado: ${data.length} productos de ${this.nombreSedeActual}`
         if (this.filtro_categoria !== 'TODOS') msg += `, categoría ${this.filtro_categoria}`
         if (this.soloConStock) msg += ' (solo con stock)'
-        
+
         console.log(msg)
-        
+
       } catch (e) {
         console.error('Error exportando a Excel', e)
         alert('No se pudo exportar a Excel.')
@@ -445,7 +445,7 @@ export default {
 
         doc.setFontSize(14)
         doc.text(`Reporte de Productos - ${this.nombreSedeActual}`, 40, 32)
-        
+
         doc.setFontSize(10)
         doc.text(`Fecha: ${new Date().toLocaleString('es-PE')}`, 40, 48)
 
@@ -457,7 +457,7 @@ export default {
           filtrosText += 'Solo con stock | '
         }
         filtrosText = filtrosText.replace(/\s\|\s$/, '')
-        
+
         if (filtrosText) {
           doc.text(filtrosText, 40, 64)
         }
@@ -486,7 +486,7 @@ export default {
         ]]
 
         const startY = filtrosText ? 96 : 80
-        
+
         doc.autoTable({
           head,
           body: rows,
@@ -514,17 +514,17 @@ export default {
         let nombreBase = 'productos'
         const sedeNombre = this.nombreSedeActual.replace(/\s+/g, '_')
         nombreBase += `_${sedeNombre}`
-        
+
         if (this.filtro_categoria && this.filtro_categoria !== 'TODOS') {
           nombreBase += `_${this.filtro_categoria.replace(/\s+/g, '_')}`
         }
         if (this.soloConStock) {
           nombreBase += '_con-stock'
         }
-        
+
         const nombre = `${nombreBase}_${this.nowString()}.pdf`
         doc.save(nombre)
-        
+
       } catch (e) {
         console.error('Error exportando a PDF', e)
         alert('No se pudo exportar a PDF.')
