@@ -1257,6 +1257,45 @@ const routes = [
       }
     },
   },
+
+  {
+    path: "/lista_activos",
+    name: "lista_activos",
+    component: () => import("../views/activos/ListaActivos.vue"),
+    meta: {
+      requireAuth: true,
+    },
+    beforeEnter: (to, from, next) => {
+      if (to.matched.some((ruta) => ruta.meta.requireAuth)) {
+        if (store.state.permisos.moduloempresa) {
+          next();
+        } else {
+          next({
+            name: "panel",
+          });
+        }
+      }
+    },
+  },
+  {
+    path: "/reportes_activos",
+    name: "reportes_activos",
+    component: () => import("../views/activos/ReportesActivos.vue"),
+    meta: {
+      requireAuth: true,
+    },
+    beforeEnter: (to, from, next) => {
+      if (to.matched.some((ruta) => ruta.meta.requireAuth)) {
+        if (store.state.permisos.moduloactivos || store.state.permisos.moduloempresa) {
+          next();
+        } else {
+          next({
+            name: "panel",
+          });
+        }
+      }
+    },
+  },
 ];
 
 const router = new VueRouter({

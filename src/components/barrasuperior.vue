@@ -10,7 +10,6 @@
                 <v-img alt="Vuetify Name" class="shrink mt-1 hidden-sm-and-down" contain min-width="100"
                     src="domotica.png" width="100" />
 
-
             </div>
             <v-spacer></v-spacer>
             <span
@@ -23,7 +22,6 @@
                 Flujo Caja
                 <v-icon color="white" class="mx-auto text--center" small>mdi-cash-register</v-icon>
             </v-btn>
-
 
             <v-spacer></v-spacer>
             <v-btn :href="`https://api.whatsapp.com/send?phone=$+51902135696&text=Hola Necesito Ayuda`" target="_blank"
@@ -208,6 +206,21 @@
                     </v-list-item>
                 </v-list-group>
 
+                <v-list-group  
+                    :value="listaMenu" prepend-icon="mdi-snowflake" >
+                    <template v-slot:activator>
+                        <v-list-item-title class="font-weight-medium">Gest. Activos</v-list-item-title>
+                    </template>
+                    <v-list-item link @click.prevent="router('lista_activos')">
+                        <v-list-item-icon><v-icon small>mdi-format-list-bulleted</v-icon></v-list-item-icon>
+                        <v-list-item-title>Lista Equipos</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item link @click.prevent="router('reportes_activos')">
+                        <v-list-item-icon><v-icon small>mdi-chart-bar</v-icon></v-list-item-icon>
+                        <v-list-item-title>Reporte de Activos</v-list-item-title>
+                    </v-list-item>
+                </v-list-group>
+
                 <v-list-group v-if="$store.state.permisos.modulokardex" :value="listaMenu" prepend-icon="mdi-archive"
                     color="primary">
                     <template v-slot:activator>
@@ -218,7 +231,7 @@
                         <v-list-item-icon><v-icon small>mdi-swap-horizontal-bold</v-icon></v-list-item-icon>
                         <v-list-item-title>Movimientos</v-list-item-title>
                     </v-list-item>
-                    <v-list-item v-if="$store.state.permisos.modulokardex && $store.state.baseDatos.kardex_avanzado" link
+                    <v-list-item v-if="$store.state.permisos.modulokardex" link
                         @click.prevent="router('rep_mov_producto')">
                         <v-list-item-icon><v-icon small>mdi-file-chart-outline</v-icon></v-list-item-icon>
                         <v-list-item-title>Mov x Producto</v-list-item-title>
@@ -228,11 +241,11 @@
                         <v-list-item-icon><v-icon small>mdi-truck-fast-outline</v-icon></v-list-item-icon>
                         <v-list-item-title>Transferencias</v-list-item-title>
                     </v-list-item>
-                    <v-list-item link @click.prevent="router('reporte_stock')" >
+                    <v-list-item link @click.prevent="router('reporte_stock')" v-if="$store.state.baseDatos.kardex_avanzado">
                         <v-list-item-icon><v-icon small>mdi-counter</v-icon></v-list-item-icon>
                         <v-list-item-title>Stock Actual</v-list-item-title>
                     </v-list-item>
-                    <v-list-item v-if="$store.state.baseDatos.kardex_avanzado"" link
+                    <v-list-item v-if="$store.state.baseDatos.kardex_avanzado" link
                         @click.prevent="router('stock_x_periodo')">
                         <v-list-item-icon><v-icon small>mdi-calendar-clock</v-icon></v-list-item-icon>
                         <v-list-item-title>Stock x Período</v-list-item-title>
@@ -695,7 +708,6 @@ export default {
                 }
             })
 
-
         },
         async obtenerYGuardarTipoCambio() {
             try {
@@ -745,7 +757,6 @@ export default {
 
                 // Guardar en Realtime DB
                 await grabaTipoCambio(fecha, info);
-
 
             } catch (e) {
                 console.log("Error:", e);
@@ -920,7 +931,6 @@ export default {
         }
 
     },
-
 
 }
 </script>

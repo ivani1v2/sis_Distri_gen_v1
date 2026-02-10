@@ -18,6 +18,17 @@
           </v-btn>
           <v-btn small icon @click="cerrar"><v-icon>mdi-close</v-icon></v-btn>
         </v-toolbar>
+        <v-card-text class="py-2 px-3">
+          <v-row dense align="center">
+            <v-col cols="12">
+              <v-text-field v-model="searchText" placeholder="Buscar productos por código o nombre"
+                prepend-inner-icon="mdi-magnify" dense clearable hide-details @input="onSearch"></v-text-field>
+              <div v-if="searchText" class="text-caption grey--text mt-1">
+                Mostrando {{ filteredList.length }} de {{ agrupadoPorProducto.length }} productos
+              </div>
+            </v-col>
+          </v-row>
+        </v-card-text>
 
         <v-tabs v-model="tab" background-color="grey lighten-4" grow>
           <v-tab>Más Vendido</v-tab>
@@ -39,7 +50,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(g, i) in listaVendidos" :key="'v-' + i">
+                  <tr v-for="(g, i) in filteredListVendidos" :key="'v-' + i">
                     <!-- Producto -->
                     <td style="font-size:75%;">{{ g.codigo }} - {{ g.nombre }}</td>
 
@@ -69,9 +80,9 @@
                     <td style="font-size:75%;">S/.{{ number2(g.total) }}</td>
                   </tr>
 
-                  <tr v-if="agrupadoPorProducto.length === 0">
-                    <td colspan="6" class="text-center grey--text py-6">
-                      No hay ítems para mostrar.
+                  <tr v-if="filteredListValor.length === 0">
+                    <td colspan="5" class="text-center grey--text py-6">
+                      {{ searchText ? 'No se encontraron productos' : 'No hay ítems para mostrar.' }}
                     </td>
                   </tr>
                 </tbody>
@@ -92,9 +103,9 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(g, i) in listaValor" :key="'m-' + i">
+                  <tr v-for="(g, i) in filteredListValor" :key="'m-' + i">
                     <!-- Producto -->
-                    <td style="font-size:75%;">{{ g.nombre }}</td>
+                    <td style="font-size:75%;">{{ g.codigo }} - {{ g.nombre }}</td>
 
                     <!-- Paquetes -->
                     <td style="font-size:75%;">
@@ -119,9 +130,9 @@
                     <td style="font-size:75%;">S/.{{ number2(g.total) }}</td>
                   </tr>
 
-                  <tr v-if="agrupadoPorProducto.length === 0">
-                    <td colspan="5" class="text-center grey--text py-6">
-                      No hay ítems para mostrar.
+                  <tr v-if="filteredListVendidos.length === 0">
+                    <td colspan="6" class="text-center grey--text py-6">
+                      {{ searchText ? 'No se encontraron productos' : 'No hay ítems para mostrar.' }}
                     </td>
                   </tr>
                 </tbody>
@@ -186,7 +197,6 @@
         </v-tabs-items>
       </v-card>
     </v-dialog>
-
   </div>
 </template>
 
@@ -237,7 +247,13 @@ export default {
       tab: 0,
       grafDial: false,
       grafTab: 0,
-      clientesDial: false, clientesDe: '', clientesLista: []
+      clientesDial: false, clientesDe: '', clientesLista: [],
+      searchText: '',
+      searchDialog: false,
+      searchTextAdvanced: '',
+      selectedProduct: null,
+      searchInCodigo: true,
+      searchInNombre: true
     }
   },
   created() {
@@ -363,10 +379,90 @@ export default {
     listaValor() {
       return [...this.agrupadoPorProducto].sort((a, b) => Number(b.total || 0) - Number(a.total || 0))
     },
+    productOptions() {
+      return this.agrupadoPorProducto.map(p => ({
+        id: p.codigo,
+        codigo: p.codigo,
+        nombre: p.nombre,
+        eq: p.eq,
+        total: p.total
+      }))
+    },
+
+    filteredListVendidos() {
+      if (!this.searchText) {
+        return this.listaVendidos
+      }
+
+      const searchLower = this.searchText.toLowerCase().trim()
+      return this.listaVendidos.filter(product => {
+        const codigo = String(product.codigo || '').toLowerCase()
+        const nombre = String(product.nombre || '').toLowerCase()
+        if (this.searchInCodigo && codigo.includes(searchLower)) return true
+        if (this.searchInNombre && nombre.includes(searchLower)) return true
+        const searchParts = searchLower.split(' ')
+        if (searchParts.length > 1) {
+          return searchParts.every(part =>
+            codigo.includes(part) || nombre.includes(part)
+          )
+        }
+
+        return false
+      })
+    },
+
+    filteredListValor() {
+      if (!this.searchText) {
+        return this.listaValor
+      }
+
+      const searchLower = this.searchText.toLowerCase().trim()
+      return this.listaValor.filter(product => {
+        const codigo = String(product.codigo || '').toLowerCase()
+        const nombre = String(product.nombre || '').toLowerCase()
+        if (this.searchInCodigo && codigo.includes(searchLower)) return true
+        if (this.searchInNombre && nombre.includes(searchLower)) return true
+        const searchParts = searchLower.split(' ')
+        if (searchParts.length > 1) {
+          return searchParts.every(part =>
+            codigo.includes(part) || nombre.includes(part)
+          )
+        }
+
+        return false
+      })
+    },
+
+    filteredList() {
+      return this.tab === 0 ? this.filteredListVendidos : this.filteredListValor
+    },
+    top5CantLabels() {
+      const source = this.searchText ? this.filteredListVendidos.slice(0, 5) : this.listaVendidos.slice(0, 5)
+      return this.buildTop5(source, "eq").labels
+    },
+    top5CantValues() {
+      const source = this.searchText ? this.filteredListVendidos.slice(0, 5) : this.listaVendidos.slice(0, 5)
+      return this.buildTop5(source, "eq").values
+    },
+
   },
   methods: {
+    onProductSelect(product) {
+      if (product) {
+        this.searchText = `${product.codigo} ${product.nombre}`
+        this.searchDialog = false
+      }
+    },
+
+    onAdvancedSearch() {
+      this.searchText = this.searchTextAdvanced
+    },
+    clearSearch() {
+      this.searchText = ''
+      this.searchTextAdvanced = ''
+      this.selectedProduct = null
+    },
     verClientes(g) {
-      // g.nombre puede venir con " (X gratuitas)"; recupera nombre base
       const baseNombre = String(g.nombre || '').split('  (')[0]
       const key = (g.codigo ? `${String(g.codigo).trim()}#` : '') + baseNombre
       this.clientesDe = baseNombre
