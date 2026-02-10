@@ -249,7 +249,7 @@ async function impresion58(arraydatos, qr, cabecera) {
   );
 
   var nuevoArray = new Array(arraydatos.length);
-  
+
   for (var i = 0; i < arraydatos.length; i++) {
     var obs = "";
     var tg = "";
@@ -259,7 +259,7 @@ async function impresion58(arraydatos, qr, cabecera) {
 
     const descuentos = arraydatos[i].descuentos || {};
     const precioActual = Number(arraydatos[i].precio || 0);
-    
+
     // Usar precio_base del item si existe, sino calcular reverso
     let precioBase = Number(arraydatos[i].precio_base || arraydatos[i].precio_catalogo || 0);
     if (!precioBase && existeDescuento && descuentos) {
@@ -272,7 +272,7 @@ async function impresion58(arraydatos, qr, cabecera) {
       }
     }
     if (!precioBase) precioBase = precioActual;
-    
+
     const textoDescuento = existeDescuento
       ? `${descuentos.desc_1 || 0} / ${descuentos.desc_2 || 0} / ${descuentos.desc_3 || 0}`
       : null;
@@ -296,10 +296,10 @@ async function impresion58(arraydatos, qr, cabecera) {
       nuevoArray[i] = new Array(6);
       nuevoArray[i][0] = arraydatos[i].cantidad;
       nuevoArray[i][1] = arraydatos[i].nombre + tg;
-      nuevoArray[i][2] = precioBase.toFixed(2); 
+      nuevoArray[i][2] = precioBase.toFixed(2);
       nuevoArray[i][3] = textoDescuento;
       nuevoArray[i][4] = precioActual.toFixed(2);
-      nuevoArray[i][5] = totals + obs; 
+      nuevoArray[i][5] = totals + obs;
     }
   }
   if (!store.state.configuracion.mostrar_ope_gratuitas) {
@@ -804,7 +804,7 @@ async function impresion80(arraydatos, qr, cabecera) {
 
     const descuentosItem = array[i].descuentos || {};
     const precioActual = Number(array[i].precio || 0);
-    
+
     // Usar precio_base del item si existe, sino calcular reverso
     let precioBase = Number(array[i].precio_base || array[i].precio_catalogo || 0);
     if (!precioBase && existeDescuento && descuentosItem) {
@@ -817,7 +817,7 @@ async function impresion80(arraydatos, qr, cabecera) {
       }
     }
     if (!precioBase) precioBase = precioActual;
-    
+
     const textoDescuento = existeDescuento
       ? `${descuentosItem.desc_1 || 0} / ${descuentosItem.desc_2 || 0} / ${descuentosItem.desc_3 || 0}`
       : null;
@@ -1289,7 +1289,8 @@ function impresionA4(array, qr, arraycabecera) {
 
   doc.setFontSize(8);
   doc.setLineWidth(0.3);
-  doc.rect(10, 40, 190, 20);
+  let alturaBoxCliente = arraycabe.guia_id ? 23 : 20;
+  doc.rect(10, 40, 190, alturaBoxCliente);
   linea = 45;
 
   doc.setFont("Helvetica", "Bold");
@@ -1314,6 +1315,16 @@ function impresionA4(array, qr, arraycabecera) {
   var texto = doc.splitTextToSize(arraycabe.direccion, 85);
   doc.text(texto, 36, linea, "left");
   linea = linea + 4 * texto.length;
+
+  // Mostrar guia_id si existe
+  if (arraycabe.guia_id) {
+    doc.setFont("Helvetica", "Bold");
+    doc.text("GUIA REM.", 15, linea, "left");
+    doc.text(" : ", 32, linea, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(arraycabe.guia_id, 36, linea, "left");
+    linea = linea + 4;
+  }
 
   linea = 45;
 
@@ -1904,7 +1915,7 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
       nuevoArray[i][3] = precio;
       nuevoArray[i][4] = totalLinea;
     } else {
-      nuevoArray[i] = new Array(6); 
+      nuevoArray[i] = new Array(6);
       nuevoArray[i][0] = array[i].cantidad || 0;
       nuevoArray[i][1] = (array[i].nombre || "") + tg;
       nuevoArray[i][2] = array[i].medida || "";
@@ -1918,7 +1929,7 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
   const headConDesc = [["Cantidad", "Descripcion", "Medida", "P.Unitario", "%Desc", "P.Total"]];
 
   const colW = existeDescuento
-    ? { c0: 15, c1: 90, c2: 18, c3: 18, c4: 15, c5: 20 } 
+    ? { c0: 15, c1: 90, c2: 18, c3: 18, c4: 15, c5: 20 }
     : { c0: 18, c1: 100, c2: 22, c3: 20, c4: 22 };
 
   doc.autoTable({
@@ -2407,7 +2418,7 @@ function tabla_A4(array, linea) {
     const descuentos = item.descuentos || {};
 
     const precioActual = Number(item.precio || 0);
-    
+
     // Usar precio_base del item si existe, sino calcular reverso
     let precioBase = Number(item.precio_base || item.precio_catalogo || 0);
     if (!precioBase && existeDescuento && descuentos) {
@@ -2420,7 +2431,7 @@ function tabla_A4(array, linea) {
       }
     }
     if (!precioBase) precioBase = precioActual;
-    
+
     const precioNeto = precioActual;
     let totalLinea = precioNeto * item.cantidad;
 

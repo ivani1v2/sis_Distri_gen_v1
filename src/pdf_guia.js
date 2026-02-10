@@ -159,6 +159,26 @@ export const impresion58 = (arrays, qr) => {
   );
   linea = linea + 4;
 
+  // Mostrar documentos relacionados debajo de Peso Bruto
+  if (arrays.doc_relacionados && arrays.doc_relacionados.length > 0) {
+    const docRelText = arrays.doc_relacionados
+      .map(d => {
+        if (d.id && d.ruc) {
+          return `${d.id} (RUC ${d.ruc})`;
+        } else if (d.id) {
+          return d.id;
+        }
+        return '';
+      })
+      .filter(Boolean)
+      .join(', ');
+
+    if (docRelText) {
+      doc.text("DOC. RELAC.: " + docRelText, 5, linea, "left");
+      linea = linea + 4;
+    }
+  }
+
   if (arrays.tipo_comprobante == "09") {
     doc.setFont("Helvetica", "");
     doc.text("MOT. TRASLADO: " + arrays.motivo, 5, linea, "left");
@@ -169,9 +189,6 @@ export const impresion58 = (arrays, qr) => {
   } else {
     doc.setFont("Helvetica", "");
     doc.text("Pagador Flete : " + arrays.pagado_por, 5, linea, "left");
-    linea = linea + 4;
-
-    doc.text("DOC. RELACIO. : " + arrays.doc_relacionados, 510, linea, "left");
     linea = linea + 4;
   }
 
@@ -274,23 +291,23 @@ export const impresion58 = (arrays, qr) => {
     body: [
       [
         "Partida : " +
-          arrays.dir_origen +
-          " " +
-          arrays.distrito_p +
-          " " +
-          arrays.provincia_p +
-          " " +
-          arrays.departamento_p,
+        arrays.dir_origen +
+        " " +
+        arrays.distrito_p +
+        " " +
+        arrays.provincia_p +
+        " " +
+        arrays.departamento_p,
       ],
       [
         "Llegada : " +
-          arrays.dir_destino +
-          " " +
-          arrays.distrito_l +
-          " " +
-          arrays.provincia_l +
-          " " +
-          arrays.departamento_l,
+        arrays.dir_destino +
+        " " +
+        arrays.distrito_l +
+        " " +
+        arrays.provincia_l +
+        " " +
+        arrays.departamento_l,
       ],
     ],
   });
@@ -446,7 +463,7 @@ export const impresion58 = (arrays, qr) => {
   doc.setFontSize(8);
   var texto = doc.splitTextToSize(
     "Representación Impresa de la GUIA DE REMISION ELECTRONICA" +
-      " Consultar su validez en https://domo.pe/buscardocumentos",
+    " Consultar su validez en https://domo.pe/buscardocumentos",
     pdfInMM - lMargin - rMargin
   );
   doc.text(texto, pageCenter, linea, "center");
@@ -610,6 +627,27 @@ export const impresion80 = (arrays, qr) => {
   );
   linea = linea + 4;
 
+  // Mostrar documentos relacionados debajo de Peso Bruto
+  if (arrays.doc_relacionados && arrays.doc_relacionados.length > 0) {
+    const docRelText = arrays.doc_relacionados
+      .map(d => {
+        if (d.id && d.ruc) {
+          return `${d.id} (RUC ${d.ruc})`;
+        } else if (d.id) {
+          return d.id;
+        }
+        return '';
+      })
+      .filter(Boolean)
+      .join(', ');
+
+    if (docRelText) {
+      var texto = doc.splitTextToSize("DOC. RELAC.: " + docRelText, 63);
+      doc.text(texto, 10, linea, "left");
+      linea = linea + 4 * texto.length;
+    }
+  }
+
   if (arrays.tipo_comprobante == "09") {
     doc.setFont("Helvetica", "");
     var texto = doc.splitTextToSize("MOT TRASLADO: " + arrays.motivo, 63);
@@ -627,9 +665,6 @@ export const impresion80 = (arrays, qr) => {
   } else {
     doc.setFont("Helvetica", "");
     doc.text("Pagador Flete : " + arrays.pagado_por, 10, linea, "left");
-    linea = linea + 4;
-
-    doc.text("DOC. RELACIO. : " + arrays.doc_relacionados, 10, linea, "left");
     linea = linea + 4;
   }
 
@@ -739,22 +774,22 @@ export const impresion80 = (arrays, qr) => {
       [
         "PARTIDA : ",
         arrays.dir_origen +
-          " " +
-          arrays.distrito_p +
-          " " +
-          arrays.provincia_p +
-          " " +
-          arrays.departamento_p,
+        " " +
+        arrays.distrito_p +
+        " " +
+        arrays.provincia_p +
+        " " +
+        arrays.departamento_p,
       ],
       [
         "LLEGADA : ",
         arrays.dir_destino +
-          " " +
-          arrays.distrito_l +
-          " " +
-          arrays.provincia_l +
-          " " +
-          arrays.departamento_l,
+        " " +
+        arrays.distrito_l +
+        " " +
+        arrays.provincia_l +
+        " " +
+        arrays.departamento_l,
       ],
     ],
   });
@@ -882,7 +917,7 @@ export const impresion80 = (arrays, qr) => {
   doc.setFontSize(8);
   var texto = doc.splitTextToSize(
     "Representación Impresa de la GUIA DE REMISION ELECTRONICA" +
-      " Consultar su validez en https://domo.pe/buscardocumentos",
+    " Consultar su validez en https://domo.pe/buscardocumentos",
     pdfInMM - lMargin - rMargin
   );
   doc.text(texto, pageCenter, linea, "center");
@@ -1047,6 +1082,29 @@ function impresionA4(arrays, qr) {
   doc.setFont("Helvetica", "");
   doc.text(String(arrays.peso_total) + " " + medida, 157, linea, "left");
 
+  if (arrays.doc_relacionados && arrays.doc_relacionados.length > 0) {
+    const docRelTextA4 = arrays.doc_relacionados
+      .map(d => {
+        if (d.id && d.ruc) {
+          return `${d.id} (${d.ruc})`;
+        } else if (d.id) {
+          return d.id;
+        }
+        return '';
+      })
+      .filter(Boolean)
+      .join(', ');
+
+    if (docRelTextA4) {
+      doc.setFont("Helvetica", "Bold");
+      doc.text("DOC. RELAC.", 130, linea + 4, "left");
+      doc.text(" : ", 154, linea + 4, "left");
+      doc.setFont("Helvetica", "");
+      var textoDocRel = doc.splitTextToSize(docRelTextA4, 40);
+      doc.text(textoDocRel, 157, linea + 4, "left");
+    }
+  }
+
   doc.setFont("Helvetica", "Bold");
   doc.text("FECHA TRASLADO", 15, linea, "left");
   doc.text(" : ", 46, linea, "left");
@@ -1073,13 +1131,6 @@ function impresionA4(arrays, qr) {
     doc.text(" : ", 46, linea, "left");
     doc.setFont("Helvetica", "");
     doc.text(arrays.pagado_por, 50, linea, "left");
-    linea = linea + 4;
-
-    doc.setFont("Helvetica", "Bold");
-    doc.text("DOC. RELACIONADOS", 15, linea, "left");
-    doc.text(" : ", 46, linea, "left");
-    doc.setFont("Helvetica", "");
-    doc.text(arrays.doc_relacionados, 50, linea, "left");
     linea = linea + 4;
   }
 
@@ -1225,22 +1276,22 @@ function impresionA4(arrays, qr) {
       [
         "DIR. PARTIDA : ",
         arrays.dir_origen +
-          " " +
-          arrays.distrito_p +
-          " " +
-          arrays.provincia_p +
-          " " +
-          arrays.departamento_p,
+        " " +
+        arrays.distrito_p +
+        " " +
+        arrays.provincia_p +
+        " " +
+        arrays.departamento_p,
       ],
       [
         "DIR. LLEGADA : ",
         arrays.dir_destino +
-          " " +
-          arrays.distrito_l +
-          " " +
-          arrays.provincia_l +
-          " " +
-          arrays.departamento_l,
+        " " +
+        arrays.distrito_l +
+        " " +
+        arrays.provincia_l +
+        " " +
+        arrays.departamento_l,
       ],
     ],
   });

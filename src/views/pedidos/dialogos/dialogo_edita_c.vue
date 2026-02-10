@@ -28,29 +28,31 @@
                     <h5>Modo : <span class="red--text">{{ info_cabecera.forma_pago }}</span>
                         <v-icon color="green" small @click="edita_modo()">mdi-pencil</v-icon>
                     </h5>
-                    <h5>Total : <span class="red--text">S/.{{ info_cabecera.total }}</span></h5>
+                    <h5>Total : <span class="red--text">S/.{{ calcularTotalGeneral() }}</span></h5>
                     <h5>Pendiente de Pago : <span class="red--text">S/.{{ info_cabecera.pendiente_pago }}</span></h5>
                 </v-col>
             </v-row>
             <v-simple-table dense dark fixed-header height="50vh">
                 <template v-slot:default>
-
                     <thead>
                         <tr>
                             <th class="text-left">
                                 Cantidad
                             </th>
                             <th class="text-left">
-                                Descripcion
+                                Descripción
                             </th>
                             <th class="text-left">
                                 Medida
                             </th>
                             <th class="text-left">
-                                Precio
+                                Precio Unitario
                             </th>
                             <th class="text-left" v-if="$store.state.configuracion?.desc_porcentaje_catalogo">
-                                % Desc
+                                Descuentos
+                            </th>
+                            <th class="text-left">
+                                Precio Neto
                             </th>
                             <th class="text-left">
                                 Total
@@ -59,32 +61,67 @@
                     </thead>
 
                     <tbody>
-
                         <tr v-for="item in lista_productos" :key="item.uuid || item.id"
                             @click.prevent="editaProducto(item)">
                             <td>{{ item.cantidad }}</td>
-                            <td>{{ item.id + "-" + item.nombre }} <span v-if="item.operacion == 'GRATUITA'"
-                                    class="red--text"> -
-                                    TG</span></td>
-                            <td>{{ item.medida }}</td>
-                            <td>S/.{{ redondear(item.precio || item.precioedita) }}</td>
-                            <td v-if="$store.state.configuracion?.desc_porcentaje_catalogo">
-                                <span v-if="item.desc_1 || item.desc_2 || item.desc_3" class="orange--text">
-                                    {{ item.desc_1 || 0 }}/{{ item.desc_2 || 0 }}/{{ item.desc_3 || 0 }}
-                                </span>
-                                <span v-else>-</span>
+                            <td>{{ item.id + "-" + item.nombre }}
+                                <span v-if="item.operacion == 'GRATUITA'" class="red--text"> - TG</span>
                             </td>
-                            <td>S/.{{ redondear(item.operacion === 'GRATUITA' ? 0 : (Number(item.cantidad) *
-                                Number(item.precio || item.precioedita))) }}
+                            <td>{{ item.medida }}</td>
+
+                            <td>
+                                <div class="d-flex flex-column align-start">
+                                    <span class="font-weight-medium">
+                                        {{ monedaSimbolo }}{{ redondear(item.precio_base ||
+                                            obtenerPrecioCatalogo(item.id)) }}
+                                    </span>
+                                    <small v-if="precioFueModificado(item)" class="caption orange--text">
+                                        (Mod.)
+                                    </small>
+                                    <small v-else class="caption green--text">
+
+                                    </small>
+                                </div>
+                            </td>
+
+                            <td v-if="$store.state.configuracion?.desc_porcentaje_catalogo">
+                                <div v-if="tieneDescuentos(item)" class="d-flex flex-column">
+                                    <span class="orange--text text-center">
+                                        {{ getDescValue(item, 'desc_1') }}
+                                        <span v-if="getDescValue(item, 'desc_2') > 0">/
+                                            {{ getDescValue(item, 'desc_2') }}
+                                            <span v-if="getDescValue(item, 'desc_3') > 0">/
+                                                {{ getDescValue(item, 'desc_3') }}
+                                            </span>
+                                        </span>
+                                    </span>
+                                </div>
+                                <span v-else class="grey--text">-</span>
+                            </td>
+
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <span class="font-weight-medium green--text">
+                                        {{ monedaSimbolo }}{{ redondear(item.precioedita || item.precio || 0) }}
+                                    </span>
+                                </div>
+                            </td>
+
+                            <td>
+                                <span :class="{ 'red--text': item.operacion === 'GRATUITA' }">
+                                    {{ monedaSimbolo }}{{ calcularTotalItem(item) }}
+                                </span>
+                                <small v-if="item.operacion === 'GRATUITA'" class="caption red--text d-block">
+                                    GRATUITO
+                                </small>
                             </td>
                         </tr>
                     </tbody>
                 </template>
-
             </v-simple-table>
         </v-card>
 
-        <v-dialog v-model="dialogoProducto" max-width="390">
+        <v-dialog v-model="dialogoProducto" max-width="450">
             <div>
                 <v-system-bar window dark>
                     <v-icon @click="dialogoProducto = false">mdi-close</v-icon>
@@ -97,17 +134,35 @@
                         <v-text-field disabled dense @keyup.enter="grabaEdita()" class="pa-3" v-model="nombreEdita"
                             label="Nombre"></v-text-field>
                     </v-col>
-                    <v-col cols="6" xs="6">
+                    <v-col cols="6" xs="6" class="position-relative ">
                         <v-text-field dense @keyup.enter="grabaEdita()" type="number" class="pa-3" v-model="precioedita"
                             label="Precio Base" @input="onPrecioEditaChange"></v-text-field>
+                        <v-btn v-if="precioCambiado" icon x-small color="blue" class="mt-n2 mr-7"
+                            @click="restaurarPrecioBase" title="Restaurar precio base original"
+                            style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%);">
+                            <v-icon small>mdi-undo</v-icon>
+                        </v-btn>
                     </v-col>
                     <v-col cols="6" xs="6">
                         <v-text-field dense @keyup.enter="grabaEdita()" type="number" class="pa-3"
                             v-model="cantidadEdita" label="Cantidad"></v-text-field>
                     </v-col>
+
+                    <v-col cols="12" class="mt-n6 mb-3">
+                        <div class="caption grey--text text--darken-1">
+                            <span v-if="descEdita.precioFinal && descEdita.precioFinal !== Number(precioedita)">
+                                <strong class="green--text">Precio Final: {{ monedaSimbolo }}{{
+                                    redondear(descEdita.precioFinal)
+                                }}</strong>
+                            </span>
+                            <span v-else class="caption grey--text">
+                                Sin descuentos aplicados
+                            </span>
+                        </div>
+                    </v-col>
                 </v-row>
 
-                <v-alert v-if="precioCambiado" type="warning" dense text class="mt-2 mb-0" style="font-size: 11px;">
+                <v-alert v-if="precioCambiado" type="warning" dense text class="mt-2 mb-6" style="font-size: 11px;">
                     El precio fue modificado. Ajuste los descuentos si es necesario.
                 </v-alert>
                 <descuentos-porcentaje v-if="dialogoProducto" :key="'desc-edit-' + editKey" ref="descEditaRef"
@@ -117,11 +172,11 @@
 
                 <v-card-actions class="mt-n2">
                     <v-btn color="red darken-1" text @click="eliminaedita()">
-                        Elimina
+                        Eliminar
                     </v-btn>
                     <v-spacer></v-spacer>
                     <v-btn color="green darken-1" text @click="grabaEdita()">
-                        Graba
+                        Guardar
                     </v-btn>
                 </v-card-actions>
             </v-card>
@@ -283,6 +338,7 @@ export default {
             detalleOriginalSnapshot: [],
             dialStock: false,
             sinStock: [],
+            precioFinalActual: 0,
             // Para descuentos
             editKey: 0,
             precioCambiado: false,
@@ -298,6 +354,9 @@ export default {
     },
 
     computed: {
+        monedaSimbolo() {
+            return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/';
+        },
         lista_productos() {
             return this.listaproductos
         },
@@ -316,6 +375,33 @@ export default {
         }
     },
     methods: {
+        precioFueModificado(item) {
+            if (!item.precio_base) return false;
+            const precioCatalogo = this.obtenerPrecioCatalogo(item.id);
+            return item.precio_base !== precioCatalogo;
+        }, obtenerPrecioBase(item) {
+            return item.precio_base || this.obtenerPrecioCatalogo(item.id);
+        },
+        tieneDescuentos(item) {
+            return (
+                (item.descuentos?.desc_1 || item.desc_1) > 0 ||
+                (item.descuentos?.desc_2 || item.desc_2) > 0 ||
+                (item.descuentos?.desc_3 || item.desc_3) > 0
+            );
+        },
+        calcularMontoDescuento(item) {
+            const precioBase = item.precio_base || this.obtenerPrecioCatalogo(item.id);
+            const precioNeto = item.precioedita || item.precio || 0;
+            const cantidad = Number(item.cantidad) || 1;
+
+            return (precioBase - precioNeto) * cantidad;
+        },
+        getDescValue(item, descKey) {
+            if (item.descuentos && item.descuentos[descKey] !== undefined) {
+                return item.descuentos[descKey];
+            }
+            return item[descKey] || 0;
+        },
         cierra() {
             this.$emit('cierra', false)
         },
@@ -531,7 +617,28 @@ export default {
                 });
             });
         },
+        restaurarPrecioBase() {
+            const precioCatalogo = this.obtenerPrecioCatalogo(this.item_selecto?.id);
+            this.precioedita = precioCatalogo;
+            this.precioCambiado = false;
 
+            if (this.item_selecto) {
+                this.item_selecto.precio_base = precioCatalogo;
+            }
+            this.descEdita = {
+                desc_1: 0,
+                desc_2: 0,
+                desc_3: 0,
+                precioFinal: precioCatalogo,
+                montoDescuento: 0
+            };
+
+            if (this.item_selecto) {
+                this.item_selecto.desc_1 = 0;
+                this.item_selecto.desc_2 = 0;
+                this.item_selecto.desc_3 = 0;
+            }
+        },
 
         editaProducto(id) {
             console.log(id);
@@ -546,37 +653,80 @@ export default {
             );
 
             if (producto) {
+                const precioCatalogo = this.obtenerPrecioCatalogo(producto.id);
+                const desc1 = producto.descuentos?.desc_1 ?? producto.desc_1 ?? 0;
+                const desc2 = producto.descuentos?.desc_2 ?? producto.desc_2 ?? 0;
+                const desc3 = producto.descuentos?.desc_3 ?? producto.desc_3 ?? 0;
+                const precioFinalActual = producto.precioedita || producto.precio || precioCatalogo;
+                const precioBaseActual = producto.precio_base || precioCatalogo;
+
                 this.item_selecto = {
                     ...producto,
-                    precio_base: Number(producto.precio_base) || Number(producto.precioedita) || Number(producto.precio) || 0,
-                    desc_1: Number(producto.desc_1) || 0,
-                    desc_2: Number(producto.desc_2) || 0,
-                    desc_3: Number(producto.desc_3) || 0
+                    precio_base: precioBaseActual,
+                    precio_catalogo: precioCatalogo,
+                    desc_1: desc1,
+                    desc_2: desc2,
+                    desc_3: desc3
                 };
+
                 this.codigoedita = this.listaproductos.indexOf(producto);
                 this.cantidadEdita = producto.cantidad;
-                // Usar precio_base si existe, sino precioedita
-                this.precioedita = Number(producto.precio_base) || Number(producto.precioedita) || Number(producto.precio) || 0;
-                this.precioOriginalEdita = this.precioedita;
+
+                this.precioedita = precioBaseActual;
+                this.precioFinalActual = precioFinalActual;
+                this.precioOriginalEdita = precioCatalogo;
+
                 this.preciodescuento = producto.preciodescuento;
                 this.nombreEdita = producto.nombre;
                 this.operacion_edita = producto.operacion;
-                // Reset descEdita
                 this.descEdita = {
-                    desc_1: Number(producto.desc_1) || 0,
-                    desc_2: Number(producto.desc_2) || 0,
-                    desc_3: Number(producto.desc_3) || 0,
-                    precioFinal: Number(producto.precioedita) || Number(producto.precio) || 0,
-                    montoDescuento: 0
+                    desc_1: desc1,
+                    desc_2: desc2,
+                    desc_3: desc3,
+                    precioFinal: precioFinalActual,
+                    montoDescuento: precioBaseActual - precioFinalActual
                 };
+                this.precioCambiado = producto.precio_base &&
+                    producto.precio_base !== precioCatalogo;
             }
             this.dialogoProducto = true;
         },
+        obtenerPrecioCatalogo(productoId) {
+            if (!productoId) {
+                return 0;
+            }
+            const productoCatalogo = store.state.productos?.find(
+                p => String(p.id) === String(productoId)
+            ); 
+            if (!productoCatalogo) { return 0; }
+            const precio = Number(productoCatalogo.precio) || 0;
+
+            return precio;
+        },
+
         onPrecioEditaChange() {
             const precioActual = Number(this.precioedita) || 0;
-            this.precioCambiado = precioActual !== this.precioOriginalEdita;
+            const precioCatalogo = this.obtenerPrecioCatalogo(this.item_selecto?.id);
+            this.precioCambiado = precioActual !== precioCatalogo;
+
             if (this.item_selecto) {
                 this.item_selecto.precio_base = precioActual;
+                if (this.precioCambiado) {
+                    this.descEdita = {
+                        desc_1: 0,
+                        desc_2: 0,
+                        desc_3: 0,
+                        precioFinal: precioActual,
+                        montoDescuento: 0
+                    };
+                    this.item_selecto.desc_1 = 0;
+                    this.item_selecto.desc_2 = 0;
+                    this.item_selecto.desc_3 = 0;
+                } else {
+                    if (this.$refs.descEditaRef) {
+                        this.$refs.descEditaRef.recalcularDesdeBase();
+                    }
+                }
             }
         },
         onDescEditaCambio(data) {
@@ -585,6 +735,10 @@ export default {
                 this.item_selecto.desc_1 = data.desc_1 || 0;
                 this.item_selecto.desc_2 = data.desc_2 || 0;
                 this.item_selecto.desc_3 = data.desc_3 || 0;
+                this.precioFinalActual = data.precioFinal;
+                if (!this.precioCambiado) {
+                    this.item_selecto.precio_base = this.precioOriginalEdita;
+                }
             }
         },
         async grabaEdita() {
@@ -598,26 +752,72 @@ export default {
 
             const producto = this.listaproductos[this.codigoedita];
             const tieneDescuentos = (this.descEdita.desc_1 > 0 || this.descEdita.desc_2 > 0 || this.descEdita.desc_3 > 0);
-            const precioFinal = tieneDescuentos && this.operacion_edita !== 'GRATUITA'
-                ? this.descEdita.precioFinal
-                : Number(this.precioedita);
+            const precioCatalogo = this.obtenerPrecioCatalogo(producto.id);
+            let precioBase;
+            if (this.precioCambiado) {
+                precioBase = Number(this.precioedita);
+            } else {
+                precioBase = precioCatalogo;
+            }
+
+            let precioFinal;
+            if (tieneDescuentos && this.operacion_edita !== 'GRATUITA') {
+                precioFinal = this.descEdita.precioFinal;
+            } else {
+                precioFinal = precioBase;
+            }
 
             producto.cantidad = Number(this.cantidadEdita);
-            producto.precio_base = Number(this.precioedita); 
+            producto.precio_base = precioBase;
             producto.precioedita = this.redondear(precioFinal);
             producto.precio = this.redondear(precioFinal);
             producto.operacion = this.operacion_edita.trim();
             producto.nombre = this.nombreEdita.trim();
 
-            producto.desc_1 = this.descEdita.desc_1 || 0;
-            producto.desc_2 = this.descEdita.desc_2 || 0;
-            producto.desc_3 = this.descEdita.desc_3 || 0;
+            producto.desc_1 = Number(this.descEdita.desc_1) || 0;
+            producto.desc_2 = Number(this.descEdita.desc_2) || 0;
+            producto.desc_3 = Number(this.descEdita.desc_3) || 0;
+            const montoDescuento = precioBase - precioFinal;
+            producto.descuentos = {
+                desc_1: Number(this.descEdita.desc_1) || 0,
+                desc_2: Number(this.descEdita.desc_2) || 0,
+                desc_3: Number(this.descEdita.desc_3) || 0,
+                precioFinal: precioFinal,
+                montoDescuento: montoDescuento,
+                precioBase: precioBase,
+                precioCatalogo: precioCatalogo
+            };
 
             const esGratuita = this.operacion_edita === 'GRATUITA';
-            producto.totalLinea = esGratuita ? 0 : Number(producto.cantidad) * Number(producto.precio);
+            producto.totalLinea = esGratuita ? 0 :
+                Number(producto.cantidad) * Number(precioFinal);
 
+            this.$forceUpdate();
             store.commit("dialogoprogress");
             this.dialogoProducto = false;
+        },
+        calcularTotalItem(item) {
+            const cantidad = Number(item.cantidad) || 0;
+            const precioNeto = Number(item.precioedita || item.precio) || 0;
+
+            if (item.operacion === 'GRATUITA') {
+                return '0.00';
+            }
+
+            return this.redondear(cantidad * precioNeto);
+        },
+
+        calcularTotalGeneral() {
+            return this.redondear(
+                this.listaproductos.reduce((total, item) => {
+                    if (item.operacion === 'GRATUITA') {
+                        return total;
+                    }
+                    const cantidad = Number(item.cantidad) || 0;
+                    const precioNeto = Number(item.precioedita || item.precio) || 0;
+                    return total + (cantidad * precioNeto);
+                }, 0)
+            );
         },
         async eliminaedita() {
             store.commit("dialogoprogress");
@@ -642,17 +842,25 @@ export default {
             return uuid;
         },
         async guardar() {
-            // snapshot para UI (por si quieres volver a pintar tal cual)
             const cabeceraAntes = JSON.parse(JSON.stringify(this.info_cabecera));
 
             try {
                 store.commit("dialogoprogress");
 
+                let totalCalculadoManualmente = 0;
+                this.listaproductos.forEach((item, index) => {
+                    const precio = Number(item.precio || item.precioedita) || 0;
+                    const cantidad = Number(item.cantidad) || 0;
+                    let totalItem = 0;
+
+                    if (item.operacion !== 'GRATUITA' && item.operacion !== 'EXONERADA') {
+                        totalItem = cantidad * precio;
+                        totalCalculadoManualmente += totalItem;
+                    }
+                });
                 const resp = await procesar_items(this.listaproductos);
                 const cab = resp[0];
                 const detalleNuevo = resp[1];
-
-                // ✅ construye cabecera NUEVA en copia (NO mutar this.info_cabecera)
                 const nextCabecera = { ...this.info_cabecera };
 
                 // total y campos derivados
@@ -662,51 +870,46 @@ export default {
                 nextCabecera.igv = cab.igv;
                 nextCabecera.total_op_exoneradas = cab.total_op_exoneradas;
                 nextCabecera.totalIGV_GRATUITA = cab.totalIGV_GRATUITA;
-                nextCabecera.total = (Number(cab.total_op_gravadas) + Number(cab.igv)).toFixed(2);
+                const totalGravadas = Number(cab.total_op_gravadas) + Number(cab.igv);
+                const totalExoneradas = Number(cab.total_op_exoneradas);
+                nextCabecera.total = this.redondear(totalGravadas + totalExoneradas);
 
-                // pendiente pago (arregla el bug de "total" no definido)
                 if (nextCabecera.forma_pago === "CONTADO") {
                     nextCabecera.pendiente_pago = 0;
                 } else if (Number(nextCabecera.pendiente_pago) === 0) {
                     nextCabecera.pendiente_pago = Number(nextCabecera.total).toFixed(2);
                 }
 
-                // vencimiento válido (sin mutar this.info_cabecera)
                 nextCabecera.vencimientoDoc = this._normalizeVencimientoDocLocal(nextCabecera);
 
                 const payload = {
                     detalle: detalleNuevo,
                     detalle_original: this.detalleOriginalSnapshot,
-                    // 👇 opcional (recomendado) si tu backend quiere validar totales/cabecera
                     cabecera: nextCabecera,
                 };
 
-                // 1) primero valida / aplica en backend
                 const r = await this.api_rest(payload, "edita_comprobante");
 
-                // ✅ si no procede (409 stock), no cambies nada en UI
                 if (!r) {
-                    this.info_cabecera = cabeceraAntes; // por si algo ya tocaste en otro lado
+                    this.info_cabecera = cabeceraAntes;
                     store.commit("dialogoprogress");
                     return;
                 }
 
                 // 2) recién aquí aplicas cambios locales
                 this.info_cabecera = nextCabecera;
-
                 await Promise.all([
                     grabaCabecera_p(this.info_cabecera.id_grupo, this.info_cabecera.numeracion, this.info_cabecera),
                     detalleCabecera_p(this.info_cabecera.id_grupo, this.info_cabecera.numeracion, detalleNuevo),
                 ]);
 
                 store.commit("dialogoprogress");
+                store.commit("dialogosnackbar", "Documento actualizado correctamente");
                 this.cierra();
             } catch (e) {
-                console.error(e);
-                // rollback UI si algo falló
                 this.info_cabecera = cabeceraAntes;
                 store.commit("dialogoprogress");
-                store.commit("dialogosnackbar", "Error guardando el documento");
+                store.commit("dialogosnackbar", "Error guardando el documento: " + (e.message || "Error desconocido"));
             }
         },
         _normalizeVencimientoDocLocal(cab) {
@@ -813,3 +1016,9 @@ export default {
 
 }
 </script>
+
+<style scoped>
+.position-relative {
+    position: relative;
+}
+</style>

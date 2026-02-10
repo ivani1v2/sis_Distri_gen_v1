@@ -83,7 +83,7 @@
                 <v-col cols="6">
                     <h3>
                         TOTAL:
-                        {{ moneda.simbolo }}{{ total(listaproductos) }}
+                        {{ monedaSimbolo }}{{ total(listaproductos) }}
                     </h3>
                 </v-col>
             </v-row>
@@ -238,7 +238,7 @@ export default {
             precioCambiado: false,
             precioOriginalEdita: 0,
             dial_cliente: false,
-            moneda: store.state.moneda.find(m => m.codigo === 'PEN'),
+            moneda: store.state.moneda.find(m => m.codigo === 'USD'),
             descSinCodigo: { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 },
             descEdita: { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 },
         }
@@ -253,6 +253,9 @@ export default {
                 desc_2: Number(this.selecto.desc_2) || 0,
                 desc_3: Number(this.selecto.desc_3) || 0
             };
+        },
+        monedaSimbolo(){
+            return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/';
         }
     },
     created() {
