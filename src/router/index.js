@@ -1267,7 +1267,7 @@ const routes = [
     },
     beforeEnter: (to, from, next) => {
       if (to.matched.some((ruta) => ruta.meta.requireAuth)) {
-        if (store.state.permisos.moduloempresa) {
+        if (store.state.baseDatos.mod_activos) {
           next();
         } else {
           next({

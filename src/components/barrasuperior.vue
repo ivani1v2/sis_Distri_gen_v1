@@ -206,7 +206,7 @@
                     </v-list-item>
                 </v-list-group>
 
-                <v-list-group  
+                <v-list-group v-if="$store.state.baseDatos.mod_activos" 
                     :value="listaMenu" prepend-icon="mdi-snowflake" >
                     <template v-slot:activator>
                         <v-list-item-title class="font-weight-medium">Gest. Activos</v-list-item-title>

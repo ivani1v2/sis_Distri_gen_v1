@@ -66,102 +66,98 @@
                 </v-toolbar>
 
                 <!-- Área scrollable -->
-                <v-card-text class="dialog-scroll">
+                <v-card-text class="pa-2">
                     <v-form ref="frm" lazy-validation @submit.prevent="guardaEmpresa">
-                        <v-container>
+                        <v-container fluid class="pa-1">
                             <v-row dense>
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field v-model.trim="form.name" label="Empresa" :rules="[req]" />
-                                </v-col>
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field v-model.trim="form.namecomercial" label="Nombre Comercial" />
-                                </v-col>
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field v-model.trim="form.ruc" type="number" label="RUC"
-                                        append-icon="mdi-magnify" :rules="[req, rucRule]"
-                                        :disabled="cargando || form.editar" @click:append="buscarDocumento"
-                                        @keyup.enter="buscarDocumento" />
+
+                                <v-col cols="12">
+                                    <div class="text-caption font-weight-bold grey--text mb-1">IDENTIFICACIÓN Y
+                                        UBICACIÓN</div>
+                                    <v-card outlined class="pa-3 mb-3">
+                                        <v-row dense>
+                                            <v-col cols="12" md="3">
+                                                <v-text-field v-model.trim="form.ruc" label="RUC" type="number" dense
+                                                    outlined hide-details append-icon="mdi-magnify"
+                                                    :rules="[req, rucRule]" :disabled="cargando || form.editar"
+                                                    @click:append="buscarDocumento" />
+                                            </v-col>
+                                            <v-col cols="12" md="5">
+                                                <v-text-field v-model.trim="form.name" label="Razón Social" dense
+                                                    outlined hide-details :rules="[req]" />
+                                            </v-col>
+                                            <v-col cols="12" md="4">
+                                                <v-text-field v-model.trim="form.namecomercial" label="Nombre Comercial"
+                                                    dense outlined hide-details />
+                                            </v-col>
+                                            <v-col cols="12" md="6">
+                                                <v-text-field v-model.trim="form.direccion" label="Dirección Fiscal"
+                                                    dense outlined hide-details />
+                                            </v-col>
+                                            <v-col cols="4" md="2"><v-text-field v-model="form.departamento"
+                                                    label="Dep." dense outlined hide-details /></v-col>
+                                            <v-col cols="4" md="2"><v-text-field v-model="form.provincia" label="Prov."
+                                                    dense outlined hide-details /></v-col>
+                                            <v-col cols="4" md="2"><v-text-field v-model="form.distrito" label="Dist."
+                                                    dense outlined hide-details /></v-col>
+                                        </v-row>
+                                    </v-card>
                                 </v-col>
 
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field v-model.trim="form.departamento" label="Departamento" />
-                                </v-col>
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field v-model.trim="form.provincia" label="Provincia" />
-                                </v-col>
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field v-model.trim="form.distrito" label="Distrito" />
-                                </v-col>
-
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field v-model.trim="form.direccion" label="Dirección" />
-                                </v-col>
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field v-model.trim="form.ubigeo" label="UBIGEO" />
-                                </v-col>
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field v-model.trim="form.anexo" label="ANEXO (0000)" />
-                                </v-col>
-
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field v-model.trim="form.usuario" label="Usuario (correo)" :rules="[req]" />
-                                </v-col>
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field v-model.trim="form.clave" label="Clave"
-                                        :append-icon="verPass ? 'mdi-eye-off' : 'mdi-eye'"
-                                        :type="verPass ? 'text' : 'password'" @click:append="verPass = !verPass" />
-                                </v-col>
-
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field v-model.trim="form.usuariosol" label="USUARIO SOL" />
-                                </v-col>
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field v-model.trim="form.clavesol" label="CLAVE SOL" />
+                                <v-col cols="12" md="7">
+                                    <div class="text-caption font-weight-bold grey--text mb-1">CREDENCIALES Y SUNAT
+                                    </div>
+                                    <v-card outlined class="pa-3" height="100%">
+                                        <v-row dense>
+                                            <v-col cols="6"><v-text-field v-model="form.usuario" label="Usuario (Email)"
+                                                    dense outlined hide-details /></v-col>
+                                            <v-col cols="6">
+                                                <v-text-field v-model="form.clave" label="Clave" dense outlined
+                                                    hide-details :append-icon="verPass ? 'mdi-eye-off' : 'mdi-eye'"
+                                                    :type="verPass ? 'text' : 'password'"
+                                                    @click:append="verPass = !verPass" />
+                                            </v-col>
+                                            <v-col cols="6"><v-text-field v-model="form.usuariosol" label="Usuario SOL"
+                                                    dense outlined hide-details /></v-col>
+                                            <v-col cols="6"><v-text-field v-model="form.clavesol" label="Clave SOL"
+                                                    dense outlined hide-details /></v-col>
+                                            <v-col cols="6"><v-text-field v-model="form.nombrefirma" label="Nom. Firma"
+                                                    dense outlined hide-details /></v-col>
+                                            <v-col cols="6"><v-text-field v-model="form.passfirma" label="Pass Firma"
+                                                    dense outlined hide-details /></v-col>
+                                            <v-col cols="6"><v-text-field v-model="form.bd" label="Base de Datos" dense
+                                                    outlined hide-details
+                                                    @blur="form.bd = form.bd.toUpperCase()" /></v-col>
+                                            <v-col cols="6"><v-text-field v-model="form.num_usuarios"
+                                                    label="Límite Usuarios" dense outlined hide-details /></v-col>
+                                        </v-row>
+                                    </v-card>
                                 </v-col>
 
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field v-model.trim="form.nombrefirma" label="Nombre firma" />
-                                </v-col>
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field v-model.trim="form.passfirma" label="PASS FIRMA" />
+                                <v-col cols="12" md="5">
+                                    <div class="text-caption font-weight-bold grey--text mb-1">MÓDULOS ACTIVOS</div>
+                                    <v-card outlined class="pa-3 grey lighten-5" height="100%">
+                                        <v-row no-gutters>
+                                            <v-col cols="6"><v-switch v-model="form.es_tienda" label="Es Tienda" dense
+                                                    hide-details class="mt-0" color="primary" /></v-col>
+                                            <v-col cols="6"><v-switch v-model="form.transporte" label="Es Transp." dense
+                                                    hide-details class="mt-0" color="primary" /></v-col>
+                                            <v-col cols="6"><v-switch v-model="form.pruebas" label="Modo Pruebas" dense
+                                                    hide-details class="mt-0" color="error" /></v-col>
+                                            <v-col cols="6"><v-switch v-model="form.multi_empresa" label="Multi-Empresa"
+                                                    dense hide-details class="mt-0" color="primary" /></v-col>
+                                            <v-col cols="6"><v-switch v-model="form.kardex_avanzado" label="Kardex avanzado "
+                                                    dense hide-details class="mt-0" color="primary" /></v-col>
+                                            <v-col cols="6"><v-switch v-model="form.mod_activos" label="modulo Activos" dense
+                                                    hide-details class="mt-0" color="primary" /></v-col>
+                                            <v-col cols="6"><v-switch v-model="form.bigquery" label="BigQuery" dense
+                                                    hide-details class="mt-0" color="primary" /></v-col>
+                                            <v-col cols="6"><v-switch v-model="form.caja2" label="Caja V2" dense
+                                                    hide-details class="mt-0" color="primary" /></v-col>
+                                        </v-row>
+                                    </v-card>
                                 </v-col>
 
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field v-model.trim="form.PersonaID" label="PersonaID" />
-                                </v-col>
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field v-model.trim="form.Token" label="Token" />
-                                </v-col>
-
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field v-model.trim="form.bd" label="BD" :rules="[req]"
-                                        :disabled="form.editar" @blur="form.bd = form.bd.toUpperCase()" />
-                                </v-col>
-
-                                <v-col cols="6" sm="6" md="4"><v-checkbox v-model="form.es_tienda"
-                                        label="Es tienda" /></v-col>
-                                <v-col cols="6" sm="6" md="4"><v-checkbox v-model="form.transporte"
-                                        label="Módulo Transportes" /></v-col>
-                                <v-col cols="6" sm="6" md="4"><v-checkbox v-model="form.pruebas"
-                                        label="PRUEBA" /></v-col>
-                                <v-col cols="6" sm="6" md="4"><v-checkbox v-model="form.caja2"
-                                        label="Caja V2" /></v-col>
-                                <v-col cols="6" sm="6" md="4"><v-checkbox v-model="form.multi_empresa"
-                                        label="Multi_Empresa" /></v-col>
-                                <v-col cols="12" sm="6" md="4">
-                                    <v-checkbox v-model="form.bigquery" label="BigQuery" />
-                                </v-col>
-                                <v-col cols="12" sm="6" md="4">
-                                    <v-checkbox v-model="form.kardex_avanzado" label="Kardex Avanzado" />
-                                </v-col>
-                                <v-col cols="6" sm="6" md="4">
-                                    <v-text-field dense outlined v-model.trim="form.ruc_asociado"
-                                        label="RUC ASOCIADO" />
-                                </v-col>
-                                  <v-col cols="6" sm="6" md="4">
-                                    <v-text-field dense outlined v-model.trim="form.num_usuarios"
-                                        label="Limite de usuarios" />
-                                </v-col>
                             </v-row>
                         </v-container>
                     </v-form>
@@ -235,7 +231,7 @@ export default {
             ruc_asociado: '',
             bigquery: false,
             kardex_avanzado: false,
-            num_usuarios:''
+            num_usuarios: ''
         },
 
         // reglas
@@ -318,7 +314,7 @@ export default {
                 ruc_asociado: '',
                 bigquery: false,
                 kardex_avanzado: false,
-                num_usuarios:''
+                num_usuarios: ''
             })
         },
 
@@ -403,7 +399,7 @@ export default {
                 es_admin: true,
                 es_master: true,
                 ruc: Number(this.form.ruc || 0),
-                num_usuarios:''
+                num_usuarios: ''
             }
             await nuevoUsuario(usuario.token, usuario)
         },

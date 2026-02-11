@@ -22,7 +22,7 @@
           <v-row dense align="center">
             <v-col cols="12">
               <v-text-field v-model="searchText" placeholder="Buscar productos por código o nombre"
-                prepend-inner-icon="mdi-magnify" dense clearable hide-details @input="onSearch"></v-text-field>
+                prepend-inner-icon="mdi-magnify" dense clearable hide-details ></v-text-field>
               <div v-if="searchText" class="text-caption grey--text mt-1">
                 Mostrando {{ filteredList.length }} de {{ agrupadoPorProducto.length }} productos
               </div>
