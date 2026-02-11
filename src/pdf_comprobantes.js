@@ -185,7 +185,10 @@ async function impresion58(arraydatos, qr, cabecera) {
   doc.text(".", 0, linea);
   linea = linea + 3;
   //console.log(imagen)
-  if (imagen != "") {
+
+  const esNotaVenta58 = arraycabe.tipocomprobante === "T";
+  const ocultarLogo58 = esNotaVenta58 && store.state.configImpresora.no_mostrar_logo_nota_pedido;
+  if (imagen != "" && !ocultarLogo58) {
     doc.addImage(
       "data:image/png;base64," + imagen,
       "png",
@@ -686,7 +689,9 @@ async function impresion80(arraydatos, qr, cabecera) {
   doc.text(".", 0, linea);
   linea = linea + 3;
   //console.log(imagen)
-  if (imagen != "") {
+  const esNotaVenta80 = arraycabe.tipocomprobante === "T";
+  const ocultarLogo80 = esNotaVenta80 && store.state.configImpresora.no_mostrar_logo_nota_pedido;
+  if (imagen != "" && !ocultarLogo80) {
     doc.addImage(
       "data:image/png;base64," + imagen,
       "png",
@@ -1181,7 +1186,9 @@ function impresionA4(array, qr, arraycabecera) {
   doc.text(".", -1, linea);
   linea = linea + 3;
 
-  if (imagen != "") {
+  const esNotaVentaA4 = arraycabe.tipocomprobante === "T";
+  const ocultarLogoA4 = esNotaVentaA4 && store.state.configImpresora.no_mostrar_logo_nota_pedido;
+  if (imagen != "" && !ocultarLogoA4) {
     console.log(store.state.configImpresora.log_largo);
 
     if (store.state.configImpresora.log_largo) {
@@ -1683,7 +1690,10 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
   // Texto empresa (columna izquierda con wrap)
   let leftX = margin + 5;
   const leftW = Math.max(120, boxX - leftX - 6);
-  if (imagen != "") {
+
+  const esNotaVentaA5 = arraycabe.tipocomprobante === "T";
+  const ocultarLogoA5 = esNotaVentaA5 && store.state.configImpresora.no_mostrar_logo_nota_pedido;
+  if (imagen != "" && !ocultarLogoA5) {
     doc.addImage("data:image/png;base64," + imagen, "png", 10, 5, 26, 26);
     leftX = 40;
   }

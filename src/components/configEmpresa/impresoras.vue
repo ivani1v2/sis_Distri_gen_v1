@@ -96,6 +96,9 @@
                             <v-col cols="6" class="mt-n6">
                                 <v-switch inset dense v-model="mostrar_logo_pedido" label="Logo en pedido A4" />
                             </v-col>
+                            <v-col cols="12" class="mt-n6">
+                                <v-switch inset dense v-model="no_mostrar_logo_nota_pedido" label="No Mostrar Logo en Nota de Venta" />
+                            </v-col>
                         </v-row>
 
                         <v-row dense>
@@ -151,6 +154,7 @@ export default {
             nom_comercial: false,
             log_largo: false,
             mostrar_logo_pedido: true,
+            no_mostrar_logo_nota_pedido: false,
             mensaje_final_proforma: '',
             impresora_auto: false,
 
@@ -181,6 +185,7 @@ export default {
                     this.mensaje_final_proforma = snapshot.val().mensaje_final_proforma || ''
                     this.log_largo = snapshot.val().log_largo || false
                     this.mostrar_logo_pedido = snapshot.val().mostrar_logo_pedido !== false
+                    this.no_mostrar_logo_nota_pedido = snapshot.val().no_mostrar_logo_nota_pedido === true
                     this.impresora_auto = snapshot.val().impresora_auto || false
                 } else {
                     this.ip_cocina = "192.168.1.5"
@@ -198,6 +203,7 @@ export default {
                     this.vendedor = false
                     this.log_largo = false
                     this.mostrar_logo_pedido = true
+                    this.no_mostrar_logo_nota_pedido = false
                     this.impresora_auto = false
                     this.mensaje_final_proforma = ''
                 }
@@ -223,6 +229,7 @@ export default {
                 impresora_auto: this.impresora_auto || false,
                 log_largo: this.log_largo || false,
                 mostrar_logo_pedido: this.mostrar_logo_pedido !== false,
+                no_mostrar_logo_nota_pedido: this.no_mostrar_logo_nota_pedido || false,
                 mensaje_final_proforma: this.mensaje_final_proforma || ''
 
             }
@@ -243,6 +250,7 @@ export default {
             actualizaImpresoras('nom_comercial', this.nom_comercial || false)
             actualizaImpresoras('log_largo', this.log_largo || false)
             actualizaImpresoras('mostrar_logo_pedido', this.mostrar_logo_pedido !== false)
+            actualizaImpresoras('no_mostrar_logo_nota_pedido', this.no_mostrar_logo_nota_pedido || false)
             actualizaImpresoras('mensaje_final_proforma', this.mensaje_final_proforma || '')
             actualizaImpresoras('impresora_auto', this.impresora_auto || false)
             store.commit("dialogoImpresora")
