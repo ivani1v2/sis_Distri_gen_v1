@@ -23,7 +23,7 @@
           </div>
         </v-card>
 
-        <div class="subtitle-2 mb-2">Resultado de la Reparación *</div>
+        <div class="subtitle-2 mb-2">Resultado de la Reparación (Obligatorio)</div>
         <v-radio-group v-model="condicionResultante" class="mt-0">
           <v-card outlined class="pa-3 mb-2" :class="{ 'success lighten-5': condicionResultante === 'OPERATIVO' }"
             @click="condicionResultante = 'OPERATIVO'" style="cursor: pointer;">
@@ -50,7 +50,7 @@
           </v-card>
         </v-radio-group>
 
-        <v-textarea v-model="observacion" label="Descripción de la reparación *" outlined dense rows="3" auto-grow class="caption"
+        <v-textarea v-model="observacion" label="Descripción de la reparación (Obligatorio)" outlined dense rows="3" auto-grow class="caption"
           :rules="[rules.required]"
           placeholder="Describa el trabajo realizado, piezas cambiadas, o motivo de la baja..."
           :error-messages="errorObservacion"></v-textarea>

@@ -79,14 +79,9 @@
                                 <v-list-item-title> <v-icon color="info" left>mdi-magnify</v-icon>
                                     Filtrar</v-list-item-title>
                             </v-list-item>
-                            <v-list-item @click="verConsolidado">
+                            <v-list-item @click="dialogReportes = true">
                                 <v-list-item-title>
-                                    <v-icon left color="warning">mdi-clipboard-text</v-icon> Rep. consolidado
-                                </v-list-item-title>
-                            </v-list-item>
-                            <v-list-item @click="rep_avance">
-                                <v-list-item-title>
-                                    <v-icon left color="info">mdi-chart-timeline-variant</v-icon> Rep. Avance Ventas
+                                    <v-icon left color="deep-purple">mdi-file-chart</v-icon> Reportes
                                 </v-list-item-title>
                             </v-list-item>
                             <v-list-item @click="dial_imprime_()">
@@ -329,6 +324,67 @@
                 </v-row>
             </v-card>
         </v-dialog>
+        <v-dialog v-model="dialogReportes" max-width="500px">
+            <v-card>
+                <v-toolbar dark color="deep-purple darken-1" dense flat>
+                    <v-toolbar-title class="text-subtitle-1">
+                        <v-icon left>mdi-file-chart</v-icon>
+                        Reportes de Pedidos
+                    </v-toolbar-title>
+                    <v-spacer></v-spacer>
+                    <v-btn icon dark @click="dialogReportes = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-toolbar>
+
+                <v-card-text class="pa-4">
+                    <v-row dense>
+                        <v-col cols="12" md="4" sm="6">
+                            <v-card @click="dialogReportes = false; verConsolidado()" hover
+                                :ripple="{ class: 'deep-purple--text' }" class="pa-3 d-flex flex-column align-center"
+                                style="cursor: pointer; height: 120px;">
+                                <v-avatar color="warning lighten-4" size="50" class="mb-2">
+                                    <v-icon color="warning" size="30">mdi-clipboard-text</v-icon>
+                                </v-avatar>
+                                <span class="text-subtitle-2 font-weight-bold text-center">Consolidado</span>
+                                <span class="caption grey--text text-center">Detalle por producto</span>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="12" md="4" sm="6">
+                            <v-card @click="dialogReportes = false; rep_avance()" hover
+                                :ripple="{ class: 'info--text' }" class="pa-3 d-flex flex-column align-center"
+                                style="cursor: pointer; height: 120px;">
+                                <v-avatar color="info lighten-4" size="50" class="mb-2">
+                                    <v-icon color="info" size="30">mdi-chart-timeline-variant</v-icon>
+                                </v-avatar>
+                                <span class="text-subtitle-2 font-weight-bold text-center">Avance Ventas</span>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="12" md="4" sm="6">
+                            <v-card @click="dialogReportes = false; dialogRepPedidos = true" hover
+                                :ripple="{ class: 'deep-purple--text' }" class="pa-3 d-flex flex-column align-center"
+                                style="cursor: pointer; height: 120px;">
+                                <v-avatar color="deep-purple lighten-4" size="50" class="mb-2">
+                                    <v-icon color="deep-purple" size="30">mdi-cash-multiple</v-icon>
+                                </v-avatar>
+                                <span class="text-subtitle-2 font-weight-bold text-center"> Lista de Pedidos</span>
+                                <span class="caption grey--text text-center">Crédito / Contado</span>
+                            </v-card>
+                        </v-col>
+                    </v-row>
+                </v-card-text>
+
+                <v-divider></v-divider>
+
+                <v-card-actions class="pa-3">
+                    <v-spacer></v-spacer>
+                    <v-btn color="grey darken-1" text @click="dialogReportes = false">
+                        Cerrar
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <dial_rep_avance v-if="dial_avance" :data="result" @cerrar="dial_avance = false" />
         <edita_ped ref="editorDetalle" v-model="showEditorDetalle" :cabecera="editorCabecera" :detalle="editorDetalle"
             :editable-precio="false" @cancelar="showEditorDetalle = false" />
@@ -345,6 +401,7 @@
 
         <dial_deudas_cliente v-model="dialogDeudasCliente" :cliente="clienteParaNuevoPedido"
             :accion-pendiente="'pre_venta'" @cerrar="cerrarDialogDeudas" @continuar="iniciarNuevoPedido" />
+        <DialogoRepPedidos v-model="dialogRepPedidos" />
     </div>
 </template>
 
@@ -365,6 +422,8 @@ import { pdfGenera } from './formatos/orden_pedido.js'
 import anular_p from './anular_pedido.vue'
 import axios from "axios";
 import { colClientes } from '../../db_firestore'
+import DialogoRepPedidos from './dialogos/dialogo_rep_pedidos.vue'
+
 export default {
     components: {
         dial_rep_avance,
@@ -374,7 +433,8 @@ export default {
         dial_imprime_ped_masivo,
         anular_p,
         BuscaClientesPedido,
-        dial_deudas_cliente
+        dial_deudas_cliente,
+        DialogoRepPedidos
     },
     data() {
         return {
@@ -414,7 +474,9 @@ export default {
             dialogBuscaClientes: false,
             dialogDeudasCliente: false,
             clienteParaNuevoPedido: null,
-            dialogNuevoCliente: false
+            dialogNuevoCliente: false,
+            dialogRepPedidos: false,
+            dialogReportes: false
         };
     },
     created() {

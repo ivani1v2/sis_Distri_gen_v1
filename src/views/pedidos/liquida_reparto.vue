@@ -34,6 +34,10 @@
                             <v-list-item-icon><v-icon color="indigo darken-2">mdi-truck</v-icon></v-list-item-icon>
                             <v-list-item-title>Reporte Transporte</v-list-item-title>
                         </v-list-item>
+                        <v-list-item @click="pdf_clientes_transporte()">
+                            <v-list-item-icon><v-icon color="teal darken-2">mdi-clipboard-list</v-icon></v-list-item-icon>
+                            <v-list-item-title>Lista Clientes (Reparto)</v-list-item-title>
+                        </v-list-item>
                         <v-list-item @click="reporte_cobrar()">
                             <v-list-item-icon><v-icon
                                     color="orange darken-2">mdi-account-cash</v-icon></v-list-item-icon>
@@ -428,7 +432,8 @@ import {
 } from '../../pdf_reportes'
 import {
     reporte_almacen,
-    reporte_transporte
+    reporte_transporte,
+    reporte_clientes_transporte
 } from './reportes_pdf'
 import imprime from '@/components/dialogos/dialog_imprime'
 import {
@@ -742,6 +747,25 @@ export default {
 
             // Generar reporte de transporte
             reporte_transporte(r);
+        },
+        async pdf_clientes_transporte() {
+            store.commit("dialogoprogress");
+
+            const array = this.desserts.filter(
+                (item) => item.consolida && item.estado !== "ANULADO"
+            );
+
+            if (!array.length) {
+                store.commit("dialogoprogress");
+                this.$store.commit('dialogosnackbar', 'Seleccione al menos un pedido.');
+                return;
+            }
+
+            const r = await this.consultadetalles_pdf(array);
+            store.commit("dialogoprogress");
+
+            // Generar reporte de lista de clientes
+            reporte_clientes_transporte(r);
         },
         async pdf_almacen() {
             store.commit("dialogoprogress");

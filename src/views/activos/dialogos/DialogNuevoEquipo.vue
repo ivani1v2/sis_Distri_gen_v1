@@ -12,37 +12,37 @@
 
       <v-card-text class="pt-4">
         <v-form ref="form" v-model="formValid">
-          <v-row dense>
+          <v-row dense class="mb-n5" >
             <v-col cols="12" sm="6">
-              <v-text-field v-model="form.codigo" label="Código *" outlined dense
+              <v-text-field v-model="form.codigo" label="Código (Obligatorio)" outlined dense
                 :rules="[rules.required, rules.codigoValido]" :disabled="!!equipo" :loading="verificandoCodigo"
                 :error-messages="errorCodigo" :hint="!equipo ? 'Ej: ACTIVO-XXX' : ''" persistent-hint
                 @blur="verificarCodigo"></v-text-field>
             </v-col>
             <v-col cols="12" sm="6">
-              <v-text-field v-model="form.marca" label="Marca *" outlined dense
+              <v-text-field v-model="form.marca" label="Marca (Obligatorio)" outlined dense
                 :rules="[rules.required]"></v-text-field>
             </v-col>
           </v-row>
 
-          <v-row dense>
+          <v-row dense class="mb-n5">
             <v-col cols="12" sm="6">
               <v-text-field v-model="form.modelo" label="Modelo" outlined dense></v-text-field>
             </v-col>
             <v-col cols="12" sm="6">
-              <v-select v-model="form.descripcion" :items="tiposEquipo" label="Tipo de Equipo *" outlined dense
+              <v-select v-model="form.descripcion" :items="tiposEquipo" label="Tipo de Equipo (Obligatorio)" outlined dense
                 :rules="[rules.required]"></v-select>
             </v-col>
           </v-row>
 
-          <v-row dense>
+          <v-row dense class="mb-n5">
             <v-col cols="12">
               <v-text-field v-model="form.ubicacion_especifica" label="Ubicación Específica" outlined dense
                 placeholder="Ej: Bodega A, Estante 3"></v-text-field>
             </v-col>
           </v-row>
 
-          <v-row dense>
+          <v-row dense class="mb-n5">
             <v-col cols="12" sm="6">
               <v-menu v-model="menuFecha" :close-on-content-click="false" transition="scale-transition" offset-y
                 min-width="auto">
@@ -60,7 +60,7 @@
             </v-col>
           </v-row>
 
-          <v-row dense>
+          <v-row dense class="mb-n5">
             <v-col cols="12">
               <v-textarea v-model="form.observacion_actual" label="Observación" outlined dense rows="2"
                 auto-grow></v-textarea>

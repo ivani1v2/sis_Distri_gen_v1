@@ -6,7 +6,7 @@
           Reportes de Activos
         </h2>
       </v-col>
-      <v-col cols="12" sm="6" class="text-right">
+      <v-col cols="12" sm="6" :class="['text-right', $vuetify.breakpoint.xsOnly ? 'mt-n11' : '']">
         <v-btn small color="primary" @click="$router.push({ name: 'lista_activos' })" class="mt-1 mt-sm-0">
           <v-icon left small>mdi-arrow-left</v-icon>
           Volver
@@ -15,7 +15,7 @@
     </v-row>
 
     <v-row dense class="mb-3">
-      <v-col v-for="(stat, key) in statsCards" :key="key" cols="6" sm="3" md="2" class="py-1 px-2">
+      <v-col v-for="(stat, key) in statsCards" :key="key" cols="6" sm="3" md="auto" class="py-1 px-2 flex-7-custom">
         <v-card class="pa-3 d-flex align-center" :color="stat.color + ' lighten-5'" flat height="100%">
           <v-icon :color="stat.color" size="22" class="mr-5 ml-6">
             {{ stat.icon }}
@@ -117,7 +117,7 @@
               <v-data-table :headers="headersCliente" :items="equiposConCliente" dense :items-per-page="10"
                 no-data-text="No hay equipos asignados" class="elevation-1 compact-table">
                 <template v-slot:[`item.estado`]="{ item }">
-                  <v-chip :color="item.estado === 'EN USO' ? 'teal' : 'orange'" x-small dark label>
+                  <v-chip :color="getColorEstado(item.estado)" x-small dark label>
                     {{ item.estado }}
                   </v-chip>
                 </template>
@@ -130,7 +130,7 @@
                   </span>
                 </template>
                 <template v-slot:[`item.cliente_direccion`]="{ item }">
-                  <span class="text-truncate" style="max-width: 150px; display: inline-block;">
+                  <span class="caption" style="max-width: 350px; display: inline-block;">
                     {{ item.cliente_direccion || '-' }}
                   </span>
                 </template>
@@ -141,7 +141,7 @@
               <v-card v-for="item in equiposConCliente" :key="item.codigo" class="mb-2 pa-2" outlined>
                 <div class="d-flex justify-space-between align-center">
                   <div class="font-weight-bold primary--text">{{ item.codigo }}</div>
-                  <v-chip :color="item.estado === 'EN USO' ? 'teal' : 'orange'" x-small dark label>
+                  <v-chip :color="getColorEstado(item.estado)" x-small dark label>
                     {{ item.estado }}
                   </v-chip>
                 </div>
@@ -282,6 +282,24 @@
                     {{ item.usuario_nombre || item.usuario || '-' }}
                   </span>
                 </template>
+                <template v-slot:[`item.cliente`]="{ item }">
+                  <div v-if="item.cliente_nuevo_nombre || item.cliente_anterior_nombre"
+                    style="max-width: 270px; white-space: nowrap;">
+                    <span v-if="item.cliente_nuevo_nombre" class="text-truncate d-inline-block"
+                      style="max-width: 260px; vertical-align: middle;">
+                      <v-icon x-small color="success" class="mr-1">mdi-account-arrow-right</v-icon>
+                      {{ item.cliente_nuevo_nombre }}
+                    </span>
+                    <span
+                      v-if="item.cliente_anterior_nombre && item.cliente_anterior_nombre !== item.cliente_nuevo_nombre"
+                      class="text-truncate d-inline-block grey--text"
+                      style="max-width: 260px; font-size: 11px; margin-left: 4px; vertical-align: middle;">
+                      <v-icon x-small color="grey" class="mr-1">mdi-account-arrow-left</v-icon>
+                      {{ item.cliente_anterior_nombre }}
+                    </span>
+                  </div>
+                  <span v-else class="grey--text">-</span>
+                </template>
                 <template v-slot:[`item.observacion`]="{ item }">
                   <span class="text-truncate" style="max-width: 250px; display: inline-block;">
                     {{ item.observacion || '-' }}
@@ -305,6 +323,16 @@
                 <div class="text-caption">
                   <v-icon x-small class="mr-1">mdi-account</v-icon>
                   {{ item.usuario_nombre || item.usuario }}
+                </div>
+                <div class="text-caption mt-1" v-if="item.cliente_nuevo_nombre || item.cliente_anterior_nombre">
+                  <v-icon x-small class="mr-1"
+                    :color="item.cliente_nuevo_nombre ? 'primary' : 'grey'">mdi-account</v-icon>
+                  <span v-if="item.cliente_nuevo_nombre">
+                    {{ item.cliente_nuevo_nombre }}
+                  </span>
+                  <span v-else-if="item.cliente_anterior_nombre" class="grey--text">
+                    {{ item.cliente_anterior_nombre }} (anterior)
+                  </span>
                 </div>
                 <div class="text-caption text-truncate mt-1">{{ item.observacion || 'Sin observación' }}</div>
               </v-card>
@@ -382,7 +410,8 @@ export default {
         { text: "Fecha", value: "fecha", width: "150px", sortable: true },
         { text: "Equipo", value: "equipo_codigo", width: "100px", sortable: true },
         { text: "Tipo", value: "tipo_cambio", width: "110px", sortable: true },
-        { text: "Usuario", value: "usuario_nombre", width: "120px", sortable: true },
+        { text: "Usuario", value: "usuario_nombre", width: "80px", sortable: true },
+        { text: "Cliente", value: "cliente", width: "280px", sortable: true },
         { text: "Observación", value: "observacion", width: "250px", sortable: true }
       ],
 
@@ -403,6 +432,7 @@ export default {
         { key: 'disponibles', icon: 'mdi-check-circle', title: 'Disponibles', value: this.stats.disponibles, color: 'green' },
         { key: 'enUso', icon: 'mdi-account-check', title: 'En Uso', value: this.stats.enUso, color: 'teal' },
         { key: 'reservados', icon: 'mdi-clock-outline', title: 'Reservados', value: this.stats.reservados, color: 'orange' },
+        { key: 'pendienteRecojo', icon: 'mdi-truck-alert', title: 'Pend. Recojo', value: this.stats.pendienteRecojo, color: 'amber' },
         { key: 'enMantenimiento', icon: 'mdi-wrench', title: 'Mantenimiento', value: this.stats.enMantenimiento, color: 'purple' },
         { key: 'averiados', icon: 'mdi-alert-circle', title: 'Averiados', value: this.stats.averiados, color: 'red' }
       ];
@@ -413,7 +443,7 @@ export default {
     },
 
     equiposConCliente() {
-      return this.equipos.filter(e => e.estado === "EN USO" || e.estado === "RESERVADO");
+      return this.equipos.filter(e => e.estado === "EN USO" || e.estado === "RESERVADO" || e.estado === "PENDIENTE RECOJO");
     },
 
     equiposMantenimiento() {
@@ -467,6 +497,7 @@ export default {
         disponibles: this.equipos.filter(e => e.condicion === "OPERATIVO" && e.estado === "ALMACÉN").length,
         enUso: this.equipos.filter(e => e.estado === "EN USO").length,
         reservados: this.equipos.filter(e => e.estado === "RESERVADO").length,
+        pendienteRecojo: this.equipos.filter(e => e.estado === "PENDIENTE RECOJO").length,
         enMantenimiento: this.equipos.filter(e => e.condicion === "EN MANTENIMIENTO").length,
         averiados: this.equipos.filter(e => e.condicion === "AVERIADO").length
       };
@@ -482,11 +513,23 @@ export default {
       return moment(timestamp).format("DD/MM/YYYY HH:mm");
     },
 
+    getColorEstado(estado) {
+      const colores = {
+        "ALMACÉN": "blue",
+        "RESERVADO": "orange",
+        "EN USO": "teal",
+        "PENDIENTE RECOJO": "amber darken-2"
+      };
+      return colores[estado] || "grey";
+    },
+
     getColorTipo(tipo) {
       const colores = {
         "INGRESO": "blue",
         "ASIGNACION": "green",
         "DEVOLUCION": "orange",
+        "PENDIENTE_RECOJO": "amber darken-2",
+        "RECOJO_COMPLETADO": "amber darken-3",
         "MANTENIMIENTO": "purple",
         "REPARACION": "teal",
         "CAMBIO_ESTADO": "grey"
@@ -570,14 +613,28 @@ export default {
 
     exportarHistorialExcel() {
       if (this.historialFiltrado.length === 0) return;
+      const data = this.historialFiltrado.map(h => {
+        let cliente = '';
+        if (h.cliente_nuevo_nombre) {
+          cliente = h.cliente_nuevo_nombre;
+          if (h.cliente_anterior_nombre && h.cliente_anterior_nombre !== h.cliente_nuevo_nombre) {
+            cliente += ` (anterior: ${h.cliente_anterior_nombre})`;
+          }
+        } else if (h.cliente_anterior_nombre) {
+          cliente = `${h.cliente_anterior_nombre} (anterior)`;
+        } else {
+          cliente = '-';
+        }
 
-      const data = this.historialFiltrado.map(h => ({
-        "Fecha": this.formatFechaHora(h.fecha),
-        "Equipo": h.equipo_codigo,
-        "Tipo": h.tipo_cambio,
-        "Usuario": h.usuario_nombre || h.usuario || "",
-        "Observación": h.observacion || ""
-      }));
+        return {
+          "Fecha": this.formatFechaHora(h.fecha),
+          "Equipo": h.equipo_codigo,
+          "Tipo": h.tipo_cambio,
+          "Usuario": h.usuario_nombre || h.usuario || "",
+          "Cliente": cliente,
+          "Observación": h.observacion || ""
+        };
+      });
 
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
@@ -679,5 +736,12 @@ export default {
 .v-card .text-caption {
   line-height: 1.1 !important;
   margin-top: 2px !important;
+}
+
+@media (min-width: 960px) {
+  .flex-7-custom {
+    flex: 0 0 14.2857% !important;
+    max-width: 14.2857% !important;
+  }
 }
 </style>

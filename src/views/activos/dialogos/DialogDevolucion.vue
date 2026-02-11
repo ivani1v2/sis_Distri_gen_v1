@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="show" max-width="450px" persistent>
+  <v-dialog v-model="show" max-width="500px" persistent>
     <v-card>
       <v-card-title class="orange lighten-1 white--text py-2 subtitle-1">
         <v-icon color="white" small class="mr-2">mdi-keyboard-return</v-icon>
@@ -10,7 +10,7 @@
         </v-btn>
       </v-card-title>
 
-      <v-card-text class="pt-4">
+      <v-card-text class="pt-4 mt-n2">
         <v-card outlined class="pa-3 mb-4">
           <div class="font-weight-bold">{{ equipo.codigo }}</div>
           <div class="caption grey--text">{{ equipo.marca }} {{ equipo.modelo }}</div>
@@ -20,7 +20,7 @@
           </div>
         </v-card>
 
-        <div class="subtitle-2 mb-2">Evaluación del Equipo *</div>
+        <div class="subtitle-2 mt-n1">Evaluación del Equipo (Obligatorio)</div>
         <v-radio-group v-model="condicionResultante" class="mt-0" :rules="[v => !!v || 'Seleccione la condición']">
           <v-card outlined class="pa-3 mb-2" :class="{ 'success lighten-5': condicionResultante === 'OPERATIVO' }"
             @click="condicionResultante = 'OPERATIVO'" style="cursor: pointer;">
@@ -40,19 +40,53 @@
               <template v-slot:label>
                 <div>
                   <span class="font-weight-bold red--text">AVERIADO</span>
-                  <div class="caption grey--text">El equipo presenta fallas y requiere reparación</div>
+                  <div class="caption grey--text">Equipo presenta fallas y requiere reparación</div>
                 </div>
               </template>
             </v-radio>
           </v-card>
         </v-radio-group>
-        <v-textarea v-model="observacion" label="Observación *" outlined dense rows="3" auto-grow class="caption"
+
+        <div v-if="condicionResultante" class="mb-n6 mt-n3">
+          <div class="subtitle-2 mb-2">¿Destino del equipo? (Obligatorio)</div>
+          <v-radio-group v-model="destino" class="mt-n2">
+            <v-card outlined class="pa-3 mb-2" :class="{ 'blue lighten-5': destino === 'ALMACÉN' }"
+              @click="destino = 'ALMACÉN'" style="cursor: pointer;">
+              <v-radio value="ALMACÉN" color="blue">
+                <template v-slot:label>
+                  <div>
+                    <span class="font-weight-bold blue--text">ALMACÉN</span>
+                    <div class="caption grey--text">El equipo ya fue recogido o está en las instalaciones</div>
+                  </div>
+                </template>
+              </v-radio>
+            </v-card>
+
+            <v-card outlined class="pa-3" :class="{ 'amber lighten-5': destino === 'PENDIENTE RECOJO' }"
+              @click="destino = 'PENDIENTE RECOJO'" style="cursor: pointer;">
+              <v-radio value="PENDIENTE RECOJO" color="amber darken-2">
+                <template v-slot:label>
+                  <div>
+                    <span class="font-weight-bold amber--text text--darken-3">PENDIENTE RECOJO</span>
+                    <div class="caption grey--text">El equipo está en el cliente, pendiente de ser recogido</div>
+                  </div>
+                </template>
+              </v-radio>
+            </v-card>
+          </v-radio-group>
+        </div>
+
+        <v-textarea v-model="observacion" label="Observación (Obligatorio)" outlined dense rows="3" auto-grow class="caption mt-3"
           :rules="[rules.required]"
           placeholder="Describa el estado del equipo, motivo de devolución, daños observados, etc."
           :error-messages="errorObservacion"></v-textarea>
 
-        <v-alert v-if="condicionResultante === 'AVERIADO'" type="warning" dense text class="caption mt-n2 mb-n2">
+        <v-alert v-if="condicionResultante === 'AVERIADO' && destino === 'ALMACÉN'" type="warning" dense text class="caption mt-n4 mb-n2">
           El equipo quedará en ALMACÉN con condición AVERIADO. Deberá enviarse a <span class="font-weight-bold">MANTENIMIENTO</span> para su reparación.
+        </v-alert>
+
+        <v-alert v-if="destino === 'PENDIENTE RECOJO'" type="info" dense text class="caption mt-n4 mb-n2">
+          El equipo quedará registrado como <span class="font-weight-bold">PENDIENTE DE RECOJO</span> hasta que se complete la recolección.
         </v-alert>
       </v-card-text>
 
@@ -85,6 +119,7 @@ export default {
   data() {
     return {
       condicionResultante: null,
+      destino: "ALMACÉN",
       observacion: "",
       guardando: false,
       errorObservacion: "",
@@ -102,7 +137,7 @@ export default {
     },
 
     esFormularioValido() {
-      return this.condicionResultante && this.observacion && this.observacion.trim().length > 0;
+      return this.condicionResultante && this.destino && this.observacion && this.observacion.trim().length > 0;
     }
   },
 
@@ -123,6 +158,7 @@ export default {
   methods: {
     limpiar() {
       this.condicionResultante = null;
+      this.destino = "ALMACÉN";
       this.observacion = "";
       this.errorObservacion = "";
     },
@@ -130,6 +166,11 @@ export default {
     async registrarDevolucion() {
       if (!this.condicionResultante) {
         this.$store.commit("dialogosnackbar", "Seleccione la condición del equipo");
+        return;
+      }
+
+      if (!this.destino) {
+        this.$store.commit("dialogosnackbar", "Seleccione el destino del equipo");
         return;
       }
 
@@ -141,7 +182,7 @@ export default {
       this.guardando = true;
 
       try {
-        await devolverEquipo(this.equipo.codigo, this.condicionResultante, this.observacion);
+        await devolverEquipo(this.equipo.codigo, this.condicionResultante, this.observacion, this.destino);
         this.$emit("devuelto");
         this.cerrar();
       } catch (error) {

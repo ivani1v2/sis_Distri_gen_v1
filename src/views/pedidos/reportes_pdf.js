@@ -95,19 +95,19 @@ export const reporte_almacen = async (cabecera, peso, arraydatos, observacion, f
     },
     columnStyles: esF1
       ? {
-          0: { columnWidth: 15, halign: 'center', fontStyle: 'bold' }, // CODIGO
-          1: { columnWidth: 115, halign: 'left' },                     // DESCRIPCION
-          2: { columnWidth: 20, halign: 'center' },                    // MEDIDA
-          3: { columnWidth: 12, halign: 'center' },                    // CAJAS
-          4: { columnWidth: 12, halign: 'center' },                    // UND
-          5: { columnWidth: 20, halign: 'center' },                    // PESO
-        }
+        0: { columnWidth: 15, halign: 'center', fontStyle: 'bold' }, // CODIGO
+        1: { columnWidth: 115, halign: 'left' },                     // DESCRIPCION
+        2: { columnWidth: 20, halign: 'center' },                    // MEDIDA
+        3: { columnWidth: 12, halign: 'center' },                    // CAJAS
+        4: { columnWidth: 12, halign: 'center' },                    // UND
+        5: { columnWidth: 20, halign: 'center' },                    // PESO
+      }
       : {
-          0: { columnWidth: 15, halign: 'center' },                    // CAJAS/UND
-          1: { columnWidth: 25, halign: 'center' },                    // MEDIDA
-          2: { columnWidth: 130, halign: 'left' },                     // DESCRIPCION
-          3: { columnWidth: 25, halign: 'center' },                    // PESO
-        },
+        0: { columnWidth: 15, halign: 'center' },                    // CAJAS/UND
+        1: { columnWidth: 25, halign: 'center' },                    // MEDIDA
+        2: { columnWidth: 130, halign: 'left' },                     // DESCRIPCION
+        3: { columnWidth: 25, halign: 'center' },                    // PESO
+      },
     head: esF1
       ? [['Codigo', 'Descripcion', 'Medida', 'Cajas', 'Und', 'Peso(KG)']]
       : [['Caj/Und', 'Medida', 'Descripcion', 'Peso(KG)']],
@@ -196,6 +196,7 @@ export const reporte_transporte = (data) => {
     var texto = doc.splitTextToSize('CONTADO: S/.' + data[0][2].contado, (pdfInMM - lMargin - rMargin));
     doc.text(texto, 100, 10, 'left');
   
+     
     var texto = doc.splitTextToSize('CREDITO: S/.' + data[0][2].credito, (pdfInMM - lMargin - rMargin));
     doc.text(texto, 100, 14, 'left');
   
@@ -858,4 +859,118 @@ function abre_dialogo_impresion(data) {
     "";
   var w = window.open(blob, "_blank", Opciones);
   w.print();
+}
+
+
+/**
+ * @param {Array} data - Array de objetos con la estructura de consultadetalles_pdf
+ */
+export const reporte_clientes_transporte = (data) => {
+  const fechaImpresion = moment(String(new Date)).format('DD/MM/YYYY hh:mm a')
+  const lMargin = 10
+  const rMargin = 10
+  const pdfInMM = 210
+
+  const doc = new jspdf({
+    orientation: "portrait",
+    unit: "mm",
+    format: [210, 297]
+  })
+
+  // Crear array de filas para la tabla
+  const rows = []
+  for (let i = 0; i < data.length; i++) {
+    const item = data[i][1] // Cabecera del pedido
+    const montoCredito = item.forma_pago === 'CREDITO' ? parseFloat(item.total || 0).toFixed(2) : '0.00'
+
+    rows.push([
+      item.numeracion || '',
+      `${item.dni || ''} - ${item.cliente || ''}`,
+      item.vendedor || '',
+      parseFloat(item.peso_total || 0).toFixed(2),
+      item.forma_pago || '',
+      montoCredito,
+      parseFloat(item.total || 0).toFixed(2)
+    ])
+  }
+
+  // Configuración de la tabla
+  doc.autoTable({
+    startY: 29,
+    margin: { top: 30, left: lMargin, right: rMargin },
+    styles: {
+      fontSize: 8,
+      cellPadding: 1.5,
+      valign: 'middle',
+      halign: 'center',
+      lineWidth: 0.2,
+      lineColor: 80,
+      textColor: [0, 0, 0]
+    },
+    headStyles: {
+      fillColor: [50, 50, 50],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      lineWidth: 0.2,
+      lineColor: 80
+    },
+    columnStyles: {
+      0: { columnWidth: 25, halign: 'center' },
+      1: { columnWidth: 70, halign: 'left' },
+      2: { columnWidth: 18, halign: 'center' },
+      3: { columnWidth: 18, halign: 'center' },
+      4: { columnWidth: 22, halign: 'center' },
+      5: { columnWidth: 20, halign: 'right' },
+      6: { columnWidth: 20, halign: 'right' },
+    },
+    head: [['Correlativo', 'Documento - Cliente', 'Vendedor', 'Peso (KG)', 'Modo', 'M. Crédito', 'Total']],
+    body: rows,
+    didParseCell: function (data) {
+      if (data.row.section === 'body') {
+        data.cell.styles.fillColor = [255, 255, 255];
+      }
+    }
+  })
+
+  // Agregar encabezado en todas las páginas
+  const pageCount = doc.internal.getNumberOfPages()
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i)
+    const pageCurrent = doc.internal.getCurrentPageInfo().pageNumber
+
+    // Título del reporte
+    doc.setFontSize(13)
+    doc.setFont('Helvetica', 'bold')
+    let texto = doc.splitTextToSize("REPARTO N° " + data[0][2].id_grupo, (pdfInMM - lMargin - rMargin))
+    doc.text(texto, lMargin, 10, 'left')
+
+    // Fecha de impresión
+    doc.setFontSize(9)
+    doc.setFont('Helvetica', '')
+    texto = doc.splitTextToSize('Fecha Impresion: ' + fechaImpresion, (pdfInMM - lMargin - rMargin))
+    doc.text(texto, lMargin, 15, 'left')
+
+    // Totales en el encabezado
+    doc.setFontSize(9)
+    texto = doc.splitTextToSize('CONTADO: S/.' + data[0][2].contado, (pdfInMM - lMargin - rMargin))
+    doc.text(texto, 100, 10, 'left')
+
+    texto = doc.splitTextToSize('CREDITO: S/.' + data[0][2].credito, (pdfInMM - lMargin - rMargin))
+    doc.text(texto, 100, 14, 'left')
+
+    texto = doc.splitTextToSize('MONTO TOTAL: S/.' + data[0][2].total, (pdfInMM - lMargin - rMargin))
+    doc.text(texto, 150, 10, 'left')
+
+    texto = doc.splitTextToSize('PESO TOTAL: ' + data[0][2].peso + ' KG', (pdfInMM - lMargin - rMargin))
+    doc.text(texto, 150, 14, 'left')
+
+    doc.setDrawColor(0, 0, 0)
+    doc.setLineWidth(0.2)
+    doc.line(lMargin, 24, pdfInMM - rMargin, 24)
+
+    // Paginación
+    doc.setFontSize(9)
+    doc.text(170, 290, 'PAG: ' + pageCurrent + '/' + pageCount)
+  }
+  window.open(doc.output('bloburl'))
 }

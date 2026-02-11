@@ -6,69 +6,87 @@
           Gestión de Activos
         </h2>
       </v-col>
-      <v-col cols="12" sm="6" md="8" class="d-flex justify-end">
+      <v-col cols="12" sm="6" md="8" :class="['d-flex', 'justify-end', $vuetify.breakpoint.xsOnly ? 'mt-n10' : '']">
         <v-btn color="primary" small @click="abrirNuevoEquipo" class="mr-2">
           <v-icon left small>mdi-plus</v-icon>
-          Nuevo Equipo
+          <span class="d-none d-sm-inline">Nuevo Equipo</span>
+          <span class="d-inline d-sm-none">Nuevo</span>
         </v-btn>
         <v-btn color="success" small @click="$router.push({ name: 'reportes_activos' })">
           <v-icon left small>mdi-chart-bar</v-icon>
-          Reportes
+          <span class="d-none d-sm-inline">Reportes</span>
+        </v-btn>
+        <v-btn color="purple" dark small @click="dialogCargaMasiva = true" class="ml-2">
+          <v-icon left small>mdi-upload-multiple</v-icon>
+          <span class="d-none d-sm-inline">Cargar Masivo</span>
         </v-btn>
       </v-col>
     </v-row>
 
-    <v-row dense class="mb-3">
-      <v-col cols="6" sm="4" md="2">
-        <v-card class="text-center pa-2 cursor-pointer" :color="filtroRapido === 'todos'
-          ? 'blue lighten-3' : 'blue lighten-5'" flat @click="aplicarFiltroRapido('todos')">
-          <div class="text-h5 font-weight-bold" :class="filtroRapido === 'todos' ? 'blue--text text--darken-2'
-            : 'primary--text'"> {{ stats.total }}
+    <v-row dense class="mb-3" style="flex-wrap: nowrap;">
+      <v-col style="flex: 1 1 0; min-width: 0;">
+        <v-card class="text-center pa-1 cursor-pointer"
+          :color="filtroRapido === 'todos' ? 'blue lighten-3' : 'blue lighten-5'" flat
+          @click="aplicarFiltroRapido('todos')">
+          <div class="text-subtitle-1 font-weight-bold"
+            :class="filtroRapido === 'todos' ? 'blue--text text--darken-2' : 'primary--text'">
+            {{ stats.total }}
           </div>
-          <div class="caption">
-            Total
-          </div>
+          <div class="caption">Total</div>
         </v-card>
       </v-col>
 
-      <v-col cols="6" sm="4" md="2">
-        <v-card class="text-center pa-2 cursor-pointer"
+      <v-col style="flex: 1 1 0; min-width: 0;">
+        <v-card class="text-center pa-1 cursor-pointer"
           :color="filtroRapido === 'disponibles' ? 'green lighten-3' : 'green lighten-5'" flat
           @click="aplicarFiltroRapido('disponibles')">
-          <div class="text-h5 font-weight-bold green--text">{{ stats.disponibles }}</div>
-          <div class="caption">Disponibles</div>
+          <div class="text-subtitle-1 font-weight-bold green--text">{{ stats.disponibles }}</div>
+          <div class="caption">Dis.</div>
         </v-card>
       </v-col>
-      <v-col cols="6" sm="4" md="2">
-        <v-card class="text-center pa-2 cursor-pointer"
+
+      <v-col style="flex: 1 1 0; min-width: 0;">
+        <v-card class="text-center pa-1 cursor-pointer"
           :color="filtroRapido === 'reservados' ? 'amber lighten-3' : 'amber lighten-5'" flat
           @click="aplicarFiltroRapido('reservados')">
-          <div class="text-h5 font-weight-bold amber--text text--darken-3">{{ stats.reservados }}</div>
-          <div class="caption">Reservados</div>
+          <div class="text-subtitle-1 font-weight-bold amber--text text--darken-3">{{ stats.reservados }}</div>
+          <div class="caption">Reser.</div>
         </v-card>
       </v-col>
-      <v-col cols="6" sm="4" md="2">
-        <v-card class="text-center pa-2 cursor-pointer"
+
+      <v-col style="flex: 1 1 0; min-width: 0;">
+        <v-card class="text-center pa-1 cursor-pointer"
           :color="filtroRapido === 'enUso' ? 'orange lighten-3' : 'orange lighten-5'" flat
           @click="aplicarFiltroRapido('enUso')">
-          <div class="text-h5 font-weight-bold orange--text text--darken-2">{{ stats.enUso }}</div>
-          <div class="caption">En Uso</div>
+          <div class="text-subtitle-1 font-weight-bold orange--text text--darken-2">{{ stats.enUso }}</div>
+          <div class="caption">En uso</div>
         </v-card>
       </v-col>
-      <v-col cols="6" sm="4" md="2">
-        <v-card class="text-center pa-2 cursor-pointer"
+
+      <v-col style="flex: 1 1 0; min-width: 0;">
+        <v-card class="text-center pa-1 cursor-pointer"
+          :color="filtroRapido === 'pendienteRecojo' ? 'amber lighten-2' : 'amber lighten-5'" flat
+          @click="aplicarFiltroRapido('pendienteRecojo')">
+          <div class="text-subtitle-1 font-weight-bold amber--text text--darken-4">{{ stats.pendienteRecojo }}</div>
+          <div class="caption">Pend.</div>
+        </v-card>
+      </v-col>
+
+      <v-col style="flex: 1 1 0; min-width: 0;">
+        <v-card class="text-center pa-1 cursor-pointer"
           :color="filtroRapido === 'enMantenimiento' ? 'purple lighten-3' : 'purple lighten-5'" flat
           @click="aplicarFiltroRapido('enMantenimiento')">
-          <div class="text-h5 font-weight-bold purple--text">{{ stats.enMantenimiento }}</div>
-          <div class="caption">Mantenimiento</div>
+          <div class="text-subtitle-1 font-weight-bold purple--text">{{ stats.enMantenimiento }}</div>
+          <div class="caption">Mant.</div>
         </v-card>
       </v-col>
-      <v-col cols="6" sm="4" md="2">
-        <v-card class="text-center pa-2 cursor-pointer"
+
+      <v-col style="flex: 1 1 0; min-width: 0;">
+        <v-card class="text-center pa-1 cursor-pointer"
           :color="filtroRapido === 'averiados' ? 'red lighten-3' : 'red lighten-5'" flat
           @click="aplicarFiltroRapido('averiados')">
-          <div class="text-h5 font-weight-bold red--text">{{ stats.averiados }}</div>
-          <div class="caption">Averiados</div>
+          <div class="text-subtitle-1 font-weight-bold red--text">{{ stats.averiados }}</div>
+          <div class="caption">Aver.</div>
         </v-card>
       </v-col>
     </v-row>
@@ -109,8 +127,23 @@
         </template>
 
         <template v-slot:[`item.cliente_nombre`]="{ item }">
-          <span v-if="item.cliente_nombre" class="text-truncate" style="max-width: 150px; display: inline-block;">
+          <span v-if="item.cliente_nombre" style="max-width: 150px; display: inline-block;">
             {{ item.cliente_nombre }}
+          </span>
+          <span v-else class="grey--text">-</span>
+        </template>
+
+        <template v-slot:[`item.cliente_direccion`]="{ item }">
+          <span v-if="item.cliente_direccion" class="caption">
+            <v-tooltip bottom max-width="300">
+              <template v-slot:activator="{ on, attrs }">
+                <span v-bind="attrs" v-on="on"
+                  style="max-width: 250px; display: inline-block;">
+                  {{ item.cliente_direccion }}
+                </span>
+              </template>
+              <span>{{ item.cliente_direccion }}</span>
+            </v-tooltip>
           </span>
           <span v-else class="grey--text">-</span>
         </template>
@@ -143,6 +176,10 @@
               <v-list-item v-if="puedeDevolver(item)" @click="abrirDevolucion(item)">
                 <v-list-item-icon><v-icon small color="orange">mdi-keyboard-return</v-icon></v-list-item-icon>
                 <v-list-item-title>Registrar Devolución</v-list-item-title>
+              </v-list-item>
+              <v-list-item v-if="puedeCompletarRecojo(item)" @click="abrirCompletarRecojo(item)">
+                <v-list-item-icon><v-icon small color="amber darken-2">mdi-truck-check</v-icon></v-list-item-icon>
+                <v-list-item-title>Completar Recojo</v-list-item-title>
               </v-list-item>
               <v-list-item v-if="puedeEnviarMantenimiento(item)" @click="abrirMantenimiento(item)">
                 <v-list-item-icon><v-icon small color="purple">mdi-wrench</v-icon></v-list-item-icon>
@@ -183,6 +220,9 @@
             <div v-if="item.cliente_nombre" class="caption mt-1">
               <v-icon x-small>mdi-account</v-icon> {{ item.cliente_nombre }}
             </div>
+            <span v-if="item.cliente_direccion" class="caption grey--text">
+              <v-icon x-small>mdi-map-marker</v-icon> {{ truncarTexto(item.cliente_direccion, 30) }}
+            </span>
           </div>
           <div class="text-right">
             <v-chip :color="getColorCondicion(item.condicion)" x-small dark label class="mb-1">
@@ -204,6 +244,10 @@
           </v-btn>
           <v-btn v-if="puedeDevolver(item)" x-small text color="orange" @click.stop="abrirDevolucion(item)">
             <v-icon x-small left>mdi-keyboard-return</v-icon> Devolver
+          </v-btn>
+          <v-btn v-if="puedeCompletarRecojo(item)" x-small text color="amber darken-2"
+            @click.stop="abrirCompletarRecojo(item)">
+            <v-icon x-small left>mdi-truck-check</v-icon> Recojo
           </v-btn>
           <v-btn v-if="puedeEnviarMantenimiento(item)" x-small text color="purple"
             @click.stop="abrirMantenimiento(item)">
@@ -233,6 +277,9 @@
     <dialog-devolucion v-if="dialogDevolucion" :visible.sync="dialogDevolucion" :equipo="equipoSeleccionado"
       @devuelto="onEquipoDevuelto" />
 
+    <dialog-completar-recojo v-if="dialogCompletarRecojo" :visible.sync="dialogCompletarRecojo"
+      :equipo="equipoSeleccionado" @recojo-completado="onRecojoCompletado" />
+
     <dialog-mantenimiento v-if="dialogMantenimiento" :visible.sync="dialogMantenimiento" :equipo="equipoSeleccionado"
       @enviado="onMantenimientoEnviado" />
 
@@ -244,6 +291,8 @@
     <dialog-detalle-equipo v-if="dialogDetalle" :visible.sync="dialogDetalle" :equipo="equipoSeleccionado"
       @editar="editarEquipo" @asignar="abrirAsignacion" @devolver="abrirDevolucion" @mantenimiento="abrirMantenimiento"
       @completar="abrirCompletarReparacion" @confirmar-entrega="abrirConfirmarEntrega" @historial="verHistorial" />
+    <dialog-carga-masiva-activos v-if="dialogCargaMasiva" :visible.sync="dialogCargaMasiva"
+      @importado="recargarEquipos" />
   </div>
 </template>
 
@@ -258,10 +307,12 @@ import DialogNuevoEquipo from "./dialogos/DialogNuevoEquipo.vue";
 import DialogAsignarCliente from "./dialogos/DialogAsignarCliente.vue";
 import DialogConfirmarEntrega from "./dialogos/DialogConfirmarEntrega.vue";
 import DialogDevolucion from "./dialogos/DialogDevolucion.vue";
+import DialogCompletarRecojo from "./dialogos/DialogCompletarRecojo.vue";
 import DialogMantenimiento from "./dialogos/DialogMantenimiento.vue";
 import DialogCompletarReparacion from "./dialogos/DialogCompletarReparacion.vue";
 import DialogHistorial from "./dialogos/DialogHistorial.vue";
 import DialogDetalleEquipo from "./dialogos/DialogDetalleEquipo.vue";
+import DialogCargaMasivaActivos from "./dialogos/DialogCargaMasivaActivos.vue";
 
 export default {
   name: "ListaActivos",
@@ -271,10 +322,12 @@ export default {
     DialogAsignarCliente,
     DialogConfirmarEntrega,
     DialogDevolucion,
+    DialogCompletarRecojo,
     DialogMantenimiento,
     DialogCompletarReparacion,
     DialogHistorial,
-    DialogDetalleEquipo
+    DialogDetalleEquipo,
+    DialogCargaMasivaActivos
   },
 
   data() {
@@ -291,6 +344,7 @@ export default {
         disponibles: 0,
         enUso: 0,
         reservados: 0,
+        pendienteRecojo: 0,
         enMantenimiento: 0,
         averiados: 0,
         dadosDeBaja: 0
@@ -303,7 +357,8 @@ export default {
         { text: "Condición", value: "condicion", width: "130" },
         { text: "Estado", value: "estado", width: "110" },
         { text: "Cliente", value: "cliente_nombre", width: "150" },
-        { text: "Ubicación", value: "ubicacion_especifica", width: "130" },
+        { text: "Dirección", value: "cliente_direccion", width: "200" },
+        { text: "Ub. Origen", value: "ubicacion_especifica", width: "130" },
         { text: "Acciones", value: "acciones", sortable: false, width: "80", align: "center" }
       ],
 
@@ -317,7 +372,8 @@ export default {
       estadosOptions: [
         { text: "Almacén", value: "ALMACÉN" },
         { text: "Reservado", value: "RESERVADO" },
-        { text: "En Uso", value: "EN USO" }
+        { text: "En Uso", value: "EN USO" },
+        { text: "Pendiente Recojo", value: "PENDIENTE RECOJO" }
       ],
 
       // Dialogs
@@ -325,13 +381,15 @@ export default {
       dialogAsignar: false,
       dialogConfirmarEntrega: false,
       dialogDevolucion: false,
+      dialogCompletarRecojo: false,
       dialogMantenimiento: false,
       dialogCompletarReparacion: false,
       dialogHistorial: false,
       dialogDetalle: false,
 
       equipoSeleccionado: null,
-      equipoEditar: null
+      equipoEditar: null,
+      dialogCargaMasiva: false,
     };
   },
 
@@ -350,6 +408,8 @@ export default {
         resultado = resultado.filter(e => e.estado === "RESERVADO");
       } else if (this.filtroRapido === "enUso") {
         resultado = resultado.filter(e => e.estado === "EN USO");
+      } else if (this.filtroRapido === "pendienteRecojo") {
+        resultado = resultado.filter(e => e.estado === "PENDIENTE RECOJO");
       } else if (this.filtroRapido === "enMantenimiento") {
         resultado = resultado.filter(e => e.condicion === "EN MANTENIMIENTO");
       } else if (this.filtroRapido === "averiados") {
@@ -411,6 +471,10 @@ export default {
         this.cargando = false;
       });
     },
+    truncarTexto(texto, longitud) {
+      if (!texto) return '';
+      return texto.length > longitud ? texto.substring(0, longitud) + '...' : texto;
+    },
 
     actualizarEstadisticas() {
       this.stats = {
@@ -418,6 +482,7 @@ export default {
         disponibles: this.equipos.filter(e => e.condicion === "OPERATIVO" && e.estado === "ALMACÉN").length,
         enUso: this.equipos.filter(e => e.estado === "EN USO").length,
         reservados: this.equipos.filter(e => e.estado === "RESERVADO").length,
+        pendienteRecojo: this.equipos.filter(e => e.estado === "PENDIENTE RECOJO").length,
         enMantenimiento: this.equipos.filter(e => e.condicion === "EN MANTENIMIENTO").length,
         averiados: this.equipos.filter(e => e.condicion === "AVERIADO").length,
         dadosDeBaja: this.equipos.filter(e => e.condicion === "DADO DE BAJA").length
@@ -452,7 +517,8 @@ export default {
       const colores = {
         "ALMACÉN": "blue",
         "RESERVADO": "orange",
-        "EN USO": "teal"
+        "EN USO": "teal",
+        "PENDIENTE RECOJO": "amber darken-2"
       };
       return colores[estado] || "grey";
     },
@@ -468,6 +534,10 @@ export default {
 
     puedeDevolver(item) {
       return item.estado === "EN USO" || item.estado === "RESERVADO";
+    },
+
+    puedeCompletarRecojo(item) {
+      return item.estado === "PENDIENTE RECOJO";
     },
 
     puedeEnviarMantenimiento(item) {
@@ -509,6 +579,11 @@ export default {
       this.dialogDevolucion = true;
     },
 
+    abrirCompletarRecojo(item) {
+      this.equipoSeleccionado = item;
+      this.dialogCompletarRecojo = true;
+    },
+
     abrirMantenimiento(item) {
       this.equipoSeleccionado = item;
       this.dialogMantenimiento = true;
@@ -545,6 +620,10 @@ export default {
       this.dialogDevolucion = false;
     },
 
+    onRecojoCompletado() {
+      this.dialogCompletarRecojo = false;
+    },
+
     onMantenimientoEnviado() {
       this.$store.commit("dialogosnackbar", "Equipo enviado a mantenimiento");
       this.dialogMantenimiento = false;
@@ -553,6 +632,10 @@ export default {
     onReparacionCompletada() {
       this.$store.commit("dialogosnackbar", "Reparación completada");
       this.dialogCompletarReparacion = false;
+    },
+    recargarEquipos() {
+      detenerEscuchaEquipos();
+      this.cargarEquipos();
     }
   }
 };

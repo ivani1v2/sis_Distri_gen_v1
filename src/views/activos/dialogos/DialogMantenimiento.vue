@@ -26,7 +26,7 @@
           Permanecerá en almacén hasta que se complete la reparación.
         </v-alert>
 
-        <v-textarea v-model="observacion" label="Motivo / Descripción del problema *" outlined dense rows="3" auto-grow
+        <v-textarea v-model="observacion" label="Motivo / Descripción del problema (Obligatorio)" outlined dense rows="3" auto-grow
           :rules="[rules.required]" placeholder="Describa la falla o problema que presenta el equipo..." class="caption"
           :error-messages="errorObservacion"></v-textarea>
       </v-card-text>
