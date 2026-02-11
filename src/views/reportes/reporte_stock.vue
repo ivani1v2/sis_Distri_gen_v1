@@ -80,6 +80,7 @@
           <tr>
             <td style="font-size:80%;">{{ item.codbarra }}</td>
             <td style="font-size:80%;">{{ item.categoria }}</td>
+                   <td style="font-size:80%;">{{ item.modelo }}</td>
             <td style="font-size:80%;">{{ item.nombre }}</td>
             <td style="font-size:80%;">{{ item.medida }}</td>
             <td style="font-size:80%;">{{ monedaSimbolo }} {{ formatMoney(item.costo) }}</td>
@@ -110,6 +111,7 @@ export default {
     headers: [
       { text: 'ID', value: 'id', align: 'start' },
       { text: 'Categoría', value: 'categoria' },
+      { text: 'Modelo', value: 'modelo' },
       { text: 'Nombre', value: 'nombre' },
       { text: 'Medida', value: 'medida' },
       { text: 'Costo', value: 'costo' },
@@ -121,7 +123,7 @@ export default {
     filtro_categoria: 'TODOS',
     arraycategoria_f: ['TODOS'],
     buscar: '',
-    sede_filtro: null,
+    sede_filtro: 'null',
     soloConStock: false,
     productosPorSede: [],
   }),
@@ -159,6 +161,7 @@ export default {
       return [
         { text: 'ID', value: 'id', align: 'start' },
         { text: 'Categoría', value: 'categoria' },
+         { text: 'Modelo', value: 'modelo' },
         { text: 'Nombre', value: 'nombre' },
         { text: 'Medida', value: 'medida' },
         { text: `Costo (${simbolo})`, value: 'costo' },
@@ -271,6 +274,7 @@ export default {
               ...prod,
               id: prod.id || item.key,
               categoria: prod.categoria || '',
+              modelo: prod.id || '',
               nombre: prod.nombre || '',
               costo: prod.costo || 0,
               stock: prod.stock || 0,
@@ -338,6 +342,7 @@ export default {
         return {
           CodBarra: it.codbarra || '',
           Categoria: it.categoria || '',
+          modelo: it.id || '',
           Nombre: it.nombre || '',
           Medida: it.medida || '',
           Costo: costoN,
@@ -360,7 +365,7 @@ export default {
 
         const hoja = XLSX.utils.json_to_sheet(data, {
           header: [
-            'CodBarra', 'Categoria', 'Nombre', 'Medida', 'Costo', 'Stock', 'PrecioVenta',
+            'CodBarra', 'Categoria', 'modelo', 'Nombre', 'Medida', 'Costo', 'Stock', 'PrecioVenta',
             'TotalCosto', 'TotalVenta', 'Observacion', 'Sede'
           ]
         })
@@ -368,6 +373,7 @@ export default {
         hoja['!cols'] = [
           { wch: 8 },
           { wch: 15 },
+          { wch: 10 },
           { wch: 30 },
           { wch: 10 },
           { wch: 12 },
