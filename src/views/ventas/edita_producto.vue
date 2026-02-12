@@ -156,6 +156,9 @@ export default {
         cantidadEdita(nuevaCantidad) {
             if (this.es_bono) return;
             
+            // Si el producto fue vendido con presentación, no recalcular precio por escalas
+            if (this.item_selecto?._presentacion_id) return;
+            
             const cantidad = Number(nuevaCantidad) || 0;
             if (cantidad <= 0) return;
             

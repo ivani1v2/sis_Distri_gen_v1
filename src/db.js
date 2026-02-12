@@ -215,6 +215,63 @@ export const editaProducto = (id, campo, data) => {
     .set(data);
 };
 
+//----------------presentaciones de productos---------------------
+export const guardarPresentaciones = (productoId, presentaciones) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("productos")
+    .child(productoId)
+    .child("presentaciones")
+    .set(presentaciones);
+};
+
+export const obtenerPresentaciones = (productoId) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("productos")
+    .child(productoId)
+    .child("presentaciones");
+};
+
+export const agregarPresentacion = (productoId, presentacionId, data) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("productos")
+    .child(productoId)
+    .child("presentaciones")
+    .child(presentacionId)
+    .set(data);
+};
+
+export const eliminarPresentacion = (productoId, presentacionId) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("productos")
+    .child(productoId)
+    .child("presentaciones")
+    .child(presentacionId)
+    .remove();
+};
+
+export const limpiarEscalasProducto = (productoId) => {
+  const updates = {
+    'escala_may1': 0,
+    'precio_may1': 0,
+    'escala_may2': 0,
+    'precio_may2': 0
+  };
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("productos")
+    .child(productoId)
+    .update(updates);
+};
+
 //-------------entradas------------
 export const allProformas = () => {
   return db

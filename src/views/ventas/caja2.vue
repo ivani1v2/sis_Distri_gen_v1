@@ -103,7 +103,8 @@
                                                             {{ moneda }} {{ redondear(item.precio_base) }}
                                                         </v-chip>
                                                         <v-chip v-if="item.medida" x-small class="ml-1" label>
-                                                            {{ item.medida }}
+                                                            {{ item.medida }} <span v-if="item._presentacion_nombre" class="ml-2"> ({{
+                                                                item._presentacion_nombre }})</span>
                                                         </v-chip>
                                                         <v-chip v-if="item.operacion === 'GRATUITA'" x-small
                                                             class="ml-1" color="pink" text-color="white" label>
@@ -115,7 +116,7 @@
                                                         style="max-width: 70vw;">
                                                         <span class="font-weight-bold red--text">{{
                                                             Number(item.cantidad)
-                                                        }}×</span>
+                                                            }}×</span>
                                                         {{ item.nombre }}
                                                     </div>
                                                 </div>
@@ -178,7 +179,7 @@
                                                 <v-list-item v-for="m in $store.state.moneda" :key="m.codigo"
                                                     @click="moneda = m.simbolo">
                                                     <v-list-item-title>{{ m.simbolo }} - {{ m.moneda
-                                                    }}</v-list-item-title>
+                                                        }}</v-list-item-title>
                                                 </v-list-item>
                                             </v-list>
                                         </v-menu>

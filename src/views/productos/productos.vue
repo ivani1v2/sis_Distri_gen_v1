@@ -72,10 +72,10 @@
                         <td style="font-size:80%;">{{ item.id }}</td>
                         <td style="font-size:80%;">{{ item.codbarra || '-' }}</td>
                         <td style="font-size:80%;">{{ item.categoria }}</td>
-                        <td style="font-size:80%;">{{item.cod_interno}} - {{ item.nombre }}</td>
+                        <td style="font-size:80%;">{{ item.cod_interno }} - {{ item.nombre }}</td>
                         <td style="font-size:80%;">{{ item.medida }}</td>
                         <td style="font-size:80%;">{{ convierte_stock(item.stock, item.factor) }}</td>
-                        <td style="font-size:80%;">{{ Number(item.precio).toFixed(2) }}</td>
+                        <td style="font-size:80%;">{{ monedaSimbolo }}{{ Number(item.precio).toFixed(2) }}</td>
                         <td style="font-size:80%;">
                             <v-row>
                                 <v-col cols="12">
@@ -99,7 +99,7 @@
                                 <div class="item-title">{{ item.nombre }}</div>
                                 <div class="item-sub">#{{ item.id }} · {{ item.categoria }} · {{ item.medida }}</div>
                                 <div class="item-meta">
-                                    Stock: {{ convierte_stock(item.stock, item.factor) }} · S/{{ redondear(item.precio)
+                                    Stock: {{ convierte_stock(item.stock, item.factor) }} · {{ monedaSimbolo }}{{ redondear(item.precio)
                                     }}
                                 </div>
                             </div>
@@ -119,7 +119,7 @@
             </v-card-actions>
         </v-card>
 
-        <v-dialog v-model="dialogo" max-width="650px">
+        <v-dialog v-model="dialogo" max-width="750px">
             <div>
                 <v-system-bar window dark>
                     <v-icon color="red" large @click="dialogo = !dialogo">mdi-close</v-icon>
@@ -251,8 +251,8 @@
                             @change="medida = (medida || '').toUpperCase()" />
                     </v-col>
                     <v-col cols="6" xs="6" sm="4" md="4">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" type="number" dense
-                            v-model="factor" label="Factor"></v-text-field>
+                        <v-text-field outlined disabled type="number" dense v-model="factor" label="Factor"
+                            value="1"></v-text-field>
                     </v-col>
 
                     <v-col cols="6" xs="6" sm="4" md="4">
@@ -273,43 +273,8 @@
                     </v-col>
                 </v-row>
 
-                <v-alert v-if="grupoPrecioSelect" type="info" dense text class="mt-n4 mb-10">
-                    Escalas deshabilitadas: Tiene grupo de precio global asignado
-                    <v-btn x-small text color="primary" class="ml-2" @click="quitarGrupoPrecio">
-                        Quitar grupo de precio Global
-                    </v-btn>
-                </v-alert>
-
+                <!-- Costo y Peso -->
                 <v-row class="mt-n6" dense>
-                    <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
-                            type="number" dense v-model="escala_may1" label="Escala may 1"
-                            persistent-hint></v-text-field>
-                    </v-col>
-                    <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
-                            type="number" dense v-model="precio_may1" label="Precio may 1"
-                            persistent-hint></v-text-field>
-                    </v-col>
-
-                </v-row>
-
-                <v-row class="mt-n6" dense>
-                    <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
-                            type="number" dense v-model="escala_may2" label="Escala may 2"
-                            persistent-hint></v-text-field>
-                    </v-col>
-                    <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
-                            type="number" dense v-model="precio_may2" label="Precio may 2"
-                            persistent-hint></v-text-field>
-                    </v-col>
-
-                </v-row>
-
-                <v-row class="mt-n6" dense>
-
                     <v-col cols="6">
                         <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" dense type="number"
                             v-model="costo" label="Costo"></v-text-field>
@@ -319,7 +284,11 @@
                             v-model="peso" label="Peso (KG)"></v-text-field>
                     </v-col>
                 </v-row>
-                <v-card flat outlined class="mt-n4 rounded-lg overflow-hidden">
+
+                <GestionPresentaciones v-if="usaPresentaciones" ref="gestionPresentaciones" :producto="productoActual"
+                    v-model="presentaciones" class="mb-4" />
+
+                <v-card v-if="false" flat outlined class="mt-n4 rounded-lg overflow-hidden">
                     <v-tabs v-model="tabBonos" dense grow color="primary" background-color="grey lighten-5">
                         <v-tab class="text-none">
                             <v-icon small left color="orange">mdi-gift-outline</v-icon>
@@ -395,7 +364,7 @@
                                                     </div>
                                                     <div class="text-overline grey--text lh-1">Límite: {{ r.cantidad_max
                                                         || '∞'
-                                                    }}</div>
+                                                        }}</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -453,7 +422,7 @@
                                                 <div class="text-center pa-2 rounded grey lighten-5 border-blue-light">
                                                     <div class="text-overline grey--text lh-1">≥{{
                                                         grupoPrecioAsignado.escala_may1 }} UND</div>
-                                                    <div class="text-subtitle-2 font-weight-black blue--text">S/{{
+                                                    <div class="text-subtitle-2 font-weight-black blue--text">{{ monedaSimbolo }}{{
                                                         grupoPrecioAsignado.precio_may1 }}</div>
                                                 </div>
                                             </v-col>
@@ -461,7 +430,7 @@
                                                 <div class="text-center pa-2 rounded grey lighten-5 border-blue-light">
                                                     <div class="text-overline grey--text lh-1">≥{{
                                                         grupoPrecioAsignado.escala_may2 }} UND</div>
-                                                    <div class="text-subtitle-2 font-weight-black blue--text">S/{{
+                                                    <div class="text-subtitle-2 font-weight-black blue--text">{{ monedaSimbolo }}{{
                                                         grupoPrecioAsignado.precio_may2 }}</div>
                                                 </div>
                                             </v-col>
@@ -503,10 +472,10 @@
                                     <v-list-item-title>{{ item.raw.nombre }}</v-list-item-title>
                                     <v-list-item-subtitle>
                                         <span v-if="item.raw.escala_may1">
-                                            ≥{{ item.raw.escala_may1 }} → S/{{ item.raw.precio_may1 }}
+                                            ≥{{ item.raw.escala_may1 }} → {{ monedaSimbolo }}{{ item.raw.precio_may1 }}
                                         </span>
                                         <span v-if="item.raw.escala_may2" class="ml-2">
-                                            | ≥{{ item.raw.escala_may2 }} → S/{{ item.raw.precio_may2 }}
+                                            | ≥{{ item.raw.escala_may2 }} → {{ monedaSimbolo }}{{ item.raw.precio_may2 }}
                                         </span>
                                     </v-list-item-subtitle>
                                 </v-list-item-content>
@@ -520,13 +489,13 @@
                             <v-row dense class="mt-1">
                                 <v-col cols="6" v-if="grupoPrecioSelectDetalle.escala_may1">
                                     <div class="text-caption blue--text">
-                                        ≥{{ grupoPrecioSelectDetalle.escala_may1 }} und → <strong>S/{{
+                                        ≥{{ grupoPrecioSelectDetalle.escala_may1 }} und → <strong>{{ monedaSimbolo }}{{
                                             grupoPrecioSelectDetalle.precio_may1 }}</strong>
                                     </div>
                                 </v-col>
                                 <v-col cols="6" v-if="grupoPrecioSelectDetalle.escala_may2">
                                     <div class="text-caption blue--text">
-                                        ≥{{ grupoPrecioSelectDetalle.escala_may2 }} und → <strong>S/{{
+                                        ≥{{ grupoPrecioSelectDetalle.escala_may2 }} und → <strong>{{ monedaSimbolo }}{{
                                             grupoPrecioSelectDetalle.precio_may2 }}</strong>
                                     </div>
                                 </v-col>
@@ -768,8 +737,11 @@ import {
     allCategorias,
     allBono,
     nuevoProductoOtraBase,
-    editaProducto
+    editaProducto,
+    guardarPresentaciones,
+    limpiarEscalasProducto
 } from '../../db'
+import GestionPresentaciones from '@/components/GestionPresentaciones.vue'
 import store from '@/store/index'
 import XLSX from 'xlsx'
 export default {
@@ -781,7 +753,8 @@ export default {
         dial_categorias,
         dial_alerta_stock_minimo,
         dial_config_bono,
-        VisorProductosBono
+        VisorProductosBono,
+        GestionPresentaciones
     },
     data: () => ({
         dial_adicional: false,
@@ -902,7 +875,8 @@ export default {
         tipoBonoActual: 'precio',
         dialVisorProductos: false,
         bonoParaVisor: {},
-        cod_interno: ''
+        cod_interno: '',
+        presentaciones: {}
     }),
 
     async beforeCreate() {
@@ -936,6 +910,23 @@ export default {
     },
 
     computed: {
+        monedaSimbolo(){
+            return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/';
+        },
+        usaPresentaciones() {
+            const med = (this.medida || '').toUpperCase().trim();
+            return med !== '' && med == 'UNIDAD';
+        },
+        productoActual() {
+            return {
+                id: this.id,
+                nombre: this.nombre,
+                stock: Number(this.stock) || 0,
+                precio: Number(this.precio) || 0,
+                factor: Number(this.factor) || 1,
+                medida: this.medida
+            };
+        },
         permisoAlertaStockActivo() {
             return Boolean(this.$store.state.configuracion?.alerta_stock_minimo);
         },
@@ -1334,6 +1325,7 @@ export default {
                 this.obs1 = ''
                 this.stock_minimo = 0
                 this.cod_interno = ''
+                this.presentaciones = {}
 
                 if (Boolean(store.state.configuracion.operacion)) {
                     this.operacion = store.state.configuracion.operacion
@@ -1376,6 +1368,9 @@ export default {
             this.stock_minimo = Number(data.stock_minimo) || 0;
             this.cod_interno = data.cod_interno || '';
 
+            // Cargar presentaciones si existen
+            this.presentaciones = data.presentaciones || {};
+
             this.dialogo = true;
         },
 
@@ -1417,6 +1412,21 @@ export default {
                 this.escala_may2 = 0;
                 this.precio_may2 = 0;
             }
+
+            // Si usa_presentaciones está activo, validar y limpiar escalas
+            if (this.usaPresentaciones) {
+                // Validar presentaciones antes de guardar
+                if (this.$refs.gestionPresentaciones && !this.$refs.gestionPresentaciones.validarAntesDeGuardar()) {
+                    store.commit("dialogoprogress");
+                    return;
+                }
+                // Limpiar escalas cuando usa presentaciones
+                this.escala_may1 = 0;
+                this.precio_may1 = 0;
+                this.escala_may2 = 0;
+                this.precio_may2 = 0;
+            }
+
             var array = {
                 id: this.id,
                 activo: this.activo,
@@ -1450,6 +1460,12 @@ export default {
                 cod_interno: this.cod_interno || ''
 
             }
+
+            // Si usa presentaciones, agregar las presentaciones al objeto
+            if (this.usaPresentaciones && this.presentaciones && Object.keys(this.presentaciones).length > 0) {
+                array.presentaciones = this.presentaciones;
+            }
+
             await nuevoProducto(this.id, array)
 
             if (this.sumacon == true) {

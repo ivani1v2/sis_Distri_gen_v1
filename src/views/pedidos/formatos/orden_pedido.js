@@ -1309,7 +1309,7 @@ function tabla_A4(array, linea) {
       nuevoArray.push([
         item.cantidad,
         item.id,
-        item.nombre + tg,
+        item.nombre + (item._presentacion_nombre ? ` -  ${item._presentacion_nombre}` : '') + tg,
         item.medida,
         precioBase.toFixed(2),
         totalLinea.toFixed(2) + obs,
@@ -1319,7 +1319,7 @@ function tabla_A4(array, linea) {
       nuevoArray.push([
         item.cantidad,
         item.id,
-        item.nombre + tg,
+        item.nombre + (item._presentacion_nombre ? ` - ${item._presentacion_nombre}` : '') + tg,
         precioBase.toFixed(2), // P.Unitario base
         textoDescuento, // %Desc 1/2/3
         precioNeto.toFixed(2), // P.Neto

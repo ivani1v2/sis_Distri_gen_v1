@@ -1465,7 +1465,8 @@ function impresionA4(arrays, qr) {
   }
 
   doc.autoTable({
-    margin: { top: linea, left: 10 },
+    startY: linea,
+    margin: { top: 15, left: 10, right: 10 },
     styles: {
       fontSize: 8,
       cellPadding: 1,

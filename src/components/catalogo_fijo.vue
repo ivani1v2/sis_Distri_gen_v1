@@ -13,12 +13,13 @@
                         <span class="text-caption grey--text text--darken-2">
                             {{ (item.categoria || '').slice(0, 4).toUpperCase() }}
                         </span>
-                        — <strong class="red--text">{{ item.cod_interno}}</strong> / {{ item.nombre }}
+                        — <strong class="red--text">{{ item.cod_interno }}</strong> / {{ item.nombre }}
                         <small v-if="$store.state.configuracion && $store.state.configuracion.mostrar_codigo"
                             class="grey--text text--darken-1">
                             ({{ item.id }})
                         </small>
-                        — <strong class="red--text"> {{ monedaSimbolo }} {{ Number(item.precio || 0).toFixed(2) }}</strong>
+                        — <strong class="red--text"> {{ monedaSimbolo }} {{ Number(item.precio || 0).toFixed(2)
+                            }}</strong>
                     </v-list-item-title>
                     <v-list-item-subtitle class="mt-n1 mb-n2">
                         <span class="text-caption"
@@ -40,10 +41,9 @@
                     <tbody>
                         <v-row class="mt-1 mb-4 mx-auto text-center" dense>
                             <v-col v-for="item in $store.state.categorias" :key="item.id" cols="6" class="pa-1">
-                                <v-card class="hoverable" @click.prevent="iraproductos(item)"
-                                    style="height: 65px; overflow: hidden;">
-                                    <v-card-text class="text-center"
-                                        style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                                <v-card class="hoverable d-flex align-center justify-center"
+                                    @click.prevent="iraproductos(item)" style="height: 65px;">
+                                    <v-card-text class="text-center pa-1">
                                         <span class="text-body-5 font-weight-medium">{{ item.nombre }}</span>
                                     </v-card-text>
                                 </v-card>
@@ -102,8 +102,9 @@
                         </thead>
                         <tbody>
                             <tr v-for="item in listafiltrada" :key="item.id" @click="prod_selecto2(item)">
-                                <td style="font-size:75%;"><span > 
-                                    <Strong class="red--text">{{item.cod_interno }} </Strong> - </span> {{ item.nombre }}</td>
+                                <td style="font-size:75%;"><span>
+                                        <Strong class="red--text">{{ item.cod_interno }} </Strong> - </span> {{
+                                            item.nombre }}</td>
                                 <td style="font-size:75%;">{{ convierte_stock(item.stock, item.factor) }}</td>
                                 <td style="font-size:75%;">{{ item.precio }}</td>
                             </tr>
@@ -124,115 +125,42 @@
                     <v-checkbox v-if="$store.state.permisos.edita_bono" v-model="es_bono" label="ES BONO"></v-checkbox>
                 </v-system-bar>
                 <v-card-text class="mt-4">
-                    <!-- Selector CAJAS + UND simultáneos -->
-                    <div class="text-caption grey--text text--darken-1" v-if="getFactor(producto_selecto) > 1">
-                        Stock:
-                        <strong>{{ Math.floor(Number(producto_selecto.stock || 0) / getFactor(producto_selecto))
-                        }}</strong>
-                        cajas
-                        + <strong>{{ Number(producto_selecto.stock || 0) % getFactor(producto_selecto) }}</strong> und
-                        (total <strong>{{ producto_selecto.stock }}</strong> und) — Factor: {{
-                            getFactor(producto_selecto) }}
-                        und/caja
-                    </div>
-                    <v-row class="pa-1" v-if="producto_selecto && getFactor(producto_selecto) > 1">
-                        <v-col cols="6">
-                            <v-btn small block :outlined="modoVenta !== 'entero'"
-                                :color="modoVenta === 'entero' ? 'success' : undefined"
-                                :disabled="getFactor(producto_selecto) <= 1" @click="seleeciona_modo('entero')">
-                                {{ producto_selecto.medida || 'CAJA' }}
-                            </v-btn>
-                        </v-col>
-                        <v-col cols="6">
-                            <v-btn small block :outlined="modoVenta !== 'fraccion'"
-                                :color="modoVenta === 'fraccion' ? 'success' : undefined"
-                                @click="seleeciona_modo('fraccion')">
-                                UND.
-                            </v-btn>
-                        </v-col>
-                    </v-row>
 
-                    <div class="mb-3 text-center" v-if="producto_selecto && this.buscar_activo_precio(1)">
-                        <!-- Precio normal -->
-                        <v-tooltip bottom>
-                            <template v-slot:activator="{ on }">
-                                <v-chip x-small class="ma-1" outlined
-                                    :color="tierVisual === 1 ? 'red' : 'grey lighten-2'"
-                                    :text-color="tierVisual === 1 ? 'black' : 'black'" :input-value="tierVisual === 1"
-                                    @click="!esPrecioEstricto && (precioSeleccionado = 1)" :disabled="esPrecioEstricto">
-                                    {{ monedaSimbolo }} {{ fmt(precioChip(producto_selecto, 1)) }}
-                                    <span class="ml-1 caption grey--text text--darken-1"
-                                        v-if="tieneMay1(producto_selecto)">
-                                        (&lt; {{ producto_selecto.escala_may1 }})
-                                    </span>
-                                    <v-icon x-small class="ml-1"
-                                        v-if="precioSeleccionado === null && _tierSugerido === 1">mdi-robot</v-icon>
-                                </v-chip>
-
-                            </template>
-                            <span v-if="tieneMay1(producto_selecto)">
-                                Aplica cuando la cantidad es menor a {{ producto_selecto.escala_may1 }} unidades.
-                            </span>
-                            <span v-else>Precio sin mayoreo.</span>
-                        </v-tooltip>
-
-                        <!-- Mayoreo 1 -->
-                        <v-tooltip bottom v-if="tieneMay1(producto_selecto) && this.buscar_activo_precio(2)">
-                            <template v-slot:activator="{ on, attrs }">
-                                <v-chip x-small class="ma-1" outlined
-                                    :color="tierVisual === 2 ? 'red' : 'grey lighten-2'"
-                                    :text-color="tierVisual === 2 ? 'black' : 'black'" :input-value="tierVisual === 2"
-                                    @click="!esPrecioEstricto && (precioSeleccionado = 2)" :disabled="esPrecioEstricto">
-                                    S/ {{ fmt(precioChip(producto_selecto, 2)) }}
-                                    <span class="ml-1 caption grey--text text--darken-1">
-                                        (desde {{ producto_selecto.escala_may1 }})
-                                    </span>
-                                    <v-icon x-small class="ml-1"
-                                        v-if="precioSeleccionado === null && _tierSugerido === 2">mdi-robot</v-icon>
-                                </v-chip>
-
-                            </template>
-                            <span v-if="tieneMay2(producto_selecto)">
-                                Aplica desde {{ producto_selecto.escala_may1 }} hasta antes de {{
-                                    producto_selecto.escala_may2
-                                }} unidades.
-                            </span>
-                            <span v-else>
-                                Aplica desde {{ producto_selecto.escala_may1 }} unidades en adelante.
-                            </span>
-                        </v-tooltip>
-
-                        <!-- Mayoreo 2 -->
-                        <v-tooltip bottom v-if="tieneMay2(producto_selecto) && this.buscar_activo_precio(3)">
-                            <template v-slot:activator="{ on, attrs }">
-                                <v-chip class="ma-1" outlined :color="tierVisual === 3 ? 'red' : 'grey lighten-2'"
-                                    :text-color="tierVisual === 3 ? 'black' : 'black'" :input-value="tierVisual === 3"
-                                    @click="!esPrecioEstricto && (precioSeleccionado = 3)" :disabled="esPrecioEstricto">
-                                    {{monedaSimbolo}} {{ fmt(precioChip(producto_selecto, 3)) }}
-                                    <span class="ml-1 caption grey--text text--darken-1">
-                                        (desde {{ producto_selecto.escala_may2 }})
-                                    </span>
-                                    <v-icon x-small class="ml-1"
-                                        v-if="precioSeleccionado === null && _tierSugerido === 3">mdi-robot</v-icon>
-                                </v-chip>
-                            </template>
-                            <span>Aplica desde {{ producto_selecto.escala_may2 }} unidades en adelante.</span>
-                        </v-tooltip>
-
-                        <!-- Botón para volver a AUTO -->
-                        <div class="mt-2" v-if="false">
-                            <v-btn x-small text color="primary" @click="precioSeleccionado = null">
-                                Usar precio automático por cantidad
-                            </v-btn>
-                        </div>
+                    <!-- Stock info -->
+                    <div class="text-caption grey--text text--darken-1 mb-2" v-if="producto_selecto">
+                        Stock: <strong>{{ producto_selecto.stock || 0 }}</strong> {{ producto_selecto.medida || 'UND' }}
                     </div>
 
+                    <!-- ============================================= -->
+                    <!-- SELECTOR DE PRECIO (v-select con precio fijo + presentaciones) -->
+                    <!-- ============================================= -->
+                    <v-select v-if="producto_selecto" v-model="opcionPrecioSeleccionada" :items="opcionesPrecios"
+                        item-text="descripcion" item-value="id" label="Seleccionar precio" outlined dense hide-details
+                        class="mb-3">
+                        <template v-slot:selection="{ item }">
+                            <span>{{ item.descripcion }} - {{ monedaSimbolo }} {{ fmt(item.precio) }}</span>
+                        </template>
+                        <template v-slot:item="{ item }">
+                            <v-list-item-content>
+                                <v-list-item-title>{{ item.descripcion }}</v-list-item-title>
+                                <v-list-item-subtitle>
+                                    {{ monedaSimbolo }} <strong class="red--text">{{ fmt(item.precio) }}</strong>
+                                    <span v-if="item.factor > 1" class="ml-2 grey--text">
+                                        Factor: {{ item.factor }}
+                                    </span>
+                                </v-list-item-subtitle>
+                            </v-list-item-content>
+                        </template>
+                    </v-select>
+
+                    <!-- ============================================= -->
+                    <!-- CANTIDAD Y DESCUENTOS (común para ambos modos) -->
+                    <!-- ============================================= -->
                     <div v-if="producto_selecto" class="mb-2">
                         <v-row dense>
                             <v-col cols="12">
-                                <v-text-field type="number" outlined dense v-model.number="cantidadInput" :label="modoVenta === 'entero'
-                                    ? `Cantidad (${producto_selecto.medida || 'CAJA'})`
-                                    : 'Cantidad (UND)'" min="0" @focus="$event.target.select()" autofocus
+                                <v-text-field type="number" outlined dense v-model.number="cantidadInput"
+                                    :label="labelCantidad" min="0" @focus="$event.target.select()" autofocus
                                     @keydown.enter="agrega_con_cantidad()" />
                             </v-col>
                         </v-row>
@@ -312,25 +240,112 @@ export default {
             snackMsg: 'Producto agregado',
             es_bono: false,
             moneda: 'S/ ',
-            descuentoAplicado: { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 }
+            descuentoAplicado: { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 },
+            presentacionSeleccionada: null,
+            opcionPrecioSeleccionada: 'fijo'
         }
     },
     computed: {
-        monedaSimbolo(){
-            return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/';
+        // Mostrar presentaciones cuando la medida es diferente a UNIDAD
+        usaPresentaciones() {
+            if (!this.producto_selecto) return false;
+            const med = (this.producto_selecto.medida || '').toUpperCase().trim();
+            return med !== '' && med !== 'UNIDAD';
+        },
+        // Opciones de precios para el v-select: precio fijo + presentaciones
+        opcionesPrecios() {
+            if (!this.producto_selecto) return [];
+
+            const opciones = [];
+
+            // Opción fija (precio base del producto)
+            opciones.push({
+                id: 'fijo',
+                descripcion: this.producto_selecto.medida || 'UNIDAD',
+                precio: Number(this.producto_selecto.precio) || 0,
+                factor: 1,
+                esPresentacion: false
+            });
+
+            // Si tiene presentaciones activas, agregarlas
+            if (this.tienePresentaciones(this.producto_selecto)) {
+                const presentaciones = this.obtenerPresentacionesActivas(this.producto_selecto);
+                presentaciones.forEach(pres => {
+                    opciones.push({
+                        id: `pres_${pres.id}`,
+                        descripcion: pres.nombre || pres.medida,
+                        precio: pres.precio,
+                        factor: pres.factor,
+                        esPresentacion: true,
+                        presentacionId: pres.id,
+                        medida: pres.medida
+                    });
+                });
+            }
+
+            return opciones;
+        },
+        // Opción de precio actualmente seleccionada
+        opcionPrecioActual() {
+            return this.opcionesPrecios.find(o => o.id === this.opcionPrecioSeleccionada) || null;
+        },
+        // Lista de presentaciones activas del producto
+        presentacionesActivas() {
+            if (!this.producto_selecto || !this.producto_selecto.presentaciones) return [];
+            const pres = this.producto_selecto.presentaciones;
+            const stock = Number(this.producto_selecto.stock || 0);
+
+            return Object.entries(pres)
+                .filter(([_, p]) => p && p.activo !== false)
+                .map(([id, p]) => ({
+                    id,
+                    nombre: p.nombre || '',
+                    medida: p.medida || 'UNIDAD',
+                    factor: Number(p.factor) || 1,
+                    precio: Number(p.precio) || 0,
+                    activo: p.activo !== false,
+                    stock_disp: Math.floor(stock / (Number(p.factor) || 1))
+                }))
+                .sort((a, b) => a.factor - b.factor);
+        },
+        // Presentación actualmente seleccionada
+        presentacionActual() {
+            if (!this.presentacionSeleccionada) return null;
+            return this.presentacionesActivas.find(p => p.id === this.presentacionSeleccionada) || null;
+        },
+        // Label dinámico para el campo cantidad
+        labelCantidad() {
+            if (this.opcionPrecioActual && this.opcionPrecioActual.esPresentacion) {
+                return `Cantidad (${this.opcionPrecioActual.descripcion})`;
+            }
+
+            if (this.producto_selecto) {
+                const medida = this.producto_selecto.medida || 'UND';
+                return `Cantidad (${medida})`;
+            }
+
+            return 'Cantidad (UND)';
         },
         precioBaseParaDescuento() {
             if (!this.producto_selecto) return 0;
-            const tier = this.precioSeleccionado ?? this.sugerirTier(this.producto_selecto, this.totalUnidades);
-            const precioUnidad = this.precioPorTier(this.producto_selecto, tier);
-            const factor = this.getFactor(this.producto_selecto);
-            return this.modoVenta === 'entero' ? precioUnidad * factor : precioUnidad;
+
+            // Usar el precio de la opción seleccionada
+            if (this.opcionPrecioActual) {
+                return this.opcionPrecioActual.precio;
+            }
+
+            return Number(this.producto_selecto.precio) || 0;
         },
         totalUnidades() {
             if (!this.producto_selecto) return 0;
-            const f = this.getFactor(this.producto_selecto);
             const q = Number(this.cantidadInput || 0);
-            return this.modoVenta === 'entero' ? q * f : q;
+
+            // Si hay opción seleccionada con factor, calcular con ese factor
+            if (this.opcionPrecioActual && this.opcionPrecioActual.factor > 1) {
+                return q * this.opcionPrecioActual.factor;
+            }
+
+            return q;
         },
         listafiltrada() {
             var invent = store.state.productos
@@ -338,19 +353,19 @@ export default {
                 (item.activo) == true)
                 .filter((item) => (item.categoria)
                     .toLowerCase().includes(this.categoriaselecta.toLowerCase()))
-                .filter((item) => (item.cod_interno+item.nombre + item.id)
+                .filter((item) => (item.cod_interno + item.nombre + item.id)
                     .toLowerCase().includes(this.buscar.toLowerCase()))
 
         },
         productosFiltrados() {
-           
-                return store.state.productos
-                    .filter(item => item.activo) // Solo productos activos
-                    .map(item => ({
-                        ...item,
-                        displayText: `${item.cod_interno} ${item.nombre} (${item.codbarra})` // Concatenamos nombre y código de barras
-                    }));
-            
+
+            return store.state.productos
+                .filter(item => item.activo) // Solo productos activos
+                .map(item => ({
+                    ...item,
+                    displayText: `${item.cod_interno} ${item.nombre} (${item.codbarra})` // Concatenamos nombre y código de barras
+                }));
+
 
         },
         tierVisual() {
@@ -361,6 +376,12 @@ export default {
         esPrecioEstricto() {
             return this.$store.state.permisos.permite_editar_precio === true;
         },
+        monedaSimbolo() {
+            return this.$store.state.moneda.find(m =>
+                m.codigo === this.$store.state.configuracion?.moneda_defecto
+            )?.simbolo || 'S/';
+        },
+
     },
     mounted() {
         this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
@@ -369,6 +390,7 @@ export default {
     beforeDestroy() {
         window.removeEventListener("keydown", this.detectarTecla);
     },
+
 
     watch: {
         cantidadInput() {
@@ -391,10 +413,9 @@ export default {
         },
         producto_selecto(nv) {
             if (nv) {
-                // reinicia auto
-                this.precioSeleccionado = null;
-                const tier = this.sugerirTier(nv, this.toNum(this.cantidad || 1, 1));
-                this._tierSugerido = tier;
+                // Seleccionar precio fijo por defecto
+                this.opcionPrecioSeleccionada = 'fijo';
+                this.cantidadInput = 1;
             }
         },
         cantCajas() {
@@ -414,6 +435,34 @@ export default {
         this._tierSugerido = 1; // estado interno para pintar sugerencia
     },
     methods: {
+        // Verificar si un producto tiene presentaciones configuradas
+        tienePresentaciones(prod) {
+            if (!prod || !prod.presentaciones) return false;
+            const pres = prod.presentaciones;
+            const activas = Object.values(pres).filter(p => p && p.activo !== false);
+            return activas.length > 0;
+        },
+
+        // Obtener presentaciones activas de un producto
+        obtenerPresentacionesActivas(prod) {
+            if (!prod || !prod.presentaciones) return [];
+            const pres = prod.presentaciones;
+            const stock = Number(prod.stock || 0);
+
+            return Object.entries(pres)
+                .filter(([_, p]) => p && p.activo !== false)
+                .map(([id, p]) => ({
+                    id,
+                    nombre: p.nombre || '',
+                    medida: p.medida || 'UNIDAD',
+                    factor: Number(p.factor) || 1,
+                    precio: Number(p.precio) || 0,
+                    activo: p.activo !== false,
+                    stock_disp: Math.floor(stock / (Number(p.factor) || 1))
+                }))
+                .sort((a, b) => a.factor - b.factor);
+        },
+
         tieneBonoProducto(prod) {
             if (!prod?.id) return false;
             const tieneUnitario = !!(
@@ -481,15 +530,24 @@ export default {
             }
         },
         agrega_con_cantidad() {
-            const factor = this.getFactor(this.producto_selecto);
             const q = this.toNum(this.cantidadInput, 0);
-            const unidadesTotal = this.modoVenta === 'entero' ? q * factor : q; // SIEMPRE en unidades para validar
 
-            if (!unidadesTotal || unidadesTotal <= 0) {
+            if (!q || q <= 0) {
                 store.commit("dialogosnackbar", "Ingrese una cantidad mayor a 0");
                 return;
             }
 
+            // Obtener la opción de precio seleccionada
+            const opcion = this.opcionPrecioActual;
+            if (!opcion) {
+                store.commit("dialogosnackbar", "Seleccione un precio");
+                return;
+            }
+
+            const factor = opcion.factor || 1;
+            const unidadesTotal = q * factor;
+
+            // Validar stock
             if (this.producto_selecto.controstock) {
                 const stockDisponible = Number(this.producto_selecto.stock || 0);
                 if (unidadesTotal > stockDisponible) {
@@ -500,10 +558,7 @@ export default {
 
             this.dialo_cantidad = false;
 
-            const tier = (this.precioSeleccionado ?? this.sugerirTier(this.producto_selecto, unidadesTotal));
-            const precioUnidad = this.precioPorTier(this.producto_selecto, tier);
-            const esCaja = (this.modoVenta === 'entero');
-            let precioEmitido = esCaja ? (precioUnidad * factor) : precioUnidad;
+            let precioEmitido = opcion.precio;
 
             const tieneDescuentos = this.descuentoAplicado.desc_1 > 0 ||
                 this.descuentoAplicado.desc_2 > 0 ||
@@ -513,25 +568,26 @@ export default {
                 precioEmitido = this.descuentoAplicado.precioFinal;
             }
 
-            const cantidadEmitida = q;
-            const medidaEmitida = (factor === 1)
-                ? (this.producto_selecto.medida || 'UNIDAD')
-                : (esCaja ? (this.producto_selecto.medida || 'CAJA') : 'UNIDAD');
             const ope = this.es_bono
                 ? 'GRATUITA'
                 : (this.producto_selecto.operacion || 'GRAVADA');
 
+            // Determinar medida
+            let medidaEmitida = opcion.esPresentacion
+                ? (opcion.medida || opcion.descripcion)
+                : (this.producto_selecto.medida || 'UNIDAD');
 
             const linea = {
                 ...this.producto_selecto,
                 operacion: ope,
-                cantidad: cantidadEmitida,
+                cantidad: q,
                 precio: Number(precioEmitido.toFixed(4)),
-                precio_base: Number((esCaja ? (precioUnidad * factor) : precioUnidad).toFixed(4)),
+                precio_base: Number(opcion.precio.toFixed(4)),
                 medida: medidaEmitida,
                 factor: factor,
-                _precio_tier: tier,
                 _unidades: unidadesTotal,
+                _presentacion_id: opcion.esPresentacion ? opcion.presentacionId : null,
+                _presentacion_nombre: opcion.esPresentacion ? opcion.descripcion : null,
                 desc_1: this.descuentoAplicado.desc_1 || 0,
                 desc_2: this.descuentoAplicado.desc_2 || 0,
                 desc_3: this.descuentoAplicado.desc_3 || 0,
@@ -737,8 +793,7 @@ export default {
             this.descuentoAplicado = data;
         },
 
-    },
-
+    }
 }
 </script>
 <style scoped>

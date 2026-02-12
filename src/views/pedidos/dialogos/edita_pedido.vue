@@ -17,7 +17,7 @@
                     <div class="d-flex justify-space-between flex-wrap caption">
                         <span>Línea Crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2) }}</strong></span>
                         <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2)
-                        }}</strong></span>
+                                }}</strong></span>
                         <span>Disponible: <strong class="red--text">
                                 {{ moneda }} {{ saldoDisponible.toFixed(2) }}
                             </strong></span>
@@ -134,7 +134,9 @@
                                                         {{ moneda }} {{ redondear(item.precio_base) }}
                                                     </v-chip>
                                                     <v-chip v-if="item.medida" x-small class="ml-1" label>
-                                                        {{ item.medida }}
+                                                        {{ item.medida }} <span v-if="item._presentacion_nombre"
+                                                            class="ml-2">({{
+                                                                item._presentacion_nombre }})</span>
                                                     </v-chip>
 
                                                     <v-chip v-if="item.operacion === 'GRATUITA'" x-small class="ml-1"
@@ -148,7 +150,7 @@
                                                     style="max-width: 70vw;">
                                                     <span class="font-weight-bold red--text">{{
                                                         Number(item.cantidad)
-                                                    }}×</span>
+                                                        }}×</span>
                                                     {{ item.nombre }}
                                                 </div>
                                             </div>
@@ -599,7 +601,8 @@ export default {
                 bono_regla: it.bono_regla || null,
                 precio_manual: it.precio_manual === true,
                 bonos_eliminados: it.bonos_eliminados || null,
-                totalLinea: Number(it.totalLinea != null ? it.totalLinea : (Number(it.cantidad || 0) * Number(it.precio || 0)))
+                totalLinea: Number(it.totalLinea != null ? it.totalLinea : (Number(it.cantidad || 0) * Number(it.precio || 0))),
+                _presentacion_nombre: it._presentacion_nombre || null,
             }))
 
 
@@ -673,7 +676,11 @@ export default {
             let offset = 0;
             nuevaLista = nuevaLista.map(item => {
                 if (item.__tsAdd) return item;
-                return { ...item, __tsAdd: baseTs + (offset++) };
+                return {
+                    ...item,
+                    __tsAdd: baseTs + (offset++),
+                    _presentacion_nombre: item._presentacion_nombre || null  // 👈 ESTA LÍNEA
+                };
             });
 
             // 3) Asigna lista y recalcula SOLO lo afectado
