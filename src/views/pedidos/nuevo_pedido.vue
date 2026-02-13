@@ -704,6 +704,7 @@ export default {
                     doc_numero: this.numero,
                     cliente_nombre: this.nombreCompleto,
                     cliente_direccion: this.direccion,
+                    cliente_zona: this.cliente_s?.zona || '',
                     cliente_telefono: this.telfcliente || '',
                     subtotal: subTotal,
                     descuentos: descuentos,

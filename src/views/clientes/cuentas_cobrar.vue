@@ -25,12 +25,17 @@
               clearable />
 
           </v-col>
-          <v-col cols="12" md="3">
+          <v-col cols="6" md="2">
             <v-select v-model="vendedoresSeleccionados" :items="vendedoresItems" item-text="nombre" item-value="codigo"
               label="Vendedor" multiple outlined dense chips small-chips deletable-chips clearable
               :menu-props="{ closeOnContentClick: true }" @change="onVendedorChange" class="mb-n6" />
           </v-col>
-          <v-col cols="12" md="3" class="d-flex align-center">
+          <v-col cols="6" md="2">
+            <v-select v-model="zonasSeleccionadas" :items="zonasItems" item-text="nombre" item-value="codigo"
+              label="Zona/Cliente" multiple outlined dense chips small-chips deletable-chips clearable
+              :menu-props="{ closeOnContentClick: true }" @change="onZonaChange" class="mb-n6" />
+          </v-col>
+          <v-col cols="12" md="2" class="d-flex align-center">
             <v-btn block color="primary" class="elevation-2" @click="filtra">
               <v-icon left>mdi-filter</v-icon>
               Aplicar filtros
@@ -361,6 +366,7 @@ export default {
   data: () => ({
     headersCxc: [
       { text: 'Cliente', value: 'cliente', sortable: true },
+      { text: 'Zona', value: 'cliente_zona', sortable: true },
       { text: 'Emision', value: 'fecha', sortable: true },
       { text: 'Venci.', value: 'fecha_vence', sortable: true },
       { text: 'Estado', value: 'estado', sortable: true },
@@ -407,15 +413,34 @@ export default {
     seleccionado: '',
     a_cuenta: 0,
     dialog_nueva_cuota: false,
+    zonasSeleccionadas: ['TODOS'],
+    zonasPrevios: ['TODOS'],
+    allZonas: [],
 
   }),
 
   created() {
     this.inicializarVendedores();
+    this.inicializarZonas();
     this.filtra();
   },
 
   computed: {
+    zonasItems() {
+      const zonas = this.allCuentasRaw
+        .map(item => item.cliente_zona)
+        .filter(zona => zona && zona.trim() !== '')
+        .filter((zona, index, self) => self.indexOf(zona) === index)
+        .sort();
+
+      const items = zonas.map(zona => ({
+        nombre: zona,
+        codigo: zona
+      }));
+
+      return [{ nombre: 'TODAS LAS ZONAS', codigo: 'TODOS' }, ...items];
+    },
+
     listafiltrada() {
       const texto = (this.busca_p || '').toLowerCase().trim()
 
@@ -481,6 +506,32 @@ export default {
   },
 
   methods: {
+    inicializarZonas() {
+      this.zonasSeleccionadas = ['TODOS'];
+      this.zonasPrevios = ['TODOS'];
+    },
+
+    onZonaChange(val = []) {
+      const TODOS = 'TODOS'
+      const antes = this.zonasPrevios
+      const ahora = val
+
+      if (
+        antes.includes(TODOS) &&
+        ahora.length > 1 &&
+        ahora.some(v => v !== TODOS)
+      ) {
+        this.zonasSeleccionadas = ahora.filter(v => v !== TODOS)
+      }
+      else if (
+        ahora.includes(TODOS) &&
+        ahora.length > 1
+      ) {
+        this.zonasSeleccionadas = [TODOS]
+      }
+      this.zonasPrevios = [...this.zonasSeleccionadas]
+      this.applyVendorFilter();
+    },
     inicializarVendedores() {
       if (!store.state.permisos?.es_admin) {
         this.vendedoresSeleccionados = [store.state.sedeActual?.codigo || 'TODOS'];
@@ -516,26 +567,33 @@ export default {
 
     applyVendorFilter() {
       const seleccionados = this.vendedoresSeleccionados || [];
+      const zonasSeleccionadas = this.zonasSeleccionadas || [];
 
       if (seleccionados.length === 0) {
         this.desserts = [];
         return;
       }
 
-      if (seleccionados.includes('TODOS')) {
-        this.desserts = this.allCuentasRaw.filter(item =>
-          item.estado === this.cuenta_estado
-        );
-        return;
+      let filtered = this.allCuentasRaw.filter(item =>
+        item.estado === this.cuenta_estado
+      );
+
+      if (!seleccionados.includes('TODOS')) {
+        const codigosNormalizados = seleccionados.map(c => String(c).toUpperCase().trim());
+        filtered = filtered.filter(p => {
+          const codVendedor = (p.vendedor != null ? String(p.vendedor) : '').toUpperCase().trim();
+          return codigosNormalizados.includes(codVendedor);
+        });
       }
 
-      const codigosNormalizados = seleccionados.map(c => String(c).toUpperCase().trim());
+      if (!zonasSeleccionadas.includes('TODOS')) {
+        filtered = filtered.filter(p => {
+          const zona = p.cliente_zona || '';
+          return zonasSeleccionadas.includes(zona);
+        });
+      }
 
-      this.desserts = this.allCuentasRaw.filter(p => {
-        if (p.estado !== this.cuenta_estado) return false;
-        const codVendedor = (p.vendedor != null ? String(p.vendedor) : '').toUpperCase().trim();
-        return codigosNormalizados.includes(codVendedor);
-      });
+      this.desserts = filtered;
     },
 
     async filtra() {
@@ -580,12 +638,19 @@ export default {
               ...data,
               nombre: nom,
               cliente: nom,
-              vendedor_nombre: vendedor_nombre
+              vendedor_nombre: vendedor_nombre,
+              cliente_zona: data.cliente_zona || 'SIN ZONA' // Valor por defecto
             });
           });
         }
 
         this.allCuentasRaw = array;
+
+        // Inicializar zonas después de tener datos
+        if (this.zonasSeleccionadas.length === 0) {
+          this.inicializarZonas();
+        }
+
         this.applyVendorFilter();
 
       } catch (error) {
