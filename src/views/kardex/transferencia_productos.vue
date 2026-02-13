@@ -38,8 +38,8 @@
                     </v-col>
 
                     <v-col cols="12" sm="2">
-                        <v-btn block depressed color="success"
-                            class="text-none font-weight-bold" @click="cargarMovimientos">
+                        <v-btn block depressed color="success" class="text-none font-weight-bold"
+                            @click="cargarMovimientos">
                             <v-icon left size="18">mdi-magnify</v-icon>Buscar
                         </v-btn>
                     </v-col>
@@ -172,12 +172,14 @@
                                         <v-list-item-content><v-list-item-title>Ver
                                                 Detalle</v-list-item-title></v-list-item-content>
                                     </v-list-item>
-                                    <v-list-item @click="editarTransferencia(item)" :disabled="esPeriodoCerradoItem(item)">
+                                    <v-list-item @click="editarTransferencia(item)"
+                                        :disabled="esPeriodoCerradoItem(item)">
                                         <v-list-item-icon><v-icon small
                                                 color="orange">mdi-pencil</v-icon></v-list-item-icon>
                                         <v-list-item-content><v-list-item-title>Editar</v-list-item-title></v-list-item-content>
                                     </v-list-item>
-                                    <v-list-item @click="anularTransferencia(item)" :disabled="esPeriodoCerradoItem(item)">
+                                    <v-list-item @click="anularTransferencia(item)"
+                                        :disabled="esPeriodoCerradoItem(item)">
                                         <v-list-item-icon><v-icon small
                                                 color="red">mdi-cancel</v-icon></v-list-item-icon>
                                         <v-list-item-content><v-list-item-title>Anular</v-list-item-title></v-list-item-content>
@@ -333,7 +335,7 @@
                             <td class="text-right">{{ Number(p.peso || 0).toFixed(2) }}kg</td>
                             <td class="text-right font-weight-medium">{{ moneda }}{{ Number(p.monto_soles ||
                                 0).toFixed(2)
-                            }}</td>
+                                }}</td>
                         </tr>
                     </tbody>
                 </v-simple-table>
@@ -370,8 +372,7 @@ import {
     exportarTransferenciaExcel as exportarExcelItem,
     exportarListaTransferenciasExcel
 } from "@/views/kardex/formatos/form_transferencia";
-import { all_transferencia, allProductoOtraBase, grabarStockOtraBase, actualiza_transferencia, all_periodos } from '@/db'
-import { anularMovimientosTransferencia } from '@/views/kardex/help_mov_tranferencia'
+import { all_transferencia, all_periodos } from '@/db'
 import moment from 'moment'
 import store from '@/store'
 
@@ -531,43 +532,51 @@ export default {
 
 
         async anularTransferencia(item) {
-            if (item.estado === 'anulado') {
-                this.muestraMsg('Esta transferencia ya está anulada.', 'warning');
+            if (item.estado === "anulado") {
+                this.muestraMsg("Esta transferencia ya está anulada.", "warning");
                 return;
             }
-            if (!confirm('¿Seguro que deseas anular esta transferencia? El stock será revertido.')) return;
+            if (!confirm("¿Seguro que deseas anular esta transferencia? El stock será revertido.")) return;
+
             this.cargando = true;
             try {
-                store.commit("dialogoprogress")
-                const snap_origen = await allProductoOtraBase(item.sede_origen).once('value');
-                const origen_actual = snap_origen.val() ? Object.values(snap_origen.val()) : [];
+                const projectId = "sis-distribucion";
+                const region = "southamerica-east1";
+                const ruc_asociado = store.state.baseDatos.ruc_asociado;
 
+                const baseUrl =
+                    location.hostname === "localhost"
+                        ? `http://localhost:5000/${projectId}/${region}`
+                        : `https://${region}-${projectId}.cloudfunctions.net`;
 
-                const snap_destino = await allProductoOtraBase(item.sede_destino).once('value');
-                const destino_actual = snap_destino.val() ? Object.values(snap_destino.val()) : [];
+                const url = `${baseUrl}/transferencias_cancel`;
 
+                const body = {
+                    ruc_asociado,
+                    key: item.key || item.id,
+                    anulado_por: store.state.permisos?.correo || "PUBLIC",
+                };
 
-                for (const prod of item.productos) {
-                    const prodOrigen = origen_actual.find(p => p.id == prod.id);
-                    const stockOrigen = prodOrigen ? Number(prodOrigen.stock) : 0;
-                    await grabarStockOtraBase(item.sede_origen, prod.id, stockOrigen + Number(prod.cantidad));
+                const resp = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body),
+                });
 
-
-                    const prodDestino = destino_actual.find(p => p.id == prod.id);
-                    const stockDestino = prodDestino ? Number(prodDestino.stock) : 0;
-                    const nuevoStockDestino = Math.max(0, stockDestino - Number(prod.cantidad));
-                    await grabarStockOtraBase(item.sede_destino, prod.id, nuevoStockDestino);
+                const json = await resp.json().catch(() => null);
+                if (!resp.ok || json?.ok === false) {
+                    throw new Error(json?.message || `HTTP ${resp.status}`);
                 }
-                await actualiza_transferencia(item.key || item.id, { estado: 'anulado', anulado_por: store.state.permisos.correo, anulado_en: moment().unix() });
-                await anularMovimientosTransferencia(item);
-                store.commit("dialogoprogress")
-                this.muestraMsg('Transferencia anulada y stocks revertidos.', 'success');
-                if (typeof this.cargarMovimientos === "function") this.cargarMovimientos();
+
+                this.muestraMsg("Transferencia anulada correctamente.", "success");
+                this.cargarMovimientos();
             } catch (e) {
-                this.muestraMsg('Error al anular transferencia: ' + (e.message || e), 'error');
+                this.muestraMsg("Error al anular transferencia: " + (e.message || e), "error");
+            } finally {
+                this.cargando = false;
             }
-            this.cargando = false;
         },
+
         imprimirTransferencia(item) {
             imprimirTransferenciaPDF80mm(
                 item,
@@ -640,12 +649,14 @@ export default {
 .border {
     border: 1px solid #e0e0e0 !important;
 }
+
 .custom-field :deep(.v-input__control .v-input__slot) {
     background: #f8f9fa !important;
     border: 1px solid #e0e0e0 !important;
     box-shadow: none !important;
     min-height: 32px !important;
 }
+
 .border-subtle {
     border: 1px solid #eceff1 !important;
 }

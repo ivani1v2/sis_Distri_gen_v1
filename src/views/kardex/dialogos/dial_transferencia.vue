@@ -53,7 +53,7 @@
                                     <v-list-item-subtitle>
                                         <v-chip x-small color="grey" class="mr-1">ID: {{ item.id }}</v-chip>
                                         <v-chip x-small color="blue" class="mr-1" v-if="item.codbarra">{{ item.codbarra
-                                        }}</v-chip>
+                                            }}</v-chip>
                                         <v-chip x-small :color="item.stock > 0 ? 'success' : 'error'">
                                             Stock: {{ item.stock || 0 }}
                                         </v-chip>
@@ -118,7 +118,7 @@
                     <template v-slot:item.nombre="{ item }">
                         <div>
                             <strong>{{ item.nombre }}</strong>
-                            <div class="text-caption grey--text">{{  item.id }}</div>
+                            <div class="text-caption grey--text">{{ item.id }}</div>
                         </div>
                     </template>
 
@@ -197,7 +197,7 @@
                         <v-alert dense text type="info" class="mb-3">
                             <strong>{{ productoActual.nombre }}</strong>
                             <div class="text-caption">
-                                Código: {{productoActual.id }}
+                                Código: {{ productoActual.id }}
                             </div>
                         </v-alert>
 
@@ -250,94 +250,78 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
-       <v-dialog v-model="dialogoConfirmar" max-width="480" persistent>
-    <v-card class="rounded-xl overflow-hidden">
-        <v-toolbar 
-            :color="modoEdicion ? 'orange darken-1' : 'primary'" 
-            dark 
-            flat 
-            dense
-        >
-            <v-icon left>mdi-alert-circle-outline</v-icon>
-            <v-toolbar-title class="text-subtitle-1 font-weight-bold">
-                {{ modoEdicion ? 'Confirmar Actualización' : 'Confirmar Transferencia' }}
-            </v-toolbar-title>
-        </v-toolbar>
+        <v-dialog v-model="dialogoConfirmar" max-width="480" persistent>
+            <v-card class="rounded-xl overflow-hidden">
+                <v-toolbar :color="modoEdicion ? 'orange darken-1' : 'primary'" dark flat dense>
+                    <v-icon left>mdi-alert-circle-outline</v-icon>
+                    <v-toolbar-title class="text-subtitle-1 font-weight-bold">
+                        {{ modoEdicion ? 'Confirmar Actualización' : 'Confirmar Transferencia' }}
+                    </v-toolbar-title>
+                </v-toolbar>
 
-        <v-card-text class="pa-4">
-            <v-alert 
-                outlined 
-                :color="modoEdicion ? 'orange' : 'info'" 
-                class="mb-4 rounded-lg bg-lighten-5"
-                dense
-            >
-                <div class="text-body-2">
-                    <span v-if="modoEdicion">
-                        ¿Está seguro de actualizar esta transferencia con <strong>{{ lista_transferencia.length }} productos</strong>?
-                    </span>
-                    <span v-else>
-                        ¿Transferir <strong>{{ lista_transferencia.length }} productos</strong> desde <strong>{{ nombreSedeOrigen }}</strong> hacia <strong>{{ nombreSedeDestino }}</strong>?
-                    </span>
-                </div>
-            </v-alert>
+                <v-card-text class="pa-4">
+                    <v-alert outlined :color="modoEdicion ? 'orange' : 'info'" class="mb-4 rounded-lg bg-lighten-5"
+                        dense>
+                        <div class="text-body-2">
+                            <span v-if="modoEdicion">
+                                ¿Está seguro de actualizar esta transferencia con <strong>{{ lista_transferencia.length
+                                    }}
+                                    productos</strong>?
+                            </span>
+                            <span v-else>
+                                ¿Transferir <strong>{{ lista_transferencia.length }} productos</strong> desde <strong>{{
+                                    nombreSedeOrigen }}</strong> hacia <strong>{{ nombreSedeDestino }}</strong>?
+                            </span>
+                        </div>
+                    </v-alert>
 
-            <v-row dense class="grey lighten-4 rounded-lg pa-2 mx-0">
-                <v-col cols="6" class="pb-2">
-                    <div class="text-caption grey--text text-uppercase">Productos</div>
-                    <div class="text-body-1 font-weight-bold">{{ lista_transferencia.length }}</div>
-                </v-col>
-                <v-col cols="6" class="pb-2 text-right">
-                    <div class="text-caption grey--text text-uppercase">Unidades</div>
-                    <div class="text-body-1 font-weight-bold">{{ totalUnidades }}</div>
-                </v-col>
-                
-                <v-divider cols="12" class="my-1"></v-divider>
+                    <v-row dense class="grey lighten-4 rounded-lg pa-2 mx-0">
+                        <v-col cols="6" class="pb-2">
+                            <div class="text-caption grey--text text-uppercase">Productos</div>
+                            <div class="text-body-1 font-weight-bold">{{ lista_transferencia.length }}</div>
+                        </v-col>
+                        <v-col cols="6" class="pb-2 text-right">
+                            <div class="text-caption grey--text text-uppercase">Unidades</div>
+                            <div class="text-body-1 font-weight-bold">{{ totalUnidades }}</div>
+                        </v-col>
 
-                <v-col cols="6" class="pt-2">
-                    <div class="text-caption grey--text text-uppercase">Peso Total</div>
-                    <div class="text-body-1 font-weight-bold">{{ totalPeso.toFixed(2) }} kg</div>
-                </v-col>
-                <v-col cols="6" class="pt-2 text-right">
-                    <div class="text-caption grey--text text-uppercase">Monto Total</div>
-                    <div class="text-h6 success--text font-weight-black lh-1">
-                        S/ {{ totalMontoSoles.toFixed(2) }}
-                    </div>
-                </v-col>
+                        <v-divider cols="12" class="my-1"></v-divider>
 
-                <v-col cols="12" v-if="observacion" class="mt-2 pt-2 border-top">
-                    <div class="text-caption grey--text text-uppercase">Observación</div>
-                    <div class="text-body-2 font-italic grey--text text--darken-2 line-clamp-2">
-                        "{{ observacion }}"
-                    </div>
-                </v-col>
-            </v-row>
-        </v-card-text>
+                        <v-col cols="6" class="pt-2">
+                            <div class="text-caption grey--text text-uppercase">Peso Total</div>
+                            <div class="text-body-1 font-weight-bold">{{ totalPeso.toFixed(2) }} kg</div>
+                        </v-col>
+                        <v-col cols="6" class="pt-2 text-right">
+                            <div class="text-caption grey--text text-uppercase">Monto Total</div>
+                            <div class="text-h6 success--text font-weight-black lh-1">
+                                S/ {{ totalMontoSoles.toFixed(2) }}
+                            </div>
+                        </v-col>
 
-        <v-divider></v-divider>
+                        <v-col cols="12" v-if="observacion" class="mt-2 pt-2 border-top">
+                            <div class="text-caption grey--text text-uppercase">Observación</div>
+                            <div class="text-body-2 font-italic grey--text text--darken-2 line-clamp-2">
+                                "{{ observacion }}"
+                            </div>
+                        </v-col>
+                    </v-row>
+                </v-card-text>
 
-        <v-card-actions class="pa-4">
-            <v-btn 
-                text 
-                color="grey darken-1" 
-                @click="dialogoConfirmar = false"
-                class="text-none px-4"
-            >
-                Cancelar
-            </v-btn>
-            <v-spacer></v-spacer>
-            <v-btn 
-                :color="modoEdicion ? 'orange' : 'success'" 
-                depressed
-                class="text-none px-6 rounded-lg"
-                @click="ejecutarTransferencia" 
-                :loading="cargando"
-            >
-                <v-icon left>mdi-check</v-icon>
-                <strong>{{ modoEdicion ? 'Actualizar' : 'Confirmar' }}</strong>
-            </v-btn>
-        </v-card-actions>
-    </v-card>
-</v-dialog>
+                <v-divider></v-divider>
+
+                <v-card-actions class="pa-4">
+                    <v-btn text color="grey darken-1" @click="dialogoConfirmar = false" class="text-none px-4">
+                        Cancelar
+                    </v-btn>
+                    <v-spacer></v-spacer>
+                    <v-btn :color="modoEdicion ? 'orange' : 'success'" depressed class="text-none px-6 rounded-lg"
+                        @click="ejecutarTransferencia" :loading="cargando">
+                        <v-icon left>mdi-check</v-icon>
+                        <strong>{{ modoEdicion ? 'Actualizar' : 'Confirmar' }}</strong>
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
 
 
         <v-snackbar v-model="mensaje" :color="colorMensaje" timeout="4000">{{ textoMensaje }}</v-snackbar>
@@ -348,15 +332,12 @@
 <script>
 import {
     allProductoOtraBase,
-    grabarStockOtraBase,
-    graba_transferencia,
-    nuevoProductoOtraBase,
-    actualiza_transferencia,
     all_periodos,
 } from '@/db';
-import { registrarMovimientosTransferencia, rehacerMovimientosTransferencia } from '../help_mov_tranferencia';
 import store from '@/store/index';
 import moment from 'moment';
+
+import { v4 as uuidv4 } from "uuid";
 
 
 export default {
@@ -391,8 +372,6 @@ export default {
             transferenciaKey: null,
             productosOriginales: [],
             periodosBD: {},
-
-
             headersTransferencia: [
                 { text: 'Producto', value: 'nombre', width: '30%' },
                 { text: 'Cantidad', value: 'cantidad', width: '12%', align: 'center' },
@@ -693,168 +672,110 @@ export default {
             this.dialogoConfirmar = true;
         },
 
-
         async ejecutarTransferencia() {
             this.cargando = true;
+
             try {
-                const snap_destino = await allProductoOtraBase(this.sede_destino).once('value');
-                const productos_destino = snap_destino.val() ? Object.values(snap_destino.val()) : [];
-
-
-                if (this.modoEdicion) {
-                    for (const prodOriginal of this.productosOriginales) {
-                        const prodOrigen = this.productos_origen.find(p => p.id == prodOriginal.id);
-                        const prodDestino = productos_destino.find(p => p.id == prodOriginal.id);
-                        if (prodOrigen) {
-                        }
-                        if (prodDestino) {
-                            const stockRevertido = Math.max(0, Number(prodDestino.stock) - Number(prodOriginal.cantidad));
-                            await grabarStockOtraBase(this.sede_destino, prodOriginal.id, stockRevertido);
-                        }
-                    }
-
-
-                    const snap_destino2 = await allProductoOtraBase(this.sede_destino).once('value');
-                    const productos_destino_actualizados = snap_destino2.val() ? Object.values(snap_destino2.val()) : [];
-                    for (const item of this.lista_transferencia) {
-                        const nuevoStockOrigen = Number(item.stock_origen) - Number(item.cantidad);
-                        await grabarStockOtraBase(this.sede_origen, item.id, Math.max(0, nuevoStockOrigen));
-
-
-                        const prodDestino = productos_destino_actualizados.find(p => p.id == item.id);
-                        let nuevoStockDestino = prodDestino
-                            ? Number(prodDestino.stock) + Number(item.cantidad)
-                            : Number(item.cantidad);
-
-
-                        if (prodDestino) {
-                            await grabarStockOtraBase(this.sede_destino, item.id, nuevoStockDestino);
-                        } else {
-                            const prodPrincipal = store.state.productos?.find(p => String(p.id) === String(item.id));
-                            const prodOrigen = this.productos_origen.find(p => p.id == item.id);
-                            const nuevoProducto = {
-                                ...(prodPrincipal || prodOrigen || item),
-                                stock: nuevoStockDestino,
-                                editado: Math.floor(Date.now() / 1000)
-                            };
-                            delete nuevoProducto.stock2;
-                            await nuevoProductoOtraBase(this.sede_destino, item.id, nuevoProducto);
-                        }
-                    }
-                    const docActualizado = {
-                        fecha_unix: moment(this.fecha_transferencia, 'YYYY-MM-DDTHH:mm').unix(),
-                        productos: this.lista_transferencia.map(item => ({
-                            id: item.id,
-                            nombre: item.nombre,
-                            codbarra: item.codbarra || '',
-                            cantidad: item.cantidad,
-                            precio: item.precio || 0,
-                            peso: item.peso || 0,
-                            monto_soles: Number((item.monto_soles || 0).toFixed(2)),
-                        })),
-                        total: Number(this.totalMontoSoles.toFixed(2)),
-                        peso_total: Number(this.totalPeso.toFixed(2)),
-                        total_unidades: this.totalUnidades,
-                        estado: "editado",
-                        editado_por: store.state.permisos.correo,
-                        editado_en: moment().unix(),
-                        observacion: this.observacion,
-                    };
-
-
-                    await actualiza_transferencia(this.transferenciaKey, docActualizado);
-                    await rehacerMovimientosTransferencia(this.transferencia, {
-                        ...this.transferencia,
-                        ...docActualizado,
-                        key: this.transferenciaKey
-                    });
-
-                    this.dialogoConfirmar = false;
-                    this.muestraMsg('Transferencia actualizada correctamente', 'success');
-
-
-                } else {
-                    for (const item of this.lista_transferencia) {
-                        const prodOrigen = this.productos_origen.find(p => p.id == item.id);
-                        if (!prodOrigen || Number(item.cantidad) > Number(prodOrigen.stock)) {
-                            this.muestraMsg(
-                                `El stock disponible de "${item.nombre}" es insuficiente (${prodOrigen ? prodOrigen.stock : 0})`,
-                                'error'
-                            );
-                            this.cargando = false;
-                            return;
-                        }
-                    }
-
-
-                    for (const item of this.lista_transferencia) {
-                        const prodOrigen = this.productos_origen.find(p => p.id == item.id);
-                        const nuevoStockOrigen = Number(prodOrigen.stock) - Number(item.cantidad);
-                        await grabarStockOtraBase(this.sede_origen, item.id, nuevoStockOrigen);
-
-
-                        const prodDestino = productos_destino.find(p => p.id == item.id);
-                        let nuevoStockDestino = prodDestino
-                            ? Number(prodDestino.stock) + Number(item.cantidad)
-                            : Number(item.cantidad);
-
-
-                        if (prodDestino) {
-                            await grabarStockOtraBase(this.sede_destino, item.id, nuevoStockDestino);
-                        } else {
-                            const prodPrincipal = store.state.productos?.find(p => String(p.id) === String(item.id));
-                            const nuevoProducto = {
-                                ...(prodPrincipal || prodOrigen),
-                                stock: nuevoStockDestino,
-                                editado: Math.floor(Date.now() / 1000)
-                            };
-                            delete nuevoProducto.stock2;
-                            await nuevoProductoOtraBase(this.sede_destino, item.id, nuevoProducto);
-                        }
-                    }
-
-
-                    const doc = {
-                        fecha_unix: moment(this.fecha_transferencia, 'YYYY-MM-DDTHH:mm').unix(),
-                        sede_origen: this.sede_origen,
-                        sede_destino: this.sede_destino,
-                        productos: this.lista_transferencia.map(item => ({
-                            id: item.id,
-                            nombre: item.nombre,
-                            codbarra: item.codbarra || '',
-                            cantidad: item.cantidad,
-                            precio: item.precio || 0,
-                            peso: item.peso || 0,
-                            monto_soles: Number((item.monto_soles || 0).toFixed(2)),
-                        })),
-                        total: Number(this.totalMontoSoles.toFixed(2)),
-                        peso_total: Number(this.totalPeso.toFixed(2)),
-                        total_unidades: this.totalUnidades,
-                        estado: "activo",
-                        usuario: store.state.permisos.correo,
-                        observacion: this.observacion,
-                    };
-
-
-                    const resp = await graba_transferencia(doc);
-                    await registrarMovimientosTransferencia({ ...doc, key: resp.key });
-
-                    this.dialogoConfirmar = false;
-                    this.muestraMsg('Transferencia realizada correctamente', 'success');
+                if (!this.sede_origen || !this.sede_destino) {
+                    this.muestraMsg("Seleccione sede origen y destino", "error");
+                    return;
+                }
+                if (this.sede_origen === this.sede_destino) {
+                    this.muestraMsg("No puede seleccionar la misma sede", "error");
+                    return;
+                }
+                if (this.lista_transferencia.length === 0) {
+                    this.muestraMsg("Agregue productos a transferir", "error");
+                    return;
+                }
+                if (this.periodoCerrado) {
+                    const periodoKey = moment(this.fecha_transferencia, "YYYY-MM-DDTHH:mm").format("YYYY-MM");
+                    this.muestraMsg(`El período ${periodoKey} está cerrado. No se pueden registrar movimientos.`, "error");
+                    return;
                 }
 
+                const projectId = "sis-distribucion";
+                const region = "southamerica-east1";
+                const ruc_asociado = store.state.baseDatos.ruc_asociado
+                const baseUrl =
+                    location.hostname === "localhost"
+                        ? `http://localhost:5000/${projectId}/${region}`
+                        : `https://${region}-${projectId}.cloudfunctions.net`;
 
-                this.$emit('guardado');
+                const url = this.modoEdicion
+                    ? `${baseUrl}/transferencias_update`
+                    : `${baseUrl}/transferencias_create`;
 
-                setTimeout(() => {
-                    this.cierra();
-                }, 150);
+                const idempotencyKey = uuidv4();
 
+                const payloadBase = {
+                    ruc_asociado,
+                    sede_origen: this.sede_origen,
+                    sede_destino: this.sede_destino,
+                    fecha_unix: moment(this.fecha_transferencia, "YYYY-MM-DDTHH:mm").unix(),
+                    observacion: this.observacion || "",
+                    productos: this.lista_transferencia.map(i => ({
+                        id: String(i.id),
+                        nombre: i.nombre,
+                        codbarra: i.codbarra || "",
+                        cantidad: Number(i.cantidad || 0),
+                        precio: Number(i.precio || 0),
+                        peso: Number(i.peso || 0),
+                        monto_soles: Number((Number(i.monto_soles || 0)).toFixed(2)),
+                        factor: i.factor || 1,
+                        medida: i.medida || "UNIDAD",
+                        modo_cant: i.modo_cant || "entero",
+                        uuid: i.uuid || null,
+                    })),
+                    total: Number(this.totalMontoSoles.toFixed(2)),
+                    peso_total: Number(this.totalPeso.toFixed(2)),
+                    total_unidades: Number(this.totalUnidades || 0),
+                    idempotencyKey,
+                    usuario: store.state.permisos?.correo || "PUBLIC",
+                    editado_por: store.state.permisos?.correo || "PUBLIC",
+                };
+
+                const body = this.modoEdicion
+                    ? { key: this.transferenciaKey, ...payloadBase }
+                    : payloadBase;
+
+                const resp = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body),
+                });
+
+                const json = await resp.json().catch(() => null);
+
+                // ✅ si la function responde { ok:true, result: {...} }
+                if (!resp.ok) {
+                    throw new Error(json?.message || `HTTP ${resp.status}`);
+                }
+                if (json && json.ok === false) {
+                    throw new Error(json?.message || "Error desconocido");
+                }
+
+                // ✅ OK
+                this.dialogoConfirmar = false;
+                this.muestraMsg(
+                    this.modoEdicion
+                        ? "Transferencia actualizada correctamente"
+                        : "Transferencia realizada correctamente",
+                    "success"
+                );
+                this.$emit("guardado");
+                setTimeout(() => this.cierra(), 150);
+
+                // opcional: si quieres usar la respuesta
+                return json;
 
             } catch (e) {
-                this.muestraMsg('Error en la transferencia: ' + (e.message || e), 'error');
-            } this.cargando = false;
+                this.muestraMsg("Error en la transferencia: " + (e.message || e), "error");
+            } finally {
+                this.cargando = false;
+            }
         },
+
 
 
         muestraMsg(msg, color) {
@@ -878,9 +799,11 @@ export default {
     font-size: 0.65rem !important;
     /* Un poco más pequeño que el overline estándar */
 }
+
 .border-top {
     border-top: 1px dashed #ccc;
 }
+
 /* Limita la observación a 2 líneas para que no rompa el diseño si es muy larga */
 .line-clamp-2 {
     display: -webkit-box;
