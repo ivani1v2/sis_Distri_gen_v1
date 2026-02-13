@@ -1,380 +1,409 @@
 <template>
     <div class="pa-2 pa-sm-4">
         <v-card class="elevation-2 rounded-lg">
-            <v-card-title class="pa-3 pa-sm-4 blue-grey lighten-5">
-                <v-row dense align="center" class="w-100">
-                    <v-col cols="12" sm="3" class="d-flex align-center">
-                        <span :class="$vuetify.breakpoint.smAndDown ? 'text-subtitle-1' : 'text-h6'"
-                            class="font-weight-bold blue-grey--text text--darken-3">
-                            Compras por Cliente
-                        </span>
-                    </v-col>
+            <v-tabs v-model="tabActual" background-color="blue-grey lighten-5" grow show-arrows>
+                <v-tab>
+                    <v-icon left small>mdi-format-list-bulleted</v-icon>
+                    <span v-if="$vuetify.breakpoint.mdAndUp">Listado de Compras</span>
+                    <span v-else>Listado</span>
+                </v-tab>
+                <v-tab>
+                    <v-icon left small>mdi-chart-bar</v-icon>
+                    <span v-if="$vuetify.breakpoint.mdAndUp">Análisis por Cliente</span>
+                    <span v-else>Análisis</span>
+                </v-tab>
+            </v-tabs>
 
-                    <v-col cols="12" sm="9" v-if="!$vuetify.breakpoint.smAndDown">
-                        <v-row dense justify="end" align="center">
-                            <!-- Fecha inicio -->
-                            <v-col cols="3">
-                                <v-menu v-model="menuFechaInicio" :close-on-content-click="false"
-                                    transition="scale-transition" offset-y>
-                                    <template v-slot:activator="{ on, attrs }">
-                                        <v-text-field v-model="date" label="Fecha Inicio"
-                                            prepend-inner-icon="mdi-calendar" readonly v-bind="attrs" v-on="on" dense
-                                            outlined hide-details />
-                                    </template>
-                                    <v-date-picker v-model="date" @input="menuFechaInicio = false" />
-                                </v-menu>
-                            </v-col>
+            <v-divider></v-divider>
 
-                            <!-- Fecha fin -->
-                            <v-col cols="3">
-                                <v-menu v-model="menuFechaFin" :close-on-content-click="false"
-                                    transition="scale-transition" offset-y>
-                                    <template v-slot:activator="{ on, attrs }">
-                                        <v-text-field v-model="date2" label="Fecha Fin"
-                                            prepend-inner-icon="mdi-calendar" readonly v-bind="attrs" v-on="on" dense
-                                            outlined hide-details />
-                                    </template>
-                                    <v-date-picker v-model="date2" @input="menuFechaFin = false" />
-                                </v-menu>
+            <v-tabs-items v-model="tabActual">
+                <!-- LISTADO DE COMPRAS -->
+                <v-tab-item>
+                    <v-card-title class="pa-3 pa-sm-4 blue-grey lighten-5">
+                        <v-row dense align="center" class="w-100">
+                            <v-col cols="12" sm="3" class="d-flex align-center">
+                                <span :class="$vuetify.breakpoint.smAndDown ? 'text-subtitle-1' : 'text-h6'"
+                                    class="font-weight-bold blue-grey--text text--darken-3">
+                                    Compras por Cliente
+                                </span>
                             </v-col>
 
-                            <!-- Cliente -->
-                            <v-col cols="6">
-                                <v-autocomplete outlined dense label="Buscar Cliente" auto-select-first
-                                    v-model="busca_p" :items="arra_clientes" prepend-inner-icon="mdi-account-search"
-                                    append-icon="mdi-magnify" @click:append="busca" @keyup.enter="busca" hide-details />
-                            </v-col>
-                        </v-row>
-                    </v-col>
-                    <v-col cols="auto" class="ml-auto mt-n10" v-if="$vuetify.breakpoint.smAndDown">
-                        <v-btn icon small color="info" @click="verConsolidadoProductos" :disabled="!desserts.length"
-                            class="mr-1" title="Ver Consolidado">
-                            <v-icon>mdi-chart-box</v-icon>
-                        </v-btn>
-                        <v-btn icon small color="primary" @click="mostrarFiltrosMovil = !mostrarFiltrosMovil"
-                            title="Mostrar Filtros">
-                            <v-icon>mdi-filter</v-icon>
-                        </v-btn>
-                    </v-col>
-                </v-row>
+                            <v-col cols="12" sm="9" v-if="!$vuetify.breakpoint.smAndDown">
+                                <v-row dense justify="end" align="center">
+                                    <!-- Fecha inicio -->
+                                    <v-col cols="3">
+                                        <v-menu v-model="menuFechaInicio" :close-on-content-click="false"
+                                            transition="scale-transition" offset-y>
+                                            <template v-slot:activator="{ on, attrs }">
+                                                <v-text-field v-model="date" label="Fecha Inicio"
+                                                    prepend-inner-icon="mdi-calendar" readonly v-bind="attrs" v-on="on"
+                                                    dense outlined hide-details />
+                                            </template>
+                                            <v-date-picker v-model="date" @input="menuFechaInicio = false" />
+                                        </v-menu>
+                                    </v-col>
 
-                <!-- FILTROS PARA MÓVIL -->
-                <v-expand-transition>
-                    <div v-if="mostrarFiltrosMovil && $vuetify.breakpoint.smAndDown" class="mt-3">
-                        <v-row dense>
-                            <v-col cols="12">
-                                <v-autocomplete outlined dense autofocus label="Buscar Cliente" auto-select-first
-                                    class="caption" v-model="busca_p" :items="arra_clientes"
-                                    prepend-inner-icon="mdi-account-search" hide-details></v-autocomplete>
+                                    <!-- Fecha fin -->
+                                    <v-col cols="3">
+                                        <v-menu v-model="menuFechaFin" :close-on-content-click="false"
+                                            transition="scale-transition" offset-y>
+                                            <template v-slot:activator="{ on, attrs }">
+                                                <v-text-field v-model="date2" label="Fecha Fin"
+                                                    prepend-inner-icon="mdi-calendar" readonly v-bind="attrs" v-on="on"
+                                                    dense outlined hide-details />
+                                            </template>
+                                            <v-date-picker v-model="date2" @input="menuFechaFin = false" />
+                                        </v-menu>
+                                    </v-col>
+
+                                    <!-- Cliente -->
+                                    <v-col cols="6">
+                                        <v-autocomplete outlined dense label="Buscar Cliente" auto-select-first
+                                            v-model="busca_p" :items="arra_clientes"
+                                            prepend-inner-icon="mdi-account-search" append-icon="mdi-magnify"
+                                            @click:append="busca" @keyup.enter="busca" hide-details />
+                                    </v-col>
+                                </v-row>
                             </v-col>
-                            <v-col cols="6">
-                                <v-menu v-model="menuFechaInicio" :close-on-content-click="false"
-                                    transition="scale-transition" offset-y>
-                                    <template v-slot:activator="{ on, attrs }">
-                                        <v-text-field v-model="date" label="Desde" prepend-inner-icon="mdi-calendar"
-                                            readonly v-bind="attrs" v-on="on" dense outlined
-                                            hide-details></v-text-field>
-                                    </template>
-                                    <v-date-picker v-model="date" @input="menuFechaInicio = false"></v-date-picker>
-                                </v-menu>
-                            </v-col>
-                            <v-col cols="6">
-                                <v-menu v-model="menuFechaFin" :close-on-content-click="false"
-                                    transition="scale-transition" offset-y>
-                                    <template v-slot:activator="{ on, attrs }">
-                                        <v-text-field v-model="date2" label="Hasta" prepend-inner-icon="mdi-calendar"
-                                            readonly v-bind="attrs" v-on="on" dense outlined
-                                            hide-details></v-text-field>
-                                    </template>
-                                    <v-date-picker v-model="date2" @input="menuFechaFin = false"></v-date-picker>
-                                </v-menu>
-                            </v-col>
-                            <v-col cols="12" class="text-center">
-                                <v-btn small block color="primary" @click="busca" class="mb-2">
-                                    <v-icon left small>mdi-magnify</v-icon>
-                                    Buscar
+                            <v-col cols="auto" class="ml-auto mt-n10" v-if="$vuetify.breakpoint.smAndDown">
+                                <v-btn icon small color="info" @click="verConsolidadoProductos"
+                                    :disabled="!desserts.length" class="mr-1" title="Ver Consolidado">
+                                    <v-icon>mdi-chart-box</v-icon>
+                                </v-btn>
+                                <v-btn icon small color="primary" @click="mostrarFiltrosMovil = !mostrarFiltrosMovil"
+                                    title="Mostrar Filtros">
+                                    <v-icon>mdi-filter</v-icon>
                                 </v-btn>
                             </v-col>
                         </v-row>
-                    </div>
-                </v-expand-transition>
-            </v-card-title>
 
-            <v-divider></v-divider>
-
-            <v-card-text v-if="$vuetify.breakpoint.smAndDown" class="py-2 px-1">
-                <v-row dense>
-                    <v-col v-for="(card, idx) in resumenCardsMovil" :key="idx" cols="6">
-                        <v-card outlined class="pa-2 rounded-lg text-center">
-                            <div class="caption grey--text">{{ card.title }}</div>
-                            <div :class="card.class" class="subtitle-2 font-weight-bold">
-                                {{ card.prefix || '' }}{{ card.value }}
+                        <!-- FILTROS PARA MÓVIL -->
+                        <v-expand-transition>
+                            <div v-if="mostrarFiltrosMovil && $vuetify.breakpoint.smAndDown" class="mt-3">
+                                <v-row dense>
+                                    <v-col cols="12">
+                                        <v-autocomplete outlined dense autofocus label="Buscar Cliente"
+                                            auto-select-first class="caption" v-model="busca_p" :items="arra_clientes"
+                                            prepend-inner-icon="mdi-account-search" hide-details></v-autocomplete>
+                                    </v-col>
+                                    <v-col cols="6">
+                                        <v-menu v-model="menuFechaInicio" :close-on-content-click="false"
+                                            transition="scale-transition" offset-y>
+                                            <template v-slot:activator="{ on, attrs }">
+                                                <v-text-field v-model="date" label="Desde"
+                                                    prepend-inner-icon="mdi-calendar" readonly v-bind="attrs" v-on="on"
+                                                    dense outlined hide-details></v-text-field>
+                                            </template>
+                                            <v-date-picker v-model="date"
+                                                @input="menuFechaInicio = false"></v-date-picker>
+                                        </v-menu>
+                                    </v-col>
+                                    <v-col cols="6">
+                                        <v-menu v-model="menuFechaFin" :close-on-content-click="false"
+                                            transition="scale-transition" offset-y>
+                                            <template v-slot:activator="{ on, attrs }">
+                                                <v-text-field v-model="date2" label="Hasta"
+                                                    prepend-inner-icon="mdi-calendar" readonly v-bind="attrs" v-on="on"
+                                                    dense outlined hide-details></v-text-field>
+                                            </template>
+                                            <v-date-picker v-model="date2"
+                                                @input="menuFechaFin = false"></v-date-picker>
+                                        </v-menu>
+                                    </v-col>
+                                    <v-col cols="12" class="text-center">
+                                        <v-btn small block color="primary" @click="busca" class="mb-2">
+                                            <v-icon left small>mdi-magnify</v-icon>
+                                            Buscar
+                                        </v-btn>
+                                    </v-col>
+                                </v-row>
                             </div>
-                        </v-card>
-                    </v-col>
-                </v-row>
-            </v-card-text>
+                        </v-expand-transition>
+                    </v-card-title>
 
-            <v-card-text v-else class="py-3">
-                <v-row dense class="align-center">
-                    <v-col cols="12" md="8">
+                    <v-divider></v-divider>
+
+                    <v-card-text v-if="$vuetify.breakpoint.smAndDown" class="py-2 px-1">
                         <v-row dense>
-                            <v-col v-for="(card, idx) in resumenCardsDesktop" :key="idx" cols="6" sm="4" md="2">
-                                <v-card outlined class="pa-3 rounded-lg">
-                                    <div class="d-flex align-center">
-                                        <v-avatar size="34" class="mr-2" :color="card.color">
-                                            <v-icon dark small>{{ card.icon }}</v-icon>
-                                        </v-avatar>
-                                        <div>
-                                            <div class="caption grey--text">{{ card.title }}</div>
-                                            <div :class="card.textClass" class="subtitle-2 font-weight-bold">
-                                                {{ card.prefix || '' }}{{ card.value }}
+                            <v-col v-for="(card, idx) in resumenCardsMovil" :key="idx" cols="6">
+                                <v-card outlined class="pa-2 rounded-lg text-center">
+                                    <div class="caption grey--text">{{ card.title }}</div>
+                                    <div :class="card.class" class="subtitle-2 font-weight-bold">
+                                        {{ card.prefix || '' }}{{ card.value }}
+                                    </div>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                    </v-card-text>
+
+                    <v-card-text v-else class="py-3">
+                        <v-row dense class="align-center">
+                            <v-col cols="12" md="8">
+                                <v-row dense>
+                                    <v-col v-for="(card, idx) in resumenCardsDesktop" :key="idx" cols="6" sm="4" md="2">
+                                        <v-card outlined class="pa-3 rounded-lg">
+                                            <div class="d-flex align-center">
+                                                <v-avatar size="34" class="mr-2" :color="card.color">
+                                                    <v-icon dark small>{{ card.icon }}</v-icon>
+                                                </v-avatar>
+                                                <div>
+                                                    <div class="caption grey--text">{{ card.title }}</div>
+                                                    <div :class="card.textClass" class="subtitle-2 font-weight-bold">
+                                                        {{ card.prefix || '' }}{{ card.value }}
+                                                    </div>
+                                                </div>
                                             </div>
+                                        </v-card>
+                                    </v-col>
+                                </v-row>
+                            </v-col>
+
+                            <v-col cols="12" md="4" class="text-center text-md-right">
+                                <v-btn small color="info" rounded @click="verConsolidadoProductos"
+                                    :disabled="!desserts.length" class="mx-1 mb-1">
+                                    <v-icon left small>mdi-package-variant-closed</v-icon>
+                                    Consolidado
+                                </v-btn>
+                                <v-btn small color="warning" rounded @click="limpiarFiltros" class="mx-1 mb-1">
+                                    <v-icon left small>mdi-filter-remove</v-icon>
+                                    Limpiar
+                                </v-btn>
+                            </v-col>
+                        </v-row>
+                    </v-card-text>
+
+                    <v-divider></v-divider>
+
+                    <div v-if="!$vuetify.breakpoint.smAndDown">
+                        <v-simple-table fixed-header height="60vh" dense class="elevation-0">
+                            <template v-slot:default>
+                                <thead class="grey darken-3">
+                                    <tr>
+                                        <th class="text-left">Correlativo</th>
+                                        <th class="text-left">Cliente</th>
+                                        <th class="text-left">Fecha</th>
+                                        <th class="text-left">Vendedor</th>
+                                        <th class="text-center">Estado</th>
+                                        <th class="text-center">Tipo Venta</th>
+                                        <th class="text-right">Total</th>
+                                        <th class="text-center">Deuda</th>
+                                        <th class="text-center">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-if="!listafiltrada.length">
+                                        <td colspan="9" class="text-center grey--text text-caption py-4">
+                                            Sin resultados para el cliente seleccionado.
+                                        </td>
+                                    </tr>
+                                    <tr v-for="item in listafiltrada" :key="item.numeracion">
+                                        <td class="caption font-weight-medium">{{ item.numeracion }}</td>
+                                        <td class="caption">{{ item.dni }} / {{ item.cliente }}</td>
+                                        <td class="caption">{{ conviertefecha(item.fecha) }}</td>
+                                        <td class="caption">{{ item.vendedor_nombre || 'No especificado' }}</td>
+                                        <td class="text-center">
+                                            <v-chip x-small :color="asigna_color_doc_chip(item)" dark>
+                                                {{ item.estado }}
+                                            </v-chip>
+                                        </td>
+                                        <td class="text-center caption">
+                                            <v-chip x-small outlined :color="getTipoVentaColor(item)" dark>
+                                                {{ getTipoVenta(item) }}
+                                            </v-chip>
+                                        </td>
+                                        <td class="text-right font-weight-bold">
+                                            {{ monedaSimbolo }}{{ redondear(item.total - item.descuentos) }}
+                                        </td>
+                                        <td class="text-center">
+                                            <div v-if="item.deudaPendiente > 0">
+                                                <v-chip x-small outlined color="red" dark
+                                                    @click="verDeudasCliente(item)">
+                                                    {{ monedaSimbolo }}{{ redondear(item.deudaPendiente) }}
+                                                    <v-icon x-small right>mdi-alert</v-icon>
+                                                </v-chip>
+                                            </div>
+                                            <div v-else>
+                                                <v-chip x-small outlined color="green" dark>
+                                                    {{ monedaSimbolo }}0.00
+                                                </v-chip>
+                                            </div>
+                                        </td>
+                                        <td class="text-center" width="200">
+                                            <v-menu offset-y>
+                                                <template v-slot:activator="{ on, attrs }">
+                                                    <v-btn icon v-bind="attrs" v-on="on" small>
+                                                        <v-icon>mdi-dots-vertical</v-icon>
+                                                    </v-btn>
+                                                </template>
+                                                <v-list dense>
+                                                    <v-list-item @click.prevent="ejecutaConsolida(item.numeracion)">
+                                                        <v-list-item-icon><v-icon
+                                                                color="info">mdi-eye</v-icon></v-list-item-icon>
+                                                        <v-list-item-title>Ver Detalle</v-list-item-title>
+                                                    </v-list-item>
+                                                    <v-list-item @click="verPDF(item, '80')">
+                                                        <v-list-item-icon><v-icon
+                                                                color="red">mdi-printer-pos-outline</v-icon></v-list-item-icon>
+                                                        <v-list-item-title>Ticket 80mm</v-list-item-title>
+                                                    </v-list-item>
+                                                    <v-list-item @click="verPDF(item, 'A4')">
+                                                        <v-list-item-icon><v-icon
+                                                                color="red darken-2">mdi-file-pdf-box</v-icon></v-list-item-icon>
+                                                        <v-list-item-title>PDF A4</v-list-item-title>
+                                                    </v-list-item>
+                                                </v-list>
+                                            </v-menu>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </template>
+                        </v-simple-table>
+                    </div>
+
+                    <!-- CARDS PARA MÓVIL -->
+                    <div v-else class="pa-2">
+                        <div v-if="!listafiltrada.length" class="text-center grey--text text-caption py-8">
+                            Sin resultados para el cliente seleccionado.
+                        </div>
+
+                        <v-card v-for="item in listafiltrada" :key="item.numeracion" class="mb-3 elevation-1" outlined>
+                            <v-card-text class="pa-3">
+                                <div class="d-flex justify-space-between align-start mb-2">
+                                    <div>
+                                        <div class="font-weight-bold caption blue-grey--text text--darken-3">
+                                            {{ item.numeracion }}
+                                        </div>
+                                        <div class="caption grey--text">
+                                            {{ conviertefecha(item.fecha) }}
                                         </div>
                                     </div>
-                                </v-card>
+                                    <div class="text-right">
+                                        <v-chip x-small :color="asigna_color_doc_chip(item)" dark>
+                                            {{ item.estado }}
+                                        </v-chip>
+                                        <v-chip x-small outlined :color="getTipoVentaColor(item)" dark class="ml-1">
+                                            {{ getTipoVenta(item) }}
+                                        </v-chip>
+                                    </div>
+                                </div>
+
+                                <div class="mb-2">
+                                    <div class="caption font-weight-medium">
+                                        {{ item.cliente }}
+                                    </div>
+                                    <div class="caption grey--text">
+                                        DNI: {{ item.dni }}
+                                    </div>
+                                    <div class="caption grey--text">
+                                        Vendedor: {{ item.vendedor_nombre || 'No especificado' }}
+                                    </div>
+                                </div>
+
+                                <v-divider class="my-2"></v-divider>
+                                <div class="d-flex justify-space-between align-center">
+                                    <div>
+                                        <div class="caption grey--text">Total</div>
+                                        <div class="font-weight-bold">
+                                            {{ monedaSimbolo }}{{ redondear(item.total - item.descuentos) }}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="caption grey--text text-right">Deuda</div>
+                                        <div v-if="item.deudaPendiente > 0" class="text-right">
+                                            <v-chip x-small outlined color="red" dark @click="verDeudasCliente(item)">
+                                                {{ monedaSimbolo }}{{ redondear(item.deudaPendiente) }}
+                                            </v-chip>
+                                        </div>
+                                        <div v-else class="text-right">
+                                            <v-chip x-small outlined color="green" dark>
+                                                {{ monedaSimbolo }}0.00
+                                            </v-chip>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <v-divider class="my-2"></v-divider>
+                                <div class="d-flex justify-space-around">
+                                    <v-btn x-small text color="info" @click.prevent="ejecutaConsolida(item.numeracion)">
+                                        <v-icon x-small left>mdi-eye</v-icon>
+                                        Detalle
+                                    </v-btn>
+                                    <v-btn x-small text color="red" @click="verPDF(item, '80')">
+                                        <v-icon x-small left>mdi-printer</v-icon>
+                                        Ticket
+                                    </v-btn>
+                                    <v-btn x-small text color="red darken-2" @click="verPDF(item, 'A4')">
+                                        <v-icon x-small left>mdi-file-pdf</v-icon>
+                                        PDF
+                                    </v-btn>
+                                </div>
+                            </v-card-text>
+                        </v-card>
+                    </div>
+
+                    <v-divider></v-divider>
+                    <v-card-text class="py-3 mb-6">
+                        <v-row dense class="align-center">
+                            <v-col cols="12" md="6">
+                                <div class="d-flex align-center mb-2">
+                                    <span class="caption grey--text mr-2">Leyenda Ticket Promedio:</span>
+                                    <div class="d-flex">
+                                        <v-chip x-small color="green" dark class="mr-1">
+                                            <v-icon x-small left>mdi-circle</v-icon>
+                                            ≥ 600
+                                        </v-chip>
+                                        <v-chip x-small color="orange" dark class="mr-1">
+                                            <v-icon x-small left>mdi-circle</v-icon>
+                                            200-599
+                                        </v-chip>
+                                        <v-chip x-small color="red" dark>
+                                            <v-icon x-small left>mdi-circle</v-icon>
+                                            &lt; 200
+                                        </v-chip>
+                                    </div>
+                                </div>
+                            </v-col>
+
+                            <v-col cols="12" md="6">
+                                <v-row dense>
+                                    <v-col cols="4">
+                                        <v-card outlined class="pa-2 rounded-lg text-center">
+                                            <div class="caption grey--text">Ventas Totales</div>
+                                            <div class="subtitle-2 font-weight-bold blue--text">
+                                                {{ monedaSimbolo }}{{ redondear(resumenFinal.ventasTotales) }}
+                                            </div>
+                                        </v-card>
+                                    </v-col>
+
+                                    <v-col cols="4">
+                                        <v-card outlined class="pa-2 rounded-lg text-center">
+                                            <div class="caption grey--text">Deuda Total</div>
+                                            <div class="subtitle-2 font-weight-bold"
+                                                :class="resumenFinal.deudaTotal > 0 ? 'red--text' : 'green--text'">
+                                                {{ monedaSimbolo }}{{ redondear(resumenFinal.deudaTotal) }}
+                                            </div>
+                                        </v-card>
+                                    </v-col>
+
+                                    <v-col cols="4">
+                                        <v-card outlined class="pa-2 rounded-lg text-center">
+                                            <div class="caption grey--text">N° Compras</div>
+                                            <div class="subtitle-2 font-weight-bold teal--text">
+                                                {{ resumenFinal.numeroPedidos }}
+                                            </div>
+                                        </v-card>
+                                    </v-col>
+                                </v-row>
                             </v-col>
                         </v-row>
-                    </v-col>
-
-                    <v-col cols="12" md="4" class="text-center text-md-right">
-                        <v-btn small color="info" rounded @click="verConsolidadoProductos" :disabled="!desserts.length"
-                            class="mx-1 mb-1">
-                            <v-icon left small>mdi-package-variant-closed</v-icon>
-                            Consolidado
-                        </v-btn>
-                        <v-btn small color="warning" rounded @click="limpiarFiltros" class="mx-1 mb-1">
-                            <v-icon left small>mdi-filter-remove</v-icon>
-                            Limpiar
-                        </v-btn>
-                    </v-col>
-                </v-row>
-            </v-card-text>
-
-            <v-divider></v-divider>
-
-            <div v-if="!$vuetify.breakpoint.smAndDown">
-                <v-simple-table fixed-header height="60vh" dense class="elevation-0">
-                    <template v-slot:default>
-                        <thead class="grey darken-3">
-                            <tr>
-                                <th class="text-left">Correlativo</th>
-                                <th class="text-left">Cliente</th>
-                                <th class="text-left">Fecha</th>
-                                <th class="text-left">Vendedor</th>
-                                <th class="text-center">Estado</th>
-                                <th class="text-center">Tipo Venta</th>
-                                <th class="text-right">Total</th>
-                                <th class="text-center">Deuda</th>
-                                <th class="text-center">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-if="!listafiltrada.length">
-                                <td colspan="9" class="text-center grey--text text-caption py-4">
-                                    Sin resultados para el cliente seleccionado.
-                                </td>
-                            </tr>
-                            <tr v-for="item in listafiltrada" :key="item.numeracion">
-                                <td class="caption font-weight-medium">{{ item.numeracion }}</td>
-                                <td class="caption">{{ item.dni }} / {{ item.cliente }}</td>
-                                <td class="caption">{{ conviertefecha(item.fecha) }}</td>
-                                <td class="caption">{{ item.vendedor_nombre || 'No especificado' }}</td>
-                                <td class="text-center">
-                                    <v-chip x-small :color="asigna_color_doc_chip(item)" dark>
-                                        {{ item.estado }}
-                                    </v-chip>
-                                </td>
-                                <td class="text-center caption">
-                                    <v-chip x-small outlined :color="getTipoVentaColor(item)" dark>
-                                        {{ getTipoVenta(item) }}
-                                    </v-chip>
-                                </td>
-                                <td class="text-right font-weight-bold">
-                                    {{ monedaSimbolo }}{{ redondear(item.total - item.descuentos) }}
-                                </td>
-                                <td class="text-center">
-                                    <div v-if="item.deudaPendiente > 0">
-                                        <v-chip x-small outlined color="red" dark @click="verDeudasCliente(item)">
-                                            {{ monedaSimbolo }}{{ redondear(item.deudaPendiente) }}
-                                            <v-icon x-small right>mdi-alert</v-icon>
-                                        </v-chip>
-                                    </div>
-                                    <div v-else>
-                                        <v-chip x-small outlined color="green" dark>
-                                            {{ monedaSimbolo }}0.00
-                                        </v-chip>
-                                    </div>
-                                </td>
-                                <td class="text-center" width="200">
-                                    <v-menu offset-y>
-                                        <template v-slot:activator="{ on, attrs }">
-                                            <v-btn icon v-bind="attrs" v-on="on" small>
-                                                <v-icon>mdi-dots-vertical</v-icon>
-                                            </v-btn>
-                                        </template>
-                                        <v-list dense>
-                                            <v-list-item @click.prevent="ejecutaConsolida(item.numeracion)">
-                                                <v-list-item-icon><v-icon
-                                                        color="info">mdi-eye</v-icon></v-list-item-icon>
-                                                <v-list-item-title>Ver Detalle</v-list-item-title>
-                                            </v-list-item>
-                                            <v-list-item @click="verPDF(item, '80')">
-                                                <v-list-item-icon><v-icon
-                                                        color="red">mdi-printer-pos-outline</v-icon></v-list-item-icon>
-                                                <v-list-item-title>Ticket 80mm</v-list-item-title>
-                                            </v-list-item>
-                                            <v-list-item @click="verPDF(item, 'A4')">
-                                                <v-list-item-icon><v-icon
-                                                        color="red darken-2">mdi-file-pdf-box</v-icon></v-list-item-icon>
-                                                <v-list-item-title>PDF A4</v-list-item-title>
-                                            </v-list-item>
-                                        </v-list>
-                                    </v-menu>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </template>
-                </v-simple-table>
-            </div>
-
-            <!-- CARDS PARA MÓVIL -->
-            <div v-else class="pa-2">
-                <div v-if="!listafiltrada.length" class="text-center grey--text text-caption py-8">
-                    Sin resultados para el cliente seleccionado.
-                </div>
-
-                <v-card v-for="item in listafiltrada" :key="item.numeracion" class="mb-3 elevation-1" outlined>
-                    <v-card-text class="pa-3">
-                        <div class="d-flex justify-space-between align-start mb-2">
-                            <div>
-                                <div class="font-weight-bold caption blue-grey--text text--darken-3">
-                                    {{ item.numeracion }}
-                                </div>
-                                <div class="caption grey--text">
-                                    {{ conviertefecha(item.fecha) }}
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <v-chip x-small :color="asigna_color_doc_chip(item)" dark>
-                                    {{ item.estado }}
-                                </v-chip>
-                                <v-chip x-small outlined :color="getTipoVentaColor(item)" dark class="ml-1">
-                                    {{ getTipoVenta(item) }}
-                                </v-chip>
-                            </div>
-                        </div>
-
-                        <div class="mb-2">
-                            <div class="caption font-weight-medium">
-                                {{ item.cliente }}
-                            </div>
-                            <div class="caption grey--text">
-                                DNI: {{ item.dni }}
-                            </div>
-                            <div class="caption grey--text">
-                                Vendedor: {{ item.vendedor_nombre || 'No especificado' }}
-                            </div>
-                        </div>
-
-                        <v-divider class="my-2"></v-divider>
-                        <div class="d-flex justify-space-between align-center">
-                            <div>
-                                <div class="caption grey--text">Total</div>
-                                <div class="font-weight-bold">
-                                    {{ monedaSimbolo }}{{ redondear(item.total - item.descuentos) }}
-                                </div>
-                            </div>
-                            <div>
-                                <div class="caption grey--text text-right">Deuda</div>
-                                <div v-if="item.deudaPendiente > 0" class="text-right">
-                                    <v-chip x-small outlined color="red" dark @click="verDeudasCliente(item)">
-                                        {{ monedaSimbolo }}{{ redondear(item.deudaPendiente) }}
-                                    </v-chip>
-                                </div>
-                                <div v-else class="text-right">
-                                    <v-chip x-small outlined color="green" dark>
-                                        {{ monedaSimbolo }}0.00
-                                    </v-chip>
-                                </div>
-                            </div>
-                        </div>
-
-                        <v-divider class="my-2"></v-divider>
-                        <div class="d-flex justify-space-around">
-                            <v-btn x-small text color="info" @click.prevent="ejecutaConsolida(item.numeracion)">
-                                <v-icon x-small left>mdi-eye</v-icon>
-                                Detalle
-                            </v-btn>
-                            <v-btn x-small text color="red" @click="verPDF(item, '80')">
-                                <v-icon x-small left>mdi-printer</v-icon>
-                                Ticket
-                            </v-btn>
-                            <v-btn x-small text color="red darken-2" @click="verPDF(item, 'A4')">
-                                <v-icon x-small left>mdi-file-pdf</v-icon>
-                                PDF
-                            </v-btn>
-                        </div>
                     </v-card-text>
-                </v-card>
-            </div>
+                </v-tab-item>
 
-            <v-divider></v-divider>
-            <v-card-text class="py-3 mb-6">
-                <v-row dense class="align-center">
-                    <v-col cols="12" md="6">
-                        <div class="d-flex align-center mb-2">
-                            <span class="caption grey--text mr-2">Leyenda Ticket Promedio:</span>
-                            <div class="d-flex">
-                                <v-chip x-small color="green" dark class="mr-1">
-                                    <v-icon x-small left>mdi-circle</v-icon>
-                                    ≥ 600
-                                </v-chip>
-                                <v-chip x-small color="orange" dark class="mr-1">
-                                    <v-icon x-small left>mdi-circle</v-icon>
-                                    200-599
-                                </v-chip>
-                                <v-chip x-small color="red" dark>
-                                    <v-icon x-small left>mdi-circle</v-icon>
-                                    &lt; 200
-                                </v-chip>
-                            </div>
-                        </div>
-                    </v-col>
-
-                    <v-col cols="12" md="6">
-                        <v-row dense>
-                            <v-col cols="4">
-                                <v-card outlined class="pa-2 rounded-lg text-center">
-                                    <div class="caption grey--text">Ventas Totales</div>
-                                    <div class="subtitle-2 font-weight-bold blue--text">
-                                        {{ monedaSimbolo }}{{ redondear(resumenFinal.ventasTotales) }}
-                                    </div>
-                                </v-card>
-                            </v-col>
-
-                            <v-col cols="4">
-                                <v-card outlined class="pa-2 rounded-lg text-center">
-                                    <div class="caption grey--text">Deuda Total</div>
-                                    <div class="subtitle-2 font-weight-bold"
-                                        :class="resumenFinal.deudaTotal > 0 ? 'red--text' : 'green--text'">
-                                        {{ monedaSimbolo }}{{ redondear(resumenFinal.deudaTotal) }}
-                                    </div>
-                                </v-card>
-                            </v-col>
-
-                            <v-col cols="4">
-                                <v-card outlined class="pa-2 rounded-lg text-center">
-                                    <div class="caption grey--text">N° Compras</div>
-                                    <div class="subtitle-2 font-weight-bold teal--text">
-                                        {{ resumenFinal.numeroPedidos }}
-                                    </div>
-                                </v-card>
-                            </v-col>
-                        </v-row>
-                    </v-col>
-                </v-row>
-            </v-card-text>
+                <!-- TAB 2: ANÁLISIS POR CLIENTE -->
+                <v-tab-item eager>
+                    <analisis-cliente :cliente-preseleccionado="clienteParaAnalisis" ref="analisisCliente" />
+                </v-tab-item>
+            </v-tabs-items>
         </v-card>
 
         <v-dialog v-model="dialog" max-width="900px" scrollable>
@@ -515,12 +544,16 @@ import store from '@/store/index'
 import moment from 'moment'
 import { pdfGenera } from '../../pdf_comprobantes'
 import DialDeudasCliente from '@/views/clientes/dialogos/dial_deudas_cliente.vue'
+import AnalisisCliente from '@/views/clientes/AnalisisCliente.vue'
 
 export default {
     components: {
-        DialDeudasCliente
+        DialDeudasCliente,
+        AnalisisCliente
     },
     data: () => ({
+        // Tab actual (0 = Listado, 1 = Análisis)
+        tabActual: 0,
         busca_clientes: false,
         documento: '',
         desserts: [],
@@ -721,6 +754,21 @@ export default {
                     class: 'teal--text'
                 }
             ];
+        },
+
+        clienteParaAnalisis() {
+            if (!this.busca_p) return '';
+            if (this.busca_p.includes('/')) {
+                return this.busca_p;
+            }
+            const clienteEncontrado = this.$store.state.clientessearch.find(
+                c => c.id === this.busca_p
+            );
+
+            if (clienteEncontrado) {
+                return `${clienteEncontrado.id} / ${clienteEncontrado.nombre}`;
+            }
+            return this.busca_p;
         }
     },
 
