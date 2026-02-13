@@ -344,6 +344,7 @@ export default {
           Categoria: it.categoria || '',
           modelo: it.id || '',
           Nombre: it.nombre || '',
+          marca: it.marca || '',
           Medida: it.medida || '',
           Costo: costoN,
           Stock: this.convierte_stock(it.stock, it.factor),
@@ -365,7 +366,7 @@ export default {
 
         const hoja = XLSX.utils.json_to_sheet(data, {
           header: [
-            'CodBarra', 'Categoria', 'modelo', 'Nombre', 'Medida', 'Costo', 'Stock', 'PrecioVenta',
+            'CodBarra', 'Categoria', 'modelo', 'Nombre','marca', 'Medida', 'Costo', 'Stock', 'PrecioVenta',
             'TotalCosto', 'TotalVenta', 'Observacion', 'Sede'
           ]
         })
@@ -382,6 +383,7 @@ export default {
           { wch: 12 },
           { wch: 12 },
           { wch: 25 },
+          { wch: 15 },
           { wch: 15 }
         ]
 
