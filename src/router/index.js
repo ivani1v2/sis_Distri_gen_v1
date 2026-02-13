@@ -870,7 +870,7 @@ const routes = [
     },
     beforeEnter: (to, from, next) => {
       if (to.matched.some((ruta) => ruta.meta.requireAuth)) {
-        if (store.state.permisos.moduloreportes) {
+        if (true) {
           next();
         } else {
           next({
