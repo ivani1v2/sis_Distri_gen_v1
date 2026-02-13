@@ -427,24 +427,24 @@ export default {
         }
     },
     watch: {
-    clientePreseleccionado: {
-        immediate: true,
-        async handler(val) {
-            if (val) {
-                // Asigna el valor al v-model del autocomplete
-                this.clienteSeleccionado = val;
-                
-                // Espera un momento para que el DOM se actualice
-                await this.$nextTick();
-                
-                // Consulta automáticamente
-                this.consultarDatos();
-            } else {
-                this.clienteSeleccionado = '';
+        clientePreseleccionado: {
+            immediate: true,
+            async handler(val) {
+                if (val) {
+                    // Asigna el valor al v-model del autocomplete
+                    this.clienteSeleccionado = val;
+
+                    // Espera un momento para que el DOM se actualice
+                    await this.$nextTick();
+
+                    // Consulta automáticamente
+                    this.consultarDatos();
+                } else {
+                    this.clienteSeleccionado = '';
+                }
             }
         }
-    }
-},
+    },
     methods: {
         getTicketTexto(ticket) {
             const val = Number(ticket || 0);
@@ -581,7 +581,6 @@ export default {
                     num_directo: Number(row.num_directo || 0),
                     num_contado: Number(row.num_contado || 0),
                     num_credito: Number(row.num_credito || 0),
-                    num_otro_pago: Number(row.num_otro_pago || 0),
                     total_pedidos: Number(row.total_pedidos || 0),
                     total_directo: Number(row.total_directo || 0),
                     total_contado: Number(row.total_contado || 0),
@@ -592,7 +591,14 @@ export default {
                     ticket_prom_credito: Number(row.ticket_prom_credito || 0),
                     anio: Number(row.anio || 0),
                     mes: Number(row.mes || 0),
-                    top_5_productos: row.top_5_productos || []
+                    top_5_productos: (row.top_5_productos || []).map(prod => ({
+                        ranking: prod.ranking,
+                        codigo_producto: prod.producto_id || 'S/C',
+                        nombre_producto: prod.producto_nombre || 'SIN NOMBRE',
+                        cantidad_total: Number(prod.cantidad_total || 0),
+                        monto_total: Number(prod.monto_total || 0),
+                        veces_comprado: Number(prod.veces_comprado || 0)
+                    }))
                 }));
 
                 console.log("Datos consultados:", this.datosCliente);
@@ -774,7 +780,7 @@ export default {
             });
         },
 
-        // GRÁFICO 3: Formas de Pago (condicional según cantidad de meses)
+        // GRÁFICO 3: Formas de Pago
         dibujarGraficoPagos() {
             this.destruirGrafico(this.chartPagosInstance);
             const canvas = this.$refs.chartPagos;
@@ -784,9 +790,7 @@ export default {
             const labels = this.datosCliente.map(d => d.eje_x);
             const contado = this.datosCliente.map(d => d.num_contado);
             const credito = this.datosCliente.map(d => d.num_credito);
-            const otro = this.datosCliente.map(d => d.num_otro_pago);
 
-            // Configuración base
             let config = {
                 options: {
                     responsive: true,
@@ -797,23 +801,20 @@ export default {
                 }
             };
 
-            // Si es un solo mes, usar DOUGHNUT
             if (this.esMesUnico) {
                 config.type = 'doughnut';
                 config.data = {
-                    labels: ['Contado', 'Crédito', 'Otro'],
+                    labels: ['Contado', 'Crédito'],
                     datasets: [{
                         data: [
                             contado.reduce((a, b) => a + b, 0),
-                            credito.reduce((a, b) => a + b, 0),
-                            otro.reduce((a, b) => a + b, 0)
+                            credito.reduce((a, b) => a + b, 0)
                         ],
                         backgroundColor: [
                             "rgba(0, 150, 136, 0.8)",
-                            "rgba(255, 152, 0, 0.8)",
-                            "rgba(158, 158, 158, 0.8)"
+                            "rgba(255, 152, 0, 0.8)"
                         ],
-                        borderColor: ["#009688", "#FF9800", "#9E9E9E"],
+                        borderColor: ["#009688", "#FF9800"],
                         borderWidth: 1
                     }]
                 };
@@ -828,7 +829,6 @@ export default {
                     }
                 };
             } else {
-                // Múltiples meses: usar BARRAS
                 config.type = 'bar';
                 config.data = {
                     labels,
@@ -846,13 +846,6 @@ export default {
                             backgroundColor: "rgba(255, 152, 0, 0.8)",
                             borderColor: "#FF9800",
                             borderWidth: 1
-                        },
-                        {
-                            label: "Otro",
-                            data: otro,
-                            backgroundColor: "rgba(158, 158, 158, 0.8)",
-                            borderColor: "#9E9E9E",
-                            borderWidth: 1
                         }
                     ]
                 };
@@ -865,7 +858,7 @@ export default {
             this.chartPagosInstance = new Chart(ctx, config);
         },
 
-        // GRÁFICO 4: Ticket Promedio por Tipo (condicional según cantidad de meses)
+        // GRÁFICO 4: Ticket Promedio por Tipo 
         dibujarGraficoTicket() {
             this.destruirGrafico(this.chartTicketInstance);
 
