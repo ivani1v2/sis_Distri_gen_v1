@@ -4,7 +4,7 @@
       <v-icon small color="amber" class="mr-2">mdi-package-variant-closed</v-icon>
       Top 5 Productos Más Vendidos
       <span v-if="productosParaMostrar" class="ml-2 font-weight-black">
-        ({{ productosParaMostrar.totalCantidad }} und)
+        ({{ productosParaMostrar.totalCantidad }} prod)
       </span>
       <v-spacer></v-spacer>
       <v-chip v-if="esMultiMes" x-small color="primary" outlined>
