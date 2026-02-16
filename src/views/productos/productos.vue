@@ -45,12 +45,6 @@
                                 <v-icon left>mdi-gift</v-icon> Configuración de Bonos
                             </v-btn>
                         </v-list-item>
-                        <v-list-item>
-                            <v-btn small color="green" class="mr-n2" @click="analiza_gruposs">
-                                MIGRAR BONO
-                            </v-btn>
-                        </v-list-item>
-
                     </v-list>
                 </v-menu>
             </v-col>
