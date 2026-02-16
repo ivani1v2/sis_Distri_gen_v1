@@ -108,7 +108,7 @@
                     <v-card class="elevation-1 rounded-lg mb-4">
                         <v-card-title class="py-2 px-3 subtitle-2 font-weight-bold blue-grey--text text--darken-2">
                             <v-icon small color="info" class="mr-2">mdi-chart-bar-stacked</v-icon>
-                            Composición: Pedido vs Directo
+                            Composición: Pedido vs Venta Directa
                         </v-card-title>
                         <v-divider></v-divider>
                         <v-card-text class="pa-2" style="height: 300px;">
@@ -135,20 +135,33 @@
                     </v-card>
                 </v-col>
 
-                <!-- GRÁFICO 4: Ticket Promedio -->
+                <!-- GRÁFICO 4: Ventas por Vendedor (NUEVO) -->
                 <v-col cols="12" md="6">
                     <v-card class="elevation-1 rounded-lg mb-4">
                         <v-card-title class="py-2 px-3 subtitle-2 font-weight-bold blue-grey--text text--darken-2">
-                            <v-icon small color="orange" class="mr-2">mdi-ticket-percent</v-icon>
-                            Ticket Promedio por Tipo
+                            <v-icon small color="purple" class="mr-2">mdi-account-tie</v-icon>
+                            Ventas por Vendedor
                             <v-spacer></v-spacer>
-                            <v-chip x-small outlined :color="esMesUnico ? 'purple' : 'orange'">
-                                {{ esMesUnico ? 'Pie' : 'Líneas' }}
+                            <v-chip x-small outlined color="purple">
+                                {{ totalVendedores }} vendedores
                             </v-chip>
                         </v-card-title>
                         <v-divider></v-divider>
                         <v-card-text class="pa-2" style="height: 300px;">
-                            <canvas ref="chartTicket"></canvas>
+                            <canvas ref="chartVendedores"></canvas>
+                        </v-card-text>
+                        <!-- Leyenda de vendedores -->
+                        <v-card-text class="pa-2 pt-0" v-if="vendedoresData.length">
+                            <v-row dense>
+                                <v-col v-for="(vend, idx) in vendedoresData.slice(0, 5)" :key="idx" cols="12" sm="6">
+                                    <div class="d-flex align-center">
+                                        <div class="color-box mr-2"
+                                            :style="{ backgroundColor: coloresVendedores[idx] }"></div>
+                                        <span class="caption font-weight-medium">{{ vend.vendedor }}</span>
+                                        <span class="caption grey--text ml-1">({{ vend.porcentaje }}%)</span>
+                                    </div>
+                                </v-col>
+                            </v-row>
                         </v-card-text>
                     </v-card>
                 </v-col>
@@ -156,8 +169,54 @@
                 <v-col cols="12" md="6">
                     <Top5Productos :datos-cliente="datosCliente" />
                 </v-col>
+
+                <!-- NUEVA FILA DE GRÁFICOS AVANZADOS -->
+                <v-row dense>
+                    <!-- Distribución por segmento de ticket -->
+                    <v-col cols="12" md="4">
+                        <v-card class="elevation-1 rounded-lg mb-4">
+                            <v-card-title class="py-2 px-3 subtitle-2 font-weight-bold blue-grey--text text--darken-2">
+                                <v-icon small color="purple" class="mr-2">mdi-chart-pie</v-icon>
+                                Distribución por Ticket
+                            </v-card-title>
+                            <v-divider></v-divider>
+                            <v-card-text class="pa-2" style="height: 250px;">
+                                <canvas ref="chartSegmentos"></canvas>
+                            </v-card-text>
+                        </v-card>
+                    </v-col>
+
+                    <!-- Horarios de compra -->
+                    <v-col cols="12" md="4">
+                        <v-card class="elevation-1 rounded-lg mb-4">
+                            <v-card-title class="py-2 px-3 subtitle-2 font-weight-bold blue-grey--text text--darken-2">
+                                <v-icon small color="teal" class="mr-2">mdi-clock-outline</v-icon>
+                                Horarios de Compra
+                            </v-card-title>
+                            <v-divider></v-divider>
+                            <v-card-text class="pa-2" style="height: 250px;">
+                                <canvas ref="chartHorarios"></canvas>
+                            </v-card-text>
+                        </v-card>
+                    </v-col>
+
+                    <!-- Días de compra -->
+                    <v-col cols="12" md="4">
+                        <v-card class="elevation-1 rounded-lg mb-4">
+                            <v-card-title class="py-2 px-3 subtitle-2 font-weight-bold blue-grey--text text--darken-2">
+                                <v-icon small color="orange" class="mr-2">mdi-calendar-week</v-icon>
+                                Días de Compra
+                            </v-card-title>
+                            <v-divider></v-divider>
+                            <v-card-text class="pa-2" style="height: 250px;">
+                                <canvas ref="chartDias"></canvas>
+                            </v-card-text>
+                        </v-card>
+                    </v-col>
+                </v-row>
             </v-row>
 
+            <!-- TABLA DE DETALLE MENSUAL -->
             <!-- TABLA DE DETALLE MENSUAL -->
             <v-card class="elevation-1 rounded-lg mb-5">
                 <v-card-title class="py-2 px-3 subtitle-2 font-weight-bold blue-grey--text text--darken-2">
@@ -174,14 +233,43 @@
                             <th class="text-right">Total General</th>
                             <th class="text-center">Ticket Prom.</th>
                             <th class="text-right"># Compras</th>
-                            <th class="text-right">Pedidos</th>
-                            <th class="text-right">Directos</th>
-                            <th class="text-right">Contado</th>
-                            <th class="text-right">Crédito</th>
+                            <th class="text-right">
+                                <v-tooltip top>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <span v-bind="attrs" v-on="on">Pedidos</span>
+                                    </template>
+                                    <span>Ventas por pedido</span>
+                                </v-tooltip>
+                            </th>
+                            <th class="text-right">
+                                <v-tooltip top>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <span v-bind="attrs" v-on="on">Directos</span>
+                                    </template>
+                                    <span>Ventas directas</span>
+                                </v-tooltip>
+                            </th>
+                            <th class="text-right">
+                                <v-tooltip top>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <span v-bind="attrs" v-on="on">Contado</span>
+                                    </template>
+                                    <span>Pagos al contado</span>
+                                </v-tooltip>
+                            </th>
+                            <th class="text-right">
+                                <v-tooltip top>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <span v-bind="attrs" v-on="on">Crédito</span>
+                                    </template>
+                                    <span>Pagos a crédito</span>
+                                </v-tooltip>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="(item, idx) in datosCliente" :key="idx">
+                        <tr v-for="(item, idx) in datosCliente" :key="idx"
+                            :class="{ 'blue-grey lighten-5': idx % 2 === 0 }">
                             <td class="font-weight-medium">
                                 {{ item.mes_nombre_es }} {{ item.anio }}
                             </td>
@@ -194,16 +282,36 @@
                                     {{ getTicketTexto(item.ticket_promedio) }}
                                 </v-chip>
                             </td>
-                            <td class="text-right">{{ item.num_compras_total }}</td>
-                            <td class="text-right blue--text">{{ item.num_pedidos }}</td>
-                            <td class="text-right green--text">{{ item.num_directo }}</td>
-                            <td class="text-right teal--text">{{ item.num_contado }}</td>
-                            <td class="text-right orange--text">{{ item.num_credito }}</td>
+                            <td class="text-right font-weight-medium">{{ item.num_compras_total }}</td>
+                            <td class="text-right">
+                                <v-chip x-small :color="item.num_pedidos > 0 ? 'blue' : 'grey'" text-color="white"
+                                    class="font-weight-bold">
+                                    {{ item.num_pedidos }}
+                                </v-chip>
+                            </td>
+                            <td class="text-right">
+                                <v-chip x-small :color="item.num_directo > 0 ? 'green' : 'grey'" text-color="white"
+                                    class="font-weight-bold">
+                                    {{ item.num_directo }}
+                                </v-chip>
+                            </td>
+                            <td class="text-right">
+                                <v-chip x-small :color="item.num_contado > 0 ? 'teal' : 'grey'" text-color="white"
+                                    class="font-weight-bold">
+                                    {{ item.num_contado }}
+                                </v-chip>
+                            </td>
+                            <td class="text-right">
+                                <v-chip x-small :color="item.num_credito > 0 ? 'orange' : 'grey'" text-color="white"
+                                    class="font-weight-bold">
+                                    {{ item.num_credito }}
+                                </v-chip>
+                            </td>
                         </tr>
-                        <!-- FILA TOTALES -->
-                        <tr class="grey lighten-4 font-weight-bold">
-                            <td>TOTAL</td>
-                            <td class="text-right primary--text">
+                        <!-- FILA TOTALES DESTACADA -->
+                        <tr class="primary lighten-4 font-weight-bold">
+                            <td class="font-weight-bold">TOTAL</td>
+                            <td class="text-right font-weight-bold primary--text">
                                 {{ monedaSimbolo }}{{ formatearNumero(totalesResumen.totalGeneral) }}
                             </td>
                             <td class="text-center">
@@ -212,11 +320,11 @@
                                     {{ getTicketTexto(totalesResumen.ticketPromedio) }}
                                 </v-chip>
                             </td>
-                            <td class="text-right">{{ totalesResumen.numCompras }}</td>
-                            <td class="text-right blue--text">{{ totalesResumen.numPedidos }}</td>
-                            <td class="text-right green--text">{{ totalesResumen.numDirecto }}</td>
-                            <td class="text-right teal--text">{{ totalesResumen.numContado }}</td>
-                            <td class="text-right orange--text">{{ totalesResumen.numCredito }}</td>
+                            <td class="text-right font-weight-bold">{{ totalesResumen.numCompras }}</td>
+                            <td class="text-right font-weight-bold blue--text">{{ totalesResumen.numPedidos }}</td>
+                            <td class="text-right font-weight-bold green--text">{{ totalesResumen.numDirecto }}</td>
+                            <td class="text-right font-weight-bold teal--text">{{ totalesResumen.numContado }}</td>
+                            <td class="text-right font-weight-bold orange--text">{{ totalesResumen.numCredito }}</td>
                         </tr>
                     </tbody>
                 </v-simple-table>
@@ -305,10 +413,45 @@ export default {
                 { text: "Octubre", value: 10 },
                 { text: "Noviembre", value: 11 },
                 { text: "Diciembre", value: 12 }
-            ]
+            ],
+            chartSegmentosInstance: null,
+            chartHorariosInstance: null,
+            chartDiasInstance: null,
+            chartVendedoresInstance: null,
+            coloresVendedores: this.generarColoresVendedores(30)
         };
     },
     computed: {
+        totalVendedores() {
+            return this.vendedoresData.length;
+        },
+        vendedoresData() {
+            if (!this.datosCliente.length) return [];
+
+            const vendMap = new Map();
+            let totalGeneral = 0;
+
+            this.datosCliente.forEach(mes => {
+                (mes.vendedores_data || []).forEach(v => {
+                    const key = v.vendedor;
+                    if (!vendMap.has(key)) {
+                        vendMap.set(key, { total: 0, compras: 0 });
+                    }
+                    const current = vendMap.get(key);
+                    current.total += v.total_vendedor;
+                    current.compras += v.compras_vendedor;
+                    totalGeneral += v.total_vendedor;
+                });
+            });
+
+            const result = Array.from(vendMap.entries()).map(([vendedor, data]) => ({
+                vendedor,
+                total: data.total,
+                compras: data.compras,
+                porcentaje: totalGeneral > 0 ? ((data.total / totalGeneral) * 100).toFixed(1) : 0
+            }));
+            return result.sort((a, b) => b.total - a.total);
+        },
         esMesUnico() {
             return this.datosCliente.length === 1;
         },
@@ -366,6 +509,14 @@ export default {
                 this.datosCliente[this.datosCliente.length - 1] || {};
             const ticketMesActual = ultimoMesData.ticket_promedio || 0;
 
+            const totalDias = this.datosCliente.reduce((sum, d) => sum + (d.dias_con_compras || 0), 0);
+            const totalCompras = this.datosCliente.reduce((sum, d) => sum + d.num_compras_total, 0);
+            const totalMeses = this.datosCliente.length;
+            const frecuencia = totalMeses > 0 ? (totalCompras / totalMeses).toFixed(1) : 0;
+
+            const ticketsAltos = this.datosCliente.reduce((sum, d) => sum + (d.num_tickets_altos || 0), 0);
+            const pctAltos = totalCompras > 0 ? ((ticketsAltos / totalCompras) * 100).toFixed(1) : 0;
+
             return [
                 {
                     title: "Total Período",
@@ -413,7 +564,7 @@ export default {
                     icon: "mdi-trophy",
                     color: "amber",
                     tooltip: "Mes con mayor venta del período"
-                }
+                },
             ];
         },
         mejorMes() {
@@ -431,13 +582,8 @@ export default {
             immediate: true,
             async handler(val) {
                 if (val) {
-                    // Asigna el valor al v-model del autocomplete
                     this.clienteSeleccionado = val;
-
-                    // Espera un momento para que el DOM se actualice
                     await this.$nextTick();
-
-                    // Consulta automáticamente
                     this.consultarDatos();
                 } else {
                     this.clienteSeleccionado = '';
@@ -448,8 +594,8 @@ export default {
     methods: {
         getTicketTexto(ticket) {
             const val = Number(ticket || 0);
-            if (val >= 600) return "RECURRENTE";
-            if (val >= 200) return "REGULAR";
+            if (val >= 600) return "ALTO";
+            if (val >= 200) return "MEDIO";
             return "BAJO";
         },
 
@@ -591,6 +737,18 @@ export default {
                     ticket_prom_credito: Number(row.ticket_prom_credito || 0),
                     anio: Number(row.anio || 0),
                     mes: Number(row.mes || 0),
+                    dias_con_compras: Number(row.dias_con_compras || 0),
+                    compras_por_dia: Number(row.compras_por_dia || 0),
+                    frecuencia_mensual: Number(row.frecuencia_mensual || 0),
+                    num_tickets_altos: Number(row.num_tickets_altos || 0),
+                    num_tickets_medios: Number(row.num_tickets_medios || 0),
+                    num_tickets_bajos: Number(row.num_tickets_bajos || 0),
+                    compras_entre_semana: Number(row.compras_entre_semana || 0),
+                    compras_fin_semana: Number(row.compras_fin_semana || 0),
+                    compras_manana: Number(row.compras_manana || 0),
+                    compras_tarde: Number(row.compras_tarde || 0),
+                    compras_noche: Number(row.compras_noche || 0),
+                    compras_madrugada: Number(row.compras_madrugada || 0),
                     top_5_productos: (row.top_5_productos || []).map(prod => ({
                         ranking: prod.ranking,
                         codigo_producto: prod.producto_id || 'S/C',
@@ -598,12 +756,15 @@ export default {
                         cantidad_total: Number(prod.cantidad_total || 0),
                         monto_total: Number(prod.monto_total || 0),
                         veces_comprado: Number(prod.veces_comprado || 0)
+                    })),
+                    vendedores_data: (row.vendedores_data || []).map(v => ({
+                        vendedor: v.vendedor || 'S/C',
+                        compras_vendedor: Number(v.compras_vendedor || 0),
+                        total_vendedor: Number(v.total_vendedor || 0)
                     }))
                 }));
-
                 console.log("Datos consultados:", this.datosCliente);
 
-                // Inicializar gráficos después de renderizar
                 this.$nextTick(() => {
                     setTimeout(() => {
                         this.inicializarGraficos();
@@ -624,11 +785,14 @@ export default {
         // Inicializar todos los gráficos
         inicializarGraficos() {
             if (!this.datosCliente.length) return;
-
             this.dibujarGraficoEvolucion();
             this.dibujarGraficoVolumen();
             this.dibujarGraficoPagos();
             this.dibujarGraficoTicket();
+            this.dibujarGraficoSegmentos();
+            this.dibujarGraficoVendedores();
+            this.dibujarGraficoHorarios();
+            this.dibujarGraficoDias();
         },
 
         // Destruir gráfico si existe
@@ -955,6 +1119,163 @@ export default {
 
             this.chartTicketInstance = new Chart(ctx, config);
         },
+        dibujarGraficoSegmentos() {
+            this.destruirGrafico(this.chartSegmentosInstance);
+            const canvas = this.$refs.chartSegmentos;
+            if (!canvas || !this.datosCliente.length) return;
+
+            const ctx = canvas.getContext("2d");
+            const total = this.datosCliente.reduce((sum, d) => sum + d.num_compras_total, 0);
+
+            const altos = this.datosCliente.reduce((sum, d) => sum + (d.num_tickets_altos || 0), 0);
+            const medios = this.datosCliente.reduce((sum, d) => sum + (d.num_tickets_medios || 0), 0);
+            const bajos = this.datosCliente.reduce((sum, d) => sum + (d.num_tickets_bajos || 0), 0);
+
+            this.chartSegmentosInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Ticket Alto (≥600)', 'Ticket Medio (200-599)', 'Ticket Bajo (<200)'],
+                    datasets: [{
+                        data: [altos, medios, bajos],
+                        backgroundColor: ['#6FCF97', '#F9A95D', '#F5A3C7'],
+                        borderWidth: 1
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => {
+                                    const value = ctx.raw;
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${ctx.label}: ${value} compras (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        },
+
+        dibujarGraficoHorarios() {
+            this.destruirGrafico(this.chartHorariosInstance);
+            const canvas = this.$refs.chartHorarios;
+            if (!canvas || !this.datosCliente.length) return;
+
+            const ctx = canvas.getContext("2d");
+
+            const manana = this.datosCliente.reduce((sum, d) => sum + (d.compras_manana || 0), 0);
+            const tarde = this.datosCliente.reduce((sum, d) => sum + (d.compras_tarde || 0), 0);
+            const noche = this.datosCliente.reduce((sum, d) => sum + (d.compras_noche || 0), 0);
+            const madrugada = this.datosCliente.reduce((sum, d) => sum + (d.compras_madrugada || 0), 0);
+
+            this.chartHorariosInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Madrugada', 'Mañana', 'Tarde', 'Noche'],
+                    datasets: [{
+                        label: 'Compras',
+                        data: [madrugada, manana, tarde, noche],
+                        backgroundColor: ['#CE93D8', '#64B5F6', '#FFB74D', '#E57373']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        },
+
+        dibujarGraficoDias() {
+            this.destruirGrafico(this.chartDiasInstance);
+            const canvas = this.$refs.chartDias;
+            if (!canvas || !this.datosCliente.length) return;
+
+            const ctx = canvas.getContext("2d");
+
+            const semana = this.datosCliente.reduce((sum, d) => sum + (d.compras_entre_semana || 0), 0);
+            const finSemana = this.datosCliente.reduce((sum, d) => sum + (d.compras_fin_semana || 0), 0);
+
+            this.chartDiasInstance = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Entre Semana', 'Fin de Semana'],
+                    datasets: [{
+                        data: [semana, finSemana],
+                        backgroundColor: ['#5C6BC0', '#F06292']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        },
+        dibujarGraficoVendedores() {
+            this.destruirGrafico(this.chartVendedoresInstance);
+            const canvas = this.$refs.chartVendedores;
+            if (!canvas || !this.vendedoresData.length) return;
+
+            const ctx = canvas.getContext("2d");
+            const labels = this.vendedoresData.map(v => v.vendedor);
+            const data = this.vendedoresData.map(v => v.total);
+
+            this.chartVendedoresInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels,
+                    datasets: [{
+                        data,
+                        backgroundColor: this.coloresVendedores,
+                        borderColor: "white",
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: "65%",
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    const value = context.raw;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${context.label}: ${this.monedaSimbolo}${value.toFixed(2)} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        },
+        generarColoresVendedores(cantidad) {
+            const coloresBase = [
+                '#FCE083', '#A5D6A5', '#FFCC99', '#99CCFF', '#F0B0C0',
+                '#B0E0D0', '#FFD0B0', '#D0C0E0', '#FFF0B0', '#F8C0D0',
+                '#D0F0F0', '#E0F0E0', '#FFF0D0', '#E0D0F0', '#FFD0E0'
+            ];
+
+            if (cantidad <= coloresBase.length) {
+                return coloresBase.slice(0, cantidad);
+            }
+
+            const colores = [...coloresBase];
+            for (let i = coloresBase.length; i < cantidad; i++) {
+                const tono = [0, 30, 60, 120, 180, 210, 240, 270, 300, 330][Math.floor(Math.random() * 10)];
+                const saturacion = 40 + Math.floor(Math.random() * 30);
+                const luminosidad = 70 + Math.floor(Math.random() * 20);
+                colores.push(`hsl(${tono}, ${saturacion}%, ${luminosidad}%)`);
+            }
+            return colores;
+        }
     },
 
     // Limpiar gráficos al destruir componente
@@ -963,6 +1284,10 @@ export default {
         this.destruirGrafico(this.chartVolumenInstance);
         this.destruirGrafico(this.chartPagosInstance);
         this.destruirGrafico(this.chartTicketInstance);
+        this.destruirGrafico(this.chartVendedoresInstance);
+        this.destruirGrafico(this.chartSegmentosInstance);
+        this.destruirGrafico(this.chartHorariosInstance);
+        this.destruirGrafico(this.chartDiasInstance);
     }
 };
 </script>
