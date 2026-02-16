@@ -155,7 +155,7 @@
                                     <v-checkbox v-model="form.kardex_avanzado" label="Kardex Avanzado" />
                                 </v-col>
                                     <v-col cols="12" sm="6" md="4">
-                                    <v-checkbox v-model="form.activos" label="Modulo activos" />
+                                    <v-checkbox v-model="form.mod_activos" label="Modulo activos" />
                                 </v-col>
                                 <v-col cols="6" sm="6" md="4">
                                     <v-text-field dense outlined v-model.trim="form.ruc_asociado"
