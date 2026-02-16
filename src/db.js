@@ -815,6 +815,13 @@ export const nuevoflujo_historial_teso = (array) => {
     .child("flujocaja_historial")
     .push(array);
 };
+
+export const cuentasxcobrar_por_bd = (bd) => {
+  return db
+    .database()
+    .ref(bd)
+    .child("x_cobrar");
+};
 //--------------flujocaja-------------
 export const allflujo = () => {
   return db.database().ref(store.state.baseDatos.bd).child("flujocaja");

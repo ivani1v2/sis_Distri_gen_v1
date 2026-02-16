@@ -8,14 +8,39 @@
         </v-dialog>
         <v-row dense class="mt-n5">
 
-            <v-col cols="12" md="6" xs="12">
+            <v-col cols="12" md="3" xs="12">
                 <h3> T.GENERAL: S/.{{ sumatotal() }} </h3>
                 <h5>APERTURA: {{ fecha_inicio }}</h5>
             </v-col>
-            <v-col cols="12" md="2" xs="12">
-
+            <v-col cols="6" md="2" xs="6">
+                <v-text-field
+                    outlined
+                    dense
+                    type="date"
+                    v-model="filtroFecha1"
+                    label="Desde"
+                    hide-details
+                    prepend-inner-icon="mdi-calendar-start"
+                />
             </v-col>
-            <v-col cols="12" md="4" xs="12">
+            <v-col cols="6" md="2" xs="6">
+                <v-text-field
+                    outlined
+                    dense
+                    type="date"
+                    v-model="filtroFecha2"
+                    label="Hasta"
+                    hide-details
+                    prepend-inner-icon="mdi-calendar-end"
+                />
+            </v-col>
+            <v-col cols="6" md="2" xs="6">
+                <v-btn color="orange darken-1" dark block small @click="dialCuentasCobrar = true">
+                    <v-icon left small>mdi-cash-multiple</v-icon>
+                    Cuentas x Cobrar
+                </v-btn>
+            </v-col>
+            <v-col cols="6" md="3" xs="6">
                 <v-menu bottom offset-y>
                     <template v-slot:activator="{ on, attrs }">
                         <v-btn color="success" block small v-bind="attrs" v-on="on">
@@ -130,11 +155,8 @@
                         </td>
                         <td width="100">
                             <v-row>
-                                <v-col cols="6" xs="6">
+                                <v-col cols="12" xs="12">
                                     <v-icon color="red" @click="abre_editar(item)">mdi-pencil</v-icon>
-                                </v-col>
-                                <v-col cols="6" xs="6">
-                                    <v-icon color="green" @click.prevent="ver_items(item)">mdi-eye</v-icon>
                                 </v-col>
                             </v-row>
                         </td>
@@ -411,6 +433,9 @@
             </v-card>
 
         </v-dialog>
+
+        <!-- Dialog de Cuentas por Cobrar -->
+        <DialCuentasCobrar v-model="dialCuentasCobrar" />
     </div>
 </template>
 
@@ -432,16 +457,23 @@ import {
 } from '../../pdf'
 
 import store from '@/store/index'
+import DialCuentasCobrar from './dial_cuentas_cobrar.vue'
 
 export default {
+    components: {
+        DialCuentasCobrar
+    },
 
     data() {
         return {
             arrayConsolidar: [],
             arra_cods: [],
             dialog: false,
-            date: moment(String(new Date)).format('YYYY-MM-DD'),
-            date2: moment(String(new Date)).format('YYYY-MM-DD'),
+            date: moment().format('YYYY-MM-DD'),
+            date2: moment().format('YYYY-MM-DD'),
+            filtroFecha1: moment().startOf('day').format('YYYY-MM-DD'),
+            filtroFecha2: moment().endOf('day').format('YYYY-MM-DD'),
+            dialCuentasCobrar: false,
             monto_apertura: 0,
             dialogo_apertura: false,
             dial_reportes: false,
@@ -469,7 +501,7 @@ export default {
             monto: '',
             obs: '',
             cabecera: '',
-            fecha_inicio: moment(String(new Date)).format('MM-DD'),
+            fecha_inicio: moment().format('MM-DD'),
             cambia_metodo: false,
             pre_anular: false,
         }
@@ -482,7 +514,18 @@ export default {
     },
     computed: {
         listafiltrada() {
-            return this.desserts
+            // Filtra por rango de fechas si están definidas
+            if (!this.filtroFecha1 || !this.filtroFecha2) {
+                return this.desserts;
+            }
+            
+            const inicio = moment(this.filtroFecha1, 'YYYY-MM-DD').startOf('day').unix();
+            const fin = moment(this.filtroFecha2, 'YYYY-MM-DD').endOf('day').unix();
+            
+            return this.desserts.filter(item => {
+                const fechaItem = item.fecha || 0;
+                return fechaItem >= inicio && fechaItem <= fin;
+            });
         },
     },
     methods: {
@@ -750,7 +793,7 @@ export default {
         ejecutareporte(flujos) {
             var modopagos = store.state.modopagos
             var nuevoArray = []
-            var fecha = moment(String(new Date)).format('YYYY-MM-DD hh:mm A')
+            var fecha = moment().format('YYYY-MM-DD hh:mm A')
             for (var i = 0; i < modopagos.length; i++) {
                 var suma = 0
                 var array = []

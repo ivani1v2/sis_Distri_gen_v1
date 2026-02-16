@@ -6,9 +6,30 @@
 
                 <div class="d-flex align-center">
                     <v-icon color="red" large @click="anterior" title="Reparto Anterior">mdi-arrow-left-bold</v-icon>
-                    <h3 class="text-h6 mx-2">
-                        REPARTO N° {{ router_grupo }}
-                    </h3>
+
+                    <div class="d-flex align-center mx-2">
+                        <span class="text-h6 mr-1">REPARTO N°</span>
+
+                        <template v-if="editandoReparto">
+                            <v-text-field v-model="repartoEditado" @keyup.enter="confirmarCambioReparto" type="number"
+                                dense outlined hide-details style="width: 100px" autofocus
+                                ref="inputReparto"></v-text-field>
+                            <v-btn icon small color="primary" @click="confirmarCambioReparto" class="ml-1"
+                                title="Buscar reparto">
+                                <v-icon>mdi-magnify</v-icon>
+                            </v-btn>
+                            <v-btn icon small @click="cancelarEdicion" class="ml-1" title="Cancelar">
+                                <v-icon>mdi-close</v-icon>
+                            </v-btn>
+                        </template>
+
+                        <span v-else class="text-h6" @click="iniciarEdicion"
+                            style="cursor: pointer; border-bottom: 1px dashed grey;">
+                            {{ router_grupo }}
+                            <v-icon x-small color="grey" class="ml-1">mdi-pencil</v-icon>
+                        </span>
+                    </div>
+
                     <v-icon color="red" large @click="siguiente" title="Reparto Siguiente">mdi-arrow-right-bold</v-icon>
                 </div>
 
@@ -35,7 +56,8 @@
                             <v-list-item-title>Reporte Transporte</v-list-item-title>
                         </v-list-item>
                         <v-list-item @click="pdf_clientes_transporte()">
-                            <v-list-item-icon><v-icon color="teal darken-2">mdi-clipboard-list</v-icon></v-list-item-icon>
+                            <v-list-item-icon><v-icon
+                                    color="teal darken-2">mdi-clipboard-list</v-icon></v-list-item-icon>
                             <v-list-item-title>Lista Clientes (Reparto)</v-list-item-title>
                         </v-list-item>
                         <v-list-item @click="reporte_cobrar()">
@@ -66,8 +88,10 @@
                             <v-list-item-icon><v-icon color="green">mdi-cloud-upload</v-icon></v-list-item-icon>
                             <v-list-item-title>Enviar a Sunat</v-list-item-title>
                         </v-list-item>
-                        <v-list-item @click="abare_guias()">
-                            <v-list-item-icon><v-icon color="cyan darken-2">mdi-file-send</v-icon></v-list-item-icon>
+                        <v-list-item @click="abare_guias()" :disabled="!puedeGenerarGuia">
+                            <v-list-item-icon>
+                                <v-icon :color="puedeGenerarGuia ? 'cyan darken-2' : 'grey'">mdi-file-send</v-icon>
+                            </v-list-item-icon>
                             <v-list-item-title>Generar Guía</v-list-item-title>
                         </v-list-item>
                         <v-list-item @click="transferir_pedidos()">
@@ -75,7 +99,7 @@
                                     color="deep-purple darken-1">mdi-swap-horizontal</v-icon></v-list-item-icon>
                             <v-list-item-title>Transferir Pedidos</v-list-item-title>
                         </v-list-item>
-                        <v-list-item @click="anular_masivo()">
+                        <v-list-item @click="anular_masivo()" :disabled="!puedeAnularMasivo">
                             <v-list-item-icon><v-icon color="red">mdi-cancel</v-icon></v-list-item-icon>
                             <v-list-item-title>Anular Masivo</v-list-item-title>
                         </v-list-item>
@@ -93,7 +117,7 @@
                     <v-col cols="12" sm="4">
                         <h4 class="text-subtitle-1">
                             FECHA TRASLADO: <span class="primary--text">{{ conviertefecha(cabecera_total.fecha_traslado)
-                                }}</span>
+                            }}</span>
                         </h4>
                     </v-col>
                     <v-col cols="12" sm="4">
@@ -108,7 +132,7 @@
                             TOTAL VENTA: <span class="green--text text--darken-2">{{ moneda }} {{ t_general }}</span>
                         </h4>
                         <span class="caption">Contado: {{ moneda }} {{ t_contado }} | Crédito: {{ moneda }} {{ t_credito
-                        }}</span>
+                            }}</span>
                     </v-col>
                 </v-row>
             </v-card-text>
@@ -164,7 +188,7 @@
                                 </v-chip>
                             </td>
                             <td class="text-right caption red--text">{{ item.moneda }}{{ redondear(item.pendiente_pago)
-                                }}</td>
+                            }}</td>
                             <td class="text-right caption font-weight-bold">{{ item.moneda }}{{ redondear(item.total) }}
                             </td>
                             <td class="text-center">
@@ -182,7 +206,8 @@
                                                             color="warning">mdi-eye</v-icon></v-list-item-icon>
                                                     <v-list-item-title>Ver Detalle</v-list-item-title>
                                                 </v-list-item>
-                                                <v-list-item @click='genera_guia(item)'>
+                                                <v-list-item @click='genera_guia(item)'
+                                                    v-if="item.estado !== 'ENVIADO' && item.estado !== 'ANULADO'">
                                                     <v-list-item-icon><v-icon
                                                             color="success">mdi-truck</v-icon></v-list-item-icon>
                                                     <v-list-item-title>Genera Guia Rem</v-list-item-title>
@@ -198,7 +223,7 @@
                                                     <v-list-item-title>Editar (PENDIENTE)</v-list-item-title>
                                                 </v-list-item>
                                                 <v-list-item @click='abrirDialogoAnulacion(item)'
-                                                    v-if="item.estado != 'ANULADO'">
+                                                    v-if="item.estado !== 'ANULADO' && item.estado !== 'ENVIADO'">
                                                     <v-list-item-icon><v-icon
                                                             color="error">mdi-delete</v-icon></v-list-item-icon>
                                                     <v-list-item-title>Anular</v-list-item-title>
@@ -245,7 +270,7 @@
                                     S/.{{ d.precio }}
                                     <strong v-if="d.preciodescuento != 0" class="red--text ml-1">(-S/.{{
                                         d.preciodescuento
-                                        }})</strong>
+                                    }})</strong>
                                 </td>
                                 <td class="text-right caption font-weight-bold">S/.{{
                                     redondear((Number(d.total_antes_impuestos)
@@ -267,7 +292,7 @@
                 <v-card-text class="pt-4">
                     <div class="mb-3 text-subtitle-2 grey--text text--darken-1">
                         Anulando comprobante: <strong class="error--text">{{ comp_anular ? comp_anular.numeracion : ''
-                            }}</strong>
+                        }}</strong>
                     </div>
 
                     <v-select dense outlined clearable :items="motivos_predeterminados"
@@ -275,6 +300,10 @@
 
                     <v-textarea outlined dense auto-grow rows="2" v-model.trim="motivo_anulacion"
                         label="Detalle del motivo (obligatorio)" :rules="[v => !!v || 'Ingrese el motivo']" />
+
+                    <v-checkbox v-model="regresar_pendiente"
+                        label="Si marca la casilla, el pedido a regresará a PENDIENTE, no se revertirá stock" dense
+                        hide-details class="mt-n3" color="warning" />
 
                     <div v-if="error_motivo" class="red--text text-caption mt-1">{{ error_motivo }}</div>
                 </v-card-text>
@@ -329,8 +358,7 @@
         <v-dialog v-model="dialogo_imprime" max-width="490px">
             <v-card class="rounded-lg">
                 <v-toolbar color="teal darken-2" dense dark><v-toolbar-title>Seleccionar
-                        Formato</v-toolbar-title><v-spacer></v-spacer><v-btn icon
-                        @click="dialogo_imprime = false">
+                        Formato</v-toolbar-title><v-spacer></v-spacer><v-btn icon @click="dialogo_imprime = false">
                         <v-icon>mdi-close</v-icon></v-btn>
                     <v-icon v-if="tiene_permiso_host" small color="orange" class="mr-2" @click="dial_config_host = true"
                         title="Configurar Impresión Host">mdi-cog</v-icon>
@@ -467,6 +495,7 @@ export default {
             ],
             error_motivo: '',
             anulando: false,
+            regresar_pendiente: false,
             seleccionado: [],
             detalle_selecto: [],
             genera_pdf: false,
@@ -521,6 +550,9 @@ export default {
             periodosBD: {},
             _periodoRef: null,
             dial_config_host: false,
+            buscarReparto: '',
+            editandoReparto: false,
+            repartoEditado: '',
         }
     },
     created() {
@@ -569,6 +601,23 @@ export default {
             const fechaRef = this.cabecera_total?.fecha_comprobantes || this.cabecera_total?.fecha_traslado;
             if (!fechaRef) return '';
             return moment.unix(fechaRef).format('YYYY-MM');
+        },
+        // Computed para verificar si hay pedidos con estado ENVIADO
+        tieneEnviados() {
+            return this.desserts.some(p => p.estado === 'ENVIADO');
+        },
+
+        puedeAnularMasivo() {
+            const seleccionados = this.desserts.filter(d => d.consolida);
+            if (seleccionados.length === 0) return false;
+            return seleccionados.every(p =>
+                p.estado !== 'ENVIADO' && p.estado !== 'ANULADO'
+            );
+        },
+        puedeGenerarGuia() {
+            const seleccionados = this.desserts.filter(d => d.consolida);
+            if (seleccionados.length === 0) return false;
+            return seleccionados.every(p => p.estado !== 'ANULADO');
         },
         suma_pedidos() {
             let total = 0;
@@ -641,7 +690,8 @@ export default {
                 total_contado: 0,
                 total_credito: 0,
                 total_general: 0,
-                total_pedidos: 0
+                total_pedidos: 0,
+                total_anulados: 0
             };
 
             // Recorremos todos los comprobantes del reparto
@@ -673,6 +723,31 @@ export default {
             nueva_cabecera_reparto(this.router_grupo + '/total', resumen.total_general);
             nueva_cabecera_reparto(this.router_grupo + '/total_pedidos', resumen.total_pedidos);
             nueva_cabecera_reparto(this.router_grupo + '/resumen', resumen);
+        },
+
+        actualizaEstadoReparto() {
+            const pedidos = this.desserts || [];
+            if (!pedidos.length) return;
+            const estadosValidos = pedidos.filter(p => p.estado);
+            const totalPedidos = estadosValidos.length;
+            const enviados = estadosValidos.filter(p => p.estado === 'ENVIADO').length;
+            const anulados = estadosValidos.filter(p => p.estado === 'ANULADO').length;
+            const pendientes = estadosValidos.filter(p => p.estado === 'PENDIENTE').length;
+            let nuevoEstado = 'PENDIENTE';
+            if (enviados > 0 && (enviados + anulados) === totalPedidos) {
+                nuevoEstado = 'ENVIADO';
+            }
+            else if (enviados === totalPedidos && totalPedidos > 0) {
+                nuevoEstado = 'ENVIADO';
+            }
+            else if (anulados === totalPedidos && totalPedidos > 0) {
+                nuevoEstado = 'ANULADO';
+            }
+            else if (enviados > 0 || anulados > 0) {
+                nuevoEstado = 'PARCIAL';
+            }
+            nueva_cabecera_reparto(this.router_grupo + '/estado', nuevoEstado);
+            nueva_cabecera_reparto(this.router_grupo + '/resumen/total_anulados', anulados);
         },
 
         async transferir_pedidos() {
@@ -1291,6 +1366,47 @@ export default {
 
             }
         },
+        iniciarEdicion() {
+            this.repartoEditado = this.router_grupo;
+            this.editandoReparto = true;
+            this.$nextTick(() => {
+                if (this.$refs.inputReparto) {
+                    this.$refs.inputReparto.focus();
+                    const input = this.$refs.inputReparto.$el.querySelector('input');
+                    if (input) input.select();
+                }
+            });
+        },
+
+        cancelarEdicion() {
+            this.editandoReparto = false;
+            this.repartoEditado = '';
+        },
+
+        confirmarCambioReparto() {
+            if (!this.repartoEditado) {
+                this.cancelarEdicion();
+                return;
+            }
+
+            const repartoBuscado = this.repartoEditado.padStart(4, '0');
+
+            Cabecera_p(repartoBuscado)
+                .once("value")
+                .then((snapshot) => {
+                    if (snapshot.exists()) {
+                        this.router_grupo = repartoBuscado;
+                        this.cancelarEdicion();
+                    } else {
+                        this.$store.commit('dialogosnackbar', 'El reparto no existe');
+                        this.$nextTick(() => {
+                            if (this.$refs.inputReparto) {
+                                this.$refs.inputReparto.focus();
+                            }
+                        });
+                    }
+                });
+        },       
 
         finaliza(data) {
             console.log(data)
@@ -1406,6 +1522,7 @@ export default {
                 };
 
                 await this.api_rest(array, 'sunat_reparto');
+                this.actualizaEstadoReparto();
 
                 this.$store.commit('dialogosnackbar', 'Envío a Sunat iniciado correctamente.');
             } catch (e) {
@@ -1446,6 +1563,7 @@ export default {
             this.motivo_anulacion = '';
             this.motivo_seleccion = null;
             this.error_motivo = '';
+            this.regresar_pendiente = false;
         },
         sincronizaMotivo(val) {
             // Si eligen uno rápido, lo pasa al textarea para permitir edición
@@ -1462,28 +1580,25 @@ export default {
             try {
                 this.anulando = true;
 
-                // 1) Trae detalle
                 const snap = await all_detalle_p(this.router_grupo, this.comp_anular.numeracion).once('value');
                 const val = snap.val() || [];
                 const detalle = Array.isArray(val) ? val : Object.values(val);
 
-                // 2) Cabecera para el API (asegurando id, id_grupo, id_documento)
                 const cabAPI = {
                     ...this.comp_anular,
-                    id: `${this.router_grupo}-${this.comp_anular.numeracion}`,   // requerido por tu Cloud Function
+                    id: `${this.router_grupo}-${this.comp_anular.numeracion}`,
                     id_grupo: this.router_grupo,
                     id_documento: this.comp_anular.numeracion,
                 };
 
-                // 3) Payload + motivo + control de stock
                 const payload = {
                     cabecera: cabAPI,
                     detalle,
-                    control_stock: true,
-                    motivo_anulacion: this.motivo_anulacion, // <-- pásalo para registrar el motivo real
+                    control_stock: !this.regresar_pendiente,
+                    motivo_anulacion: this.motivo_anulacion,
+                    regresar_pendiente: this.regresar_pendiente,
                 };
 
-                // 4) Idempotencia por comprobante
                 const idem = `anula-${this.router_grupo}-${this.comp_anular.numeracion}`;
 
                 await axios.post(
@@ -1496,13 +1611,26 @@ export default {
                     { headers: { 'X-Idempotency-Key': idem } }
                 );
 
-                this.$store.commit('dialogosnackbar', 'Comprobante anulado y stock revertido.');
+                if (this.regresar_pendiente && this.comp_anular.id_pedido) {
+                    await modifica_pedidos(this.comp_anular.id_pedido + '/estado', 'pendiente');
+                }
+
+                this.recalcula_cabecera();
+                this.actualizaEstadoReparto();
+
+                if (this.regresar_pendiente) {
+                    this.$store.commit('dialogosnackbar', 'Comprobante anulado SIN revertir stock. Pedido regresó a pendiente.');
+                } else {
+                    this.$store.commit('dialogosnackbar', 'Comprobante anulado CON reversión de stock.');
+                }
+
                 this.cerrarDialogoAnulacion();
             } catch (e) {
                 console.error(e);
                 this.$store.commit('dialogosnackbar', 'Ocurrió un error al anular.');
             } finally {
                 this.anulando = false;
+                this.regresar_pendiente = false;
             }
         },
 
@@ -1637,6 +1765,7 @@ export default {
 
                 // 6. Feedback al usuario
                 this.$store.commit('dialogosnackbar', 'Comprobantes anulados y devueltos a pendiente.');
+                this.actualizaEstadoReparto();
             } catch (e) {
                 console.error('Error en anular_masivo:', e);
                 alert('Ocurrió un error al intentar anular masivamente.');
