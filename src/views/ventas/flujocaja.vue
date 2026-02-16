@@ -1,6 +1,6 @@
 <template>
     <div class="pa-4">
-        
+
         <v-dialog persistent v-model="dialogoprogress" max-width="250">
             <v-card class="pa-8 text-center rounded-lg">
                 <v-progress-circular :rotate="360" :size="80" :width="10" color="primary" indeterminate />
@@ -24,13 +24,14 @@
                     </v-col>
 
                     <v-col cols="12" md="2" sm="4" class="text-center">
-                        <v-btn small v-if="$store.state.permisos.punto_venta" block  color="error" @click="abrir_caja()">
+                        <v-btn small v-if="$store.state.permisos.punto_venta" block color="error" @click="abrir_caja()">
                             <v-icon left>mdi-cash-register</v-icon> Punto Venta
                         </v-btn>
                     </v-col>
 
                     <v-col cols="12" md="5" sm="8" class="text-right">
-                        <v-menu v-model="menuOpc" bottom offset-y :close-on-content-click="false" nudge-bottom="10" max-width="300">
+                        <v-menu v-model="menuOpc" bottom offset-y :close-on-content-click="false" nudge-bottom="10"
+                            max-width="300">
                             <template v-slot:activator="{ on, attrs }">
                                 <v-btn color="primary" block small v-bind="attrs" v-on="on">
                                     <v-icon left>mdi-tune</v-icon> Opciones de Flujo
@@ -39,8 +40,8 @@
 
                             <v-list dense>
                                 <v-list-item @click.stop>
-                                    <v-select outlined dense v-model="filtroMov" :items="arrayFiltroMov" item-text="text"
-                                        item-value="value" label="Filtrar movimientos" hide-details />
+                                    <v-select outlined dense v-model="filtroMov" :items="arrayFiltroMov"
+                                        item-text="text" item-value="value" label="Filtrar movimientos" hide-details />
                                 </v-list-item>
                                 <v-divider class="my-1"></v-divider>
 
@@ -49,7 +50,8 @@
                                     <v-list-item-title>Inicio / Apertura Caja</v-list-item-title>
                                 </v-list-item>
                                 <v-list-item @click="evento(2)">
-                                    <v-list-item-icon><v-icon color="info">mdi-swap-horizontal</v-icon></v-list-item-icon>
+                                    <v-list-item-icon><v-icon
+                                            color="info">mdi-swap-horizontal</v-icon></v-list-item-icon>
                                     <v-list-item-title>Nuevo Ingreso / Egreso</v-list-item-title>
                                 </v-list-item>
                                 <v-list-item @click="evento(3)">
@@ -61,11 +63,13 @@
                                     <v-list-item-title>Ver Historial</v-list-item-title>
                                 </v-list-item>
                                 <v-list-item @click="dialog_reporte = true">
-                                    <v-list-item-icon><v-icon color="info">mdi-chart-box-outline</v-icon></v-list-item-icon>
+                                    <v-list-item-icon><v-icon
+                                            color="info">mdi-chart-box-outline</v-icon></v-list-item-icon>
                                     <v-list-item-title>Productos Vendidos</v-list-item-title>
                                 </v-list-item>
                                 <v-list-item @click="evento(6)">
-                                    <v-list-item-icon><v-icon color="info">mdi-file-chart-outline</v-icon></v-list-item-icon>
+                                    <v-list-item-icon><v-icon
+                                            color="info">mdi-file-chart-outline</v-icon></v-list-item-icon>
                                     <v-list-item-title>Reporte General</v-list-item-title>
                                 </v-list-item>
                             </v-list>
@@ -74,10 +78,11 @@
                 </v-row>
             </v-card-text>
         </v-card>
-        
+
         <v-row dense>
             <v-col cols="12" md="3" sm="6" v-for="item in suma_reportes()" :key="item.nombre">
-                <v-card class="pa-3 elevation-2 rounded-lg" :color="item.nombre === 'EFE' ? 'amber lighten-5' : 'blue-grey lighten-5'">
+                <v-card class="pa-3 elevation-2 rounded-lg"
+                    :color="item.nombre === 'EFE' ? 'amber lighten-5' : 'blue-grey lighten-5'">
                     <div class="text-subtitle-1 font-weight-bold">{{ item.nombre }}</div>
                     <v-divider class="my-1"></v-divider>
                     <v-row dense class="text-caption font-weight-medium text-center">
@@ -88,7 +93,8 @@
                     <v-row dense class="text-center font-weight-bold">
                         <v-col cols="4" class="green--text text--darken-2">S/.{{ redondear(item.ingreso) }}</v-col>
                         <v-col cols="4" class="red--text text--darken-2">S/.{{ redondear(item.egreso) }}</v-col>
-                        <v-col cols="4" :class="{'green--text': (item.ingreso - item.egreso) >= 0, 'red--text': (item.ingreso - item.egreso) < 0}">
+                        <v-col cols="4"
+                            :class="{ 'green--text': (item.ingreso - item.egreso) >= 0, 'red--text': (item.ingreso - item.egreso) < 0 }">
                             S/.{{ redondear(item.ingreso - item.egreso) }}
                         </v-col>
                     </v-row>
@@ -97,7 +103,7 @@
         </v-row>
 
         <v-divider class="my-4"></v-divider>
-        
+
         <v-simple-table class="elevation-1 rounded-lg" fixed-header height="60vh" dense>
             <template v-slot:default>
                 <thead>
@@ -112,19 +118,18 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="item in listafiltrada" :key="item.id" :class="{ 'grey lighten-4': item.operacion === 'credito' }">
+                    <tr v-for="item in listafiltrada" :key="item.id"
+                        :class="{ 'grey lighten-4': item.operacion === 'credito' }">
                         <td>
-                            <v-chip 
-                                x-small 
-                                :color="item.operacion === 'ingreso' ? 'success' : (item.operacion === 'egreso' ? 'error' : 'primary')" 
-                                dark
-                            >
+                            <v-chip x-small
+                                :color="item.operacion === 'ingreso' ? 'success' : (item.operacion === 'egreso' ? 'error' : 'primary')"
+                                dark>
                                 {{ extrae_texto(item.operacion, 4) }}
                             </v-chip>
                         </td>
                         <td>{{ extrae_texto(item.modo, 4) }}</td>
                         <td><span class="caption">{{ conviertefecha(item.fecha) }}</span></td>
-                        <td class="text-right font-weight-bold" 
+                        <td class="text-right font-weight-bold"
                             :class="{ 'red--text': item.operacion === 'egreso', 'success--text': item.operacion === 'ingreso' }">
                             S/.{{ redondear(item.total) }}
                         </td>
@@ -138,7 +143,8 @@
                             <v-btn icon x-small color="red" @click="abre_editar(item)" title="Ver / Anular">
                                 <v-icon>mdi-pencil</v-icon>
                             </v-btn>
-                            <v-btn icon x-small color="green" @click.prevent="ver_items(item)" title="Ver Detalle Venta">
+                            <v-btn icon x-small color="green" @click.prevent="ver_items(item)"
+                                title="Ver Detalle Venta">
                                 <v-icon>mdi-eye</v-icon>
                             </v-btn>
                         </td>
@@ -149,52 +155,69 @@
 
         <v-dialog v-model="dialogoegreso" max-width="600">
             <v-card class="rounded-lg">
-                <v-toolbar color="info" dense dark><v-toolbar-title>Registro Ingreso / Egreso</v-toolbar-title><v-spacer></v-spacer><v-btn icon @click="dialogoegreso = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-toolbar color="info" dense dark><v-toolbar-title>Registro Ingreso /
+                        Egreso</v-toolbar-title><v-spacer></v-spacer><v-btn icon
+                        @click="dialogoegreso = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
                 <v-card-text class="pa-4">
                     <v-row dense>
-                        <v-col cols="6"><v-text-field type="date" outlined dense v-model="date" label="Fecha"></v-text-field></v-col>
-                        <v-col cols="6"><v-select v-model="operacion" :items="arrayoperacion2" label="Tipo Operación" outlined dense></v-select></v-col>
+                        <v-col cols="6"><v-text-field type="date" outlined dense v-model="date"
+                                label="Fecha"></v-text-field></v-col>
+                        <v-col cols="6"><v-select v-model="operacion" :items="arrayoperacion2" label="Tipo Operación"
+                                outlined dense></v-select></v-col>
                     </v-row>
                     <v-row dense class="mt-n4">
-                        <v-col cols="6"><v-text-field type="number" v-model="monto" label="Monto S/." outlined dense prefix="S/." /></v-col>
-                        <v-col cols="6"><v-select v-model="modo_pago" :items="$store.state.modopagos" label="Modo Pago" outlined dense></v-select></v-col>
+                        <v-col cols="6"><v-text-field type="number" v-model="monto" label="Monto S/." outlined dense
+                                prefix="S/." /></v-col>
+                        <v-col cols="6"><v-select v-model="modo_pago" :items="$store.state.modopagos" label="Modo Pago"
+                                outlined dense></v-select></v-col>
                     </v-row>
                     <v-row dense class="mt-n4">
-                        <v-col cols="12"><v-textarea v-model="obs" auto-grow outlined dense label="Observación" rows="1" /></v-col>
+                        <v-col cols="12"><v-textarea v-model="obs" auto-grow outlined dense label="Observación"
+                                rows="1" /></v-col>
                     </v-row>
                 </v-card-text>
                 <v-card-actions class="pa-4 pt-0">
-                    <v-btn color="green" block large @click="graba()"><v-icon left>mdi-content-save</v-icon> GUARDAR</v-btn>
+                    <v-btn color="green" block large @click="graba()"><v-icon left>mdi-content-save</v-icon>
+                        GUARDAR</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
 
         <v-dialog v-model="dialogoObservacion" max-width="390">
             <v-card class="rounded-lg">
-                <v-toolbar color="red" dense dark><v-toolbar-title>Detalle y Gestión</v-toolbar-title><v-spacer></v-spacer><v-btn icon @click="dialogoObservacion = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-toolbar color="red" dense dark><v-toolbar-title>Detalle y
+                        Gestión</v-toolbar-title><v-spacer></v-spacer><v-btn icon
+                        @click="dialogoObservacion = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
                 <v-card-text class="pa-4">
-                    <h4 class="mb-2">Total: <strong class="success--text">S/.{{ redondear(itemelecto.total) }}</strong></h4>
-                    <h4 class="mb-2">Modo Pago: <strong class="red--text">{{ itemelecto.modo }}</strong> 
-                         <v-btn icon x-small color="green" class="ml-1" @click="cambia_metodo = true" title="Cambiar método de pago"><v-icon small>mdi-lead-pencil</v-icon></v-btn>
+                    <h4 class="mb-2">Total: <strong class="success--text">S/.{{ redondear(itemelecto.total) }}</strong>
+                    </h4>
+                    <h4 class="mb-2">Modo Pago: <strong class="red--text">{{ itemelecto.modo }}</strong>
+                        <v-btn icon x-small color="green" class="ml-1" @click="cambia_metodo = true"
+                            title="Cambiar método de pago"><v-icon small>mdi-lead-pencil</v-icon></v-btn>
                     </h4>
                     <h4 class="mb-4">Observación: {{ itemelecto.observacion }}</h4>
                 </v-card-text>
                 <v-card-actions class="pa-4 pt-0">
-                    <v-btn color="error" block large @click="pre_anular = true"><v-icon left>mdi-delete</v-icon> ANULAR FLUJO</v-btn>
+                    <v-btn color="error" block large @click="pre_anular = true"><v-icon left>mdi-delete</v-icon> ANULAR
+                        FLUJO</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
-        
+
         <v-dialog v-model="pre_anular" max-width="460">
-             <v-card class="rounded-lg">
-                <v-toolbar color="red darken-2" dense dark><v-toolbar-title>Confirmar Anulación (Atención)</v-toolbar-title><v-spacer></v-spacer><v-btn icon @click="pre_anular = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+            <v-card class="rounded-lg">
+                <v-toolbar color="red darken-2" dense dark><v-toolbar-title>Confirmar Anulación
+                        (Atención)</v-toolbar-title><v-spacer></v-spacer><v-btn icon
+                        @click="pre_anular = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
                 <v-card-text class="pa-4 text-center">
                     <h4 class="text-h6 red--text">¡ADVERTENCIA DE ANULACIÓN!</h4>
                     <p class="mt-3 text-subtitle-2">
                         Este proceso anulará **SOLO** la entrada en el **Flujo de Caja**.
                     </p>
                     <p class="caption font-weight-bold">
-                        RECUERDE: Debe anular el comprobante de venta asociado (Boleta/Factura) con una **NOTA DE CRÉDITO** o solicitud de **BAJA** en el sistema de la SUNAT/facturador.
+                        RECUERDE: Debe anular el comprobante de venta asociado (Boleta/Factura) con una **NOTA DE
+                        CRÉDITO** o
+                        solicitud de **BAJA** en el sistema de la SUNAT/facturador.
                     </p>
                 </v-card-text>
                 <v-card-actions class="pa-4 pt-0">
@@ -202,12 +225,15 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
-        
+
         <v-dialog v-model="cambia_metodo" max-width="390">
             <v-card class="rounded-lg">
-                <v-toolbar color="green" dense dark><v-toolbar-title>Cambiar Modo de Pago</v-toolbar-title><v-spacer></v-spacer><v-btn icon @click="cambia_metodo = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
-                 <v-card-text class="pa-4">
-                    <v-select v-model="modo_pago" :items="$store.state.modopagos" label="Nuevo Modo" outlined dense></v-select>
+                <v-toolbar color="green" dense dark><v-toolbar-title>Cambiar Modo de
+                        Pago</v-toolbar-title><v-spacer></v-spacer><v-btn icon
+                        @click="cambia_metodo = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-card-text class="pa-4">
+                    <v-select v-model="modo_pago" :items="$store.state.modopagos" label="Nuevo Modo" outlined
+                        dense></v-select>
                 </v-card-text>
                 <v-card-actions class="pa-4 pt-0">
                     <v-btn color="success" block large @click="cambia_edita_modo()">MODIFICAR</v-btn>
@@ -217,10 +243,14 @@
 
         <v-dialog v-model="dialogocierre" max-width="460">
             <v-card class="rounded-lg">
-                <v-toolbar color="primary" dense dark><v-toolbar-title>Cierre de Caja</v-toolbar-title><v-spacer></v-spacer><v-btn icon @click="dialogocierre = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-toolbar color="primary" dense dark><v-toolbar-title>Cierre de
+                        Caja</v-toolbar-title><v-spacer></v-spacer><v-btn icon
+                        @click="dialogocierre = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
                 <v-card-text class="pa-4">
-                    <v-text-field disabled type="date" outlined dense v-model="date" label="Fecha de Cierre"></v-text-field>
-                    <v-textarea class="mt-n2" dense v-model="observacion" auto-grow filled outlined color="deep-purple" label="Observación del Cierre" rows="1"></v-textarea>
+                    <v-text-field disabled type="date" outlined dense v-model="date"
+                        label="Fecha de Cierre"></v-text-field>
+                    <v-textarea class="mt-n2" dense v-model="observacion" auto-grow filled outlined color="deep-purple"
+                        label="Observación del Cierre" rows="1"></v-textarea>
                 </v-card-text>
                 <v-card-actions class="pa-4 pt-0">
                     <v-btn color="red" large @click="ejecuta_reporte_detallado()">Ver Reporte</v-btn>
@@ -229,13 +259,16 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
-        
+
         <v-dialog v-model="dialogo_apertura" max-width="390">
-             <v-card class="rounded-lg">
-                <v-toolbar color="info" dense dark><v-toolbar-title>Apertura de Caja</v-toolbar-title><v-spacer></v-spacer><v-btn icon @click="dialogo_apertura = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
-                 <v-card-text class="pa-4">
+            <v-card class="rounded-lg">
+                <v-toolbar color="info" dense dark><v-toolbar-title>Apertura de
+                        Caja</v-toolbar-title><v-spacer></v-spacer><v-btn icon
+                        @click="dialogo_apertura = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-card-text class="pa-4">
                     <v-text-field disabled type="date" outlined dense v-model="date" label="Fecha"></v-text-field>
-                    <v-text-field class="mt-n2" outlined type="number" dense v-model="monto_apertura" label="Monto Apertura (Efectivo)" prefix="S/." />
+                    <v-text-field class="mt-n2" outlined type="number" dense v-model="monto_apertura"
+                        label="Monto Apertura (Efectivo)" prefix="S/." />
                     <v-checkbox v-model="guardar_stock" label="Guardar stock actual" class="mt-2" dense></v-checkbox>
                 </v-card-text>
                 <v-card-actions class="pa-4 pt-0">
@@ -248,7 +281,9 @@
 
         <v-dialog v-model="dial_reportes" max-width="390">
             <v-card class="rounded-lg">
-                <v-toolbar color="teal darken-1" dense dark><v-toolbar-title>Generar Reporte General</v-toolbar-title><v-spacer></v-spacer><v-btn icon @click="dial_reportes = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-toolbar color="teal darken-1" dense dark><v-toolbar-title>Generar Reporte
+                        General</v-toolbar-title><v-spacer></v-spacer><v-btn icon
+                        @click="dial_reportes = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
                 <v-card-text class="pa-4">
                     <v-row dense>
                         <v-col cols="6">
@@ -265,10 +300,12 @@
                 </v-card-text>
             </v-card>
         </v-dialog>
-        
+
         <v-dialog v-model="dialog" max-width="850px">
             <v-card class="rounded-lg">
-                <v-toolbar color="primary" dense dark><v-toolbar-title>Detalle de Items</v-toolbar-title><v-spacer></v-spacer><v-btn icon @click="dialog = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
+                <v-toolbar color="primary" dense dark><v-toolbar-title>Detalle de
+                        Items</v-toolbar-title><v-spacer></v-spacer><v-btn icon
+                        @click="dialog = false"><v-icon>mdi-close</v-icon></v-btn></v-toolbar>
                 <v-card-text class="pa-4">
                     <v-simple-table fixed-header height="60vh" dense class="elevation-1">
                         <template v-slot:default>
@@ -287,7 +324,8 @@
                                     <td>{{ item.medida }}</td>
                                     <td class="text-center">{{ item.cantidad }}</td>
                                     <td class="text-right">S/.{{ redondear(item.precioedita) }}</td>
-                                    <td class="text-right font-weight-bold">S/.{{ redondear(item.precioedita * item.cantidad) }}</td>
+                                    <td class="text-right font-weight-bold">S/.{{ redondear(item.precioedita *
+                                        item.cantidad) }}</td>
                                 </tr>
                             </tbody>
                         </template>
@@ -295,7 +333,7 @@
                 </v-card-text>
             </v-card>
         </v-dialog>
-        
+
         <dial_rep_vend v-if="dialog_reporte" :data="desserts" @cierra="dialog_reporte = false" />
 
     </div>
@@ -666,43 +704,126 @@ export default {
         },
         async cierraflujos() {
             this.$store.commit("dialogoprogress", 1);
+            try {
+                // 1) Calcula totales por método con los flujos actuales
+                const tot = this.calcTotalesPorMetodo(this.desserts);
 
-            // 1) Calcula totales por método con los flujos actuales
-            const tot = this.calcTotalesPorMetodo(this.desserts);
+                // 2) Arma registro de historial (incluye desagregado por método)
+                const id_historial = this.generateUUID(); // id para idempotencia
+                const ahora_unix = moment().unix();
 
-            // 2) Arma registro de historial (incluye desagregado por método)
-            const historial = {
-                fecha_inicio: moment().unix(),
-                fecha_cierre: moment().unix(),
-                monto_apertura: 0,
-                ingreso: tot.total_ingreso,
-                egreso: tot.total_egreso,
-                observacion: this.observacion,
-                estado: 'cerrado',
-                data: this.desserts,              // respaldo de movimientos
-                totales_por_modo: tot.por_modo,            // 👈 guardado por método
-                saldos_finales_por_modo: tot.saldos_finales// 👈 saldos finales por método
-            };
+                const historial = {
+                    id_historial,
+                    fecha_inicio: ahora_unix,
+                    fecha_cierre: ahora_unix,
+                    monto_apertura: 0,
+                    ingreso: tot.total_ingreso,
+                    egreso: tot.total_egreso,
+                    observacion: this.observacion || '',
+                    estado: 'cerrado',
+                    data: this.desserts, // respaldo de movimientos
+                    totales_por_modo: tot.por_modo,
+                    saldos_finales_por_modo: tot.saldos_finales
+                };
 
-            // (opcional) genera pdf detallado antes de limpiar
-            this.ejecuta_reporte_detallado();
+                // 3) Guarda historial: con retries y timeout
+                const guardarHistorial = async () => {
+                    // asume que nuevoflujo_historial(historial) => Promise que devuelve { key }
+                    return await nuevoflujo_historial(historial);
+                };
 
-            // 3) Guarda historial y crea movimientos en tesorería (netos por método)
-            const r = await nuevoflujo_historial(historial);
-            await this.crear_flujo_tesoreria(historial, r.key);
+                const r = await this.withTimeout(
+                    this.retryAsync(guardarHistorial, {
+                        retries: 4,
+                        delay: 600,
+                        factor: 2,
+                        onRetry: (att, err) => console.warn('retry guardarHistorial', att, err.message)
+                    }),
+                    15000,
+                    'Guardar historial timeout'
+                );
 
-            // 4) Limpia flujos de la caja actual
-            await elimina_all_flujo();
+                // 4) Crear movimientos de tesorería (netos por método)
+                // encapsular en función para retries
+                const crearTesoreria = async () => {
+                    await this.crear_flujo_tesoreria(historial, r.key);
+                    return true;
+                };
 
-            // 5) Aplica saldos finales como saldos iniciales del NUEVO flujo
-            if (store.state.configuracion.copia_saldos_caja) {
-                await this.aplica_saldos_iniciales(tot.saldos_finales);
+                await this.withTimeout(
+                    this.retryAsync(crearTesoreria, { retries: 3, delay: 500, factor: 2 }),
+                    20000,
+                    'Crear tesorería timeout'
+                );
+
+                // 5) Eliminar todos los flujos: operación crítica. Si falla: guardar pendiente.
+                // intenta elimina_all_flujo() con timeout/retry. Si falla, registra pending action para worker.
+                const eliminaFn = async () => {
+                    return await elimina_all_flujo(); // debe ser Promise
+                };
+
+                try {
+                    await this.withTimeout(this.retryAsync(eliminaFn, { retries: 3, delay: 500, factor: 2 }), 15000, 'Eliminar flujos timeout');
+                } catch (errElimina) {
+                    console.error('No se pudo eliminar flujos directamente:', errElimina);
+
+                    // Guardar acción pendiente en RTDB para que un CF o worker la procese luego
+                    // Supongo que tienes una referencia pública para pending: all_histo_stock / pending_actions
+                    try {
+                        const pendingRef = (bd) => {
+                            // sustituye 'pending_actions' por la ruta que uses
+                            return all_histo_stock().ref.root.child('pending_actions').push();
+                        };
+
+                        await pendingRef().set({
+                            type: 'elimina_all_flujo',
+                            id_historial,
+                            fecha: moment().unix(),
+                            descripcion: 'Eliminar flujos pendiente por fallo en cliente',
+                        });
+                        console.warn('Se registró acción pendiente para eliminar flujos en pending_actions.');
+                    } catch (e) {
+                        console.error('Fallo al registrar pending action para elimina_all_flujo:', e);
+                    }
+                }
+
+                // 6) Aplica saldos finales como saldos iniciales del NUEVO flujo (si está configurado)
+                if (store.state.configuracion.copia_saldos_caja) {
+                    try {
+                        await this.withTimeout(
+                            this.retryAsync(() => this.aplica_saldos_iniciales(tot.saldos_finales), { retries: 3, delay: 500, factor: 2 }),
+                            15000,
+                            'Aplica saldos timeout'
+                        );
+                    } catch (errAplica) {
+                        console.error('No se pudo aplicar saldos iniciales automáticamente:', errAplica);
+                        // Registra pending action para aplicar saldos más tarde
+                        try {
+                            const pendingRef = all_histo_stock().ref.root.child('pending_actions').push();
+                            await pendingRef.set({
+                                type: 'aplica_saldos_iniciales',
+                                id_historial,
+                                saldos_finales: tot.saldos_finales,
+                                fecha: moment().unix()
+                            });
+                        } catch (e) {
+                            console.error('Fallo al guardar pending action aplica_saldos:', e);
+                        }
+                    }
+                }
+
+                // 7) Resultado final: notificar al usuario y limpiar UI
+                this.$store.commit("dialogoprogress", 0);
+                this.dialogocierre = false;
+                this.$store.commit('dialogosnackbar', '✅ Cierre de caja completado (o registrado para reintento si hubo fallos).');
+
+            } catch (err) {
+                console.error('Error en cierraflujos:', err);
+                this.$store.commit("dialogoprogress", 0);
+                this.$store.commit('dialogosnackbar', '❌ Error al cerrar flujos: ' + (err.message || String(err)));
             }
-
-
-            this.$store.commit("dialogoprogress", 0);
-            this.dialogocierre = false;
         },
+
         async crear_flujo_tesoreria(data, key) {
             const ingresosPorModo = {};
             const egresosPorModo = {};
@@ -1002,6 +1123,62 @@ export default {
         redondear(valor) {
             return parseFloat(valor).toFixed(2)
         },
+        // helpers: poner en el mismo archivo o en un util importado
+        sleep(ms) {
+            return new Promise(r => setTimeout(r, ms));
+        },
+
+        async retryAsync(fn, { retries = 3, delay = 500, factor = 2, onRetry } = {}) {
+            let attempt = 0;
+            let currentDelay = delay;
+            while (true) {
+                try {
+                    return await fn();
+                } catch (err) {
+                    attempt++;
+                    if (attempt > retries) throw err;
+                    if (onRetry) onRetry(attempt, err);
+                    await sleep(currentDelay);
+                    currentDelay *= factor;
+                }
+            }
+        },
+
+        withTimeout(promise, ms, message = 'Timeout') {
+            return Promise.race([
+                promise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms))
+            ]);
+        },
+
+        generateUUID() {
+            var dt = new Date().getTime();
+            var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                var r = (dt + Math.random() * 16) % 16 | 0;
+                dt = Math.floor(dt / 16);
+                return (c == 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+            });
+            return uuid;
+        },
+
+        // safeWrite: si falla la escritura (network), se guarda la acción en pending_actions en RTDB
+        async safeWrite(actionPath, payload, fallbackNodeRefFn) {
+            // fallbackNodeRefFn debe devolver una referencia para guardar pending actions (ej: ref('pending_actions').push())
+            try {
+                // intenta escritura normal (payload debe ser el objeto que esperas pasar)
+                return await payload(); // Si payload es función que hace la escritura y retorna Promise
+            } catch (err) {
+                console.error('safeWrite fallo, guardando pending action', actionPath, err);
+                try {
+                    const fallbackRef = fallbackNodeRefFn();
+                    await fallbackRef.set({ actionPath, timestamp: Date.now(), error: String(err) });
+                } catch (e2) {
+                    console.error('safeWrite: error al guardar pending action', e2);
+                }
+                throw err; // re-lanzar para que el flujo principal sepa que hubo fallo
+            }
+        },
+
 
     }
 

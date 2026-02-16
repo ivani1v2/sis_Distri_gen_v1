@@ -29,7 +29,7 @@
                 <v-icon color="green">mdi-whatsapp</v-icon>
             </v-btn>
         </v-app-bar>
-        <v-navigation-drawer v-model="drawer" temporary app class="drawer-estilo">
+        <v-navigation-drawer v-model="drawer" temporary app class="drawer-estilo ">
 
             <v-list-item class="pa-4 primary darken-1 white--text">
                 <v-list-item-avatar>
@@ -327,7 +327,7 @@
                     <v-list-item-content><v-list-item-title>Configuración</v-list-item-title></v-list-item-content>
                 </v-list-item>
 
-                <v-list-item link @click.prevent="accion('Cerrar Sesion')">
+                <v-list-item link @click.prevent="accion('Cerrar Sesion')" class="mb-12">
                     <v-list-item-icon><v-icon color="red">mdi-logout-variant</v-icon></v-list-item-icon>
                     <v-list-item-content><v-list-item-title class="font-weight-bold">Cerrar
                             Sesión</v-list-item-title></v-list-item-content>
