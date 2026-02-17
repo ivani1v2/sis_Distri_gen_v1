@@ -43,7 +43,7 @@
             <v-col cols="6" md="3" xs="6">
                 <v-menu bottom offset-y>
                     <template v-slot:activator="{ on, attrs }">
-                        <v-btn color="success" block small v-bind="attrs" v-on="on">
+                        <v-btn color="info" block small v-bind="attrs" v-on="on">
                             Opciones
                             <v-spacer></v-spacer>
                             <v-icon left>
@@ -64,7 +64,7 @@
                         </v-list-item>
                         <v-list-item>
                             <v-btn dark small color="info" block @click="evento(3)">
-                                CIERRA CAJA
+                                CIERRA TESORERIA
                             </v-btn>
                         </v-list-item>
                         <v-list-item>
@@ -471,7 +471,8 @@ export default {
             dialog: false,
             date: moment().format('YYYY-MM-DD'),
             date2: moment().format('YYYY-MM-DD'),
-            filtroFecha1: moment().startOf('day').format('YYYY-MM-DD'),
+            filtroFecha1: moment().startOf('month').format('YYYY-MM-DD'),
+
             filtroFecha2: moment().endOf('day').format('YYYY-MM-DD'),
             dialCuentasCobrar: false,
             monto_apertura: 0,
@@ -613,7 +614,7 @@ export default {
             }
         },
         async onDataChange(items) {
-
+            console.log(items.val())
             let array = [];
             items.forEach((item) => {
                 let data = item.val();
