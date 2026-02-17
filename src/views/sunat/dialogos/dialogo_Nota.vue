@@ -156,7 +156,7 @@
                     CORRELATIVO : {{ serienc }}-{{ ordenNcredito }}
                 </v-card-text>
                 <v-card-text>
-                    TOTAL: S/.{{ sumaTotal() }}
+                    TOTAL: {{moneda}}{{ sumaTotal() }}
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
@@ -292,12 +292,16 @@ export default {
         this.dial = true
 
         // copia de items originales (documento relacionado)
+        // copia de items originales (documento relacionado)
         this.itemsOriginales = this.items ? JSON.parse(JSON.stringify(this.items)) : []
+        // asegurar que precioedita tome el valor actual de precio
+        this.itemsOriginales.forEach(it => { it.precioedita = it.precio })
         // por defecto, la NC arranca con todos los items
         this.listaproductos = this.itemsOriginales.map(i => ({ ...i }))
 
+
         this.info_comprobante = this.cabecera || {}
-        this.moneda = this.info_comprobante.moneda || 'S/'
+               this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
     },
     watch: {
         motivo: {
@@ -660,7 +664,7 @@ export default {
                         precioedita: data.precio,
                         tipoproducto: data.tipoproducto,
                         operacion: data.operacion,
-                        factor : data.factor || 1,
+                        factor: data.factor || 1,
                         cargoxconsumo: false,
                         valor_unitario: valor_unitario.toFixed(5),
                         valor_total: valorTotal.toFixed(2),

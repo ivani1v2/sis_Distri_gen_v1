@@ -237,7 +237,7 @@ function generaQR(cabecera) {
   return imgData
 }
 
-function impresionA4(arraydatos, qr, arraycabecera) {
+function impresionA4(arraydatos, qr, arraycabecera, modo) {
   var arraycabe = arraycabecera
   var linea = parseInt(store.state.configImpresora.msuperior)
   var nombreEmpresa = store.state.baseDatos.name
@@ -499,7 +499,10 @@ function impresionA4(arraydatos, qr, arraycabecera) {
   linea = linea + 15
   doc.text('.', 0, linea)
 
-  abre_dialogo_impresion(doc.output('bloburi'))
+  //abre_dialogo_impresion(doc.output('bloburi'))
+      doc.save(
+        arraycabe.serie + "-" + arraycabe.correlativo + ".pdf"
+      );
 
 }
 
