@@ -94,6 +94,11 @@
                                                         color="error">mdi-navigation</v-icon></v-list-item-icon>
                                                 <v-list-item-title>Ir Google Maps</v-list-item-title>
                                             </v-list-item>
+                                            <v-list-item @click="copiarUrlMaps(pedido)">
+                                                <v-list-item-icon><v-icon
+                                                        color="primary">mdi-content-copy</v-icon></v-list-item-icon>
+                                                <v-list-item-title>Copiar URL</v-list-item-title>
+                                            </v-list-item>
                                             <v-list-item @click="item_selecto = pedido; dialogoMapa = true">
                                                 <v-list-item-icon><v-icon
                                                         color="success">mdi-map-marker</v-icon></v-list-item-icon>
@@ -154,6 +159,11 @@
                                             <v-list-item-icon><v-icon
                                                     color="error">mdi-navigation</v-icon></v-list-item-icon>
                                             <v-list-item-title>Ir Google Maps</v-list-item-title>
+                                        </v-list-item>
+                                        <v-list-item @click="copiarUrlMaps(pedido)">
+                                            <v-list-item-icon><v-icon
+                                                    color="primary">mdi-content-copy</v-icon></v-list-item-icon>
+                                            <v-list-item-title>Copiar URL</v-list-item-title>
                                         </v-list-item>
                                         <v-list-item @click="item_selecto = pedido; dialogoMapa = true">
                                             <v-list-item-icon><v-icon
@@ -237,14 +247,14 @@ import dial_rechaza from './dialogos/rechaza_pedido.vue'
 import busca_reparto from './dialogos/buscar_reparto.vue'
 import acepta_pedido from './dialogos/acepta_pedido.vue'
 import cobranza_reparto from './dialogos/cobranza_reparto.vue'
-import { llamarCliente, enviarWhatsApp, irGoogleMaps, chipColor, chipColorEntrega } from './funciones'
+import { llamarCliente, enviarWhatsApp, irGoogleMaps, copiarUrlMaps, chipColor, chipColorEntrega } from './funciones'
 export default {
     components: { dial_mapas, mapa_reparto, dial_rechaza, busca_reparto, acepta_pedido, cobranza_reparto },
     data() {
         return {
             dial_cobranza: false,
             estadoFiltro: 'pendiente',
-            estadosEntrega: ['todos', 'pendiente', 'entregado', 'reprogramado', 'rechazado'],
+            estadosEntrega: ['todos', 'pendiente', 'entregado', 'parcial', 'reprogramado', 'rechazado'],
             dial_repartos: false,
             dialogoMapa: false,
             dialogoMapa_reparto: false,
@@ -442,6 +452,7 @@ export default {
         },
 
         irGoogleMaps,
+        copiarUrlMaps,
         enviarWhatsApp,
         llamarCliente,
         chipColor,

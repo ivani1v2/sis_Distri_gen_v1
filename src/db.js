@@ -1661,6 +1661,19 @@ export const nueva_cabecera_reparto = (id, array) => {
     .child(id)
     .set(array);
 };
+
+export const incrementa_procesados_reparto = (grupo) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("pedidos")
+    .child("cabecera_reparto")
+    .child(grupo)
+    .child("resumen")
+    .child("total_pedidos_procesados")
+    .transaction((current) => (current || 0) + 1);
+};
+
 export const all_Cabecera_p = (grupo) => {
   return db
     .database()
@@ -1862,3 +1875,88 @@ export const consulta_cierre_periodo = (periodo) => {
     .child("cierres")
     .child(periodo);
 }
+
+// ======== GASTOS REPARTO ========
+export const all_gastos_reparto = (grupo) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("pedidos")
+    .child("cabecera_reparto")
+    .child(grupo)
+    .child("d_gastos");
+};
+
+export const nuevo_gasto_reparto = (grupo, array) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("pedidos")
+    .child("cabecera_reparto")
+    .child(grupo)
+    .child("d_gastos")
+    .push(array);
+};
+
+export const elimina_gasto_reparto = (grupo, id) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("pedidos")
+    .child("cabecera_reparto")
+    .child(grupo)
+    .child("d_gastos")
+    .child(id)
+    .remove();
+};
+
+export const edita_gasto_reparto = (grupo, id, data) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("pedidos")
+    .child("cabecera_reparto")
+    .child(grupo)
+    .child("d_gastos")
+    .child(id)
+    .set(data);
+};
+
+// ======== TRANSPORTE REPARTO ========
+export const guarda_transporte_reparto = (grupo, data) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("pedidos")
+    .child("cabecera_reparto")
+    .child(grupo)
+    .child("d_transporte")
+    .set(data);
+};
+
+export const eliminar_transporte_reparto = (grupo) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("pedidos")
+    .child("cabecera_reparto")
+    .child(grupo)
+    .child("d_transporte")
+    .remove();
+};
+
+export const obtener_transporte_reparto = (grupo) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("pedidos")
+    .child("cabecera_reparto")
+    .child(grupo)
+    .child("d_transporte");
+};
+
+// ======== USUARIOS TRANSPORTE ========
+export const allUsuariosTransporte = () => {
+  const rucAsociado = Number(store.state.baseDatos.ruc_asociado);
+  return db.database().ref("usuarios").orderByChild("ruc").equalTo(rucAsociado);
+};

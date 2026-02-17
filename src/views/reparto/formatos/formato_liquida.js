@@ -1,7 +1,25 @@
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
-export const pdfGenera = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "") => {
+// Función para obtener color según estado
+const getEstadoColor = (estado) => {
+    const estadoUpper = String(estado || "").toUpperCase();
+    switch (estadoUpper) {
+        case "ENTREGADO":
+            return [46, 125, 50]; // Verde
+        case "PARCIAL":
+            return [255, 152, 0]; // Naranja
+        case "RECHAZADO":
+            return [211, 47, 47]; // Rojo
+        case "REPROGRAMADO":
+            return [156, 39, 176]; // Púrpura
+        case "PENDIENTE":
+        default:
+            return [100, 100, 100]; // Gris
+    }
+};
+
+export const pdfGenera = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "", gastos = []) => {
     const doc = new jsPDF();
     const moneda = "S/ ";
 
@@ -9,9 +27,10 @@ export const pdfGenera = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "") => {
     // 1) TÍTULO
     // ======================
     doc.setFontSize(16);
-    doc.text(`Liquidación de Reparto ${grupo}`, 14, 18);
+    doc.text(`Liquidación de Reparto N° ${grupo}`, 14, 18);
 
     doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
     doc.text(`Fecha: ${new Date().toLocaleString()}`, 14, 24);
 
     // ======================
@@ -33,14 +52,18 @@ export const pdfGenera = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "") => {
     // ======================
     // 3) RESUMEN GENERAL / POR ESTADO_ENTREGA
     // ======================
+    let y = 30; // Ajustado para empezar justo después de la fecha
+
     const resumenEstados = {
         ENTREGADO: { monto: 0, docs: 0, cobrado: 0 },
+        PARCIAL: { monto: 0, docs: 0, cobrado: 0 },
         RECHAZADO: { monto: 0, docs: 0 },
         PENDIENTE: { monto: 0, docs: 0 }
     };
 
     let totalRechazadoMercGlobal = 0;   // suma de total_rechazado de dataEntrega
     let totalCobradoGlobal = 0;         // suma de total_cobrado de dataEntrega
+    const totalGastos = gastos.reduce((acc, g) => acc + Number(g.monto || 0), 0);
 
     clavesActivas.forEach(num => {
         const cab = cabeceraGrupo[num] || {};
@@ -63,6 +86,10 @@ export const pdfGenera = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "") => {
             resumenEstados.ENTREGADO.monto += montoValido;
             resumenEstados.ENTREGADO.docs += 1;
             resumenEstados.ENTREGADO.cobrado += isNaN(totalCobrado) ? 0 : totalCobrado;
+        } else if (estadoEntrega === "PARCIAL") {
+            resumenEstados.PARCIAL.monto += montoValido;
+            resumenEstados.PARCIAL.docs += 1;
+            resumenEstados.PARCIAL.cobrado += isNaN(totalCobrado) ? 0 : totalCobrado;
         } else if (estadoEntrega === "RECHAZADO") {
             resumenEstados.RECHAZADO.monto += montoValido;
             resumenEstados.RECHAZADO.docs += 1;
@@ -74,51 +101,71 @@ export const pdfGenera = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "") => {
 
     const totalPedidoGlobal =
         resumenEstados.ENTREGADO.monto +
+        resumenEstados.PARCIAL.monto +
         resumenEstados.RECHAZADO.monto +
         resumenEstados.PENDIENTE.monto;
 
-    let y = 32;
-
     doc.setFontSize(11);
+    doc.setTextColor(0, 0, 0);
     doc.text("Resumen general", 14, y);
     y += 4;
 
     // Cuadro pequeño de resumen
+    const bodyResumen = [
+        [
+            "Total pedido",
+            `${moneda}${totalPedidoGlobal.toFixed(2)}`,
+            clavesActivas.length
+        ],
+        [
+            "Entregado (completo)",
+            `${moneda}${resumenEstados.ENTREGADO.monto.toFixed(2)}`,
+            resumenEstados.ENTREGADO.docs
+        ],
+        [
+            "Entregado (parcial) - Cobrado",
+            `${moneda}${resumenEstados.PARCIAL.cobrado.toFixed(2)}`,
+            resumenEstados.PARCIAL.docs
+        ],
+        [
+            "Rechazado (documento completo)",
+            `${moneda}${resumenEstados.RECHAZADO.monto.toFixed(2)}`,
+            resumenEstados.RECHAZADO.docs
+        ],
+        [
+            "Pendiente",
+            `${moneda}${resumenEstados.PENDIENTE.monto.toFixed(2)}`,
+            resumenEstados.PENDIENTE.docs
+        ],
+        [
+            "Cobrado (total)",
+            `${moneda}${totalCobradoGlobal.toFixed(2)}`,
+            ""
+        ],
+        [
+            "Mercadería rechazada (x ítem)",
+            `${moneda}${totalRechazadoMercGlobal.toFixed(2)}`,
+            ""
+        ]
+    ];
+
+    if (gastos.length > 0) {
+        bodyResumen.push([
+            "Gastos del reparto",
+            `${moneda}${totalGastos.toFixed(2)}`,
+            gastos.length
+        ]);
+        bodyResumen.push([
+            "Total neto (cobrado - gastos)",
+            `${moneda}${(totalCobradoGlobal - totalGastos).toFixed(2)}`,
+            ""
+        ]);
+    }
+
     doc.autoTable({
         startY: y,
         head: [["Concepto", "Monto", "N° Comprobantes"]],
-        body: [
-            [
-                "Total pedido",
-                `${moneda}${totalPedidoGlobal.toFixed(2)}`,
-                clavesActivas.length
-            ],
-            [
-                "Entregado (facturado)",
-                `${moneda}${resumenEstados.ENTREGADO.monto.toFixed(2)}`,
-                resumenEstados.ENTREGADO.docs
-            ],
-            [
-                "Rechazado (documento)",
-                `${moneda}${resumenEstados.RECHAZADO.monto.toFixed(2)}`,
-                resumenEstados.RECHAZADO.docs
-            ],
-            [
-                "Pendiente",
-                `${moneda}${resumenEstados.PENDIENTE.monto.toFixed(2)}`,
-                resumenEstados.PENDIENTE.docs
-            ],
-            [
-                "Cobrado (total)",
-                `${moneda}${totalCobradoGlobal.toFixed(2)}`,
-                "" // no aplica n° docs aquí
-            ],
-            [
-                "Mercadería rechazada (x ítem)",
-                `${moneda}${totalRechazadoMercGlobal.toFixed(2)}`,
-                "" // cantidad de ítems la veremos en la tabla de rechazos
-            ]
-        ],
+        body: bodyResumen,
         theme: "grid",
         styles: { fontSize: 9 },
         headStyles: { fillColor: [52, 73, 94] },
@@ -146,6 +193,7 @@ export const pdfGenera = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "") => {
     });
 
     doc.setFontSize(11);
+    doc.setTextColor(0, 0, 0);
     doc.text("Totales por método de pago", 14, y);
 
     const bodyPagos = Object.entries(totalesPorPago).map(([nombre, monto]) => [
@@ -167,7 +215,89 @@ export const pdfGenera = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "") => {
     let finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : y + 15;
 
     // ======================
-    // 5) RESUMEN POR COMPROBANTE
+    // 5) CUADRO DE RECHAZOS (por producto)
+    // ======================
+    const bodyRechazos = [];
+    let totalItemsRechazados = 0;
+
+    clavesActivas.forEach(num => {
+        const ent = dataEntrega[num] || {};
+        (ent.rechazos || []).forEach(r => {
+            const totalLinea = Number(r.total_linea || 0);
+            const cant = Number(r.cantidad || 0);
+            totalItemsRechazados += isNaN(cant) ? 0 : cant;
+
+            bodyRechazos.push([
+                num,
+                r.nombre || "",
+                (r.es_rechazo_parcial ? "UNIDAD" : (r.medida || "")),
+                cant || 0,
+                `${moneda}${Number(r.precio_unit || 0).toFixed(2)}`,
+                `${moneda}${(isNaN(totalLinea) ? 0 : totalLinea).toFixed(2)}`
+            ]);
+        });
+    });
+
+    if (bodyRechazos.length > 0) {
+        finalY += 6;
+        doc.setFontSize(11);
+        doc.text(
+            `Productos rechazados (Ítems: ${totalItemsRechazados} | Total: ${moneda}${totalRechazadoMercGlobal.toFixed(2)})`,
+            14,
+            finalY
+        );
+
+        doc.autoTable({
+            startY: finalY + 3,
+            head: [["Comprobante", "Producto", "Medida", "Cant", "Precio", "Total"]],
+            body: bodyRechazos,
+            theme: "grid",
+            styles: { fontSize: 7 },
+            headStyles: { fillColor: [192, 57, 43] },
+            tableWidth: 182,
+            margin: { left: 14 }
+        });
+
+        finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : finalY + 20;
+    }
+
+    // ======================
+    // 6) GASTOS DEL REPARTO
+    // ======================
+    if (gastos.length > 0) {
+        finalY += 6;
+
+        doc.setFontSize(11);
+        doc.text("Gastos del Reparto", 14, finalY);
+
+        const bodyGastos = gastos.map(g => [
+            g.descripcion || '',
+            g.usuario || '',
+            new Date(g.fecha).toLocaleString(),
+            `${moneda}${Number(g.monto || 0).toFixed(2)}`
+        ]);
+
+        bodyGastos.push([
+            { content: 'TOTAL GASTOS', colSpan: 3, styles: { fontStyle: 'bold' } },
+            { content: `${moneda}${totalGastos.toFixed(2)}`, styles: { fontStyle: 'bold' } }
+        ]);
+
+        doc.autoTable({
+            startY: finalY + 4,
+            head: [["Descripción", "Usuario", "Fecha", "Monto"]],
+            body: bodyGastos,
+            theme: "grid",
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [255, 152, 0] },
+            tableWidth: 182,
+            margin: { left: 14 }
+        });
+
+        finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : finalY + 20;
+    }
+
+    // ======================
+    // 7) DETALLE POR COMPROBANTE (al final)
     // ======================
     finalY += 6;
     doc.setFontSize(11);
@@ -188,7 +318,7 @@ export const pdfGenera = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "") => {
         return [
             num,
             (cab.cliente || "").substring(0, 25),
-            estadoEntrega,
+            { content: estadoEntrega, styles: { textColor: getEstadoColor(estadoEntrega) } },
             `${moneda}${(isNaN(totalPedido) ? 0 : totalPedido).toFixed(2)}`,
             `${moneda}${(isNaN(totalCobrado) ? 0 : totalCobrado).toFixed(2)}`,
             `${moneda}${(isNaN(totalRech) ? 0 : totalRech).toFixed(2)}`
@@ -215,59 +345,13 @@ export const pdfGenera = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "") => {
         margin: { left: 14 }
     });
 
-    finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : finalY + 20;
-
-    // ======================
-    // 6) CUADRO DE RECHAZOS (por producto)
-    // ======================
-    const bodyRechazos = [];
-    let totalItemsRechazados = 0;
-
-    clavesActivas.forEach(num => {
-        const ent = dataEntrega[num] || {};
-        (ent.rechazos || []).forEach(r => {
-            const totalLinea = Number(r.total_linea || 0);
-            const cant = Number(r.cantidad || 0);
-            totalItemsRechazados += isNaN(cant) ? 0 : cant;
-
-            bodyRechazos.push([
-                num,                              // Comprobante
-                r.nombre || "",                  // Producto
-                r.medida || "",                  // Medida
-                cant || 0,                       // Cantidad
-                `${moneda}${Number(r.precio_unit || 0).toFixed(2)}`, // Precio
-                `${moneda}${(isNaN(totalLinea) ? 0 : totalLinea).toFixed(2)}` // Total
-            ]);
-        });
-    });
-
-    if (bodyRechazos.length > 0) {
-        finalY += 6;
-        doc.setFontSize(11);
-        doc.text(
-            `Productos rechazados (Ítems: ${totalItemsRechazados} | Total: ${moneda}${totalRechazadoMercGlobal.toFixed(2)})`,
-            14,
-            finalY
-        );
-
-        doc.autoTable({
-            startY: finalY + 3,
-            head: [["Comprobante", "Producto", "Medida", "Cant", "Precio", "Total"]],
-            body: bodyRechazos,
-            theme: "grid",
-            styles: { fontSize: 7 },
-            headStyles: { fillColor: [192, 57, 43] },
-            tableWidth: 182,
-            margin: { left: 14 }
-        });
-    }
-
     doc.save(`liquidacion_reparto_${grupo || "sin_grupo"}.pdf`);
 };
 
-export const pdfGeneraDetalle = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "") => {
+export const pdfGeneraDetalle = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "", gastos = []) => {
     const doc = new jsPDF();
-    
+    const moneda = "S/ ";
+
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
     doc.text(`Detalle de Reparto ${grupo}`, 14, 18);
@@ -289,164 +373,181 @@ export const pdfGeneraDetalle = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "
         return;
     }
 
-    const resumenPorMoneda = {};
+    // ======================
+    // 1) RESUMEN GENERAL (igual que en Liquidación)
+    // ======================
+    let y = 30;
+
+    // Calcular totales por estado de entrega
+    const resumenEstados = {
+        ENTREGADO: { monto: 0, docs: 0, cobrado: 0 },
+        PARCIAL: { monto: 0, docs: 0, cobrado: 0 },
+        RECHAZADO: { monto: 0, docs: 0, cobrado: 0 },
+        PENDIENTE: { monto: 0, docs: 0, cobrado: 0 }
+    };
+
     let totalRechazadoMercGlobal = 0;
+    let totalCobradoGlobal = 0;
+    const totalGastos = gastos.reduce((acc, g) => acc + Number(g.monto || 0), 0);
 
     clavesActivas.forEach(num => {
         const cab = cabeceraGrupo[num] || {};
         const ent = dataEntrega[num] || {};
 
-        const monedaRaw = cab.moneda || cab.cod_moneda || ent.moneda || "S/";
-        const simbolo = monedaRaw.trim();
+        const estadoEntrega = String(cab.estado_entrega || "").toUpperCase();
+        const totalPedido = cab.total != null
+            ? Number(cab.total)
+            : Number(ent.total_pedido || 0);
 
-        if (!resumenPorMoneda[simbolo]) {
-            resumenPorMoneda[simbolo] = {
-                contado: 0,
-                credito: 0,
-                entregado: 0,
-                rechazado: 0,
-                pendiente: 0,
-                total: 0,
-                pedidos: 0,
-                docsEntregado: 0,
-                docsRechazado: 0,
-                docsPendiente: 0
-            };
-        }
-
-        const totalPedido = cab.total != null ? Number(cab.total) : Number(ent.total_pedido || 0);
-        const montoValido = isNaN(totalPedido) ? 0 : totalPedido;
+        const totalCobrado = Number(ent.total_cobrado || 0);
         const totalRechazado = Number(ent.total_rechazado || 0);
+
+        totalCobradoGlobal += isNaN(totalCobrado) ? 0 : totalCobrado;
         totalRechazadoMercGlobal += isNaN(totalRechazado) ? 0 : totalRechazado;
 
-        const condicion = String(cab.condicion_pago || cab.condicion || "CONTADO").toUpperCase();
-        if (condicion.includes("CREDITO") || condicion.includes("CRÉDITO")) {
-            resumenPorMoneda[simbolo].credito += montoValido;
-        } else {
-            resumenPorMoneda[simbolo].contado += montoValido;
-        }
+        const montoValido = isNaN(totalPedido) ? 0 : totalPedido;
 
-        const estadoEntrega = String(cab.estado_entrega || "").toUpperCase();
         if (estadoEntrega === "ENTREGADO") {
-            resumenPorMoneda[simbolo].entregado += montoValido;
-            resumenPorMoneda[simbolo].docsEntregado += 1;
+            resumenEstados.ENTREGADO.monto += montoValido;
+            resumenEstados.ENTREGADO.cobrado += isNaN(totalCobrado) ? 0 : totalCobrado;
+            resumenEstados.ENTREGADO.docs += 1;
+        } else if (estadoEntrega === "PARCIAL") {
+            resumenEstados.PARCIAL.monto += montoValido;
+            resumenEstados.PARCIAL.cobrado += isNaN(totalCobrado) ? 0 : totalCobrado;
+            resumenEstados.PARCIAL.docs += 1;
         } else if (estadoEntrega === "RECHAZADO") {
-            resumenPorMoneda[simbolo].rechazado += montoValido;
-            resumenPorMoneda[simbolo].docsRechazado += 1;
+            resumenEstados.RECHAZADO.monto += montoValido;
+            resumenEstados.RECHAZADO.cobrado += isNaN(totalCobrado) ? 0 : totalCobrado;
+            resumenEstados.RECHAZADO.docs += 1;
         } else {
-            resumenPorMoneda[simbolo].pendiente += montoValido;
-            resumenPorMoneda[simbolo].docsPendiente += 1;
+            resumenEstados.PENDIENTE.monto += montoValido;
+            resumenEstados.PENDIENTE.cobrado += isNaN(totalCobrado) ? 0 : totalCobrado;
+            resumenEstados.PENDIENTE.docs += 1;
         }
-
-        resumenPorMoneda[simbolo].total += montoValido;
-        resumenPorMoneda[simbolo].pedidos += 1;
     });
 
-    let y = 32;
-    
+    const totalPedidoGlobal =
+        resumenEstados.ENTREGADO.monto +
+        resumenEstados.PARCIAL.monto +
+        resumenEstados.RECHAZADO.monto +
+        resumenEstados.PENDIENTE.monto;
+
+    // Calcular totales por método de pago
+    const totalesPorPago = {};
+    clavesActivas.forEach(num => {
+        const ent = dataEntrega[num] || {};
+        (ent.pagos_entrega || []).forEach(pg => {
+            const nombre = (pg.nombre || "OTROS").toUpperCase();
+            const monto = Number(pg.monto || 0);
+            if (!totalesPorPago[nombre]) {
+                totalesPorPago[nombre] = 0;
+            }
+            totalesPorPago[nombre] += isNaN(monto) ? 0 : monto;
+        });
+    });
+
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
     doc.text("Resumen general", 14, y);
     y += 4;
 
-    const bodyResumen = [];
-    const monedasKeys = Object.keys(resumenPorMoneda);
+    const bodyResumenDetalle = [
+        [
+            "Total pedido",
+            `${moneda}${totalPedidoGlobal.toFixed(2)}`,
+            clavesActivas.length
+        ],
+        [
+            "Entregado (completo)",
+            `${moneda}${resumenEstados.ENTREGADO.monto.toFixed(2)}`,
+            resumenEstados.ENTREGADO.docs
+        ],
+        [
+            "Entregado (parcial) - Cobrado",
+            `${moneda}${resumenEstados.PARCIAL.cobrado.toFixed(2)}`,
+            resumenEstados.PARCIAL.docs
+        ],
+        [
+            "Rechazado (documento)",
+            `${moneda}${resumenEstados.RECHAZADO.monto.toFixed(2)}`,
+            resumenEstados.RECHAZADO.docs
+        ],
+        [
+            "Pendiente",
+            `${moneda}${resumenEstados.PENDIENTE.monto.toFixed(2)}`,
+            resumenEstados.PENDIENTE.docs
+        ],
+        [
+            "Cobrado (total)",
+            `${moneda}${totalCobradoGlobal.toFixed(2)}`,
+            ""
+        ],
+        [
+            "Mercadería rechazada (x ítem)",
+            `${moneda}${totalRechazadoMercGlobal.toFixed(2)}`,
+            ""
+        ]
+    ];
 
-    monedasKeys.forEach(simbolo => {
-        const res = resumenPorMoneda[simbolo];
-        
-        if (monedasKeys.length > 1) {
-            bodyResumen.push([
-                { content: `── ${simbolo} ──`, colSpan: 3, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }
-            ]);
-        }
-
-        bodyResumen.push(
-            ["Total pedido", `${simbolo} ${res.total.toFixed(2)}`, res.pedidos],
-            ["Crédito", `${simbolo} ${res.credito.toFixed(2)}`, ""],
-            ["Entregado", `${simbolo} ${res.entregado.toFixed(2)}`, res.docsEntregado],
-            ["Rechazado (doc)", `${simbolo} ${res.rechazado.toFixed(2)}`, res.docsRechazado],
-            ["Pendiente", `${simbolo} ${res.pendiente.toFixed(2)}`, res.docsPendiente]
-        );
-    });
+    if (gastos.length > 0) {
+        bodyResumenDetalle.push([
+            "Gastos del reparto",
+            `${moneda}${totalGastos.toFixed(2)}`,
+            gastos.length
+        ]);
+        bodyResumenDetalle.push([
+            "Total neto (cobrado - gastos)",
+            `${moneda}${(totalCobradoGlobal - totalGastos).toFixed(2)}`,
+            ""
+        ]);
+    }
 
     doc.autoTable({
         startY: y,
-        head: [["Concepto", "Monto", "N° Docs"]],
-        body: bodyResumen,
+        head: [["Concepto", "Monto", "N° Comprobantes"]],
+        body: bodyResumenDetalle,
         theme: "grid",
         styles: { fontSize: 8 },
         headStyles: { fillColor: [52, 73, 94] },
         tableWidth: 'auto',
-        margin: { left: 14, right: 14 },
-        columnStyles: {
-            0: { cellWidth: 'auto' },
-            1: { cellWidth: 'auto' },
-            2: { cellWidth: 'auto' }
-        }
+        margin: { left: 14, right: 14 }
     });
 
     let finalY = doc.lastAutoTable.finalY + 6;
 
+    // ======================
+    // 2) TOTALES POR MÉTODO DE PAGO
+    // ======================
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
-    doc.text("Detalle por comprobante", 14, finalY);
+    doc.text("Totales por método de pago", 14, finalY);
 
-    const bodyDetalle = clavesActivas.map(num => {
-        const cab = cabeceraGrupo[num] || {};
-        const ent = dataEntrega[num] || {};
-
-        const monedaSimbolo = cab.moneda || cab.cod_moneda || ent.moneda || "S/";
-        const totalPedido = cab.total != null ? Number(cab.total) : Number(ent.total_pedido || 0);
-        const direccion = cab.direccion || cab.cliente_direccion || "";
-        const codVendedor = cab.cod_vendedor || cab.vendedor || cab.vend_code || "";
-        const observacion = cab.observacion || ent.observacion || "";
-
-        return [
-            num,
-            codVendedor,
-            (cab.cliente || "").substring(0, 30),
-            { 
-                content: direccion, 
-                styles: { fontSize: 6 }
-            },
-            `${monedaSimbolo} ${(isNaN(totalPedido) ? 0 : totalPedido).toFixed(2)}`,
-            observacion
-        ];
-    });
+    const bodyPagos = Object.entries(totalesPorPago).map(([nombre, monto]) => [
+        nombre,
+        `${moneda}${monto.toFixed(2)}`
+    ]);
 
     doc.autoTable({
         startY: finalY + 3,
-        head: [["Comprobante", "Vend", "Cliente", "Dirección", "Total", "Observación"]],
-        body: bodyDetalle,
+        head: [["Método de pago", "Monto"]],
+        body: bodyPagos,
         theme: "grid",
-        styles: { 
-            fontSize: 7, 
-            cellPadding: 2,
-            overflow: 'linebreak'
-        },
-        headStyles: { fillColor: [39, 174, 96] },
-        tableWidth: 182,
-        margin: { left: 14 },
-        columnStyles: {
-            0: { cellWidth: 22 },
-            1: { cellWidth: 12 },
-            2: { cellWidth: 28 },
-            3: { cellWidth: 30, fontSize: 6 },
-            4: { cellWidth: 22 },
-            5: { cellWidth: 68 }
-        }
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [41, 128, 185] },
+        tableWidth: 'auto',
+        margin: { left: 14, right: 14 }
     });
 
     finalY = doc.lastAutoTable.finalY + 6;
 
+    // ======================
+    // 3) PRODUCTOS RECHAZADOS
+    // ======================
     const bodyRechazos = [];
     let totalItemsRechazados = 0;
 
     clavesActivas.forEach(num => {
-        const cab = cabeceraGrupo[num] || {};
         const ent = dataEntrega[num] || {};
-        const monedaSimbolo = cab.moneda || cab.cod_moneda || ent.moneda || "S/";
 
         (ent.rechazos || []).forEach(r => {
             const totalLinea = Number(r.total_linea || 0);
@@ -456,10 +557,10 @@ export const pdfGeneraDetalle = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "
             bodyRechazos.push([
                 num,
                 r.nombre || "",
-                r.medida || "",
+                (r.es_rechazo_parcial ? "UNIDAD" : (r.medida || "")),
                 cant || 0,
-                `${monedaSimbolo} ${Number(r.precio_unit || 0).toFixed(2)}`,
-                `${monedaSimbolo} ${(isNaN(totalLinea) ? 0 : totalLinea).toFixed(2)}`
+                `${moneda}${Number(r.precio_unit || 0).toFixed(2)}`,
+                `${moneda}${(isNaN(totalLinea) ? 0 : totalLinea).toFixed(2)}`
             ]);
         });
     });
@@ -468,7 +569,7 @@ export const pdfGeneraDetalle = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.text(
-            `Productos rechazados (Ítems: ${totalItemsRechazados} | Total: S/ ${totalRechazadoMercGlobal.toFixed(2)})`,
+            `Productos rechazados (Ítems: ${totalItemsRechazados} | Total: ${moneda}${totalRechazadoMercGlobal.toFixed(2)})`,
             14,
             finalY
         );
@@ -478,12 +579,11 @@ export const pdfGeneraDetalle = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "
             head: [["Comprobante", "Producto", "Medida", "Cant", "Precio", "Total"]],
             body: bodyRechazos,
             theme: "grid",
-            styles: { 
+            styles: {
                 fontSize: 7,
                 overflow: 'linebreak'
             },
             headStyles: { fillColor: [192, 57, 43] },
-            // ANCHO COMPLETO
             tableWidth: 'auto',
             margin: { left: 14, right: 14 },
             columnStyles: {
@@ -496,6 +596,97 @@ export const pdfGeneraDetalle = (cabeceraGrupo = {}, dataEntrega = {}, grupo = "
             }
         });
     }
+
+    // ======================
+    // 4) GASTOS DEL REPARTO
+    // ======================
+    if (gastos.length > 0) {
+        finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : finalY + 10;
+
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        doc.text("Gastos del Reparto", 14, finalY);
+
+        const bodyGastos = gastos.map(g => [
+            g.descripcion || '',
+            g.usuario || '',
+            new Date(g.fecha).toLocaleString(),
+            `${moneda}${Number(g.monto || 0).toFixed(2)}`
+        ]);
+
+        bodyGastos.push([
+            { content: 'TOTAL GASTOS', colSpan: 3, styles: { fontStyle: 'bold' } },
+            { content: `${moneda}${totalGastos.toFixed(2)}`, styles: { fontStyle: 'bold' } }
+        ]);
+
+        doc.autoTable({
+            startY: finalY + 4,
+            head: [["Descripción", "Usuario", "Fecha", "Monto"]],
+            body: bodyGastos,
+            theme: "grid",
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [255, 152, 0] },
+            tableWidth: 182,
+            margin: { left: 14 }
+        });
+    }
+
+    // ======================
+    // 5) DETALLE POR COMPROBANTE (al final)
+    // ======================
+    finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 6 : finalY + 6;
+
+    doc.setFontSize(11);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Detalle por comprobante", 14, finalY);
+
+    const bodyDetalle = clavesActivas.map(num => {
+        const cab = cabeceraGrupo[num] || {};
+        const ent = dataEntrega[num] || {};
+        const estadoEntrega = String(cab.estado_entrega || "PENDIENTE").toUpperCase();
+
+        const totalPedido = cab.total != null ? Number(cab.total) : Number(ent.total_pedido || 0);
+        const direccion = cab.direccion || cab.cliente_direccion || "";
+        const codVendedor = cab.cod_vendedor || cab.vendedor || cab.vend_code || "";
+        const observacion = cab.observacion || ent.observacion || "";
+
+        return [
+            num,
+            codVendedor,
+            (cab.cliente || "").substring(0, 30),
+            {
+                content: direccion,
+                styles: { fontSize: 6 }
+            },
+            { content: estadoEntrega, styles: { textColor: getEstadoColor(estadoEntrega) } },
+            `${moneda}${(isNaN(totalPedido) ? 0 : totalPedido).toFixed(2)}`,
+            observacion
+        ];
+    });
+
+    doc.autoTable({
+        startY: finalY + 3,
+        head: [["Comprobante", "Vend", "Cliente", "Dirección", "Estado", "Total", "Observación"]],
+        body: bodyDetalle,
+        theme: "grid",
+        styles: {
+            fontSize: 7,
+            cellPadding: 2,
+            overflow: 'linebreak'
+        },
+        headStyles: { fillColor: [39, 174, 96] },
+        tableWidth: 182,
+        margin: { left: 14 },
+        columnStyles: {
+            0: { cellWidth: 22 },
+            1: { cellWidth: 12 },
+            2: { cellWidth: 28 },
+            3: { cellWidth: 30, fontSize: 6 },
+            4: { cellWidth: 18 },
+            5: { cellWidth: 22 },
+            6: { cellWidth: 50 }
+        }
+    });
 
     // Guardar PDF
     doc.save(`detalle_reparto_${grupo || "sin_grupo"}.pdf`);

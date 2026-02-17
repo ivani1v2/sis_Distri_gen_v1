@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <v-container fluid class="pa-0 mb-12">
         <v-toolbar v-if="!isMobile" flat color="white" class="mb-3 rounded-lg elevation-2">
             <v-toolbar-title class="font-weight-bold grey--text text--darken-2">
@@ -98,17 +98,34 @@
                     <thead>
                         <tr>
                             <th class="text-left"># ID</th>
-                            <th class="text-left">📅 Fecha Emision</th>
-                            <th class="text-left">🟢 Estado Sunat</th>
+                            <th class="text-left">Fecha</th>
+                            <th class="text-left">Transporte</th>
+                            <th class="text-left">Estado</th>
                             <th class="text-left">📦 N° Pedidos</th>
                             <th class="text-left">💰 Total ({{ monedaSimbolo }})</th>
-                            <th class="text-center">🛠️ Acciones</th>
+                            <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="pedido in repartosarray" :key="pedido.id">
                             <td class="text-caption font-weight-bold">{{ pedido.id }}</td>
                             <td class="text-caption">{{ pedido.fecha }}</td>
+
+                            <td>
+                                <v-chip v-if="pedido.d_transporte?.usuario_nombre" x-small
+                                    :color="esAdmin ? 'info' : 'grey lighten-2'" :dark="esAdmin" :outlined="!esAdmin"
+                                    :class="{ 'cursor-pointer': esAdmin }"
+                                    @click="esAdmin ? abrirAsignarTransporte(pedido) : null">
+                                    <v-icon x-small left>mdi-account</v-icon>
+                                    {{ pedido.d_transporte.usuario_nombre }}
+                                </v-chip>
+                                <v-chip v-else-if="esAdmin" x-small outlined color="grey"
+                                    @click="abrirAsignarTransporte(pedido)" class="cursor-pointer">
+                                    <v-icon x-small left>mdi-truck-plus</v-icon>
+                                    Sin asignar
+                                </v-chip>
+                                <span v-else class="caption grey--text">-</span>
+                            </td>
 
                             <td>
                                 <div class="d-flex align-center">
@@ -140,7 +157,7 @@
                                     <v-btn x-small :color="getCargaButtonColor(pedido)" class="mx-1 my-1" depressed
                                         rounded elevation="1" @click="abrirCargaProductos(pedido)">
                                         <v-icon left small :color="getCargaIconColor(pedido)">{{ getCargaIcon(pedido)
-                                            }}</v-icon>
+                                        }}</v-icon>
                                         <span :class="getCargaTextClass(pedido)" class="font-weight-medium">
                                             Carga
                                             <template
@@ -150,10 +167,17 @@
                                         </span>
                                     </v-btn>
 
-                                    <v-btn x-small color="indigo lighten-5" class="mx-1 my-1" depressed rounded
-                                        elevation="1" @click="reparto_transporte(pedido)">
-                                        <v-icon left small color="indigo darken-1">mdi-truck-delivery</v-icon>
-                                        <span class="indigo--text text--darken-1 font-weight-medium">Mapa</span>
+                                    <v-btn x-small :color="getMapaButtonColor(pedido)" class="mx-1 my-1" depressed
+                                        rounded elevation="1" @click="reparto_transporte(pedido)">
+                                        <v-icon left small :color="getMapaIconColor(pedido)">{{ getMapaIcon(pedido)
+                                            }}</v-icon>
+                                        <span :class="getMapaTextClass(pedido)" class="font-weight-medium">
+                                            {{ getPorcentajeEntregados(pedido) >= 100 ? 'ENTREGADO' : 'EN REPARTO' }}
+                                            <template
+                                                v-if="getPorcentajeEntregados(pedido) > 0 && getPorcentajeEntregados(pedido) < 100">
+                                                ({{ Math.round(getPorcentajeEntregados(pedido)) }}%)
+                                            </template>
+                                        </span>
                                     </v-btn>
 
                                     <v-menu offset-y left>
@@ -179,6 +203,19 @@
                                                     <v-icon color="error">mdi-printer</v-icon>
                                                 </v-list-item-icon>
                                                 <v-list-item-title>Liquidación Manual PDF</v-list-item-title>
+                                            </v-list-item>
+
+                                            <v-divider v-if="esAdmin" class="my-1"></v-divider>
+
+                                            <v-list-item v-if="esAdmin" @click="abrirAsignarTransporte(pedido)">
+                                                <v-list-item-icon>
+                                                    <v-icon
+                                                        :color="pedido.d_transporte?.usuario_id ? 'success' : 'info'">{{
+                                                            pedido.d_transporte?.usuario_id ? 'mdi-truck-check' :
+                                                                'mdi-truck' }}</v-icon>
+                                                </v-list-item-icon>
+                                                <v-list-item-title>{{ pedido.d_transporte?.usuario_id ? 'Editar Transporte' : 'Asignar Transporte'
+                                                    }}</v-list-item-title>
                                             </v-list-item>
                                         </v-list>
                                     </v-menu>
@@ -236,6 +273,15 @@
                     </div>
                 </v-card-text>
 
+                <!-- Chip de usuario asignado en móvil -->
+                <div v-if="pedido.d_transporte?.usuario_nombre" class="px-3 py-1">
+                    <v-chip x-small :color="esAdmin ? 'info' : 'grey lighten-2'" :dark="esAdmin" :outlined="!esAdmin"
+                        @click="esAdmin ? abrirAsignarTransporte(pedido) : null">
+                        <v-icon x-small left>mdi-account</v-icon>
+                        {{ pedido.d_transporte.usuario_nombre }}
+                    </v-chip>
+                </div>
+
                 <v-divider class="mx-3"></v-divider>
 
                 <v-card-actions class="py-1 px-0 d-flex justify-end align-center">
@@ -256,9 +302,14 @@
                         </span>
                     </v-btn>
 
-                    <v-btn x-small text color="indigo darken-1" class="ml-n1" @click="reparto_transporte(pedido)">
-                        <v-icon left x-small>mdi-truck-delivery</v-icon>
-                        Mapa
+                    <v-btn x-small text :color="getMapaIconColor(pedido)" class="ml-1"
+                        @click="reparto_transporte(pedido)">
+                        <v-icon left x-small>{{ getMapaIcon(pedido) }}</v-icon>
+                        {{ getPorcentajeEntregados(pedido) >= 100 ? 'ENTREGADO' : 'EN REPARTO' }}
+                        <span v-if="getPorcentajeEntregados(pedido) > 0 && getPorcentajeEntregados(pedido) < 100"
+                            class="ml-1 caption">
+                            ({{ Math.round(getPorcentajeEntregados(pedido)) }}%)
+                        </span>
                     </v-btn>
 
                     <v-menu offset-y left>
@@ -282,6 +333,15 @@
                                     <v-icon color="error">mdi-printer</v-icon>
                                 </v-list-item-icon>
                                 <v-list-item-title>Liquidación Manual PDF</v-list-item-title>
+                            </v-list-item>
+
+                            <v-divider v-if="esAdmin" class="my-1"></v-divider>
+
+                            <v-list-item v-if="esAdmin" @click="abrirAsignarTransporte(pedido)">
+                                <v-list-item-icon>
+                                    <v-icon color="info">mdi-truck</v-icon>
+                                </v-list-item-icon>
+                                <v-list-item-title>Asignar Transporte</v-list-item-title>
                             </v-list-item>
                         </v-list>
                     </v-menu>
@@ -377,6 +437,10 @@
         <cobranza_reparto v-if="dial_cobranza" :pedidos="null" :grupo="repartoActual" @cerrar="dial_cobranza = false" />
         <dial_carga_productos v-if="dial_carga" :grupo="grupoCarga" @cerrar="dial_carga = false"
             @guardado="onCargaGuardada" />
+
+        <!-- DIALOG ASIGNAR TRANSPORTE -->
+        <dial_transporte v-model="dial_asignar_transporte" :reparto-id="repartoTransporteActual" @guardado="filtrar"
+            @cierre="dial_asignar_transporte = false" />
     </v-container>
 </template>
 
@@ -389,6 +453,7 @@ import dial_nuevo_rep from './dialogos/nuevo_reparto.vue'
 import dial_sube_rep from './dialogos/excel_ruta.vue'
 import cobranza_reparto from '../reparto/dialogos/cobranza_reparto.vue'
 import dial_carga_productos from './dialogos/dial_carga_productos.vue'
+import dial_transporte from './dialogos/dial_transporte.vue'
 import { pdf_a4_t } from './formatos/formato_liq_manual'
 export default {
     name: "lista_repartos",
@@ -396,7 +461,8 @@ export default {
         dial_nuevo_rep,
         dial_sube_rep,
         cobranza_reparto,
-        dial_carga_productos
+        dial_carga_productos,
+        dial_transporte
     },
     data() {
         return {
@@ -423,6 +489,9 @@ export default {
             // refs
             refOrden: null,
             dial_reporte_liq: false,
+            // transporte
+            dial_asignar_transporte: false,
+            repartoTransporteActual: ''
         };
     },
     created() {
@@ -439,6 +508,9 @@ export default {
         }
     },
     computed: {
+        esAdmin() {
+            return this.$store.state.permisos?.es_admin === true;
+        },
         allChecked() {
             return this.selectedIds.length && this.selectedIds.length === this.repartosarray.length;
         },
@@ -458,6 +530,10 @@ export default {
         date2() { this.filtrar(); },
     },
     methods: {
+        abrirAsignarTransporte(pedido) {
+            this.repartoTransporteActual = pedido.grupo || pedido.id;
+            this.dial_asignar_transporte = true;
+        },
         abrirCargaProductos(pedido) {
             this.grupoCarga = pedido.grupo || pedido.id;
             this.dial_carga = true;
@@ -502,6 +578,33 @@ export default {
                 return 'red--text text--darken-1';
             }
             return 'orange--text text--darken-1';
+        },
+        // ---- MÃ©todos para botÃ³n MAPA ----
+        getPorcentajeEntregados(pedido) {
+            const totalPedidos = pedido.resumen?.total_pedidos || 0;
+            const entregados = pedido.resumen?.total_pedidos_procesados || 0;
+            if (totalPedidos === 0) return 0;
+            return (entregados / totalPedidos) * 100;
+        },
+        getMapaIcon(pedido) {
+            const porcentaje = this.getPorcentajeEntregados(pedido);
+            if (porcentaje >= 100) return 'mdi-truck-check';
+            return 'mdi-truck-delivery';
+        },
+        getMapaButtonColor(pedido) {
+            const porcentaje = this.getPorcentajeEntregados(pedido);
+            if (porcentaje >= 100) return 'cyan lighten-5';
+            return 'indigo lighten-5';
+        },
+        getMapaIconColor(pedido) {
+            const porcentaje = this.getPorcentajeEntregados(pedido);
+            if (porcentaje >= 100) return 'cyan darken-2';
+            return 'indigo darken-1';
+        },
+        getMapaTextClass(pedido) {
+            const porcentaje = this.getPorcentajeEntregados(pedido);
+            if (porcentaje >= 100) return 'cyan--text text--darken-2';
+            return 'indigo--text text--darken-1';
         },
         reparto_transporte(data) {
             this.$router.push({
@@ -561,12 +664,19 @@ export default {
         },
         onDataChange(snap) {
             const array = [];
+            const currentUserId = this.$store.state.permisos.token || '';
             snap.forEach((item) => {
                 const data = item.val() || {};
                 const key = item.key;
                 data.id = key;
-
                 data.fecha = this.formatFecha(data.fecha_emision);
+
+                // Filtrar por usuario asignado: si tiene usuario_id y no coincide con el usuario actual, no mostrar
+                const usuarioAsignado = data.d_transporte?.usuario_id || '';
+                if (usuarioAsignado && usuarioAsignado !== currentUserId) {
+                    return; // No incluir este reparto
+                }
+
                 array.push(data);
             });
             console.log(array)
@@ -609,7 +719,7 @@ export default {
                     };
                     console.log('array_selecto', this.array_selecto);
                     this.dial_reporte_liq = true;
-                    // Si quieres generar PDF aquí, descomenta esta línea:
+                    // Si quieres generar PDF aquÃ­, descomenta esta lÃ­nea:
                     // pdf_a4(datas, array)
                 } else {
                     console.warn("No se encontraron datos para el grupo:", datas.grupo);
@@ -680,7 +790,7 @@ export default {
                         return { cabecera: cab, detalle: detSnap.val() };
                     });
 
-                    const resultados = await pAllChunked(tasks, 16); // ajusta el tamaño si quieres
+                    const resultados = await pAllChunked(tasks, 16); // ajusta el tamaÃ±o si quieres
                     datas.push(...resultados);
                 }
 
@@ -699,15 +809,11 @@ export default {
                 store.commit("dialogoprogress");
             }
         }
-
-
-
-
     },
 };
 </script>
 <style scoped>
-/* Añadir estilos para mejorar el efecto visual en la tarjeta de orientación */
+/* AÃ±adir estilos para mejorar el efecto visual en la tarjeta de orientaciÃ³n */
 .hover-shadow:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
     transform: translateY(-2px);
@@ -718,7 +824,7 @@ export default {
     transition: all 0.3s ease;
 }
 
-/* Estilo para que la tabla se vea un poco más grande y limpia */
+/* Estilo para que la tabla se vea un poco mÃ¡s grande y limpia */
 .v-simple-table th {
     font-size: 0.8rem !important;
     font-weight: 600 !important;

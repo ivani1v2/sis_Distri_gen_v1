@@ -6,6 +6,21 @@ export function irGoogleMaps(pedido) {
         alert("Este cliente no tiene coordenadas registradas.");
     }
 }
+export function copiarUrlMaps(pedido) {
+    if (pedido.latitud && pedido.longitud) {
+        const url = `https://www.google.com/maps?q=${pedido.latitud},${pedido.longitud}`;
+        navigator.clipboard.writeText(url).then(() => {
+            // Opcional: mostrar notificación de éxito
+        }).catch(err => {
+            console.error('Error al copiar URL:', err);
+            alert("No se pudo copiar al portapapeles");
+        });
+        return true;
+    } else {
+        alert("Este cliente no tiene coordenadas registradas.");
+        return false;
+    }
+}
 export function enviarWhatsApp(pedido) {
     const telefono = String(pedido.telefono || "").replace(/\D/g, "");
     if (!telefono) {
@@ -34,6 +49,7 @@ export function chipColor(estado) {
 export function chipColorEntrega(estado) {
     const s = (estado || '').toString().trim().toLowerCase();
     if (s === 'entregado') return 'info';
+    if (s === 'parcial') return 'purple';
     if (s === 'reprogramado') return 'success';
     if (s === 'rechazado') return 'error';
     // default: pendiente u otros
@@ -47,9 +63,11 @@ export function estadoColorTexto(estado) {
     // pendiente -> naranja
     // rechazado -> rojo
     // entregado/atendido -> verde
+    // parcial -> morado
     // default -> #999 (gris)
     if (st === 'rechazado') return 'red';
     if (st === 'entregado' || st === 'atendido') return 'green';
+    if (st === 'parcial') return 'purple';
     if (st === 'pendiente') return 'orange';
     // otros (reprogramado, etc.)
     return '#0091ff'; // celeste como tus marcadores ltblue/naranja/etc.

@@ -35,6 +35,11 @@
 
                 <v-spacer></v-spacer>
 
+                <!-- Botón Transporte (solo para admin) -->
+                <v-btn v-if="esAdmin" color="info" dark small class="rounded-lg mx-1" @click="abrirDialTransporte">
+                    <v-icon left small>mdi-truck</v-icon> Transporte
+                </v-btn>
+
                 <v-menu bottom offset-y transition="scale-transition" nudge-bottom="5" :close-on-content-click="false">
                     <template v-slot:activator="{ on, attrs }">
                         <v-btn color="red darken-2" dark small v-bind="attrs" v-on="on" class="rounded-lg mx-1">
@@ -117,8 +122,18 @@
                     <v-col cols="12" sm="4">
                         <h4 class="text-subtitle-1">
                             FECHA TRASLADO: <span class="primary--text">{{ conviertefecha(cabecera_total.fecha_traslado)
-                            }}</span>
+                                }}</span>
                         </h4>
+                        <!-- Chip de transporte asignado -->
+                        <div v-if="cabecera_total.d_transporte?.usuario_nombre" class="mt-1">
+                            <v-chip small color="info" dark>
+                                <v-icon small left>mdi-truck</v-icon>
+                                {{ cabecera_total.d_transporte.usuario_nombre }}
+                                <span v-if="cabecera_total.d_transporte.placa" class="ml-1">
+                                    | {{ cabecera_total.d_transporte.placa }}
+                                </span>
+                            </v-chip>
+                        </div>
                     </v-col>
                     <v-col cols="12" sm="4">
                         <h4 class="text-subtitle-1">
@@ -132,7 +147,7 @@
                             TOTAL VENTA: <span class="green--text text--darken-2">{{ moneda }} {{ t_general }}</span>
                         </h4>
                         <span class="caption">Contado: {{ moneda }} {{ t_contado }} | Crédito: {{ moneda }} {{ t_credito
-                            }}</span>
+                        }}</span>
                     </v-col>
                 </v-row>
             </v-card-text>
@@ -188,7 +203,7 @@
                                 </v-chip>
                             </td>
                             <td class="text-right caption red--text">{{ item.moneda }}{{ redondear(item.pendiente_pago)
-                            }}</td>
+                                }}</td>
                             <td class="text-right caption font-weight-bold">{{ item.moneda }}{{ redondear(item.total) }}
                             </td>
                             <td class="text-center">
@@ -270,7 +285,7 @@
                                     S/.{{ d.precio }}
                                     <strong v-if="d.preciodescuento != 0" class="red--text ml-1">(-S/.{{
                                         d.preciodescuento
-                                    }})</strong>
+                                        }})</strong>
                                 </td>
                                 <td class="text-right caption font-weight-bold">S/.{{
                                     redondear((Number(d.total_antes_impuestos)
@@ -292,7 +307,7 @@
                 <v-card-text class="pt-4">
                     <div class="mb-3 text-subtitle-2 grey--text text--darken-1">
                         Anulando comprobante: <strong class="error--text">{{ comp_anular ? comp_anular.numeracion : ''
-                        }}</strong>
+                            }}</strong>
                     </div>
 
                     <v-select dense outlined clearable :items="motivos_predeterminados"
@@ -428,6 +443,13 @@
             :cabecera="cabecera_selecta" :detalle="detalle_selecto" />
         <imprime v-if="genera_pdf" :data="seleccionado" :detalle="detalle_selecto" @cierra="genera_pdf = $event" />
         <impresorahost v-if="dial_config_host" @cierra="dial_config_host = false" />
+        
+        <!-- Dialogo Transporte -->
+        <dial_transporte 
+            v-model="dial_transporte_show" 
+            :reparto-id="router_grupo"
+            @guardado="inicio"
+            @cierre="dial_transporte_show = false" />
     </div>
 </template>
 
@@ -470,15 +492,18 @@ import {
 import { reporteProductoClientePDF } from './reportes_pdf'
 import axios from "axios"
 import { colClientes } from '../../db_firestore'
+import dial_transporte from '../reparto/dialogos/dial_transporte.vue'
 export default {
     components: {
         dialogo_edita_c,
         imprime,
         genera_guias,
-        impresorahost
+        impresorahost,
+        dial_transporte
     },
     data() {
         return {
+            dial_transporte_show: false,
             dialogo_imprime: false,
             dialogDetalle: false,
             pedidoSeleccionado: null,
@@ -577,6 +602,9 @@ export default {
         }
     },
     computed: {
+        esAdmin() {
+            return this.$store.state.permisos?.es_admin === true;
+        },
         tiene_permiso_host() {
             return store.state.permisos?.permite_impresion_host === true;
         },
@@ -665,6 +693,9 @@ export default {
         }
     },
     methods: {
+        abrirDialTransporte() {
+            this.dial_transporte_show = true;
+        },
         async genera_guia(data) {
             store.commit("dialogoprogress", 1)
             const snapshot = await all_detalle_p(this.router_grupo, data.numeracion).once("value");
@@ -1017,28 +1048,70 @@ export default {
                         pedidos: data.pedidos,
                         fecha_traslado: data.fecha_traslado,
                         envio_stock: data.envio_stock,
-                        fecha_comprobantes: data.fecha_comprobantes
+                        fecha_comprobantes: data.fecha_comprobantes,
+                        d_transporte: data.d_transporte || null
                     }
                     this.total_peso = data.peso
                 })
         },
-        anterior() {
-            if (parseInt(this.router_grupo) > 1) {
-                this.router_grupo = (parseInt(this.router_grupo) - 1).toString().padStart(4, '0');
+        async anterior() {
+            if (parseInt(this.router_grupo) <= 1) {
+                this.$store.commit('dialogosnackbar', 'Ya estás en el primer reparto');
+                return;
+            }
+
+            const corre = (parseInt(this.router_grupo) - 1).toString().padStart(4, '0');
+
+            try {
+                const snapshot = await Cabecera_p(corre).once('value');
+
+                if (!snapshot.exists()) {
+                    this.$store.commit('dialogosnackbar', 'El reparto anterior no existe');
+                    return;
+                }
+
+                const esAccesible = await this._repartoEsAccesible(corre);
+
+                if (esAccesible) {
+                    this.router_grupo = corre;
+                } else {
+                    // Buscar automáticamente el anterior reparto accesible
+                    const anteriorAccesible = await this.buscarAnteriorAccesible(parseInt(corre));
+                    if (anteriorAccesible) {
+                        this.router_grupo = anteriorAccesible;
+                    }
+                }
+            } catch (error) {
+                console.error('Error en anterior:', error);
+                this.$store.commit('dialogosnackbar', 'Error al cargar el reparto');
             }
         },
-        siguiente() {
+        async siguiente() {
             const corre = (parseInt(this.router_grupo) + 1).toString().padStart(4, '0');
-            console.log(corre)
-            Cabecera_p(corre)
-                .once("value")
-                .then((snapshot) => {
-                    if (snapshot.exists()) {
-                        this.router_grupo = corre; // esto disparará el watcher
-                    } else {
-                        store.commit('dialogosnackbar', 'NO EXISTEN MÁS REPARTOS');
+
+            try {
+                const snapshot = await Cabecera_p(corre).once('value');
+
+                if (!snapshot.exists()) {
+                    this.$store.commit('dialogosnackbar', 'NO EXISTEN MÁS REPARTOS');
+                    return;
+                }
+
+                const esAccesible = await this._repartoEsAccesible(corre);
+
+                if (esAccesible) {
+                    this.router_grupo = corre;
+                } else {
+                    // Buscar automáticamente el siguiente reparto accesible
+                    const siguienteAccesible = await this.buscarSiguienteAccesible(parseInt(corre));
+                    if (siguienteAccesible) {
+                        this.router_grupo = siguienteAccesible;
                     }
-                });
+                }
+            } catch (error) {
+                console.error('Error en siguiente:', error);
+                this.$store.commit('dialogosnackbar', 'Error al cargar el reparto');
+            }
         },
 
 
@@ -1383,7 +1456,7 @@ export default {
             this.repartoEditado = '';
         },
 
-        confirmarCambioReparto() {
+        async confirmarCambioReparto() {
             if (!this.repartoEditado) {
                 this.cancelarEdicion();
                 return;
@@ -1391,22 +1464,37 @@ export default {
 
             const repartoBuscado = this.repartoEditado.padStart(4, '0');
 
-            Cabecera_p(repartoBuscado)
-                .once("value")
-                .then((snapshot) => {
-                    if (snapshot.exists()) {
-                        this.router_grupo = repartoBuscado;
-                        this.cancelarEdicion();
-                    } else {
-                        this.$store.commit('dialogosnackbar', 'El reparto no existe');
-                        this.$nextTick(() => {
-                            if (this.$refs.inputReparto) {
-                                this.$refs.inputReparto.focus();
-                            }
-                        });
-                    }
-                });
-        },       
+            try {
+                const snapshot = await Cabecera_p(repartoBuscado).once('value');
+
+                if (!snapshot.exists()) {
+                    this.$store.commit('dialogosnackbar', 'El reparto no existe');
+                    this.$nextTick(() => {
+                        if (this.$refs.inputReparto) {
+                            this.$refs.inputReparto.focus();
+                        }
+                    });
+                    return;
+                }
+
+                const esAccesible = await this._repartoEsAccesible(repartoBuscado);
+
+                if (esAccesible) {
+                    this.router_grupo = repartoBuscado;
+                    this.cancelarEdicion();
+                } else {
+                    this.$store.commit('dialogosnackbar', 'No tienes permiso para ver este reparto');
+                    this.$nextTick(() => {
+                        if (this.$refs.inputReparto) {
+                            this.$refs.inputReparto.focus();
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error en confirmarCambioReparto:', error);
+                this.$store.commit('dialogosnackbar', 'Error al buscar el reparto');
+            }
+        },
 
         finaliza(data) {
             console.log(data)
@@ -1781,7 +1869,84 @@ export default {
             if (this._periodoRef) this._periodoRef.off('value', this.onPeriodoChange);
             this._periodoRef = all_periodos();
             this._periodoRef.on('value', this.onPeriodoChange);
-        }
+        },
+
+        async _repartoEsAccesible(grupo) {
+            if (!grupo) return false;
+
+            const currentUserId = this.$store.state.permisos.token || '';
+
+            try {
+                // Obtener la referencia directa a la cabecera del reparto
+                const snapshot = await Cabecera_p(grupo).once('value');
+                const repartoData = snapshot.val();
+
+                // Si el reparto no existe, no es accesible
+                if (!repartoData) return false;
+
+                // Obtener el usuario asignado del objeto d_transporte
+                const usuarioAsignado = repartoData.d_transporte?.usuario_id || '';
+
+                // Regla de acceso:
+                // - Si NO tiene usuario asignado (usuarioAsignado es ''), es ACCESIBLE para todos.
+                // - Si TIENE usuario asignado, solo es ACCESIBLE si coincide con el currentUserId.
+                return !usuarioAsignado || usuarioAsignado === currentUserId;
+            } catch (error) {
+                console.error(`Error al verificar accesibilidad del reparto ${grupo}:`, error);
+                return false; // En caso de error, denegamos el acceso por seguridad.
+            }
+        },
+        async buscarSiguienteAccesible(desde) {
+            let grupoActual = parseInt(desde);
+            const maxIntentos = 100; // Límite para evitar bucle infinito
+
+            for (let i = 0; i < maxIntentos; i++) {
+                const siguiente = (grupoActual + 1).toString().padStart(4, '0');
+                const snapshot = await Cabecera_p(siguiente).once('value');
+
+                if (!snapshot.exists()) {
+                    this.$store.commit('dialogosnackbar', 'No hay más repartos accesibles');
+                    return null;
+                }
+
+                const esAccesible = await this._repartoEsAccesible(siguiente);
+                if (esAccesible) {
+                    return siguiente;
+                }
+
+                grupoActual++;
+            }
+
+            this.$store.commit('dialogosnackbar', 'No se encontraron más repartos accesibles');
+            return null;
+        },
+
+        async buscarAnteriorAccesible(desde) {
+            let grupoActual = parseInt(desde);
+            const maxIntentos = 100;
+
+            for (let i = 0; i < maxIntentos; i++) {
+                if (grupoActual <= 1) {
+                    this.$store.commit('dialogosnackbar', 'No hay repartos anteriores accesibles');
+                    return null;
+                }
+
+                const anterior = (grupoActual - 1).toString().padStart(4, '0');
+                const snapshot = await Cabecera_p(anterior).once('value');
+
+                if (!snapshot.exists()) break;
+
+                const esAccesible = await this._repartoEsAccesible(anterior);
+                if (esAccesible) {
+                    return anterior;
+                }
+
+                grupoActual--;
+            }
+
+            this.$store.commit('dialogosnackbar', 'No se encontraron repartos anteriores accesibles');
+            return null;
+        },
     }
 }
 </script>

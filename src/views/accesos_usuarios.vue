@@ -127,6 +127,7 @@ export default {
                     items: [
                         [
                             { label: 'Transporte', value: 'modulotransporte' },
+                            { label: 'Es Transportista', value: 'es_transporte', tooltip: 'El usuario aparecerá en la lista de transportistas para asignar a repartos' },
                         ],
                         [
                         ],

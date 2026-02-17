@@ -44,17 +44,22 @@
 
             <v-card-actions class="mt-n12">
                 <v-row dense>
-                    <v-col cols="6" class="text-center">
-                        <v-btn x-small color="error" class="ma-2" @click="abrirDialogoRechazo">
-                            <v-icon left>mdi-delete</v-icon>
-                            Agregar rechazo
+                    <v-col cols="4" class="text-center px-1">
+                        <v-btn block x-small color="error" class="ma-0" @click="abrirDialogoRechazo">
+                            <v-icon left small>mdi-delete</v-icon>
+                            {{ $vuetify.breakpoint.xs ? 'Rechazar' : 'Agregar rechazo' }}
                         </v-btn>
                     </v-col>
-                    <v-col cols="6" class="text-center">
-                        <!-- AHORA abre diálogo de pagos -->
-                        <v-btn x-small color="success" class="ma-2" @click="abrirPagos">
-                            <v-icon left>mdi-check</v-icon>
-                            Confirmar
+                    <v-col cols="4" class="text-center px-1">
+                        <v-btn block x-small color="success" class="ma-0" @click="abrirPagos">
+                            <v-icon left small>mdi-check</v-icon>
+                            {{ $vuetify.breakpoint.xs ? 'Cobrar' : 'Confirmar' }}
+                        </v-btn>
+                    </v-col>
+                    <v-col cols="4" class="text-center px-1">
+                        <v-btn block x-small color="info" class="ma-0" @click="verDetallePedido">
+                            <v-icon left small>mdi-file-document-outline</v-icon>
+                            {{ $vuetify.breakpoint.xs ? 'Ver' : 'Detalle Pedido' }}
                         </v-btn>
                     </v-col>
                 </v-row>
@@ -78,9 +83,9 @@
                                     <div class="flex-grow-1 mr-2">
                                         <div class="text-caption grey--text text--darken-1">
                                             <span>
-                                                Precio: {{ moneda }} {{ redondear(unitPrice(it)) }}
+                                                Precio: {{ moneda }} {{ redondear(it.es_rechazo_parcial ? unitPrice(it) / (it.factor || 1) : unitPrice(it)) }}
                                             </span>
-                                            <v-chip v-if="it.medida" x-small class="ml-1" label>{{ it.medida }}</v-chip>
+                                            <v-chip v-if="it.medida" x-small class="ml-1" label>{{ it.es_rechazo_parcial ? 'UNIDAD' : it.medida }}</v-chip>
                                             <v-chip v-if="it.operacion === 'GRATUITA'" x-small class="ml-1" color="pink"
                                                 text-color="white" label>
                                                 Gratuita
@@ -90,6 +95,7 @@
                                         <div class="mt-1 text-subtitle-2 text-truncate" style="max-width:70vw;">
                                             <span class="font-weight-bold red--text">{{ Number(it.cantidad_rechazo ||
                                                 it.cantidad) }}×</span>
+                                            <span class="caption grey--text">[{{ it.codigo || it.id }}]</span>
                                             {{ it.nombre }}
                                         </div>
                                     </div>
@@ -130,6 +136,7 @@
                         <template v-slot:item="{ item }">
                             <div class="d-flex justify-space-between align-center" style="width:100%;">
                                 <div class="text-truncate" style="max-width:70%;">
+                                    <span class="caption blue-grey--text">[{{ item.codigo || item.id }}]</span>
                                     {{ item.nombre }}
                                     <span class="grey--text">
                                         · {{ Number(item.cantidad) }} {{ item.medida || '' }}
@@ -165,11 +172,37 @@
 
                     <div v-if="seleccionActual" class="mt-2">
                         <div class="caption grey--text mb-1">
-                            Disponible: {{ Number(seleccionActual.cantidad) }} {{ seleccionActual.medida || '' }}
+                            Disponible: {{ cantidadDisponibleTexto }}
                         </div>
-                        <v-text-field v-model.number="qtyRechazo" type="number" outlined dense hide-details :min="1"
-                            :max="Number(seleccionActual.cantidad)" label="Cantidad a rechazar"
+
+                        <!-- Si el factor > 1 y medida != UNIDAD, permite rechazo parcial -->
+                        <div v-if="permiteRechazoParcial" class="mb-2">
+                            <v-chip x-small color="info" class="mb-1">
+                                Factor: {{ seleccionActual.factor }} unidades por {{ seleccionActual.medida }}
+                            </v-chip>
+                            <v-radio-group v-model="modoRechazo" row dense hide-details class="mt-1">
+                                <v-radio label="Rechazar completo" value="completo" />
+                                <v-radio label="Rechazar parcial (abrir paquete)" value="parcial" />
+                            </v-radio-group>
+                        </div>
+
+                        <!-- Cantidad a rechazar según modo -->
+                        <v-text-field v-if="modoRechazo === 'completo' || !permiteRechazoParcial"
+                            v-model.number="qtyRechazo" type="number" outlined dense hide-details :min="1"
+                            :max="Number(seleccionActual.cantidad)" :label="labelCantidadRechazo"
                             @focus="$event.target.select()" />
+
+                        <!-- Modo parcial: rechazar unidades del factor -->
+                        <div v-if="modoRechazo === 'parcial' && permiteRechazoParcial">
+                            <v-text-field v-model.number="qtyRechazoParcial" type="number" outlined dense hide-details
+                                :min="1" :max="maxUnidadesParciales"
+                                :label="`Unidades a rechazar (máx ${maxUnidadesParciales})`"
+                                @focus="$event.target.select()" />
+                            <div class="caption grey--text mt-1">
+                                Rechazando {{ qtyRechazoParcial || 0 }} unidades de {{ totalUnidadesDisponibles }}
+                                totales
+                            </div>
+                        </div>
                     </div>
                 </v-card-text>
                 <v-card-actions>
@@ -256,11 +289,103 @@
             </v-card>
         </v-dialog>
 
+        <v-dialog v-model="dialogoDetalle" :max-width="$vuetify.breakpoint.smAndDown ? '100%' : '700px'" :fullscreen="$vuetify.breakpoint.smAndDown">
+            <v-card>
+                <v-toolbar flat dense color="grey lighten-3">
+                    <v-toolbar-title class="text-subtitle-2">
+                        <v-icon small left>mdi-file-document-outline</v-icon>
+                        Pedido #{{ item_selecto.id }}
+                    </v-toolbar-title>
+                    <v-spacer></v-spacer>
+                    <v-btn icon small @click="dialogoDetalle = false">
+                        <v-icon small>mdi-close</v-icon>
+                    </v-btn>
+                </v-toolbar>
+
+                <v-card-text class="pa-3">
+                    <div :class="$vuetify.breakpoint.smAndDown ? 'd-flex flex-column' : 'd-flex justify-space-between align-center'" class="mb-3">
+                        <div>
+                            <span class="font-weight-medium">{{ item_selecto.cliente }}</span>
+                            <span class="grey--text text-caption ml-2">{{ item_selecto.dni }}</span>
+                        </div>
+                        <div :class="$vuetify.breakpoint.smAndDown ? 'mt-1' : 'text-right'">
+                            <span class="font-weight-bold primary--text">{{ moneda }} {{ redondear(item_selecto.total) }}</span>
+                        </div>
+                    </div>
+
+                    <div v-if="$vuetify.breakpoint.smAndDown">
+                        <v-card v-for="item in detallePedidoItems" :key="item.codigo" outlined class="mb-2 pa-2">
+                            <div class="d-flex justify-space-between align-start">
+                                <div class="flex-grow-1" style="max-width: 70%;">
+                                    <div class="text-body-2 font-weight-medium">{{ item.nombre }}</div>
+                                    <div class="text-caption grey--text">{{ item.codigo }}</div>
+                                    <v-chip v-if="item.operacion === 'GRATUITA'" x-small color="pink" text-color="white" class="mt-1">Gratis</v-chip>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-caption grey--text">{{ item.cantidad }} {{ item.medida }}</div>
+                                    <div class="text-caption">{{ moneda }} {{ item.precio_unit.toFixed(2) }}</div>
+                                    <div class="font-weight-bold" :class="{ 'red--text': item.operacion === 'GRATUITA' }">
+                                        {{ moneda }} {{ item.total.toFixed(2) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </v-card>
+                        <v-card color="grey lighten-4" class="pa-3">
+                            <div class="d-flex justify-space-between">
+                                <span class="font-weight-bold">TOTAL</span>
+                                <span class="font-weight-bold primary--text">{{ moneda }} {{ detallePedidoTotal }}</span>
+                            </div>
+                        </v-card>
+                    </div>
+
+                    <v-simple-table v-else dense>
+                        <template v-slot:default>
+                            <thead>
+                                <tr>
+                                    <th class="text-caption">Producto</th>
+                                    <th class="text-caption text-center">Cant</th>
+                                    <th class="text-caption text-right">P.Unit</th>
+                                    <th class="text-caption text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="item in detallePedidoItems" :key="item.codigo">
+                                    <td>
+                                        <div class="text-body-2">
+                                            {{ item.nombre }}
+                                            <v-chip v-if="item.operacion === 'GRATUITA'" x-small color="pink"
+                                                text-color="white" class="ml-1">
+                                                Gratis
+                                            </v-chip>
+                                        </div>
+                                        <div class="text-caption grey--text">{{ item.codigo }}</div>
+                                    </td>
+                                    <td class="text-center">{{ item.cantidad }} {{ item.medida }}</td>
+                                    <td class="text-right">{{ moneda }} {{ item.precio_unit.toFixed(2) }}</td>
+                                    <td class="text-right font-weight-medium">
+                                        <span :class="{ 'red--text': item.operacion === 'GRATUITA' }">
+                                            {{ moneda }} {{ item.total.toFixed(2) }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr class="grey lighten-4">
+                                    <td colspan="3" class="text-right font-weight-bold">TOTAL</td>
+                                    <td class="text-right font-weight-bold primary--text">{{ moneda }} {{
+                                        detallePedidoTotal }}</td>
+                                </tr>
+                            </tbody>
+                        </template>
+                    </v-simple-table>
+                </v-card-text>
+            </v-card>
+        </v-dialog>
+
     </v-dialog>
 </template>
 
 <script>
-import { all_detalle_p, grabaCabecera_p, nuevo_detalle_entrega, nuevaCuentaxcobrar } from "../../../db";
+
+import { all_detalle_p, grabaCabecera_p, nuevo_detalle_entrega, nuevaCuentaxcobrar, incrementa_procesados_reparto } from "../../../db";
 
 export default {
     props: { grupo: null, item_selecto: { type: Object, required: true } },
@@ -275,20 +400,25 @@ export default {
             rechazoSeleccion: null,
             seleccionActual: null,
             qtyRechazo: 1,
+            qtyRechazoParcial: 1,
+            modoRechazo: 'completo',
             rechazados: [],
             // Pagos
             dialPagos: false,
             pagosEntrega: [],
             mostrarCredito: false,
             montoCredito: "",
-            fechaVenceCredito: ""
+            fechaVenceCredito: "",
+            dialogoDetalle: false,
+            detallePedido: "",
+            detallePedidoItems: [],
+            detallePedidoTotal: 0
         };
     },
     async created() {
         console.log(this.item_selecto);
         this.item_selecto.id_grupo = this.item_selecto.id_grupo || this.grupo;
         await this.busca_detalle();
-        // base de métodos de pago desde el store
         this.moneda = this.item_selecto.moneda || "S/";
         const lista = (this.$store?.state?.modopagos || []).map(n => ({ nombre: n, monto: "" }));
         this.pagosEntrega = lista;
@@ -309,21 +439,63 @@ export default {
         },
         qtyValida() {
             if (!this.seleccionActual) return false;
+
+            if (this.modoRechazo === 'parcial' && this.permiteRechazoParcial) {
+                const q = Number(this.qtyRechazoParcial || 0);
+                return q >= 1 && q <= this.maxUnidadesParciales;
+            }
+
             const q = Number(this.qtyRechazo || 0);
             return q >= 1 && q <= Number(this.seleccionActual.cantidad || 0);
         },
-        // $$$
+
+        permiteRechazoParcial() {
+            if (!this.seleccionActual) return false;
+            const factor = Number(this.seleccionActual.factor || 1);
+            const medida = String(this.seleccionActual.medida || '').toUpperCase();
+            return factor > 1 && medida !== 'UNIDAD' && medida !== 'UND' && medida !== 'NIU';
+        },
+
+        totalUnidadesDisponibles() {
+            if (!this.seleccionActual) return 0;
+            const factor = Number(this.seleccionActual.factor || 1);
+            const cantidad = Number(this.seleccionActual.cantidad || 0);
+            return cantidad * factor;
+        },
+
+        maxUnidadesParciales() {
+            if (!this.seleccionActual) return 0;
+            const factor = Number(this.seleccionActual.factor || 1);
+            const cantidad = Number(this.seleccionActual.cantidad || 0);
+            return cantidad * factor;
+        },
+
+        cantidadDisponibleTexto() {
+            if (!this.seleccionActual) return '';
+            const cantidad = Number(this.seleccionActual.cantidad || 0);
+            const medida = this.seleccionActual.medida || '';
+            const factor = Number(this.seleccionActual.factor || 1);
+
+            if (factor > 1 && medida !== 'UNIDAD' && medida !== 'UND' && medida !== 'NIU') {
+                return `${cantidad} ${medida} (${cantidad * factor} unidades)`;
+            }
+            return `${cantidad} ${medida}`;
+        },
+
+        labelCantidadRechazo() {
+            if (!this.seleccionActual) return 'Cantidad a rechazar';
+            const medida = this.seleccionActual.medida || '';
+            return `Cantidad de ${medida} a rechazar`;
+        },
+
         totalRechazosMonto() {
             return this.rechazados.reduce((acc, it) => {
-                // Los productos gratuitos NO descuentan nada del cobro
                 if (String(it.operacion || '').toUpperCase() === 'GRATUITA') return acc;
                 return acc + this.totalLineaRechazo(it);
             }, 0);
         },
         totalACobrar() {
-            // Si el comprobante ya es a CRÉDITO, en entrega no se cobra nada
             if (this.esCredito) return 0;
-
             const t = Number(this.item_selecto?.total || 0) - Number(this.totalRechazosMonto || 0);
             return t < 0 ? 0 : t;
         },
@@ -335,12 +507,10 @@ export default {
             return this.mostrarCredito ? Number(this.montoCredito || 0) : 0;
         },
 
-        // 🔹 nuevo: suma de pagos + crédito
         sumaTotalConCredito() {
             return this.sumaPagos + this.montoCreditoNumber;
         },
 
-        // 🔹 nuevo: diferencia considerando crédito
         diferenciaTotal() {
             return Number(this.totalACobrar.toFixed(2)) - Number(this.sumaTotalConCredito.toFixed(2));
         },
@@ -378,7 +548,6 @@ export default {
         },
         chipItemsColor() { return "blue-grey darken-2"; },
 
-        // === Rechazos ===
         abrirDialogoRechazo() {
             this.rechazoSeleccion = null;
             this.seleccionActual = null;
@@ -405,22 +574,50 @@ export default {
             const it = this.itemsElegibles.find(x => (x.uuid || x.id) === uuid);
             this.seleccionActual = it || null;
             this.qtyRechazo = 1;
+            this.qtyRechazoParcial = 1;
+            this.modoRechazo = 'completo';
         },
         confirmAddRechazo() {
             if (!this.seleccionActual || !this.qtyValida) return;
-            const it = { ...this.seleccionActual, cantidad_rechazo: Number(this.qtyRechazo) };
+
+            let cantidadRechazo;
+            let esParcial = false;
+            const factor = Number(this.seleccionActual.factor || 1);
+            const medida = String(this.seleccionActual.medida || '').toUpperCase();
+
+            if (this.modoRechazo === 'parcial' && this.permiteRechazoParcial) {
+                cantidadRechazo = Number(this.qtyRechazoParcial);
+                esParcial = true;
+            } else {
+                cantidadRechazo = Number(this.qtyRechazo);
+                if (factor > 1 && medida !== 'UNIDAD' && medida !== 'UND' && medida !== 'NIU') {
+                    cantidadRechazo = cantidadRechazo * factor;
+                    esParcial = false;
+                }
+            }
+
+            const it = {
+                ...this.seleccionActual,
+                cantidad_rechazo: cantidadRechazo,
+                es_rechazo_parcial: esParcial,
+                factor: factor,
+                medida_original: this.seleccionActual.medida,
+                cantidad_original: Number(this.seleccionActual.cantidad)
+            };
+
             this.rechazados.push(it);
             this.dialRechazo = false;
             this.rechazoSeleccion = null;
             this.seleccionActual = null;
             this.qtyRechazo = 1;
+            this.qtyRechazoParcial = 1;
+            this.modoRechazo = 'completo';
         },
         quitarRechazo(it) {
             const id = it.uuid || it.id;
             this.rechazados = this.rechazados.filter(r => (r.uuid || r.id) !== id);
         },
 
-        // Cálculos monetarios
         unitPrice(it) {
             const p = Number(it.precio);
             if (Number.isFinite(p) && p > 0) return p;
@@ -429,11 +626,27 @@ export default {
             return cant ? (tot / cant) : 0;
         },
         totalLineaRechazo(it) {
-            // Si es gratuita, el valor monetario del rechazo es 0
             if (String(it.operacion || '').toUpperCase() === 'GRATUITA') return 0;
 
-            const q = Number(it.cantidad_rechazo || it.cantidad || 0);
-            return this.unitPrice(it) * q;
+            const cantidadRechazo = Number(it.cantidad_rechazo || 0);
+            const factor = Number(it.factor || 1);
+            const medida = String(it.medida_original || it.medida || '').toUpperCase();
+
+            let precioPorUnidadVenta = this.unitPrice(it);
+            let total = 0;
+
+            if (it.es_rechazo_parcial) {
+                total = (precioPorUnidadVenta / factor) * cantidadRechazo;
+            } else {
+                if (factor > 1 && medida !== 'UNIDAD' && medida !== 'UND' && medida !== 'NIU') {
+                    const cajasRechazadas = cantidadRechazo / factor;
+                    total = precioPorUnidadVenta * cajasRechazadas;
+                } else {
+                    total = precioPorUnidadVenta * cantidadRechazo;
+                }
+            }
+
+            return total;
         },
 
         abrirPagos() {
@@ -457,32 +670,39 @@ export default {
             saldo.monto = restante ? restante.toFixed(2) : '0';
         },
 
-        // Guarda todo (estado entrega + observaciones + rechazos + pagos)
-        // Guarda todo (estado entrega + observaciones + rechazos + pagos + crédito)
         async finalizarEntrega() {
             if (!this.pagosValidos) return;
 
-            const rechazos = this.rechazados.map(it => ({
-                uuid: it.uuid || it.id,
-                id_producto: it.id,
-                nombre: it.nombre,
-                cantidad: Number(it.cantidad_rechazo || 0),
-                total_linea: Number(this.totalLineaRechazo(it) || 0),
-                medida: it.medida || "",
-                precio_unit: Number(this.unitPrice(it)) || 0,
-                operacion: it.operacion || ""
-            }));
+            const rechazos = this.rechazados.map(it => {
+                const factor = Number(it.factor || 1);
+                let precioUnit = Number(this.unitPrice(it)) || 0;
+                if (it.es_rechazo_parcial && factor > 1) {
+                    precioUnit = precioUnit / factor;
+                }
+
+                return {
+                    uuid: it.uuid || it.id,
+                    id_producto: it.id,
+                    nombre: it.nombre,
+                    cantidad: Number(it.cantidad_rechazo || 0),
+                    total_linea: Number(this.totalLineaRechazo(it) || 0),
+                    medida: it.medida || "",
+                    precio_unit: precioUnit,
+                    operacion: it.operacion || "",
+                    factor: factor,
+                    es_rechazo_parcial: it.es_rechazo_parcial || false,
+                    cantidad_original: Number(it.cantidad_original || it.cantidad || 0)
+                };
+            });
 
             const pagos_filtrados = this.pagosEntrega
                 .filter(p => parseFloat(p.monto) > 0)
                 .map(p => ({ nombre: p.nombre, monto: Number(p.monto) }));
 
-            // 🔹 montos clave
-            const totalCobrar = Number(this.totalACobrar.toFixed(2));       // lo que se debe por el pedido (ya con rechazos)
-            const totalPagado = Number(this.sumaPagos.toFixed(2));          // lo que realmente se pagó en caja
-            const montoCred = Number(this.montoCreditoNumber.toFixed(2)); // lo que se fue a crédito
+            const totalCobrar = Number(this.totalACobrar.toFixed(2));
+            const totalPagado = Number(this.sumaPagos.toFixed(2));
+            const montoCred = Number(this.montoCreditoNumber.toFixed(2));
 
-            // 🔹 fecha de vencimiento (solo si hay crédito)
             let fechaVenceUnix = null;
             if (montoCred > 0) {
                 if (!this.fechaVenceCredito) {
@@ -493,7 +713,8 @@ export default {
                 );
             }
 
-            // 🔹 payload para nuevo_detalle_entrega (ahora incluye crédito)
+            const estadoEntrega = rechazos.length > 0 ? "parcial" : "entregado";
+
             const data = {
                 id_grupo: this.item_selecto.id_grupo,
                 id_pedido: this.item_selecto.id,
@@ -503,20 +724,18 @@ export default {
                 observaciones: this.observaciones || "",
                 total_pedido: Number(this.item_selecto.total || 0),
                 total_rechazado: Number(this.totalRechazosMonto.toFixed(2)),
-                total_cobrar: totalCobrar,          // total que se debía cobrar
-                total_cobrado: totalPagado,         // 💰 realmente cobrado (solo pagos)
-                total_credito: montoCred,           // 💳 lo que quedó como crédito
-                fecha_vence_credito: fechaVenceUnix // null si no hubo crédito
+                total_cobrar: totalCobrar,
+                total_cobrado: totalPagado,
+                total_credito: montoCred,
+                fecha_vence_credito: fechaVenceUnix
             };
 
             const promesas = [
                 nuevo_detalle_entrega(this.item_selecto.id_grupo, this.item_selecto.id, data),
-                grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/estado_entrega`, "entregado"),
+                grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/estado_entrega`, estadoEntrega),
                 grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/observacion_entrega`, this.observaciones || ""),
                 grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/rechazos_count`, rechazos.length),
                 grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/pagos_entrega`, pagos_filtrados),
-
-                // 👉 en cabecera ahora guardamos los 3 montos
                 grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/total_cobrar`, totalCobrar),
                 grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/total_cobrado`, totalPagado),
                 grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/total_credito`, montoCred),
@@ -528,7 +747,6 @@ export default {
                 );
             }
 
-            // 🔹 Si hay crédito, también generamos la cuenta por cobrar
             if (montoCred > 0) {
                 const cab = this.item_selecto || {};
                 const pendiente = montoCred;
@@ -561,6 +779,18 @@ export default {
             try {
                 this.$store.commit("dialogoprogress");
                 await Promise.all(promesas);
+                
+                // Incrementar contador de procesados si es la PRIMERA VEZ que se procesa
+                // Usamos el campo 'contador_procesado' para evitar doble conteo
+                if (!this.item_selecto.contador_procesado) {
+                    await incrementa_procesados_reparto(this.item_selecto.id_grupo);
+                    // Marcar como ya contabilizado para evitar doble conteo
+                    await grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/contador_procesado`, true);
+                    console.log('✅ Contador de pedidos procesados incrementado para reparto:', this.item_selecto.id_grupo);
+                } else {
+                    console.log('⏭️ Pedido ya fue contabilizado, no se incrementa (contador_procesado = true)');
+                }
+                
                 this.$store.commit("dialogoprogress");
 
                 if (montoCred > 0) {
@@ -578,67 +808,56 @@ export default {
             }
         },
 
-
         busca_ico(data) {
             var iconos = this.$store.state.iconos_pagos.find(item => item.nombre == data)
             return iconos.icono
         },
         getMetodoSaldo() {
-            let efectivo = this.pagosEntrega.find(x => String(x.nombre).toUpperCase() === 'EFECTIVO');
+            let efectivo = this.pagosEntrega.find(x => String(x.nombre).toUpperCase() === 'YAPE');
             if (!efectivo && this.pagosEntrega.length > 0) {
                 efectivo = this.pagosEntrega[0];
             }
             return efectivo || null;
         },
 
-        // Suma de métodos excepto uno (para calcular saldo)
         sumaSin(nombre) {
             return this.pagosEntrega
                 .filter(p => p.nombre !== nombre)
                 .reduce((acc, p) => acc + (parseFloat(p.monto) || 0), 0);
         },
 
-        // Click en icono del método: rellena ese método con TODO el total a cobrar y limpia los demás
         cambia_modo_pago(val) {
             const total = Number(this.totalACobrar.toFixed(2));
-            // limpia todos
             this.pagosEntrega.forEach(p => { p.monto = ''; });
-            // pone el total en el seleccionado
             const sel = this.pagosEntrega.find(p => p.nombre === val.nombre);
             if (sel) sel.monto = total > 0 ? total.toFixed(2) : '';
 
-            // si el seleccionado NO es el de saldo (EFECTIVO o 1ro), no hace falta más;
-            // si quieres que EFECTIVO quede en 0 explícito:
             const saldo = this.getMetodoSaldo();
             if (saldo && saldo.nombre !== val.nombre) {
                 saldo.monto = '0';
             }
         },
 
-        // Cuando el usuario escribe en un método, ajusta automáticamente EFECTIVO con el restante
         onMontoInput(editado) {
             const saldo = this.getMetodoSaldo();
             if (!saldo || editado?.nombre === saldo.nombre) return;
 
             const total = Number(this.totalACobrar.toFixed(2));
-            const otros = this.sumaSin(saldo.nombre); // todos los métodos menos el de saldo
+            const otros = this.sumaSin(saldo.nombre);
             let restante = Number((total - otros - this.montoCreditoNumber).toFixed(2));
 
             if (restante < 0) restante = 0;
             saldo.monto = restante ? restante.toFixed(2) : '0';
         },
 
-
-
         setFechaVencePorDefecto() {
             const d = new Date();
             d.setDate(d.getDate() + 7);
-            this.fechaVenceCredito = d.toISOString().slice(0, 10); // YYYY-MM-DD
+            this.fechaVenceCredito = d.toISOString().slice(0, 10);
         },
 
         toggleCredito() {
             if (!this.mostrarCredito) {
-                // al abrir: propone como crédito el faltante (total - pagos)
                 const faltante = this.totalACobrar - this.sumaPagos;
                 this.montoCredito = Number(faltante > 0 ? faltante : 0).toFixed(2);
                 this.setFechaVencePorDefecto();
@@ -646,9 +865,31 @@ export default {
             }
             this.mostrarCredito = !this.mostrarCredito;
         },
+        verDetallePedido() {
+            const detalleItems = this.array_detalle.map(item => {
+                const cantidad = Number(item.cantidad || 0);
+                const precio = Number(item.precio || 0);
+                const esGratuita = String(item.operacion || '').toUpperCase() === 'GRATUITA';
+                const total = esGratuita ? 0 : cantidad * precio;
+                const codigo = item.cod_interno || item.id || "";
+                return {
+                    codigo: codigo,
+                    nombre: item.nombre || "",
+                    cantidad: cantidad,
+                    medida: item.medida || "",
+                    precio_unit: precio,
+                    total: total,
+                    operacion: item.operacion || ""
+                };
+            });
+            this.detallePedidoItems = detalleItems;
+            this.detallePedidoTotal = this.redondear(this.item_selecto.total);
+            this.dialogoDetalle = true;
+        }
     },
 };
 </script>
+
 <style scoped>
 .mpago-field .v-input__slot {
     padding-left: 6px;

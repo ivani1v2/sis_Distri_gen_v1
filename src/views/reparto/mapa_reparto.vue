@@ -71,6 +71,18 @@
                         <span>Ir con Google Maps</span>
                     </v-tooltip>
 
+                    <!-- copiar url -->
+                    <v-tooltip bottom>
+                        <template v-slot:activator="{ on, attrs }">
+                            <v-btn v-bind="attrs" v-on="on" color="primary" dark icon
+                                :disabled="!clienteSeleccionado.latitud || !clienteSeleccionado.longitud"
+                                @click="copiarUrlMaps(clienteSeleccionado)">
+                                <v-icon>mdi-content-copy</v-icon>
+                            </v-btn>
+                        </template>
+                        <span>Copiar URL</span>
+                    </v-tooltip>
+
                     <!-- whatsapp -->
                     <v-tooltip bottom>
                         <template v-slot:activator="{ on, attrs }">
@@ -182,7 +194,7 @@
 <script>
 import { gmapApi } from 'vue2-google-maps'
 import store from '@/store/index'
-import { llamarCliente, enviarWhatsApp, irGoogleMaps, chipColor, chipColorEntrega, estadoColorTexto } from './funciones'
+import { llamarCliente, enviarWhatsApp, irGoogleMaps, copiarUrlMaps, chipColor, chipColorEntrega, estadoColorTexto } from './funciones'
 import acepta_pedido from './dialogos/acepta_pedido.vue'
 import dial_rechaza from './dialogos/rechaza_pedido.vue'
 export default {
@@ -201,7 +213,7 @@ export default {
             dial_aceptado: false,
             dial_rechazo: false,
             estadoFiltro: 'todos',
-            estadosEntrega: ['todos', 'pendiente', 'entregado', 'reprogramado', 'rechazado'],   // {lat, lng}
+            estadosEntrega: ['todos', 'pendiente', 'entregado', 'parcial', 'reprogramado', 'rechazado'],   // {lat, lng}
             clienteSeleccionado: null,
             clienteSeleccionadoIndex: null,
             busqueda: '',                   // ✅ índice del cliente seleccionado
@@ -352,6 +364,7 @@ export default {
         llamarCliente,
         enviarWhatsApp,
         irGoogleMaps,
+        copiarUrlMaps,
         estadoColorTexto,
         startBlink(index) {
             this.clienteSeleccionadoIndex = index
