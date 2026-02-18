@@ -279,7 +279,6 @@
                             type="number" dense v-model="precio_may1" label="Precio may 1"
                             persistent-hint></v-text-field>
                     </v-col>
-
                 </v-row>
 
                 <v-row class="mt-n6" dense>
@@ -293,8 +292,57 @@
                             type="number" dense v-model="precio_may2" label="Precio may 2"
                             persistent-hint></v-text-field>
                     </v-col>
-
                 </v-row>
+
+                <v-expansion-panels flat style="background: transparent;" v-if="false">
+                    <v-expansion-panel style="background: transparent;">
+                        <v-expansion-panel-header class="px-0 primary--text font-weight-bold mt-n7 mb-4">
+                            Ver más escalas
+                        </v-expansion-panel-header>
+                        <v-expansion-panel-content class="px-0">
+
+                            <v-row class="mt-n4" dense>
+                                <v-col cols="6">
+                                    <v-text-field outlined
+                                        :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
+                                        type="number" dense v-model="escala_may3" label="Escala may 3"></v-text-field>
+                                </v-col>
+                                <v-col cols="6">
+                                    <v-text-field outlined
+                                        :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
+                                        type="number" dense v-model="precio_may3" label="Precio may 3"></v-text-field>
+                                </v-col>
+                            </v-row>
+
+                            <v-row class="mt-n6" dense>
+                                <v-col cols="6">
+                                    <v-text-field outlined
+                                        :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
+                                        type="number" dense v-model="escala_may4" label="Escala may 4"></v-text-field>
+                                </v-col>
+                                <v-col cols="6">
+                                    <v-text-field outlined
+                                        :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
+                                        type="number" dense v-model="precio_may4" label="Precio may 4"></v-text-field>
+                                </v-col>
+                            </v-row>
+
+                            <v-row class="mt-n6" dense>
+                                <v-col cols="6">
+                                    <v-text-field outlined
+                                        :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
+                                        type="number" dense v-model="escala_may5" label="Escala may 5"></v-text-field>
+                                </v-col>
+                                <v-col cols="6">
+                                    <v-text-field outlined
+                                        :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
+                                        type="number" dense v-model="precio_may5" label="Precio may 5"></v-text-field>
+                                </v-col>
+                            </v-row>
+
+                        </v-expansion-panel-content>
+                    </v-expansion-panel>
+                </v-expansion-panels>
 
                 <v-row class="mt-n6" dense>
 
@@ -383,7 +431,7 @@
                                                     </div>
                                                     <div class="text-overline grey--text lh-1">Límite: {{ r.cantidad_max
                                                         || '∞'
-                                                        }}</div>
+                                                    }}</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -859,6 +907,12 @@ export default {
         precio_may1: 0,
         escala_may2: 0,
         precio_may2: 0,
+        escala_may3: 0,
+        precio_may3: 0,
+        escala_may4: 0,
+        precio_may4: 0,
+        escala_may5: 0,
+        precio_may5: 0,
         peso: 0,
         tiene_bono: false,
         dial_adiciona: false,
@@ -967,7 +1021,7 @@ export default {
                 }
             }
             if (this.filtro_categoria == 'TODOS') {
-                return lista.filter((item) => (item.id + item.nombre+item.codbarra)
+                return lista.filter((item) => (item.id + item.nombre + item.codbarra)
                     .toLowerCase().includes(this.buscar.toLowerCase()))
             } else {
                 return lista.filter(item => item.categoria == this.filtro_categoria && (item.id + item.nombre)
@@ -1284,6 +1338,12 @@ export default {
                 this.precio_may1 = 0
                 this.escala_may2 = 0
                 this.precio_may2 = 0
+                this.escala_may3 = 0
+                this.precio_may3 = 0
+                this.escala_may4 = 0
+                this.precio_may4 = 0
+                this.escala_may5 = 0
+                this.precio_may5 = 0
                 this.proveedor = 0
                 this.peso = 0
                 this.factor = 1
@@ -1320,6 +1380,12 @@ export default {
             this.precio_may1 = Number(data.precio_may1) || 0
             this.escala_may2 = Number(data.escala_may2) || 0
             this.precio_may2 = Number(data.precio_may2) || 0;
+            this.escala_may3 = Number(data.escala_may3) || 0
+            this.precio_may3 = Number(data.precio_may3) || 0;
+            this.escala_may4 = Number(data.escala_may4) || 0
+            this.precio_may4 = Number(data.precio_may4) || 0;
+            this.escala_may5 = Number(data.escala_may5) || 0
+            this.precio_may5 = Number(data.precio_may5) || 0;
             this.costo = Number(data.costo);
             this.peso = Number(data.peso) || 0
             this.tipodata = data.tipodata;
@@ -1374,6 +1440,12 @@ export default {
                 this.precio_may1 = 0;
                 this.escala_may2 = 0;
                 this.precio_may2 = 0;
+                this.escala_may3 = 0;
+                this.precio_may3 = 0;
+                this.escala_may4 = 0;
+                this.precio_may4 = 0;
+                this.escala_may5 = 0;
+                this.precio_may5 = 0;
             }
             var array = {
                 id: this.id,
@@ -1390,6 +1462,12 @@ export default {
                 precio_may1: this.precio_may1 || 0,
                 escala_may2: this.escala_may2 || 0,
                 precio_may2: this.precio_may2 || 0,
+                escala_may3: this.escala_may3 || 0,
+                precio_may3: this.precio_may3 || 0,
+                escala_may4: this.escala_may4 || 0,
+                precio_may4: this.precio_may4 || 0,
+                escala_may5: this.escala_may5 || 0,
+                precio_may5: this.precio_may5 || 0,
                 peso: this.peso || 0,
                 costo: this.costo,
                 margen: this.margen || 0,
@@ -1409,7 +1487,7 @@ export default {
             await nuevoProducto(this.id, array)
 
             if (this.sumacon == true) {
-            //    await this.copiarProductoATodasLasSedes(this.id, array);
+                //    await this.copiarProductoATodasLasSedes(this.id, array);
                 this.sumacontador()
             }
             this.dialogo = cerrar

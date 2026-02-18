@@ -128,7 +128,7 @@
                     <div class="text-caption grey--text text--darken-1" v-if="getFactor(producto_selecto) > 1">
                         Stock:
                         <strong>{{ Math.floor(Number(producto_selecto.stock || 0) / getFactor(producto_selecto))
-                            }}</strong>
+                        }}</strong>
                         cajas
                         + <strong>{{ Number(producto_selecto.stock || 0) % getFactor(producto_selecto) }}</strong> und
                         (total <strong>{{ producto_selecto.stock }}</strong> und)
@@ -138,7 +138,7 @@
                             <v-btn small block :outlined="modoVenta !== 'entero'"
                                 :color="modoVenta === 'entero' ? 'success' : undefined"
                                 :disabled="getFactor(producto_selecto) <= 1" @click="seleeciona_modo('entero')">
-                                {{ producto_selecto.medida || 'CAJA' }} x {{ getFactor(producto_selecto)  }}
+                                {{ producto_selecto.medida || 'CAJA' }} x {{ getFactor(producto_selecto) }}
                             </v-btn>
                         </v-col>
                         <v-col cols="6">
@@ -156,7 +156,7 @@
                                 <span>
                                     {{ item.text }}
                                     <span v-if="item.sugerido" class="ml-2 grey--text text--darken-1">
-                                        
+
                                     </span>
                                 </span>
                             </template>
@@ -174,9 +174,10 @@
                             </template>
                         </v-select>
 
-              <div class="text-caption mt-1 grey--text text--darken-1" v-if="opcionesPrecioSelect.some(x => x.value === null)">
-  Si eliges <strong>AUTO</strong>, el sistema aplica la escala según la cantidad.
-</div>
+                        <div class="text-caption mt-1 grey--text text--darken-1"
+                            v-if="opcionesPrecioSelect.some(x => x.value === null)">
+                            Si eliges <strong>AUTO</strong>, el sistema aplica la escala según la cantidad.
+                        </div>
 
                     </div>
 
@@ -406,64 +407,64 @@ export default {
             }
         },
 
-      opcionesPrecioSelect() {
-  if (!this.producto_selecto) return [];
+        opcionesPrecioSelect() {
+            if (!this.producto_selecto) return [];
 
-  const p = this.producto_selecto;
-  const opts = [];
+            const p = this.producto_selecto;
+            const opts = [];
 
-  const t1 = this.buscar_activo_precio(1);
+            const t1 = this.buscar_activo_precio(1);
 
-  const t2 = this.tieneMay1(p) && this.buscar_activo_precio(2);
-  const t3 = this.tieneMay2(p) && this.buscar_activo_precio(3);
+            const t2 = this.tieneMay1(p) && this.buscar_activo_precio(2);
+            const t3 = this.tieneMay2(p) && this.buscar_activo_precio(3);
 
-  // ✅ Solo mostramos AUTO si hay al menos 2 opciones reales
-  const hayMasDeUnaEscala = (t2 || t3); // porque 1 siempre existe si t1=true
+            // ✅ Solo mostramos AUTO si hay al menos 2 opciones reales
+            const hayMasDeUnaEscala = (t2 || t3); // porque 1 siempre existe si t1=true
 
-  if (hayMasDeUnaEscala) {
-    opts.push({
-      value: null,
-      text: `AUTO (S/ ${this.fmt(this.precioChip(p, this._tierSugerido))})`,
-      sub: `Aplicará: ${this.descripcionTier(p, this._tierSugerido)}`,
-      sugerido: true
-    });
-  } else {
-    // si no hay auto, aseguramos que se quede fijo en 1
-    if (this.precioSeleccionado === null) this.precioSeleccionado = 1;
-  }
+            if (hayMasDeUnaEscala) {
+                opts.push({
+                    value: null,
+                    text: `AUTO (S/ ${this.fmt(this.precioChip(p, this._tierSugerido))})`,
+                    sub: `Aplicará: ${this.descripcionTier(p, this._tierSugerido)}`,
+                    sugerido: true
+                });
+            } else {
+                // si no hay auto, aseguramos que se quede fijo en 1
+                if (this.precioSeleccionado === null) this.precioSeleccionado = 1;
+            }
 
-  // Tier 1
-  if (t1) {
-    opts.push({
-      value: 1,
-      text: `Precio normal — S/ ${this.fmt(this.precioChip(p, 1))}`,
-      sub: this.descripcionTier(p, 1),
-      sugerido: this._tierSugerido === 1
-    });
-  }
+            // Tier 1
+            if (t1) {
+                opts.push({
+                    value: 1,
+                    text: `Precio normal — S/ ${this.fmt(this.precioChip(p, 1))}`,
+                    sub: this.descripcionTier(p, 1),
+                    sugerido: this._tierSugerido === 1
+                });
+            }
 
-  // Tier 2
-  if (t2) {
-    opts.push({
-      value: 2,
-      text: `Mayoreo 1 — S/ ${this.fmt(this.precioChip(p, 2))}`,
-      sub: this.descripcionTier(p, 2),
-      sugerido: this._tierSugerido === 2
-    });
-  }
+            // Tier 2
+            if (t2) {
+                opts.push({
+                    value: 2,
+                    text: `Mayoreo 1 — S/ ${this.fmt(this.precioChip(p, 2))}`,
+                    sub: this.descripcionTier(p, 2),
+                    sugerido: this._tierSugerido === 2
+                });
+            }
 
-  // Tier 3
-  if (t3) {
-    opts.push({
-      value: 3,
-      text: `Mayoreo 2 — S/ ${this.fmt(this.precioChip(p, 3))}`,
-      sub: this.descripcionTier(p, 3),
-      sugerido: this._tierSugerido === 3
-    });
-  }
+            // Tier 3
+            if (t3) {
+                opts.push({
+                    value: 3,
+                    text: `Mayoreo 2 — S/ ${this.fmt(this.precioChip(p, 3))}`,
+                    sub: this.descripcionTier(p, 3),
+                    sugerido: this._tierSugerido === 3
+                });
+            }
 
-  return opts;
-},
+            return opts;
+        },
 
 
     },
