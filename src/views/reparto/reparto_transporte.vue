@@ -1,9 +1,9 @@
 <template>
     <div class="pa-1">
         <v-app-bar scroll-behavior="hide" class="mt-12" app color="" dark dense>
-            <v-row dense align="center">                
+            <v-row dense align="center">
                 <v-btn v-if="!isMobile" small color="success" dark rounded depressed lock class="mt-1"
-                    @click="dial_repartos = !dial_repartos">
+                    @click="dial_repartos = true">
                     <v-icon left>mdi-truck</v-icon>
                     Buscar Reparto
                 </v-btn>
@@ -44,7 +44,7 @@
                                 <v-list-item-icon><v-icon color="info">mdi-cash-register</v-icon></v-list-item-icon>
                                 <v-list-item-title>Ver Cobranza</v-list-item-title>
                             </v-list-item>
-                            <v-list-item @click="dial_repartos = !dial_repartos">
+                            <v-list-item @click="dial_repartos = true">
                                 <v-list-item-icon><v-icon color="error">mdi-truck</v-icon></v-list-item-icon>
                                 <v-list-item-title>Buscar Reparto</v-list-item-title>
                             </v-list-item>
@@ -55,9 +55,9 @@
         </v-app-bar>
         <v-card class="mt-12" v-if="!isMobile">
             <v-chip v-if="repartoActual" color="yellow darken-2" text-color="black" small class="mr-2 mb-2">
-            <v-icon left small>mdi-truck</v-icon>
-            Reparto #{{ repartoActual }}
-        </v-chip>
+                <v-icon left small>mdi-truck</v-icon>
+                Reparto #{{ repartoActual }}
+            </v-chip>
             <v-simple-table fixed-header height="75vh" dense>
                 <thead>
                     <tr>
@@ -131,9 +131,9 @@
         <!-- 📱 VISTA PARA CELULARES -->
         <v-container v-else fluid class="mt-12 mb-12">
             <v-chip v-if="repartoActual" color="yellow darken-2" text-color="black" small class="mr-2 mb-2">
-            <v-icon left small>mdi-truck</v-icon>
-            Reparto #{{ repartoActual }}
-        </v-chip>
+                <v-icon left small>mdi-truck</v-icon>
+                Reparto #{{ repartoActual }}
+            </v-chip>
             <v-row dense>
                 <v-col v-for="pedido in displayedPedidos" :key="pedido.id" cols="12" class="pb-0">
                     <v-card outlined class="mb-1 pa-2" style="font-size: 80%;">
@@ -218,7 +218,7 @@
             </v-row>
             <div class="text-center py-4" v-if="displayedPedidos.length < pedidosFiltrados.length">
                 <v-btn small outlined @click="verMas">Ver más ({{ displayedPedidos.length }}/{{ pedidosFiltrados.length
-                }})</v-btn>
+                    }})</v-btn>
             </div>
         </v-container>
         <dial_mapas v-model="dialogoMapa"
@@ -226,21 +226,19 @@
             :ver-todos="false" :guardar_auto="false" @cierra="dialogoMapa = false" />
         <mapa_reparto v-model="dialogoMapa_reparto" :clientes="pedidosFiltrados" :grupo="repartoActual" />
         <dial_rechaza v-if="dial_rechazo" :item_selecto="item_selecto" @cerrar="dial_rechazo = false"
-            @guardado=" dial_rechazo = false" :grupo="repartoActual" />
-        <busca_reparto v-if="dial_repartos" @seleccionado="ver_reparto($event), dial_repartos = false"
-            @cerrar="dial_repartos = false" />
-        <div v-if="isMobile && !dialogoMapa_reparto && pedidosFiltrados.length > 0" class="fab-mobile">
-
-            <v-btn color="success" dark class="mb-2" @click="estadoFiltro = 'todos'; dialogoMapa_reparto = true">
-                Mapa
-                <v-icon>mdi-map-marker</v-icon>
-            </v-btn>
-        </div>
-        <acepta_pedido v-if="dial_aceptado" :item_selecto="item_selecto" @cerrar="dial_aceptado = false"
+            @guardado=" dial_rechazo = false" :grupo="repartoActual" />            
+            <div v-if="isMobile && !dialogoMapa_reparto && pedidosFiltrados.length > 0" class="fab-mobile">                
+                <v-btn color="success" dark class="mb-2" @click="estadoFiltro = 'todos'; dialogoMapa_reparto = true">
+                    Mapa
+                    <v-icon>mdi-map-marker</v-icon>
+                </v-btn>
+            </div>
+            <acepta_pedido v-if="dial_aceptado" :item_selecto="item_selecto" @cerrar="dial_aceptado = false"
             @guardado=" dial_aceptado = false" :grupo="repartoActual" />
-        <cobranza_reparto v-if="dial_cobranza" :pedidos="pedidosFiltrados" :grupo="repartoActual"
+            <cobranza_reparto v-if="dial_cobranza" :pedidos="pedidosFiltrados" :grupo="repartoActual"
             @cerrar="dial_cobranza = false" />
-    </div>
+            <busca_reparto v-if="dial_repartos" v-model="dial_repartos" @seleccionado="ver_reparto" />
+        </div>
 </template>
 
 <script>
@@ -352,18 +350,22 @@ export default {
         async ver_reparto(reparto) {
             console.log("Seleccionando reparto:", reparto);
 
-            const grupoId = reparto.grupo;
+            const grupoId = reparto.grupo || reparto.id;
+            if (!grupoId) {
+                console.error("No se encontró ID de reparto");
+                return;
+            }
+
+            // Actualizar URL si es necesario
             if (String(this.$route.params.id || "") !== String(grupoId)) {
                 this.$router.replace({
                     name: "reparto_transporte",
                     params: { id: String(grupoId) },
                 });
             }
-            // guarda en sessionStorage para persistencia
-            sessionStorage.setItem("num_reparto", String(grupoId));
 
-            // cierra diálogo de selección si estaba abierto
-            this.dial_repartos = false;
+            // Guardar en sessionStorage para persistencia
+            sessionStorage.setItem("num_reparto", String(grupoId));
 
             // 🔄 si ya había un listener anterior, lo apagamos
             if (this.repartoRef && this.repartoListener) {
@@ -374,21 +376,20 @@ export default {
             this.repartoActual = grupoId;
 
             // crea la ref al nodo de cabecera de este grupo
-            // OJO: asumo que all_Cabecera_p(grupoId) devuelve la ref tipo firebase.database().ref(...)
             const ref = all_Cabecera_p(grupoId);
 
             // definimos el callback y lo guardamos para poder hacer off luego
             const listener = async (snap) => {
                 const cabecera = snap.val() || {};
-                console.log('cabn', cabecera)
-                // armamos array de pedidos
+                console.log('cabecera', cabecera);
 
+                // armamos array de pedidos
                 const pedidos = Object.keys(cabecera).map(key => {
                     const p = cabecera[key] || {};
                     p.id = key;
                     p.estado_entrega = p.estado_entrega || "pendiente";
                     return p;
-                }).filter(p => p.estado !== "ANULADO");;
+                }).filter(p => p.estado !== "ANULADO");
 
                 // seteamos en data
                 this.lista_pedidos = pedidos;
@@ -397,8 +398,7 @@ export default {
                 await this.cargarClientesParaPedidos();
 
                 // IMPORTANTE: si el item_selecto que tenías abierto en modal/mapa
-                // pertenece a este mismo reparto, refrescarlo para que el estado_entrega
-                // nuevo se vea sin tener que reabrir nada
+                // pertenece a este mismo reparto, refrescarlo
                 if (this.item_selecto && this.item_selecto.id) {
                     const actualizado = this.lista_pedidos.find(p => p.id === this.item_selecto.id);
                     if (actualizado) {
@@ -413,6 +413,9 @@ export default {
             // guardar ref y listener para apagarlos más tarde
             this.repartoRef = ref;
             this.repartoListener = listener;
+
+            // Mostrar notificación de éxito
+            this.$store.commit('dialogosnackbar', 'Reparto cargado correctamente');
         },
 
         async cargarClientesParaPedidos() {

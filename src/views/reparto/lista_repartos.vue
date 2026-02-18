@@ -426,7 +426,7 @@
 
         <dial_nuevo_rep v-if="nuevo_rep" @cierra="nuevo_rep = false" />
         <dial_sube_rep v-if="dial_sube_excel" @cerrar="dial_sube_excel = false, filtrar" />
-        <cobranza_reparto v-if="dial_cobranza" :pedidos="null" :grupo="repartoActual" @cerrar="dial_cobranza = false" />
+        <cobranza_reparto v-if="dial_cobranza" :pedidos="[]" :grupo="repartoActual" @cerrar="dial_cobranza = false" />
         <dial_carga_productos v-if="dial_carga" :grupo="grupoCarga" @cerrar="dial_carga = false"
             @guardado="onCargaGuardada" />
 

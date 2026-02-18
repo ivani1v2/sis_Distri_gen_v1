@@ -193,7 +193,7 @@
                             </td>
                             <td class="caption">{{ item.dni }} - {{ item.cliente }}</td>
                             <td class="caption">{{ item.vendedor }}</td>
-                            <td class="text-center caption">{{ item.peso_total }}</td>
+                            <td class="text-center caption">{{ redondear(item.peso_total) }}</td>
                             <td class="caption">
                                 <v-chip x-small :color="item.forma_pago === 'CREDITO' ? 'orange' : 'success'" dark>
                                     {{ item.forma_pago }}

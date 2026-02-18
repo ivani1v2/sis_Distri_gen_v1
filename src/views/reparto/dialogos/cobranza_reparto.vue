@@ -107,24 +107,17 @@
                     </v-btn>
                 </v-col>
             </v-row>
-
-            <!-- Resumen de gastos -->
-            <v-row v-if="gastos.length > 0" dense class="mt-2">
+           <!-- Resumen de gastos -->
+            <v-row v-if="gastos.length > 0" dense class="mt-1">
                 <v-col cols="12">
-                    <v-alert type="warning" dense text class="mb-0">
+                    <v-alert type="warning" dense text class="mb-0 py-1">
                         <div class="d-flex flex-column">
-                            <div class="d-flex justify-space-between align-center mb-1">
-                                <span><strong>Total EFECTIVO cobrado:</strong> {{ monedaSimbolo }}{{
-                                    totalEfectivo.toFixed(2) }}</span>
-                                <span><strong>Total gastos:</strong> -{{ monedaSimbolo }}{{ totalGastos.toFixed(2)
-                                }}</span>
-                            </div>
-                            <v-divider class="my-1"></v-divider>
-                            <div class="d-flex justify-space-between align-center">
-                                <span class="font-weight-bold">EFECTIVO disponible después de gastos:</span>
-                                <span class="font-weight-bold text-h6"
-                                    :class="efectivoDisponible >= 0 ? 'green--text' : 'red--text'">
-                                    {{ monedaSimbolo }}{{ efectivoDisponible.toFixed(2) }}
+                            <div class="d-flex justify-space-between align-center caption">
+                                <span>Efectivo: <strong>{{ monedaSimbolo }}{{ totalEfectivo.toFixed(2)
+                                        }}</strong></span>
+                                <span>Gastos: <strong>-{{ monedaSimbolo }}{{ totalGastos.toFixed(2) }}</strong></span>
+                                <span :class="efectivoDisponible >= 0 ? 'green--text' : 'red--text'">
+                                    <strong>{{ monedaSimbolo }}{{ efectivoDisponible.toFixed(2) }}</strong>
                                 </span>
                             </div>
                         </div>
@@ -205,15 +198,24 @@
         <!-- Diálogo de Gastos -->
         <v-dialog v-model="dialogGastos" max-width="550">
             <v-card class="rounded-lg">
-                <v-card-title class="font-weight-bold amber darken-2 white--text py-3">
-                    <v-icon left>mdi-cash-minus</v-icon>
+                <v-card-title :class="[
+                    'font-weight-bold amber darken-2 white--text',
+                    isMobile ? 'py-2 subtitle-2' : 'py-3 subtitle-3']">
+                    <v-icon left :small="isMobile" color="white">
+                        mdi-cash-minus
+                    </v-icon>
                     Gastos del Reparto
                     <v-spacer></v-spacer>
-                    <v-btn icon small dark @click="abrirNuevoGasto" title="Agregar gasto">
-                        <v-icon>mdi-plus</v-icon>
+                    <v-btn :x-small="isMobile" :small="!isMobile" color="white" class="amber--text font-weight-bold"
+                        :style="isMobile
+                            ? 'border-radius:18px; padding:0 10px;'
+                            : 'border-radius:20px;'" :elevation="isMobile ? 1 : 2" @click="abrirNuevoGasto">
+                        <v-icon left :x-small="isMobile" color="amber darken-2">
+                            mdi-plus
+                        </v-icon>
+                        Agregar
                     </v-btn>
                 </v-card-title>
-
                 <v-card-text class="pt-4">
                     <v-alert v-if="totalEfectivo > 0" type="info" dense text class="mb-3">
                         Efectivo cobrado: <strong>{{ monedaSimbolo }}{{ totalEfectivo.toFixed(2) }}</strong> |
@@ -229,8 +231,11 @@
                             <v-list-item-content>
                                 <v-list-item-title>{{ gasto.descripcion }}</v-list-item-title>
                                 <v-list-item-subtitle>
-                                    {{ formatFecha(gasto.fecha) }} - {{ gasto.usuario }}
+                                    {{ formatFecha(gasto.fecha) }}
                                 </v-list-item-subtitle>
+                                <div class="caption grey--text mt-1">
+                                    {{ gasto.usuario }}
+                                </div>
                             </v-list-item-content>
                             <v-list-item-action>
                                 <div class="d-flex align-center">
@@ -348,11 +353,13 @@ export default {
         };
     },
     computed: {
+        isMobile() {
+            return this.$vuetify.breakpoint.smAndDown
+        },
         totalCobrado() {
             return Object.values(this.dataEntrega).reduce((acc, o) => acc + (o.total_cobrado || 0), 0);
         },
         totalPedido() {
-            // Calcular desde la cabecera del grupo (todos los pedidos del reparto)
             return Object.values(this.cabeceraGrupo).reduce((acc, cab) => {
                 if (String(cab.estado || "").toUpperCase() === "ANULADO") return acc;
                 return acc + Number(cab.total || 0);
