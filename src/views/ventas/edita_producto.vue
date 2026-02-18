@@ -5,13 +5,9 @@
             <v-system-bar window dark>
                 <v-icon large color="red" @click="cierra()">mdi-close</v-icon>
                 <v-spacer></v-spacer>
-                <IndicadorBono v-if="tieneBonoProducto" 
-                    :producto="productoCompleto" 
-                    :bonos-globales="bonosGlobalesCache"
-                    :solo-icono="false"
-                    class="mr-14" />
-                <v-checkbox v-if="$store.state.permisos.edita_bono" v-model="es_bono"
-                    label="ES BONO"></v-checkbox>
+                <IndicadorBono v-if="tieneBonoProducto" :producto="productoCompleto"
+                    :bonos-globales="bonosGlobalesCache" :solo-icono="false" class="mr-14" />
+                <v-checkbox v-if="$store.state.permisos.edita_bono" v-model="es_bono" label="ES BONO"></v-checkbox>
             </v-system-bar>
         </div>
         <v-card class="pa-3">
@@ -19,16 +15,18 @@
             <v-alert v-if="esBonoGlobal" type="warning" dense text class="mb-6">
                 Bono global - No editable
             </v-alert>
-            
+
             <v-alert v-else-if="esBonoIndividualBloqueado" type="info" dense text class="mb-6">
                 Bono exclusivo - No editable
             </v-alert>
-            
-            <v-alert v-else-if="esPrecioEstricto && tieneEscalasConfiguradas && !es_bono" type="info" dense text class="mb-2">
+
+            <v-alert v-else-if="esPrecioEstricto && tieneEscalasConfiguradas && !es_bono" type="info" dense text
+                class="mb-2">
                 Precio automático por escala
                 <span v-if="tienePrecioGrupoAplicado || tienePrecioEscalaAplicado" class="ml-1">
                     <v-chip x-small class="ml-1" color="blue" text-color="white">
-                        {{ tienePrecioGrupoAplicado ? item_selecto._precio_grupo : ('Tier ' + (item_selecto._precio_tier || 1)) }}
+                        {{ tienePrecioGrupoAplicado ? item_selecto._precio_grupo : ('Tier ' + (item_selecto._precio_tier
+                            || 1)) }}
                     </v-chip>
                 </span>
             </v-alert>
@@ -134,7 +132,7 @@ export default {
     },
     created() {
         var val = this.item_selecto
-     
+
         this.desc_1 = val.desc_1 || 0
         this.desc_2 = val.desc_2 || 0
         this.desc_3 = val.desc_3 || 0
@@ -149,34 +147,34 @@ export default {
             this.preciodescuento = 0
         }
         this.dial = true
-        
+
         this.cargarBonosGlobales();
     },
     watch: {
         cantidadEdita(nuevaCantidad) {
             if (this.es_bono) return;
-            
+
             // Si el producto fue vendido con presentación, no recalcular precio por escalas
             if (this.item_selecto?._presentacion_id) return;
-            
+
             const cantidad = Number(nuevaCantidad) || 0;
             if (cantidad <= 0) return;
-            
+
             const factor = Number(this.item_selecto?.factor || 1);
             const medida = String(this.item_selecto?.medida || '').toUpperCase();
             const unidadesTotal = (factor > 1 && medida !== 'UNIDAD') ? cantidad * factor : cantidad;
-            
+
             const prod = store.state.productos.find(p => String(p.id) === String(this.item_selecto?.id));
             if (!prod) return;
-            
+
             const tieneGrupoPrecio = !!prod.grupo_precio;
             const tieneMay1 = Number(prod.precio_may1 || 0) > 0 && Number(prod.escala_may1 || 0) > 0;
             const tieneMay2 = Number(prod.precio_may2 || 0) > 0 && Number(prod.escala_may2 || 0) > 0;
-            
+
             if (!tieneGrupoPrecio && !tieneMay1 && !tieneMay2) return;
-            
+
             let precioFinal = null;
-            
+
             if (tieneGrupoPrecio) {
                 const bonos = this.$store.state.bonos || {};
                 const cfg = bonos[prod.grupo_precio];
@@ -186,14 +184,14 @@ export default {
                     const p1 = Number(cfg.precio_may1 || 0);
                     const p2 = Number(cfg.precio_may2 || 0);
                     const precioBase = Number(prod.precio || 0);
-                    
+
                     let nuevoPrecio = precioBase;
                     if (esc2 && unidadesTotal >= esc2 && p2) {
                         nuevoPrecio = p2;
                     } else if (esc1 && unidadesTotal >= esc1 && p1) {
                         nuevoPrecio = p1;
                     }
-                    
+
                     precioFinal = (factor > 1 && medida !== 'UNIDAD') ? nuevoPrecio * factor : nuevoPrecio;
                 }
             } else if (tieneMay1 || tieneMay2) {
@@ -202,7 +200,7 @@ export default {
                 const precioBase = Number(prod.precio || 0);
                 const precioMay1 = Number(prod.precio_may1 || precioBase);
                 const precioMay2 = Number(prod.precio_may2 || precioBase);
-                
+
                 let precioUnidad = precioBase;
                 if (tieneMay1 && tieneMay2) {
                     const lim1 = Math.min(esc1, esc2);
@@ -217,10 +215,10 @@ export default {
                 } else if (tieneMay2) {
                     precioUnidad = unidadesTotal >= esc2 ? precioMay2 : precioBase;
                 }
-                
+
                 precioFinal = (factor > 1 && medida !== 'UNIDAD') ? precioUnidad * factor : precioUnidad;
             }
-            
+
             if (precioFinal !== null) {
                 this.precioedita = this.redondear(precioFinal);
             }
@@ -231,7 +229,7 @@ export default {
                 this.preciodescuento = 0;
             } else {
                 let precioRecuperado = Number(this.item_selecto?.precio_base || 0);
-                
+
                 if (!precioRecuperado || precioRecuperado <= 0) {
                     const prodOriginal = store.state.productos.find(
                         p => String(p.id) === String(this.item_selecto?.id)
@@ -243,7 +241,7 @@ export default {
                 if (!precioRecuperado || precioRecuperado <= 0) {
                     precioRecuperado = Number(this.item_selecto?.precio || 0);
                 }
-                
+
                 this.precioedita = precioRecuperado;
                 this.preciodescuento = 0;
             }
@@ -254,21 +252,21 @@ export default {
         checkboxBonoVisible() {
             return this.$store.state.permisos.edita_bono === true;
         },
-        
+
         esBonoGlobal() {
             if (this.item_selecto?.bono_auto !== true) return false;
             if (this.item_selecto?.bono_origen_tipo !== 'grupo_bono') return false;
             if (this.es_bono !== true) return false;
             return this.$store.state.permisos.permite_editar_bono === true;
         },
-        
+
         esBonoIndividualBloqueado() {
             if (this.item_selecto?.bono_auto !== true) return false;
             if (this.item_selecto?.bono_origen_tipo !== 'lista_bono') return false;
             if (this.es_bono !== true) return false;
             return this.$store.state.permisos.permite_editar_bono === true;
         },
-        
+
         tienePrecioEscalaAplicado() {
             const tier = this.item_selecto?._precio_tier || 1;
             return tier > 1;
@@ -281,24 +279,24 @@ export default {
         esPrecioEstricto() {
             return this.$store.state.permisos.permite_editar_precio === true;
         },
-        
+
         tieneEscalasConfiguradas() {
             const prod = this.productoCompleto;
             if (!prod?.id) return false;
-            
+
             const tieneGrupoPrecio = !!prod.grupo_precio;
             if (tieneGrupoPrecio) {
                 const bonos = this.$store.state.bonos || {};
                 const cfg = bonos[prod.grupo_precio];
                 if (cfg && cfg.tipo === 'precio' && cfg.activo) return true;
             }
-            
+
             const tieneMay1 = Number(prod.precio_may1 || 0) > 0 && Number(prod.escala_may1 || 0) > 0;
             const tieneMay2 = Number(prod.precio_may2 || 0) > 0 && Number(prod.escala_may2 || 0) > 0;
-            
+
             return tieneMay1 || tieneMay2;
         },
-        
+
         esPrecioEscalaBloqueado() {
             if (!this.tienePrecioEscalaAplicado && !this.tienePrecioGrupoAplicado) return false;
             if (this.es_bono) return false;
@@ -325,23 +323,23 @@ export default {
         },
         tieneBonoProducto() {
             if (!this.productoCompleto?.id) return false;
-            
+
             const tieneUnitario = !!(
-                this.productoCompleto.tiene_bono && 
+                this.productoCompleto.tiene_bono &&
                 Array.isArray(this.productoCompleto.lista_bono) &&
                 this.productoCompleto.lista_bono.length > 0
             );
-            
+
             const tieneGrupoPrecio = this.bonosGlobalesCache.some(b => {
                 if (!b.activo) return false;
                 return b.codigo === this.productoCompleto.grupo_precio && b.tipo === 'precio';
             });
-            
+
             const tieneGrupoBono = this.bonosGlobalesCache.some(b => {
                 if (!b.activo) return false;
                 return b.codigo === this.productoCompleto.grupo_bono && b.tipo === 'bono';
             });
-            
+
             return tieneUnitario || tieneGrupoPrecio || tieneGrupoBono;
         }
     },
@@ -409,14 +407,22 @@ export default {
 
             // Stock
             if (this.item_selecto.controstock) {
-                const producto = store.state.productos.find(
-                    item => item.id == this.item_selecto.id
-                );
-                if (producto && producto.stock < Number(this.cantidadEdita)) {
-                    alert('Producto sin Stock');
+                const producto = store.state.productos.find(item => String(item.id) === String(this.item_selecto.id));
+                if (!producto) {
+                    alert('Producto no encontrado en stock');
+                    return;
+                }
+
+                const stockActual = Number(producto.stock || 0); // stock en inventario hoy (excluye lo reservado para esta línea)
+                const cantidadOriginal = Number(this.item_selecto.cantidad || 0); // la cantidad que ya estaba "reservada" en la línea
+                const stockDisponible = stockActual + cantidadOriginal; // lo que realmente podemos asignar a esta línea
+
+                if (Number(this.cantidadEdita) > stockDisponible) {
+                    alert(`Producto sin stock. Disponible: ${stockDisponible}`);
                     return;
                 }
             }
+
 
             // 🚨 AQUÍ ESTABA EL PROBLEMA:
             // Antes intentabas usar this.listaproductos y this.recalculoCompleto()
@@ -436,7 +442,7 @@ export default {
                 linea.precio = linea.precio_base || Number(this.item_selecto.precio || 0);
                 linea.totalLinea = '0.00';
                 linea.preciodescuento = 0;
-                
+
                 if (this.item_selecto.bono_auto) {
                     linea.bono_editado = true;
                 }
@@ -446,7 +452,7 @@ export default {
                     linea.bono_origen_tipo = null;
                     linea.bono_origen = null;
                     linea.bono_regla = null;
-                }                
+                }
                 linea.operacion =
                     (linea.operacion === 'GRATUITA')
                         ? 'GRAVADA'
@@ -464,15 +470,30 @@ export default {
 
 
         suma() {
-            if (this.item_selecto.controstock) {
-                var producto = store.state.productos.find(item => item.id == this.item_selecto.id)
-                if (producto.stock <= this.cantidadEdita) {
-                    alert('Producto sin Stock')
-                    return
-                }
+            if (!this.item_selecto.controstock) {
+                this.cantidadEdita = parseInt(this.cantidadEdita) + 1;
+                return;
             }
-            this.cantidadEdita = parseInt(this.cantidadEdita) + 1
+
+            const producto = store.state.productos.find(item => String(item.id) === String(this.item_selecto.id));
+            if (!producto) {
+                // Si por alguna razón no encontramos el producto, permitimos sumar (o ajusta según prefieras)
+                this.cantidadEdita = parseInt(this.cantidadEdita) + 1;
+                return;
+            }
+
+            const stockActual = Number(producto.stock || 0);
+            const cantidadOriginal = Number(this.item_selecto.cantidad || 0);
+            const stockDisponible = stockActual + cantidadOriginal; // stock libre + lo que ya estaba reservado en esta línea
+
+            if (Number(this.cantidadEdita) + 1 > stockDisponible) {
+                alert('Producto sin Stock');
+                return;
+            }
+
+            this.cantidadEdita = parseInt(this.cantidadEdita) + 1;
         },
+
         resta() {
             if (this.cantidadEdita > 1) {
                 this.cantidadEdita = parseInt(this.cantidadEdita) - 1
@@ -503,11 +524,11 @@ export default {
             if (d2 > 0) precio_actual = precio_actual * (1 - d2 / 100);
             if (d3 > 0) precio_actual = precio_actual * (1 - d3 / 100);
 
-      
+
 
             // Actualiza precio neto y monto de descuento
             this.precioedita = this.redondear(precio_actual);
-    
+
         },
 
         cierra() {
