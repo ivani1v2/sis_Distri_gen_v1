@@ -2,8 +2,10 @@
     <v-dialog v-model="dialogo" max-width="550" persistent>
         <v-card class="rounded-lg">
             <v-toolbar dense color="info" dark>
-                <v-icon left>mdi-truck</v-icon>
-                <v-toolbar-title>Asignar Transporte</v-toolbar-title>
+                <v-icon left small>mdi-truck</v-icon>
+                <v-toolbar-title class="subtitle-2">
+                    Asignar Transporte - Reparto #{{ repartoId }}
+                </v-toolbar-title>
                 <v-spacer></v-spacer>
                 <v-btn icon @click="cerrar">
                     <v-icon>mdi-close</v-icon>

@@ -1,9 +1,7 @@
 <template>
     <div class="pa-1">
-
-
         <v-app-bar scroll-behavior="hide" class="mt-12" app color="" dark dense>
-            <v-row dense>
+            <v-row dense align="center">                
                 <v-btn v-if="!isMobile" small color="success" dark rounded depressed lock class="mt-1"
                     @click="dial_repartos = !dial_repartos">
                     <v-icon left>mdi-truck</v-icon>
@@ -56,6 +54,10 @@
             </v-row>
         </v-app-bar>
         <v-card class="mt-12" v-if="!isMobile">
+            <v-chip v-if="repartoActual" color="yellow darken-2" text-color="black" small class="mr-2 mb-2">
+            <v-icon left small>mdi-truck</v-icon>
+            Reparto #{{ repartoActual }}
+        </v-chip>
             <v-simple-table fixed-header height="75vh" dense>
                 <thead>
                     <tr>
@@ -128,6 +130,10 @@
 
         <!-- 📱 VISTA PARA CELULARES -->
         <v-container v-else fluid class="mt-12 mb-12">
+            <v-chip v-if="repartoActual" color="yellow darken-2" text-color="black" small class="mr-2 mb-2">
+            <v-icon left small>mdi-truck</v-icon>
+            Reparto #{{ repartoActual }}
+        </v-chip>
             <v-row dense>
                 <v-col v-for="pedido in displayedPedidos" :key="pedido.id" cols="12" class="pb-0">
                     <v-card outlined class="mb-1 pa-2" style="font-size: 80%;">

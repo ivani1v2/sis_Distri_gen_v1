@@ -35,81 +35,85 @@
 
                 <v-spacer></v-spacer>
 
-                <!-- Botón Transporte (solo para admin) -->
-                <v-btn v-if="esAdmin" color="info" dark small class="rounded-lg mx-1" @click="abrirDialTransporte">
-                    <v-icon left small>mdi-truck</v-icon> Transporte
-                </v-btn>
+                <div class="d-flex align-center mt-2">
+                    <v-btn v-if="esAdmin" color="info" dark small class="rounded-lg mx-1" @click="abrirDialTransporte">
+                        <v-icon left small>mdi-truck</v-icon> Transp.
+                    </v-btn>
 
-                <v-menu bottom offset-y transition="scale-transition" nudge-bottom="5" :close-on-content-click="false">
-                    <template v-slot:activator="{ on, attrs }">
-                        <v-btn color="red darken-2" dark small v-bind="attrs" v-on="on" class="rounded-lg mx-1">
-                            <v-icon left small>mdi-file-chart</v-icon> Reportes
-                        </v-btn>
-                    </template>
-                    <v-list dense class="py-1">
-                        <v-list-item @click="dial_descarga = true">
-                            <v-list-item-icon><v-icon color="blue darken-2">mdi-warehouse</v-icon></v-list-item-icon>
-                            <v-list-item-title>Reporte Almacén</v-list-item-title>
-                        </v-list-item>
-                        <v-list-item @click="reporte_producto_cliente()">
-                            <v-list-item-icon><v-icon
-                                    color="green darken-2">mdi-account-multiple</v-icon></v-list-item-icon>
-                            <v-list-item-title>Producto x Cliente</v-list-item-title>
-                        </v-list-item>
-                        <v-list-item @click="pdf_transporte()">
-                            <v-list-item-icon><v-icon color="indigo darken-2">mdi-truck</v-icon></v-list-item-icon>
-                            <v-list-item-title>Reporte Transporte</v-list-item-title>
-                        </v-list-item>
-                        <v-list-item @click="pdf_clientes_transporte()">
-                            <v-list-item-icon><v-icon
-                                    color="teal darken-2">mdi-clipboard-list</v-icon></v-list-item-icon>
-                            <v-list-item-title>Lista Clientes (Reparto)</v-list-item-title>
-                        </v-list-item>
-                        <v-list-item @click="reporte_cobrar()">
-                            <v-list-item-icon><v-icon
-                                    color="orange darken-2">mdi-account-cash</v-icon></v-list-item-icon>
-                            <v-list-item-title>Por Cobrar</v-list-item-title>
-                        </v-list-item>
-                        <v-list-item @click="ver_detalle_masivo()">
-                            <v-list-item-icon><v-icon color="purple darken-2">mdi-file-eye</v-icon></v-list-item-icon>
-                            <v-list-item-title>Ver Detalle (Consol.)</v-list-item-title>
-                        </v-list-item>
-                        <v-divider></v-divider>
-                        <v-list-item @click="dialogo_imprime = true">
-                            <v-list-item-icon><v-icon color="teal darken-2">mdi-printer</v-icon></v-list-item-icon>
-                            <v-list-item-title>Imprimir Comprobantes</v-list-item-title>
-                        </v-list-item>
-                    </v-list>
-                </v-menu>
+                    <v-menu bottom offset-y transition="scale-transition" nudge-bottom="5"
+                        :close-on-content-click="false">
+                        <template v-slot:activator="{ on, attrs }">
+                            <v-btn color="red darken-2" dark small v-bind="attrs" v-on="on" class="rounded-lg mx-1">
+                                <v-icon left small>mdi-file-chart</v-icon> Reportes
+                            </v-btn>
+                        </template>
+                        <v-list dense class="py-1">
+                            <v-list-item @click="dial_descarga = true">
+                                <v-list-item-icon><v-icon
+                                        color="blue darken-2">mdi-warehouse</v-icon></v-list-item-icon>
+                                <v-list-item-title>Reporte Almacén</v-list-item-title>
+                            </v-list-item>
+                            <v-list-item @click="reporte_producto_cliente()">
+                                <v-list-item-icon><v-icon
+                                        color="green darken-2">mdi-account-multiple</v-icon></v-list-item-icon>
+                                <v-list-item-title>Producto x Cliente</v-list-item-title>
+                            </v-list-item>
+                            <v-list-item @click="pdf_transporte()">
+                                <v-list-item-icon><v-icon color="indigo darken-2">mdi-truck</v-icon></v-list-item-icon>
+                                <v-list-item-title>Reporte Transporte</v-list-item-title>
+                            </v-list-item>
+                            <v-list-item @click="pdf_clientes_transporte()">
+                                <v-list-item-icon><v-icon
+                                        color="teal darken-2">mdi-clipboard-list</v-icon></v-list-item-icon>
+                                <v-list-item-title>Lista Clientes (Reparto)</v-list-item-title>
+                            </v-list-item>
+                            <v-list-item @click="reporte_cobrar()">
+                                <v-list-item-icon><v-icon
+                                        color="orange darken-2">mdi-account-cash</v-icon></v-list-item-icon>
+                                <v-list-item-title>Por Cobrar</v-list-item-title>
+                            </v-list-item>
+                            <v-list-item @click="ver_detalle_masivo()">
+                                <v-list-item-icon><v-icon
+                                        color="purple darken-2">mdi-file-eye</v-icon></v-list-item-icon>
+                                <v-list-item-title>Ver Detalle (Consol.)</v-list-item-title>
+                            </v-list-item>
+                            <v-divider></v-divider>
+                            <v-list-item @click="dialogo_imprime = true">
+                                <v-list-item-icon><v-icon color="teal darken-2">mdi-printer</v-icon></v-list-item-icon>
+                                <v-list-item-title>Imprimir Comprobantes</v-list-item-title>
+                            </v-list-item>
+                        </v-list>
+                    </v-menu>
 
-                <v-menu bottom offset-y transition="scale-transition" nudge-bottom="5">
-                    <template v-slot:activator="{ on, attrs }">
-                        <v-btn color="blue darken-3" dark small v-bind="attrs" v-on="on" class="rounded-lg mx-1">
-                            <v-icon left small>mdi-cogs</v-icon> Acciones
-                        </v-btn>
-                    </template>
-                    <v-list dense class="py-1">
-                        <v-list-item @click="envia_sunat" :disabled="periodoCerrado">
-                            <v-list-item-icon><v-icon color="green">mdi-cloud-upload</v-icon></v-list-item-icon>
-                            <v-list-item-title>Enviar a Sunat</v-list-item-title>
-                        </v-list-item>
-                        <v-list-item @click="abare_guias()" :disabled="!puedeGenerarGuia">
-                            <v-list-item-icon>
-                                <v-icon :color="puedeGenerarGuia ? 'cyan darken-2' : 'grey'">mdi-file-send</v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-title>Generar Guía</v-list-item-title>
-                        </v-list-item>
-                        <v-list-item @click="transferir_pedidos()">
-                            <v-list-item-icon><v-icon
-                                    color="deep-purple darken-1">mdi-swap-horizontal</v-icon></v-list-item-icon>
-                            <v-list-item-title>Transferir Pedidos</v-list-item-title>
-                        </v-list-item>
-                        <v-list-item @click="anular_masivo()" :disabled="!puedeAnularMasivo">
-                            <v-list-item-icon><v-icon color="red">mdi-cancel</v-icon></v-list-item-icon>
-                            <v-list-item-title>Anular Masivo</v-list-item-title>
-                        </v-list-item>
-                    </v-list>
-                </v-menu>
+                    <v-menu bottom offset-y transition="scale-transition" nudge-bottom="5">
+                        <template v-slot:activator="{ on, attrs }">
+                            <v-btn color="blue darken-3" dark small v-bind="attrs" v-on="on" class="rounded-lg mx-1">
+                                <v-icon left small>mdi-cogs</v-icon> Acciones
+                            </v-btn>
+                        </template>
+                        <v-list dense class="py-1">
+                            <v-list-item @click="envia_sunat" :disabled="periodoCerrado">
+                                <v-list-item-icon><v-icon color="green">mdi-cloud-upload</v-icon></v-list-item-icon>
+                                <v-list-item-title>Enviar a Sunat</v-list-item-title>
+                            </v-list-item>
+                            <v-list-item @click="abare_guias()" :disabled="!puedeGenerarGuia">
+                                <v-list-item-icon>
+                                    <v-icon :color="puedeGenerarGuia ? 'cyan darken-2' : 'grey'">mdi-file-send</v-icon>
+                                </v-list-item-icon>
+                                <v-list-item-title>Generar Guía</v-list-item-title>
+                            </v-list-item>
+                            <v-list-item @click="transferir_pedidos()">
+                                <v-list-item-icon><v-icon
+                                        color="deep-purple darken-1">mdi-swap-horizontal</v-icon></v-list-item-icon>
+                                <v-list-item-title>Transferir Pedidos</v-list-item-title>
+                            </v-list-item>
+                            <v-list-item @click="anular_masivo()" :disabled="!puedeAnularMasivo">
+                                <v-list-item-icon><v-icon color="red">mdi-cancel</v-icon></v-list-item-icon>
+                                <v-list-item-title>Anular Masivo</v-list-item-title>
+                            </v-list-item>
+                        </v-list>
+                    </v-menu>
+                </div>
 
             </v-card-title>
 
@@ -122,7 +126,7 @@
                     <v-col cols="12" sm="4">
                         <h4 class="text-subtitle-1">
                             FECHA TRASLADO: <span class="primary--text">{{ conviertefecha(cabecera_total.fecha_traslado)
-                                }}</span>
+                            }}</span>
                         </h4>
                         <!-- Chip de transporte asignado -->
                         <div v-if="cabecera_total.d_transporte?.usuario_nombre" class="mt-1">
@@ -147,7 +151,7 @@
                             TOTAL VENTA: <span class="green--text text--darken-2">{{ moneda }} {{ t_general }}</span>
                         </h4>
                         <span class="caption">Contado: {{ moneda }} {{ t_contado }} | Crédito: {{ moneda }} {{ t_credito
-                        }}</span>
+                            }}</span>
                     </v-col>
                 </v-row>
             </v-card-text>
@@ -203,7 +207,7 @@
                                 </v-chip>
                             </td>
                             <td class="text-right caption red--text">{{ item.moneda }}{{ redondear(item.pendiente_pago)
-                                }}</td>
+                            }}</td>
                             <td class="text-right caption font-weight-bold">{{ item.moneda }}{{ redondear(item.total) }}
                             </td>
                             <td class="text-center">
@@ -285,7 +289,7 @@
                                     S/.{{ d.precio }}
                                     <strong v-if="d.preciodescuento != 0" class="red--text ml-1">(-S/.{{
                                         d.preciodescuento
-                                        }})</strong>
+                                    }})</strong>
                                 </td>
                                 <td class="text-right caption font-weight-bold">S/.{{
                                     redondear((Number(d.total_antes_impuestos)
@@ -307,7 +311,7 @@
                 <v-card-text class="pt-4">
                     <div class="mb-3 text-subtitle-2 grey--text text--darken-1">
                         Anulando comprobante: <strong class="error--text">{{ comp_anular ? comp_anular.numeracion : ''
-                            }}</strong>
+                        }}</strong>
                     </div>
 
                     <v-select dense outlined clearable :items="motivos_predeterminados"
@@ -443,12 +447,9 @@
             :cabecera="cabecera_selecta" :detalle="detalle_selecto" />
         <imprime v-if="genera_pdf" :data="seleccionado" :detalle="detalle_selecto" @cierra="genera_pdf = $event" />
         <impresorahost v-if="dial_config_host" @cierra="dial_config_host = false" />
-        
+
         <!-- Dialogo Transporte -->
-        <dial_transporte 
-            v-model="dial_transporte_show" 
-            :reparto-id="router_grupo"
-            @guardado="inicio"
+        <dial_transporte v-model="dial_transporte_show" :reparto-id="router_grupo" @guardado="inicio"
             @cierre="dial_transporte_show = false" />
     </div>
 </template>

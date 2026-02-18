@@ -112,10 +112,8 @@
                             <td class="text-caption">{{ pedido.fecha }}</td>
 
                             <td>
-                                <v-chip v-if="pedido.d_transporte?.usuario_nombre" x-small
-                                    :color="esAdmin ? 'info' : 'grey lighten-2'" :dark="esAdmin" :outlined="!esAdmin"
-                                    :class="{ 'cursor-pointer': esAdmin }"
-                                    @click="esAdmin ? abrirAsignarTransporte(pedido) : null">
+                                <v-chip v-if="pedido.d_transporte?.usuario_nombre" x-small color="info" dark
+                                    class="cursor-pointer" @click="esAdmin ? abrirAsignarTransporte(pedido) : null">
                                     <v-icon x-small left>mdi-account</v-icon>
                                     {{ pedido.d_transporte.usuario_nombre }}
                                 </v-chip>
@@ -148,14 +146,13 @@
 
                             <td>
                                 <div class="d-flex justify-center flex-wrap">
-                                    <v-btn x-small color="orange-grey lighten-5" class="mx-1 my-1" depressed rounded
-                                        elevation="1" @click="ir_reparto(pedido)">
+                                    <v-btn v-if="esAdmin" x-small color="orange-grey lighten-5" class="mx-1 my-1"
+                                        depressed rounded elevation="1" @click="ir_reparto(pedido)">
                                         <v-icon left small color="blue-grey darken-1">mdi-clipboard-list</v-icon>
                                         <span class="blue-grey--text text--darken-1 font-weight-medium">Detalle</span>
                                     </v-btn>
-
-                                    <v-btn x-small :color="getCargaButtonColor(pedido)" class="mx-1 my-1" depressed
-                                        rounded elevation="1" @click="abrirCargaProductos(pedido)">
+                                    <v-btn v-if="esAdmin" x-small :color="getCargaButtonColor(pedido)" class="mx-1 my-1"
+                                        depressed rounded elevation="1" @click="abrirCargaProductos(pedido)">
                                         <v-icon left small :color="getCargaIconColor(pedido)">{{ getCargaIcon(pedido)
                                         }}</v-icon>
                                         <span :class="getCargaTextClass(pedido)" class="font-weight-medium">
@@ -166,11 +163,10 @@
                                             </template>
                                         </span>
                                     </v-btn>
-
                                     <v-btn x-small :color="getMapaButtonColor(pedido)" class="mx-1 my-1" depressed
                                         rounded elevation="1" @click="reparto_transporte(pedido)">
                                         <v-icon left small :color="getMapaIconColor(pedido)">{{ getMapaIcon(pedido)
-                                            }}</v-icon>
+                                        }}</v-icon>
                                         <span :class="getMapaTextClass(pedido)" class="font-weight-medium">
                                             {{ getPorcentajeEntregados(pedido) >= 100 ? 'ENTREGADO' : 'EN REPARTO' }}
                                             <template
@@ -179,7 +175,6 @@
                                             </template>
                                         </span>
                                     </v-btn>
-
                                     <v-menu offset-y left>
                                         <template v-slot:activator="{ on, attrs }">
                                             <v-btn x-small color="green lighten-5" class="mx-1 my-1" depressed rounded
@@ -188,7 +183,6 @@
                                                 <span class="green--text text--darken-1">Opciones</span>
                                             </v-btn>
                                         </template>
-
                                         <v-list dense>
                                             <v-list-item
                                                 @click="repartoActual = pedido.id; dial_cobranza = !dial_cobranza">
@@ -197,26 +191,24 @@
                                                 </v-list-item-icon>
                                                 <v-list-item-title>Liquidación Electrónica</v-list-item-title>
                                             </v-list-item>
-
                                             <v-list-item @click="formato_liq(pedido)">
                                                 <v-list-item-icon>
                                                     <v-icon color="error">mdi-printer</v-icon>
                                                 </v-list-item-icon>
                                                 <v-list-item-title>Liquidación Manual PDF</v-list-item-title>
                                             </v-list-item>
-
-                                            <v-divider v-if="esAdmin" class="my-1"></v-divider>
-
-                                            <v-list-item v-if="esAdmin" @click="abrirAsignarTransporte(pedido)">
-                                                <v-list-item-icon>
-                                                    <v-icon
-                                                        :color="pedido.d_transporte?.usuario_id ? 'success' : 'info'">{{
-                                                            pedido.d_transporte?.usuario_id ? 'mdi-truck-check' :
-                                                                'mdi-truck' }}</v-icon>
-                                                </v-list-item-icon>
-                                                <v-list-item-title>{{ pedido.d_transporte?.usuario_id ? 'Editar Transporte' : 'Asignar Transporte'
-                                                    }}</v-list-item-title>
-                                            </v-list-item>
+                                            <template v-if="esAdmin">
+                                                <v-divider class="my-1"></v-divider>
+                                                <v-list-item @click="abrirAsignarTransporte(pedido)">
+                                                    <v-list-item-icon>
+                                                        <v-icon
+                                                            :color="pedido.d_transporte?.usuario_id ? 'success' : 'info'">{{
+                                                                pedido.d_transporte?.usuario_id ? 'mdi-truck-check' :
+                                                                    'mdi-truck' }}</v-icon>
+                                                    </v-list-item-icon>
+                                                    <v-list-item-title>{{ pedido.d_transporte?.usuario_id ? 'Editar Transporte' : 'Asignar Transporte' }}</v-list-item-title>
+                                                </v-list-item>
+                                            </template>
                                         </v-list>
                                     </v-menu>
                                 </div>
@@ -272,26 +264,29 @@
                         </div>
                     </div>
                 </v-card-text>
-
-                <!-- Chip de usuario asignado en móvil -->
                 <div v-if="pedido.d_transporte?.usuario_nombre" class="px-3 py-1">
-                    <v-chip x-small :color="esAdmin ? 'info' : 'grey lighten-2'" :dark="esAdmin" :outlined="!esAdmin"
+                    <v-chip x-small color="info" dark class="cursor-pointer"
                         @click="esAdmin ? abrirAsignarTransporte(pedido) : null">
                         <v-icon x-small left>mdi-account</v-icon>
                         {{ pedido.d_transporte.usuario_nombre }}
+                    </v-chip>
+                </div>
+                <div v-else-if="esAdmin" class="px-3 py-1">
+                    <v-chip x-small outlined color="grey" @click="abrirAsignarTransporte(pedido)"
+                        class="cursor-pointer">
+                        <v-icon x-small left>mdi-truck-plus</v-icon>
+                        Sin asignar
                     </v-chip>
                 </div>
 
                 <v-divider class="mx-3"></v-divider>
 
                 <v-card-actions class="py-1 px-0 d-flex justify-end align-center">
-
-                    <v-btn x-small text color="blue-grey darken-1" @click="ir_reparto(pedido)">
+                    <v-btn v-if="esAdmin" x-small text color="blue-grey darken-1" @click="ir_reparto(pedido)">
                         <v-icon left x-small>mdi-clipboard-list</v-icon>
                         Detalle
                     </v-btn>
-
-                    <v-btn x-small text :color="getCargaIconColor(pedido)" class="ml-1"
+                    <v-btn v-if="esAdmin" x-small text :color="getCargaIconColor(pedido)" class="ml-1"
                         @click="abrirCargaProductos(pedido)">
                         <v-icon left x-small>{{ getCargaIcon(pedido) }}</v-icon>
                         Carga
@@ -301,7 +296,6 @@
                             ({{ Math.round(pedido.estado_carga.porcentaje) }}%)
                         </span>
                     </v-btn>
-
                     <v-btn x-small text :color="getMapaIconColor(pedido)" class="ml-1"
                         @click="reparto_transporte(pedido)">
                         <v-icon left x-small>{{ getMapaIcon(pedido) }}</v-icon>
@@ -311,7 +305,6 @@
                             ({{ Math.round(getPorcentajeEntregados(pedido)) }}%)
                         </span>
                     </v-btn>
-
                     <v-menu offset-y left>
                         <template v-slot:activator="{ on, attrs }">
                             <v-btn x-small text color="green darken-1" class="ml-n1" v-bind="attrs" v-on="on">
@@ -327,22 +320,21 @@
                                 </v-list-item-icon>
                                 <v-list-item-title>Liquidación Electrónica</v-list-item-title>
                             </v-list-item>
-
                             <v-list-item @click="formato_liq(pedido)">
                                 <v-list-item-icon>
                                     <v-icon color="error">mdi-printer</v-icon>
                                 </v-list-item-icon>
                                 <v-list-item-title>Liquidación Manual PDF</v-list-item-title>
                             </v-list-item>
-
-                            <v-divider v-if="esAdmin" class="my-1"></v-divider>
-
-                            <v-list-item v-if="esAdmin" @click="abrirAsignarTransporte(pedido)">
-                                <v-list-item-icon>
-                                    <v-icon color="info">mdi-truck</v-icon>
-                                </v-list-item-icon>
-                                <v-list-item-title>Asignar Transporte</v-list-item-title>
-                            </v-list-item>
+                            <template v-if="esAdmin">
+                                <v-divider class="my-1"></v-divider>
+                                <v-list-item v-if="esAdmin" @click="abrirAsignarTransporte(pedido)">
+                                    <v-list-item-icon>
+                                        <v-icon color="info">mdi-truck</v-icon>
+                                    </v-list-item-icon>
+                                    <v-list-item-title>Asignar Transporte</v-list-item-title>
+                                </v-list-item>
+                            </template>
                         </v-list>
                     </v-menu>
                 </v-card-actions>
@@ -665,16 +657,20 @@ export default {
         onDataChange(snap) {
             const array = [];
             const currentUserId = this.$store.state.permisos.token || '';
+            const esAdmin = this.$store.state.permisos?.es_admin === true;
+
             snap.forEach((item) => {
                 const data = item.val() || {};
                 const key = item.key;
                 data.id = key;
                 data.fecha = this.formatFecha(data.fecha_emision);
 
-                // Filtrar por usuario asignado: si tiene usuario_id y no coincide con el usuario actual, no mostrar
-                const usuarioAsignado = data.d_transporte?.usuario_id || '';
-                if (usuarioAsignado && usuarioAsignado !== currentUserId) {
-                    return; // No incluir este reparto
+                if (!esAdmin) {
+                    const usuarioAsignado = data.d_transporte?.usuario_id || '';
+                    // Si tiene asignado otro usuario (no es él) -> NO mostrar
+                    if (usuarioAsignado && usuarioAsignado !== currentUserId) {
+                        return;
+                    }
                 }
 
                 array.push(data);
