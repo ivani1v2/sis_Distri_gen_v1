@@ -1070,7 +1070,6 @@ function impresionA4(arrays, qr) {
   doc.text(" : ", 46, linea, "left");
   doc.setFont("Helvetica", "");
   doc.text(fecha_emision, 50, linea, "left");
-  linea = linea + 4;
 
   var medida = "KG";
   if (arrays.medida_t != undefined) {
@@ -1102,22 +1101,40 @@ function impresionA4(arrays, qr) {
       doc.setFont("Helvetica", "");
       var textoDocRel = doc.splitTextToSize(docRelTextA4, 40);
       doc.text(textoDocRel, 157, linea + 4, "left");
+      if (arrays.nro_bultos && arrays.nro_bultos > 0) {
+        doc.setFont("Helvetica", "Bold");
+        doc.text("Nro. Bultos", 130, linea + 8, "left");
+        doc.text(" : ", 154, linea + 8, "left");
+        doc.setFont("Helvetica", "");
+        doc.text(String(arrays.nro_bultos) + " " + (arrays.medida_bultos || ''), 157, linea + 8, "left");
+      }
+    }
+  } else {
+    if (arrays.nro_bultos && arrays.nro_bultos > 0) {
+      doc.setFont("Helvetica", "Bold");
+      doc.text("Nro. Bultos", 130, linea + 4, "left");
+      doc.text(" : ", 154, linea + 4, "left");
+      doc.setFont("Helvetica", "");
+      doc.text(String(arrays.nro_bultos) + " " + (arrays.medida_bultos || ''), 157, linea + 4, "left");
     }
   }
 
   doc.setFont("Helvetica", "Bold");
-  doc.text("FECHA TRASLADO", 15, linea, "left");
-  doc.text(" : ", 46, linea, "left");
+  doc.text("FECHA TRASLADO", 15, linea + 4, "left");
+  doc.text(" : ", 46, linea + 4, "left");
   doc.setFont("Helvetica", "");
-  doc.text(fecha_traslado, 50, linea, "left");
-  linea = linea + 5;
+  doc.text(fecha_traslado, 50, linea + 4, "left");
+
+  var nextLine = linea + 8;
+
   if (arrays.tipo_comprobante == "09") {
     doc.setFont("Helvetica", "Bold");
-    doc.text("MOTIVO TRASLADO", 15, linea, "left");
-    doc.text(" : ", 46, linea, "left");
+    doc.text("MOTIVO TRASLADO", 15, nextLine, "left");
+    doc.text(" : ", 46, nextLine, "left");
     doc.setFont("Helvetica", "");
-    doc.text(arrays.motivo, 50, linea, "left");
-    linea = linea + 4;
+    doc.text(arrays.motivo, 50, nextLine, "left");
+
+    linea = nextLine + 4;
 
     doc.setFont("Helvetica", "Bold");
     doc.text("MODO TRANSPORTE", 15, linea, "left");

@@ -360,6 +360,7 @@
                                 <v-textarea style="font-size:13.5px" outlined dense v-model="observacion" auto-grow
                                     filled label="Observacion" rows="1"></v-textarea>
                             </v-col>
+                            
                             <v-col cols="12" class="mt-n6">
                                 <v-btn block elevation="3" color="warning" @click="agregar_item()" small>
                                     <v-icon left>

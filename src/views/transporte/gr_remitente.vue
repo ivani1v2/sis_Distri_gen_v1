@@ -426,15 +426,24 @@
             <v-col cols="2">
                 <v-text-field outlined dense v-model="peso" type="number" label="Peso Total"></v-text-field>
             </v-col>
-            <v-col cols="5">
-
-
+            <v-col cols="4">
                 <v-textarea style="font-size:13.5px" outlined dense v-model="observacion" auto-grow filled
                     label="Observacion" rows="1"></v-textarea>
-
-
             </v-col>
-            <v-col cols="3">
+            <v-col cols="1">
+                <v-text-field outlined dense v-model="nro_bultos" type="number" label="Nro. de Bultos"></v-text-field>
+            </v-col>
+            <v-col cols="1">
+                <div v-if="medida_bultos !== 'OTROS'">
+                    <v-select outlined dense v-model="medida_bultos" :items="opciones_medida_bultos" menu-props="auto"
+                        hide-details label="Medida"></v-select>
+                </div>
+                <div v-else>
+                    <v-text-field outlined dense v-model="medida_bultos_personalizada" label="Medida (otros)"
+                        hide-details append-icon="mdi-close" @click:append="volverASelect"></v-text-field>
+                </div>
+            </v-col>
+            <v-col cols="2">
                 <v-btn block elevation="3" color="warning" @click="agregar_item()" small>
                     <v-icon left>
                         mdi-package-variant-closed
@@ -679,7 +688,10 @@ export default {
         modo_direccion: '',
         numero: '',
         id_grupo_pedido: '',
-        numeracion_pedido: ''
+        numeracion_pedido: '',
+        opciones_medida_bultos: ['CAJAS', 'BULTOS', 'SOBRE', 'PAQUETE', 'OTROS'],
+        medida_bultos_personalizada: '',
+        medida_bultos: 'CAJAS',
     }),
     watch: {
         'departamento_p'(depa) {
@@ -757,6 +769,11 @@ export default {
             this.u_destino = (uDep && uProv && uDist) ? `${uDep}${uProv}${uDist}` : ''
             console.log(this.u_destino)
         },
+        'medida_bultos'(newVal) {
+            if (newVal !== 'OTROS') {
+                this.medida_bultos_personalizada = '';
+            }
+        },
 
     },
     created() {
@@ -795,7 +812,7 @@ export default {
             this.ruc_destinatario = cabecera.dni
             this.documento_dest = cabecera.tipoDocumento
             this.razonsocial_destinatario = cabecera.cliente
-            
+
             this.id_grupo_pedido = cabecera.id_grupo || ''
             this.numeracion_pedido = cabecera.numeracion || ''
 
@@ -884,6 +901,12 @@ export default {
             } else {
                 return 'INICIO DEL TRASLADO'
             }
+        },
+        medida_bultos_final() {
+            if (this.medida_bultos === 'OTROS') {
+                return this.medida_bultos_personalizada || 'OTROS';
+            }
+            return this.medida_bultos;
         },
     },
     methods: {
@@ -1241,6 +1264,8 @@ export default {
                 medida_t: this.medida_t,
                 cod_medida_t: this.obtencodigomedida(this.medida_t),
                 peso_total: this.peso,
+                nro_bultos: this.nro_bultos,
+                medida_bultos: this.medida_bultos_final,
                 data: this.lista_items,
                 retorno_vacio: this.retorno_vacio,
                 retorno_envaces: this.retorno_envaces,
@@ -1342,6 +1367,8 @@ export default {
                 medida_t: this.medida_t,
                 cod_medida_t: this.obtencodigomedida(this.medida_t),
                 peso_total: this.peso,
+                nro_bultos: this.nro_bultos,
+                medida_bultos: this.medida_bultos_final,
                 data: this.lista_items,
                 retorno_vacio: this.retorno_vacio,
                 retorno_envaces: this.retorno_envaces,
@@ -1353,11 +1380,10 @@ export default {
                 ruc_subcontrata: this.ruc_subcontrata,
                 razon_subcontrata: this.razon_subcontrata,
                 pagado_por: this.pagado_por,
-
                 doc_relacionados: this.array_relacionados
             }
             await nuevaGuiaremision(array.id, array)
-            
+
             // Guardar guia_id en el pedido si viene desde liquida_reparto
             if (this.id_grupo_pedido && this.numeracion_pedido) {
                 await grabaCabecera_p(
@@ -1366,7 +1392,7 @@ export default {
                     array.id
                 )
             }
-            
+
             await this.guarda_empresa_t()
             guia_remision(array, array.data)
             if (this.tipo_guia == 'GUIA REMITENTE') {
@@ -1376,7 +1402,6 @@ export default {
                 await sumaContador("orden_guia_t", (parseInt(array.correlativo) + 1).toString().padStart(5, 0))
                 this.finaliza_(array)
             }
-
         },
         obten_codigo_doc(val) {
             if (val == "DNI") {
@@ -1517,7 +1542,10 @@ export default {
                 || d.ubigeo_sunat === val
             ) || null
         },
-
+        volverASelect() {
+            this.medida_bultos = 'CAJAS';
+            this.medida_bultos_personalizada = '';
+        },
     }
 }
 </script>

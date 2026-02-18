@@ -147,11 +147,12 @@ export const pdfGeneraFinal = (arraydatos, qr, cabecera) => {
     console.log(array[i])
     nuevoArray[i] = new Array(4);
     nuevoArray[i][0] = array[i].cantidad;
-    nuevoArray[i][1] = array[i].nombre;
+    var codigo = array[i].id || array[i].cod_producto || '';
+    var nombre = array[i].nombre || '';
+    nuevoArray[i][1] = (codigo ? codigo + ' - ' : '') + nombre;
     nuevoArray[i][2] = array[i].precioedita;
     nuevoArray[i][3] = parseFloat((array[i].precioedita) * array[i].cantidad).toFixed(2);
   }
-
 
   doc.autoTable({
     margin: { top: linea - 9, left: 1 },
@@ -406,9 +407,11 @@ function impresionA4(arraydatos, qr, arraycabecera, modo) {
   linea = 65
   var nuevoArray = new Array(array.length);
   for (var i = 0; i < array.length; i++) {
-    nuevoArray[i] = new Array(4);
+    nuevoArray[i] = new Array(5);
     nuevoArray[i][0] = array[i].cantidad;
-    nuevoArray[i][1] = array[i].nombre.trim();
+    var codigo = array[i].id || array[i].cod_producto || '';
+    var nombre = array[i].nombre ? array[i].nombre.trim() : '';
+    nuevoArray[i][1] = (codigo ? codigo + ' - ' : '') + nombre;
     nuevoArray[i][2] = array[i].medida;
     nuevoArray[i][3] = array[i].precioedita;
     nuevoArray[i][4] = parseFloat((array[i].precioedita) * array[i].cantidad).toFixed(store.state.configuracion.decimal);
@@ -500,9 +503,9 @@ function impresionA4(arraydatos, qr, arraycabecera, modo) {
   doc.text('.', 0, linea)
 
   //abre_dialogo_impresion(doc.output('bloburi'))
-      doc.save(
-        arraycabe.serie + "-" + arraycabe.correlativo + ".pdf"
-      );
+  doc.save(
+    arraycabe.serie + "-" + arraycabe.correlativo + ".pdf"
+  );
 
 }
 
