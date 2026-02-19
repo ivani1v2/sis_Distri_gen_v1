@@ -437,7 +437,7 @@
                                                     </div>
                                                     <div class="text-overline grey--text lh-1">Límite: {{ r.cantidad_max
                                                         || '∞'
-                                                    }}</div>
+                                                        }}</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -1012,8 +1012,11 @@ export default {
                 precio_may1: this.precio_may1,
                 escala_may2: this.escala_may2,
                 precio_may2: this.precio_may2,
-                
-
+                precio_may3: this.precio_may3,
+                escala_may4: this.escala_may4,
+                precio_may4: this.precio_may4,
+                escala_may5: this.escala_may5,
+                precio_may5: this.precio_may5,
                 peso: this.peso,
                 costo: this.costo,
                 tipoproducto: this.tipoproducto,
@@ -1077,9 +1080,7 @@ export default {
                 }
             }
             if (this.filtro_categoria == 'TODOS') {
-                return lista.filter((item) => (item.id + item.nombre + item.codbarra)
-                return lista.filter((item) => (item.id + item.nombre + item.codbarra)
-                    .toLowerCase().includes(this.buscar.toLowerCase()))
+                return lista.filter((item) => (item.id + item.nombre + item.codbarra).toLowerCase().includes(this.buscar.toLowerCase()))
             } else {
                 return lista.filter(item => item.categoria == this.filtro_categoria && (item.id + item.nombre)
                     .toLowerCase().includes(this.buscar.toLowerCase()))
@@ -1834,7 +1835,7 @@ export default {
         },
 
         onProductoSincronizado(resultado) {
-            
+
         },
     },
 
