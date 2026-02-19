@@ -95,6 +95,19 @@
                         <v-text-field dense @keyup.enter="grabaEdita()" type="number" class="pa-3"
                             v-model="cantidadEdita" label="Cantidad"></v-text-field>
                     </v-col>
+
+                    <v-col cols="12" class="mt-n6 mb-3">
+                        <div class="caption grey--text text--darken-1">
+                            <span v-if="descEdita.precioFinal && descEdita.precioFinal !== Number(precioedita)">
+                                <strong class="green--text">Precio Final: {{ monedaSimbolo }}{{
+                                    redondear(descEdita.precioFinal)
+                                    }}</strong>
+                            </span>
+                            <span v-else class="caption grey--text">
+                                Sin descuentos aplicados
+                            </span>
+                        </div>
+                    </v-col>
                 </v-row>
 
                 <v-card-actions class="mt-n6">
@@ -155,6 +168,21 @@
                 <div v-if="info_cabecera.forma_pago == 'CREDITO'">
                     <v-text-field outlined label="Fecha Pago Credito" type="date" v-model="date_vence"
                         dense></v-text-field>
+
+                    <!-- 👇 NUEVO: Botón para abrir cronograma -->
+                    <v-btn block color="indigo" dark class="mt-2 mb-3" @click="abrirCronogramaDesdeModo">
+                        <v-icon left>mdi-calendar-clock</v-icon>
+                        Configurar Cronograma de Cuotas
+                        <v-icon right v-if="tieneCronograma">mdi-check-circle</v-icon>
+                    </v-btn>
+
+                    <!-- Indicador de cuotas existentes -->
+                    <div v-if="tieneCronograma" class="caption success--text mb-2">
+                        <v-icon small color="success">mdi-check</v-icon>
+                        {{ totalCuotas }} cuota(s) programada(s) - Total: {{ monedaSimbolo }} {{
+                        totalCuotasImporte.toFixed(2)
+                        }}
+                    </div>
                 </div>
                 <v-card-actions>
                     <v-spacer></v-spacer>
@@ -162,6 +190,11 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <cronograma v-if="dialogoCronograma" :totalCredito="Number(info_cabecera.pendiente_pago) || 0"
+            @cierra="dialogoCronograma = false" @emite_cronograma="guarda_cronograma($event)" :pagoInicial="0"
+            :moneda="monedaSimbolo" :planExistente="planExistenteFormateado" />
+
         <v-dialog v-model="edita_numeracion" max-width="500">
             <div>
                 <v-system-bar window dark>
@@ -223,10 +256,12 @@ import {
 } from '../../../funciones_generales'
 import moment from 'moment'
 import store from '@/store/index'
-
+import cronograma from '../../ventas/dialogos/cronograma_creditos.vue'
 import axios from "axios"
 import cat_fijo from '@/components/catalogo_fijo'
 import dial_stock from '@/views/ventas/dialogos/dial_stock_insuficiente.vue'
+import DescuentosPorcentaje from '@/components/descuentos_porcentaje.vue'
+
 
 export default {
     name: 'caja',
@@ -234,6 +269,8 @@ export default {
 
         cat_fijo,
         dial_stock,
+        DescuentosPorcentaje,
+        cronograma,
     },
     props: {
         cabecera: '',
@@ -266,7 +303,14 @@ export default {
             detalleOriginalSnapshot: [],
             dialStock: false,
             sinStock: [],
-
+            precioFinalActual: 0,
+            // Para descuentos
+            editKey: 0,
+            precioCambiado: false,
+            precioOriginalEdita: 0,
+            descEdita: { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 },
+            dialogoCronograma: false,
+            cronogramaData: null,
         }
     },
     created() {
@@ -280,6 +324,39 @@ export default {
         lista_productos() {
             return this.listaproductos
         },
+        precioBaseEdita() {
+            return Number(this.item_selecto?.precio_base) || Number(this.precioedita) || 0;
+        },
+        descuentosInicialesEdita() {
+            return {
+                desc_1: Number(this.item_selecto?.desc_1) || 0,
+                desc_2: Number(this.item_selecto?.desc_2) || 0,
+                desc_3: Number(this.item_selecto?.desc_3) || 0
+            };
+        },
+        decimales() {
+            return this.$store?.state?.configuracion?.decimal ?? 2;
+        },
+        tieneCronograma() {
+            return this.info_cabecera?.cuotas &&
+                Array.isArray(this.info_cabecera.cuotas) &&
+                this.info_cabecera.cuotas.length > 0;
+        },
+        totalCuotas() {
+            return this.tieneCronograma ? this.info_cabecera.cuotas.length : 0;
+        },
+        totalCuotasImporte() {
+            if (!this.tieneCronograma) return 0;
+            return this.info_cabecera.cuotas.reduce((sum, c) => sum + (Number(c.importe) || 0), 0);
+        },
+        planExistenteFormateado() {
+            const cuotas = this.info_cabecera?.cuotas;
+            if (!cuotas) return null;
+            if (Array.isArray(cuotas)) {
+                return { cuotas };
+            }
+            return cuotas;
+        }
     },
     methods: {
         cierra() {
@@ -405,13 +482,14 @@ export default {
                 if (!Number(this.info_cabecera.pendiente_pago)) {
                     this.info_cabecera.pendiente_pago = Number(this.info_cabecera.total) || 0
                 }
-
-                // ✅ NUEVO: si no hay cuotas, crea la estructura estándar
-                const cuotas = this.info_cabecera?.cuotas
-                if (!Array.isArray(cuotas) || cuotas.length === 0) {
-                    this.info_cabecera.cuotas = this.buildCuotasCreditoDefault()
+                const cuotas = this.info_cabecera?.cuotas;
+                if (this.cronogramaData) {
+                    this.info_cabecera.cuotas = this.cronogramaData.cuotas || this.cronogramaData;
+                    this.info_cabecera.cronograma = this.cronogramaData.cuotas || this.cronogramaData;
+                } else if (!Array.isArray(cuotas) || cuotas.length === 0) {
+                    this.info_cabecera.cuotas = this.buildCuotasCreditoDefault();
+                    this.info_cabecera.cronograma = this.info_cabecera.cuotas;
                 } else {
-                    // opcional: asegurar vendedor/estado/fecha_modificacion si vinieron incompletas
                     this.info_cabecera.cuotas = cuotas.map((c, idx) => ({
                         numero: c.numero || String(idx + 1).padStart(3, '0'),
                         importe: (Number(c.importe) || 0).toFixed(2),
@@ -419,16 +497,16 @@ export default {
                         estado: c.estado || 'pendiente',
                         fecha_modificacion: c.fecha_modificacion || moment().unix(),
                         vendedor: c.vendedor || (this.info_cabecera.cod_vendedor || this.info_cabecera.vendedor || store.state.sedeActual.codigo),
-                    }))
+                    }));
+                    this.info_cabecera.cronograma = this.info_cabecera.cuotas;
                 }
             } else {
-                // CONTADO: vencimiento = fecha del doc (o ahora si no hay)
                 const f = Number(this.info_cabecera?.fecha)
                 this.info_cabecera.vencimientoDoc = Number.isFinite(f) ? f : moment().unix()
                 this.info_cabecera.pendiente_pago = 0
-
-                // ✅ NUEVO: limpia cuotas como tu otro componente
                 this.info_cabecera.cuotas = ''
+                this.info_cabecera.cronograma = null
+                this.cronogramaData = null
             }
 
             this.dial_edita_modo = false
@@ -518,6 +596,66 @@ export default {
                 this.preciodescuento = producto.preciodescuento;
                 this.nombreEdita = producto.nombre;
                 this.operacion_edita = producto.operacion;
+                this.descEdita = {
+                    desc_1: desc1,
+                    desc_2: desc2,
+                    desc_3: desc3,
+                    precioFinal: precioFinalActual,
+                    montoDescuento: precioBaseActual - precioFinalActual
+                };
+                this.precioCambiado = producto.precio_base &&
+                    producto.precio_base !== precioCatalogo;
+            }
+            this.dialogoProducto = true;
+        },
+        obtenerPrecioCatalogo(productoId) {
+            if (!productoId) {
+                return 0;
+            }
+            const productoCatalogo = store.state.productos?.find(
+                p => String(p.id) === String(productoId)
+            );
+            if (!productoCatalogo) { return 0; }
+            const precio = Number(productoCatalogo.precio) || 0;
+
+            return precio;
+        },
+
+        onPrecioEditaChange() {
+            const precioActual = Number(this.precioedita) || 0;
+            const precioCatalogo = this.obtenerPrecioCatalogo(this.item_selecto?.id);
+            this.precioCambiado = precioActual !== precioCatalogo;
+
+            if (this.item_selecto) {
+                this.item_selecto.precio_base = precioActual;
+                if (this.precioCambiado) {
+                    this.descEdita = {
+                        desc_1: 0,
+                        desc_2: 0,
+                        desc_3: 0,
+                        precioFinal: precioActual,
+                        montoDescuento: 0
+                    };
+                    this.item_selecto.desc_1 = 0;
+                    this.item_selecto.desc_2 = 0;
+                    this.item_selecto.desc_3 = 0;
+                } else {
+                    if (this.$refs.descEditaRef) {
+                        this.$refs.descEditaRef.recalcularDesdeBase();
+                    }
+                }
+            }
+        },
+        onDescEditaCambio(data) {
+            this.descEdita = data;
+            if (this.item_selecto && data.precioFinal !== undefined) {
+                this.item_selecto.desc_1 = data.desc_1 || 0;
+                this.item_selecto.desc_2 = data.desc_2 || 0;
+                this.item_selecto.desc_3 = data.desc_3 || 0;
+                this.precioFinalActual = data.precioFinal;
+                if (!this.precioCambiado) {
+                    this.item_selecto.precio_base = this.precioOriginalEdita;
+                }
             }
         },
         async grabaEdita() {
@@ -732,7 +870,40 @@ export default {
             const h = this.hashDJB2(fingerprint);
             return `${metodo}:${grupo}:${numeracion}:${h}`;
         },
+        abrirCronogramaDesdeModo() {
+            if (this.info_cabecera.forma_pago !== 'CREDITO') return;
+            const montoPendiente = Number(this.info_cabecera.pendiente_pago) || 0;
+            if (montoPendiente <= 0) {
+                store.commit("dialogosnackbar", "Ingrese un monto pendiente de pago válido");
+                return;
+            }
+
+            this.dialogoCronograma = true;
+        },
+        guarda_cronograma(cronograma) {
+            this.cronogramaData = cronograma;
+            this.$set(this.info_cabecera, 'cronograma', cronograma.cuotas || cronograma);
+            this.$set(this.info_cabecera, 'cuotas', cronograma.cuotas || cronograma);
+            const sumaCuotas = (cronograma.cuotas || cronograma).reduce((sum, c) => sum + (Number(c.importe) || 0), 0);
+            const pendiente = Number(this.info_cabecera.pendiente_pago) || 0;
+
+            if (Math.abs(sumaCuotas - pendiente) > 0.01) {
+                console.warn(`La suma de cuotas (${sumaCuotas}) no coincide con el pendiente (${pendiente})`);
+            }
+            if (cronograma.fecha_ultima_cuota) {
+                this.date_vence = cronograma.fecha_ultima_cuota;
+                this.$set(this.info_cabecera, 'fecha_vencimiento', cronograma.fecha_ultima_cuota);
+                this.$set(this.info_cabecera, 'vencimientoDoc', moment(cronograma.fecha_ultima_cuota).unix());
+            }
+            this.dialogoCronograma = false;
+        },
     },
 
 }
 </script>
+
+<style scoped>
+.position-relative {
+    position: relative;
+}
+</style>
