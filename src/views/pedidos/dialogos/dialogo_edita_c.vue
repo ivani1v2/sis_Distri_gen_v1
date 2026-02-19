@@ -321,6 +321,9 @@ export default {
     },
 
     computed: {
+        monedaSimbolo() {
+        return this.$store.state.moneda?.find(m => m.codigo === this.$store.state.configuracion?.moneda_defecto)?.simbolo || 'S/';
+    },
         lista_productos() {
             return this.listaproductos
         },
