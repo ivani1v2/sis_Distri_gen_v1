@@ -96,7 +96,7 @@
                     :items-per-page="50" :loading="cargando" class="elevation-1"
                     :footer-props="{ itemsPerPageOptions: [25, 50, 100, 200] }">
                     <!-- Cliente -->
-                    <template v-slot:item.nombre="{ item }">
+                    <template v-slot:[`item.nombre`]="{ item }">
                         <span style="font-size:85%">
                             <v-icon small color="red" @click.prevent="editar_cliente(item)">mdi-pencil</v-icon>
                             {{ item.nombre }}
@@ -104,7 +104,7 @@
                     </template>
 
                     <!-- Dirección (tooltip con _dir y texto truncado _dirTrunc que ya preparaste) -->
-                    <template v-slot:item._dir="{ item }">
+                    <template v-slot:[`item._dir`]="{ item }">
                         <span style="font-size:75%">
                             <v-tooltip top>
                                 <template v-slot:activator="{ on, attrs }">
@@ -116,12 +116,12 @@
                     </template>
 
                     <!-- Zona -->
-                    <template v-slot:item.zona="{ item }">
+                    <template v-slot:[`item.zona`]="{ item }">
                         <span style="font-size:75%">{{ item.zona }}</span>
                     </template>
 
                     <!-- Estado (icono coloreado + texto accesible en tooltip) -->
-                    <template v-slot:item.estado="{ item }">
+                    <template v-slot:[`item.estado`]="{ item }">
                         <span style="font-size:75%">
                             <v-tooltip top>
                                 <template v-slot:activator="{ on, attrs }">
@@ -136,7 +136,7 @@
                     </template>
 
                     <!-- Acción (botones iguales a tu tabla) -->
-                    <template v-slot:item.accion="{ item }">
+                    <template v-slot:[`item.accion`]="{ item }">
                         <div class="d-flex flex-wrap align-right gap-1 acciones-inline">
                             <v-btn x-small text color="info" v-if="$store.state.permisos.venta_directa"
                                 @click="vender(item)">

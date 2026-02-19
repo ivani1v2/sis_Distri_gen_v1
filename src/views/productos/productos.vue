@@ -149,6 +149,12 @@
                                 </v-list-item>
                             </v-list>
                             <v-list dense>
+                                <v-list-item @click="abrirDialogoSincronizacion">
+                                    <v-list-item-icon><v-icon color="teal">mdi-sync</v-icon></v-list-item-icon>
+                                    <v-list-item-title>Sincronizar en otras sedes</v-list-item-title>
+                                </v-list-item>
+                            </v-list>
+                            <v-list dense>
                                 <v-list-item @click="dialogoElimina = true">
                                     <v-list-item-icon><v-icon color="red">mdi-delete</v-icon></v-list-item-icon>
                                     <v-list-item-title>Eliminar</v-list-item-title>
@@ -383,7 +389,7 @@
                                                     </div>
                                                     <div class="text-overline grey--text lh-1">Límite: {{ r.cantidad_max
                                                         || '∞'
-                                                        }}</div>
+                                                    }}</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -483,7 +489,7 @@
                         <div class="text-subtitle-2 mb-2">
                             Grupo de Precios Mayoreo
                         </div>
-                        <v-autocomplete outlined dense clearable v-model="grupoPrecioSelect" :items="grupoPrecioItems"
+                        <v-autocomplete outlined dense clearable v-model="grupoPrecioTemp" :items="grupoPrecioItems"
                             item-text="text" item-value="value" label="Seleccionar" prepend-inner-icon="mdi-magnify"
                             no-data-text="No hay grupos de precios disponibles">
                             <template v-slot:item="{ item }">
@@ -525,7 +531,7 @@
                     <v-divider class="mb-4"></v-divider>
                     <div>
                         <div class="text-subtitle-2 mb-2">Grupo de Bonificación</div>
-                        <v-autocomplete outlined dense clearable v-model="grupoBonoSelect" :items="grupoBonoItems"
+                        <v-autocomplete outlined dense clearable v-model="grupoBonoTemp" :items="grupoBonoItems"
                             item-text="text" item-value="value" label="Seleccionar" prepend-inner-icon="mdi-magnify"
                             no-data-text="No hay grupos disponibles">
                             <template v-slot:item="{ item }">
@@ -568,7 +574,7 @@
                     </div>
                 </v-card-text>
                 <v-card-actions>
-                    <v-btn text color="grey" @click="dial_bono_global = false">Cancelar</v-btn>
+                    <v-btn text color="grey" @click="cerrarSinGuardarBonos">Cancelar</v-btn>
                     <v-spacer></v-spacer>
                     <v-btn color="success" @click="guardarBonosGlobales">
                         <v-icon left>mdi-check</v-icon> Guardar
@@ -727,6 +733,11 @@
             </v-card>
 
         </v-dialog>
+
+        <GestionSedes :mostrarSedes.sync="dialogoSedes" :productoACopiar="productoACopiar"
+            :mostrarSincronizar.sync="dialogoSincronizar" :productoSincronizar="productoParaSincronizar"
+            @copiado="onProductoCopiado" @sincronizado="onProductoSincronizado" />
+
         <dial_categorias v-if="dial_categorias" @cierra="cerrarYActualizarCategorias" :tipo='tipo_tabla' />
         <dial_alerta_stock_minimo v-if="permisoAlertaStockActivo" v-model="dialogoAlertaStock" />
         <dial_alerta_stock_minimo v-model="dialogoAlertaStockManual" />
@@ -748,14 +759,14 @@ import { imprime_codbarra } from './imprime_cod_barra'
 import { runMigracionBonosUnitariosToGlobales } from './migracion_bonos'
 import dial_config_bono from './dialogos/dial_config_bono.vue';
 import VisorProductosBono from './components/VisorProductosBono.vue';
+import GestionSedes from './components/GestionSedes.vue';
 import {
     nuevoProducto,
     eliminaProducto,
     obtenContador,
     sumaContador,
     allCategorias,
-    allBono,
-    nuevoProductoOtraBase,
+    allBono
 } from '../../db'
 import store from '@/store/index'
 import XLSX from 'xlsx'
@@ -768,7 +779,8 @@ export default {
         dial_categorias,
         dial_alerta_stock_minimo,
         dial_config_bono,
-        VisorProductosBono
+        VisorProductosBono,
+        GestionSedes
     },
     data: () => ({
         dial_adicional: false,
@@ -885,6 +897,11 @@ export default {
         tipoBonoActual: 'precio',
         dialVisorProductos: false,
         bonoParaVisor: {},
+        grupoPrecioTemp: null,
+        grupoBonoTemp: null,
+        dialogoSedes: false,
+        productoACopiar: null,
+        dialogoSincronizar: false,
     }),
 
     async beforeCreate() {
@@ -896,6 +913,10 @@ export default {
         var snapshot = await allCategorias("marcas").once("value")
         snapshot.forEach((item) => {
             this.array_marca.push(item.val().nombre)
+        })
+        var snapshot = await allCategorias("proveedor").once("value")
+        snapshot.forEach((item) => {
+            this.arrayproveedor.push(item.val().nombre)
         })
     },
 
@@ -920,6 +941,39 @@ export default {
     computed: {
         permisoAlertaStockActivo() {
             return Boolean(this.$store.state.configuracion?.alerta_stock_minimo);
+        },
+        productoParaSincronizar() {
+            return {
+                id: this.id,
+                nombre: this.nombre,
+                categoria: this.categoria,
+                precio: this.precio,
+                stock: this.stock,
+                activo: this.activo,
+                codbarra: this.codbarra,
+                proveedor: this.proveedor,
+                medida: this.medida,
+                factor: this.factor,
+                escala_may1: this.escala_may1,
+                precio_may1: this.precio_may1,
+                escala_may2: this.escala_may2,
+                precio_may2: this.precio_may2,
+                peso: this.peso,
+                costo: this.costo,
+                tipoproducto: this.tipoproducto,
+                operacion: this.operacion,
+                icbper: this.icbper,
+                controstock: this.controstock,
+                lista_bono: this.lista_bono,
+                tiene_bono: this.tiene_bono,
+                marca: this.marca,
+                grupoPrecioSelect: this.grupoPrecioSelect,
+                grupo_precio: this.grupoPrecioSelect,
+                grupoBonoSelect: this.grupoBonoSelect,
+                grupo_bono: this.grupoBonoSelect,
+                obs1: this.obs1,
+                stock_minimo: this.stock_minimo,
+            };
         },
         stockMinimoConvertido() {
             const s = Number(this.stock_minimo) || 0;
@@ -967,7 +1021,7 @@ export default {
                 }
             }
             if (this.filtro_categoria == 'TODOS') {
-                return lista.filter((item) => (item.id + item.nombre+item.codbarra)
+                return lista.filter((item) => (item.id + item.nombre + item.codbarra)
                     .toLowerCase().includes(this.buscar.toLowerCase()))
             } else {
                 return lista.filter(item => item.categoria == this.filtro_categoria && (item.id + item.nombre)
@@ -1108,6 +1162,9 @@ export default {
         },
 
         async cargarGruposBonos() {
+            this.grupoPrecioTemp = this.grupoPrecioSelect;
+            this.grupoBonoTemp = this.grupoBonoSelect;
+
             const snap = await allBono().once("value");
             const val = typeof snap.val === "function" ? snap.val() : null;
             let arr = [];
@@ -1137,8 +1194,11 @@ export default {
         },
 
         guardarBonosGlobales() {
+            this.grupoPrecioSelect = this.grupoPrecioTemp;
+            this.grupoBonoSelect = this.grupoBonoTemp;
+
             this.dial_bono_global = false;
-            this.save(true);
+            store.commit("dialogosnackbar", "Bono asignado. No olvides guardar el producto.");
         },
 
         quitarGrupoPrecio() {
@@ -1147,6 +1207,10 @@ export default {
 
         quitarGrupoBono() {
             this.grupoBonoSelect = null;
+        },
+        cerrarSinGuardarBonos() {
+            this.dial_bono_global = false;
+            store.commit("dialogosnackbar", "Cambios de bono descartados");
         },
 
         formatearFechaSimple(fecha) {
@@ -1368,7 +1432,6 @@ export default {
             store.commit("dialogoprogress")
             const tieneGrupoPrecio = !!this.grupoPrecioSelect;
 
-            // si hay grupo de precio global, limpia escalas locales
             if (tieneGrupoPrecio) {
                 this.escala_may1 = 0;
                 this.precio_may1 = 0;
@@ -1409,31 +1472,21 @@ export default {
             await nuevoProducto(this.id, array)
 
             if (this.sumacon == true) {
-            //    await this.copiarProductoATodasLasSedes(this.id, array);
+                const todasLasSedes = store.state.array_sedes || [];
+                const bdActual = this.$store.state.baseDatos.bd;
+                const otrasSedes = todasLasSedes.filter(s => s.tipo === 'sede' && s.base !== bdActual);
+
+                if (otrasSedes.length > 0) {
+                    this.abrirDialogoSedes(array);
+                } else {
+                    this.dialogo = false;
+                }
                 this.sumacontador()
+            } else {
+                this.dialogo = false;
             }
-            this.dialogo = cerrar
 
             store.commit("dialogoprogress")
-        },
-
-        async copiarProductoATodasLasSedes(id, producto) {
-            try {
-                const sedes = store.state.array_sedes || [];
-                const bdActual = store.state.baseDatos.bd;
-                const otrasSedes = sedes.filter(s => s.tipo === 'sede' && s.base !== bdActual);
-                const promesas = otrasSedes.map(sede => {
-                    const productoConStock0 = { ...producto, stock: 0 };
-                    return nuevoProductoOtraBase(sede.base, id, productoConStock0);
-                });
-
-                if (promesas.length > 0) {
-                    await Promise.all(promesas);
-                    console.log(`Producto ${id} copiado a ${promesas.length} sedes con stock 0`);
-                }
-            } catch (error) {
-                console.error('Error copiando producto a otras sedes:', error);
-            }
         },
 
         async eliminar() {
@@ -1681,7 +1734,27 @@ export default {
             this.cargarBonosGlobalesCache();
         },
 
+        abrirDialogoSedes(producto) {
+            this.productoACopiar = producto;
+            this.dialogoSedes = true;
+        },
 
+        abrirDialogoSincronizacion() {
+            if (!this.id) {
+                store.commit("dialogosnackbar", "Primero debes guardar el producto");
+                return;
+            }
+            this.dialogoSincronizar = true;
+        },
+
+        onProductoCopiado(resultado) {
+            this.dialogo = false;
+            this.productoACopiar = null;
+        },
+
+        onProductoSincronizado(resultado) {
+            
+        },
     },
 
 }

@@ -25,14 +25,14 @@
                     <v-alert type="info" border="left" colored-border icon="mdi-credit-card" class="mb-4" dense>
                         <div class="d-none d-md-flex justify-space-between">
                             <span>Línea de Crédito: <strong>{{ monedaSimbolo }} {{ lineaCreditoCliente.toFixed(2)
-                                    }}</strong></span>
+                            }}</strong></span>
                             <span>Disponible: <strong :class="saldoDisponible < 0 ? 'red--text' : 'green--text'">
                                     {{ monedaSimbolo }} {{ saldoDisponible.toFixed(2) }}
                                 </strong></span>
                         </div>
                         <div class="d-flex d-md-none flex-column caption">
                             <div>Línea de Crédito: <strong>{{ monedaSimbolo }} {{ lineaCreditoCliente.toFixed(2)
-                                    }}</strong></div>
+                            }}</strong></div>
                             <div class="mt-1">Disponible: <strong
                                     :class="saldoDisponible < 0 ? 'red--text' : 'green--text'">
                                     {{ monedaSimbolo }} {{ saldoDisponible.toFixed(2) }}
@@ -60,11 +60,15 @@
                                         {{ conviertefecha(cuenta.fecha_vence) }}
                                     </v-chip>
                                 </div>
-                                <div class="text-right">
-                                    <div class="font-weight-bold red--text">
+                                <div class="text-right d-flex align-center">
+                                    <div class="font-weight-bold red--text mr-6">
                                         {{ cuenta.moneda || monedaSimbolo }}{{ parseFloat(cuenta.monto_pendiente ||
-                                        0).toFixed(2) }}
+                                            0).toFixed(2) }}
                                     </div>
+                                    <v-btn small color="primary" outlined @click="abrirLiquidacion(cuenta)">
+                                        <v-icon small left>mdi-cash-plus</v-icon>
+                                        Abonar
+                                    </v-btn>
                                 </div>
                             </div>
                         </v-card>
@@ -98,15 +102,21 @@
                 </v-btn>
             </v-card-actions>
         </v-card>
+
+        <dial_liquidacion_cliente v-model="dialog_liquidacion" :cuenta="cuenta_seleccionada" @actualizar="onActualizarCuenta" @cerrar="dialog_liquidacion = false" />
     </v-dialog>
 </template>
 
 <script>
 import moment from 'moment'
 import { allcuentaxcobrar } from '../../../db'
+import dial_liquidacion_cliente from '../cuentas_x_cobrar/dial_liquidacion_cliente.vue'
 
 export default {
     name: 'DialDeudasCliente',
+    components: {
+        dial_liquidacion_cliente
+    },
     props: {
         value: { type: Boolean, default: false },
         cliente: { type: Object, default: null },
@@ -116,7 +126,9 @@ export default {
         cargando: false,
         cuentas_pendientes: [],
         total_deuda: 0,
-        consultaEnProceso: false
+        consultaEnProceso: false,
+        dialog_liquidacion: false,
+        cuenta_seleccionada: null
     }),
     watch: {
         value: {
@@ -232,7 +244,32 @@ export default {
                 cliente: this.cliente,
                 tieneDeuda: this.cuentas_pendientes.length > 0
             })
-        }
+        },
+        abrirLiquidacion(cuenta) {
+            this.cuenta_seleccionada = cuenta
+            this.dialog_liquidacion = true
+        },
+        onActualizarCuenta(cuentaActualizada) {
+            if (cuentaActualizada.estado === 'LIQUIDADO' || cuentaActualizada.estado === 'ELIMINADO') {
+                this.cuentas_pendientes = this.cuentas_pendientes.filter(
+                    c => c.doc_ref !== cuentaActualizada.doc_ref
+                )
+                this.dialog_liquidacion = false
+                this.cuenta_seleccionada = null
+            } else {
+                const idx = this.cuentas_pendientes.findIndex(
+                    c => c.doc_ref === cuentaActualizada.doc_ref
+                )
+                if (idx !== -1) {
+                    this.$set(this.cuentas_pendientes, idx, cuentaActualizada)
+                }
+            }
+
+            this.total_deuda = this.cuentas_pendientes.reduce(
+                (acc, c) => acc + parseFloat(c.monto_pendiente || 0),
+                0
+            )
+        },
     }
 }
 </script>
