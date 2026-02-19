@@ -108,6 +108,18 @@
                             </v-chip>
                             <span v-else>-</span>
                         </td>
+                         <td class="text-right">
+                    <v-chip 
+                        outlined 
+                        v-if="item.linea_credito && item.linea_credito > 0" 
+                        small
+                        :color="item.permite_credito ? 'success' : 'grey'" 
+                        label
+                    >
+                        {{ monedaSimbolo }} {{ Number(item.linea_credito).toFixed(2) }}
+                    </v-chip>
+                    <span v-else>-</span>
+                </td>
                         <td width="150">
                             <v-row>
                                 <v-col cols="6" class="text-center">
@@ -132,7 +144,7 @@
             <div class="mobile-list">
                 <recycle-scroller :items="listaFiltrada" :item-size="84" key-field="id" class="scroller">
                     <template #default="{ item }">
-                        <div class="item-card">
+                        <div class="item-card mb-4">
                             <div class="item-main">
                                 <div class="item-title">{{ item.nombre }}</div>
                                 <div class="item-sub">
@@ -267,6 +279,7 @@ export default {
             { text: 'Telefono', value: 'telefono' },
             { text: 'Dia', value: 'dia' },
             { text: 'Vend', value: 'sede' },
+            { text: 'Línea Crédito', value: 'linea_credito', align: 'right' },
             { text: 'Actions', value: 'actions', sortable: false }
         ],
 
@@ -300,9 +313,12 @@ export default {
         if (this.unsub) this.unsub()
     },
 
-
-
     computed: {
+        monedaSimbolo() {
+            return this.$store.state.moneda.find(m =>
+                m.codigo === this.$store.state.configuracion?.moneda_defecto
+            )?.simbolo || 'S/';
+        },
         // Fuente de datos: no mutar aquí
         zonasConTodas() {
             const base = Array.isArray(this.$store.state.zonas)
@@ -596,6 +612,7 @@ export default {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    padding: 8px 0;
 }
 
 .scroller {
@@ -616,7 +633,7 @@ export default {
     box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
 
     padding: 10px 12px;
-    margin: 6px 8px;
+    margin: 0 8px 16px 8px;
     min-height: 72px;
     /* ajusta y luego iguala item-size */
 }

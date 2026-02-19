@@ -175,17 +175,18 @@
                                                 </v-list-item-icon>
                                                 <v-list-item-title>Descargar</v-list-item-title>
                                             </v-list-item>
-                                            <v-list-item @click='editar(pedido)' v-if="pedido.estado != 'anulado'">
+                                            <v-list-item @click='editar(pedido)' v-if="pedido.estado === 'pendiente'">
                                                 <v-list-item-icon>
                                                     <v-icon color="success"> mdi-pencil</v-icon>
                                                 </v-list-item-icon>
                                                 <v-list-item-title>Editar</v-list-item-title>
                                             </v-list-item>
-                                            <v-list-item @click='anular(pedido)' v-if="pedido.estado != 'anulado'">
+
+                                            <v-list-item @click='anular(pedido)' v-if="pedido.estado === 'pendiente'">
                                                 <v-list-item-icon>
                                                     <v-icon color="error"> mdi-delete</v-icon>
                                                 </v-list-item-icon>
-                                                <v-list-item-title>Anulado</v-list-item-title>
+                                                <v-list-item-title>Anular</v-list-item-title>
                                             </v-list-item>
                                         </v-list>
                                     </v-menu>
@@ -258,13 +259,13 @@
                         </v-btn>
 
                         <v-spacer></v-spacer>
-
-                        <v-btn v-if="pedido.estado != 'anulado'" icon small color="primary"
+                        <v-btn v-if="pedido.estado === 'pendiente'" icon small color="primary"
                             @click.stop="editar(pedido)">
                             <v-icon small>mdi-pencil</v-icon>
                         </v-btn>
 
-                        <v-btn v-if="pedido.estado != 'anulado'" icon small color="error" @click.stop="anular(pedido)">
+                        <v-btn v-if="pedido.estado === 'pendiente'" icon small color="error"
+                            @click.stop="anular(pedido)">
                             <v-icon small>mdi-delete</v-icon>
                         </v-btn>
                     </v-card-actions>

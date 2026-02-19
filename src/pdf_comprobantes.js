@@ -1199,7 +1199,7 @@ function impresionA4(array, qr, arraycabecera) {
     console.log(store.state.configImpresora.log_largo);
 
     if (store.state.configImpresora.log_largo) {
-      doc.addImage("data:image/png;base64," + imagen, "png", 10, 9, 130, 30);
+      doc.addImage("data:image/png;base64," + imagen, "png", 10, 9, 120, 35);
     } else {
       doc.rect(10, 10, 30, 30);
       doc.addImage("data:image/png;base64," + imagen, "png", 12, 12, 26, 26);

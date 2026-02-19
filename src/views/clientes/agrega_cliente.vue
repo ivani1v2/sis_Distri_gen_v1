@@ -4,11 +4,21 @@
             <v-system-bar window dark>
                 <v-icon large color="red" @click="cierra()">mdi-close</v-icon>
                 <v-spacer></v-spacer>
-                <v-btn x-small color="primary" @click="dial_config = true">
-                    <v-icon left>mdi-plus</v-icon> Adicional
-                </v-btn>
+                <v-tooltip bottom>
+                    <template v-slot:activator="{ on, attrs }">
+                        <span v-bind="attrs" v-on="on">
+                            <v-btn x-small color="primary" @click="dial_config = true" :disabled="!puedeAbrirAdicional">
+                                <v-icon left>mdi-plus</v-icon> Adicional
+                            </v-btn>
+                        </span>
+                    </template>
+                    <span v-if="!puedeAbrirAdicional">
+                        Complete el documento ({{ clienteForm.tipodoc === 'RUC' ? '11 dígitos' : '8 dígitos' }}) para
+                        habilitar
+                    </span>
+                </v-tooltip>
                 <v-spacer></v-spacer>
-                <v-icon color="green" large v-if="!permiso_edita" @click="save()">mdi-content-save</v-icon>
+                <v-icon color="green" large v-if="!permiso_edita" @click="guardarNormal()">mdi-content-save</v-icon>
                 <template>
                     <v-menu bottom left offset-y>
                         <template v-slot:activator="{ on, attrs }">
@@ -214,14 +224,16 @@
                 </v-col>
 
                 <v-col cols="6" class="mt-n4">
-                    <v-select :disabled="permiso_edita" :items="arrayTipoComprobante" item-text="text" item-value="value"
-                        label="Tipo Comprobante" dense outlined v-model="clienteForm.tipocomprobante">
+                    <v-select :disabled="permiso_edita" :items="arrayTipoComprobante" item-text="text"
+                        item-value="value" label="Tipo Comprobante" dense outlined
+                        v-model="clienteForm.tipocomprobante">
                         <template v-slot:append>
                             <v-tooltip bottom>
                                 <template v-slot:activator="{ on, attrs }">
                                     <v-icon small color="blue" v-bind="attrs" v-on="on">mdi-help-circle</v-icon>
                                 </template>
-                                <span>Tipo de comprobante por defecto para este cliente (Nota venta, Boleta, Factura)</span>
+                                <span>Tipo de comprobante por defecto para este cliente (Nota venta, Boleta,
+                                    Factura)</span>
                             </v-tooltip>
                         </template>
                     </v-select>
@@ -315,7 +327,7 @@
                     <v-btn color="primary" @click="guardarDireccion">Guardar</v-btn>
                 </div>
             </v-card>
-        </v-dialog>        
+        </v-dialog>
         <!-- Diálogo ADICIONAL -->
         <v-dialog v-model="dial_config" max-width="520">
             <v-card class="pa-3">
@@ -329,20 +341,18 @@
 
                 <v-row dense>
                     <v-col cols="12">
-                        <v-switch inset :disabled="permiso_edita || !lineaCreditoHabilitado" 
-                            v-model="clienteForm.permite_credito"
-                            label="Permite ventas al crédito" />
+                        <v-switch inset :disabled="permiso_edita || !lineaCreditoHabilitado"
+                            v-model="clienteForm.permite_credito" label="Permite ventas al crédito" />
                         <small v-if="!lineaCreditoHabilitado" class="grey--text">
                             La línea de crédito está deshabilitada en configuración general.
                         </small>
                     </v-col>
 
                     <v-col cols="12" sm="6">
-                        <v-text-field 
-                            :disabled="permiso_edita || !clienteForm.permite_credito || !lineaCreditoHabilitado" 
-                            type="number" min="0" outlined dense 
-                            v-model.number="clienteForm.linea_credito" prefix="S/."
-                            label="Línea de crédito" 
+                        <v-text-field
+                            :disabled="permiso_edita || !clienteForm.permite_credito || !lineaCreditoHabilitado"
+                            type="number" min="0" outlined dense v-model.number="clienteForm.linea_credito" prefix=$
+                            label="Línea de crédito"
                             :rules="clienteForm.permite_credito ? [v => v > 0 || 'Debe ser mayor a 0'] : []"
                             :error="clienteForm.permite_credito && clienteForm.linea_credito <= 0"
                             :error-messages="clienteForm.permite_credito && clienteForm.linea_credito <= 0 ? 'Requerido mayor a 0' : ''" />
@@ -356,9 +366,9 @@
                 </v-row>
 
                 <v-card-actions>
-                    <v-spacer></v-spacer>
                     <v-btn text @click="dial_config = false">Cerrar</v-btn>
-                    <v-btn color="primary" @click="dial_config = false">OK</v-btn>
+                    <v-spacer></v-spacer>
+                    <v-btn color="primary" @click="guardarAll()">OK</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -492,6 +502,15 @@ export default {
             }
             return ['1', '2', '3'];
         },
+        puedeAbrirAdicional() {
+            if (this.cliente_selecto) return true;
+            const tipo = (this.clienteForm.tipodoc || '').toUpperCase();
+            const doc = String(this.clienteForm.documento || '').trim();
+            if (tipo === 'SIN DOCUMENTO') return true;
+            if (tipo === 'DNI') return doc.length === 8;
+            if (tipo === 'RUC') return doc.length === 11;
+            return doc.length > 0;
+        }
     },
     watch: {
         // Normalización doc + detección DNI/RUC
@@ -728,14 +747,12 @@ export default {
                 }
                 if (this.clienteForm.permite_credito && this.lineaCreditoHabilitado) {
                     const credito = Number(this.clienteForm.linea_credito || 0)
-                    if(credito <= 0) {
+                    if (credito <= 0) {
                         this.error = 'si habilita crédito, la línea de crédito debe ser mayor a 0'
                         this.dial_config = true
                         return
                     }
                 }
-
-                store.commit('dialogoprogress')
 
                 let suma = false
                 if (this.clienteForm.tipodoc === 'SIN DOCUMENTO' && this.clienteForm.documento === '') {
@@ -763,11 +780,11 @@ export default {
                 }
 
                 this.$emit('actualizar', this.clienteForm)
-                store.commit('dialogoprogress')
+
+                return Promise.resolve();
             } catch (err) {
                 console.error(err)
-                this.snackbar = true
-                this.text = 'Error al guardar cliente'
+                return Promise.reject(err);
             }
         },
         // Dentro de methods: { ... }
@@ -1016,6 +1033,56 @@ export default {
             }
         },
 
+        guardarAll() {
+            if (this.clienteForm.permite_credito && this.lineaCreditoHabilitado) {
+                const credito = Number(this.clienteForm.linea_credito || 0);
+                if (credito <= 0) {
+                    this.error = 'Si habilita crédito, la línea de crédito debe ser mayor a 0';
+                    return;
+                }
+            }
+
+            store.commit('dialogoprogress');
+
+            this.save()
+                .then(() => {
+                    store.commit('dialogosnackbar', 'Configuración adicional guardada');
+                    this.dial_config = false;
+                    this.error = null;
+                })
+                .catch(err => {
+                    console.error('Error al guardar:', err);
+                    this.error = 'Error al guardar la configuración';
+                    store.commit('dialogosnackbar', 'Error al guardar configuración');
+                })
+                .finally(() => {
+                    store.commit('dialogoprogress');
+                });
+        },
+        guardarNormal() {
+            if (this.clienteForm.sede === '') {
+                alert('Seleccione una sede para el cliente');
+                return;
+            }
+            if (this.clienteForm.nombre === '') {
+                alert('Ingrese nombre valido');
+                return;
+            }
+
+            store.commit('dialogoprogress');
+
+            this.save()
+                .then(() => {
+                    store.commit('dialogosnackbar', 'Cliente guardado correctamente');
+                })
+                .catch(err => {
+                    console.error('Error al guardar:', err);
+                    store.commit('dialogosnackbar', 'Error al guardar cliente');
+                })
+                .finally(() => {
+                    store.commit('dialogoprogress');
+                });
+        }
     }
 }
 </script>
