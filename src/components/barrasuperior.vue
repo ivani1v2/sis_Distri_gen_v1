@@ -566,6 +566,8 @@ export default {
                     this.barra = true
                     store.commit('BD', '')
                     store.commit('permisos', '')
+                    store.commit('array_sedes', '');
+                    store.commit('sedeActual', '');
                     localStorage.removeItem('ruc_asociado');
                     location.reload(true);
                 })
@@ -611,6 +613,7 @@ export default {
             }
         },
         async obtener_multi(data) {
+            
             if (data.multi_empresa) {
                 const snap = await lee_multiEmpresas(data.ruc).once('value');
                 const empresa = snap.val();
