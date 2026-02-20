@@ -166,9 +166,12 @@
             <template v-slot:default="{ item }">
               <v-list-item>
                 <v-list-item-content>
-                  <v-list-item-title class="font-weight-medium" v-text="item.nombre"></v-list-item-title>
-                  <v-list-item-subtitle class="caption"
-                    v-text="`${monedaSimbolo}${item.precio} x ${item.medida}`"></v-list-item-subtitle>
+                  <v-list-item-title class="font-weight-medium">
+                    {{ item.nombre }}
+                  </v-list-item-title>
+                  <v-list-item-subtitle class="caption">
+                    {{ monedaSimbolo }}{{ item.precio }} x {{ item.medida }}
+                  </v-list-item-subtitle>
                   <v-list-item-subtitle v-if="item.preciodescuento != 0" class="red--text caption font-weight-bold">
                     Descuento ({{ monedaSimbolo }}{{ redondear(item.preciodescuento) }})
                   </v-list-item-subtitle>
