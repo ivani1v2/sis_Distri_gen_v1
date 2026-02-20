@@ -1,62 +1,94 @@
 <template>
   <div class="pa-4">
     <v-card class="elevation-3 rounded-lg">
-<v-card-title class="pa-4 blue-grey lighten-5 d-block">
-        
-        <div class="d-flex align-center mb-3">
-          <v-icon :large="$vuetify.breakpoint.mdAndUp" left color="blue-grey darken-3">mdi-cash-multiple</v-icon>
-          <span :class="{'text-h5': $vuetify.breakpoint.mdAndUp, 'text-h6': $vuetify.breakpoint.smAndDown}" 
-                class="font-weight-bold blue-grey--text text--darken-3">Cx Cobrar</span>
-          <v-spacer></v-spacer>
-          
-          <v-btn color="info" small @click="exportarExcel" class="ml-2 font-weight-medium">
-            <v-icon left small>mdi-file-excel</v-icon>
-            <span>Exportar</span>
-        
-          </v-btn>
-        </div>
-
-        <v-row dense>
-          <v-col cols="12" sm="6">
-            <v-select outlined v-model="cuenta_estado" :items="array_estado" label="Estado"
-              prepend-inner-icon="mdi-list-status" dense hide-details @change="filtra"></v-select>
+      <v-card-title class="pa-4 blue-grey lighten-5">
+        <v-row align="center" class="ma-0" no-gutters>
+          <v-col cols="12" md="6" class="d-flex align-center">
+            <v-icon :large="$vuetify.breakpoint.mdAndUp" left color="blue-grey darken-3">
+              mdi-cash-multiple
+            </v-icon>
+            <span :class="{
+              'text-h5': $vuetify.breakpoint.mdAndUp,
+              'text-h6': $vuetify.breakpoint.smAndDown
+            }" class="font-weight-bold blue-grey--text text--darken-3">
+              Cx Cobrar
+            </span>
           </v-col>
-
-          <v-col cols="12" sm="6" class="d-flex align-center">
-            <v-autocomplete class="flex-grow-1" outlined dense label="Buscar Cliente" :items="arra_empleados"
-              prepend-inner-icon="mdi-account-search" v-model="busca_p" hide-details clearable></v-autocomplete>
-
-            <v-btn small icon color="primary" class="ml-2 elevation-2" @click="filtra" title="Aplicar filtro">
-              <v-icon>mdi-filter</v-icon>
-            </v-btn>
+          <v-col cols="12" md="6" class="mt-3 mt-md-0">
+            <div class="d-flex" :class="{
+              'justify-space-between w-100': $vuetify.breakpoint.smAndDown,
+              'justify-end': $vuetify.breakpoint.mdAndUp
+            }">
+              <v-btn color="success" small :class="$vuetify.breakpoint.smAndDown ? 'flex-grow-1 mr-2' : 'mr-2'"
+                @click="abrirDialogoNuevaCuenta">
+                <v-icon left small>mdi-plus-circle</v-icon>
+                Nueva
+              </v-btn>
+              <v-btn color="info" small :class="$vuetify.breakpoint.smAndDown ? 'flex-grow-1' : ''"
+                @click="exportarExcel">
+                <v-icon left small>mdi-file-excel</v-icon>
+                Exportar
+              </v-btn>
+            </div>
           </v-col>
         </v-row>
       </v-card-title>
 
+      <v-card-text class="pt-3">
+        <v-row dense>
+          <v-col cols="12" md="3">
+            <v-select outlined v-model="cuenta_estado" :items="array_estado" label="Estado"
+              prepend-inner-icon="mdi-list-status" dense hide-details @change="filtra" />
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-autocomplete outlined dense hide-details label="Buscar Cliente" :items="arra_empleados"
+              item-text="nombre" item-value="documento" prepend-inner-icon="mdi-account-search" v-model="busca_p"
+              clearable />
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-select v-model="vendedoresSeleccionados" :items="vendedoresItems" item-text="nombre" item-value="codigo"
+              label="Vendedor" multiple outlined dense chips small-chips deletable-chips clearable
+              :menu-props="{ closeOnContentClick: true }" @change="onVendedorChange" class="mb-n6" />
+          </v-col>
+          <v-col cols="12" md="3" class="d-flex align-center">
+            <v-btn block color="primary" class="elevation-2" @click="filtra">
+              <v-icon left>mdi-filter</v-icon>
+              Aplicar filtros
+            </v-btn>
+          </v-col>
+        </v-row>
+      </v-card-text>
       <v-divider></v-divider>
       <v-card-text class="py-4">
         <v-row align="center">
           <h4 class="text-h6">
-            Total Pendiente: <span class="red--text text--darken-3">{{monedaSimbolo}} {{ suma_total().toFixed(2) }}</span>
+            Total Pendiente: <span class="red--text text--darken-3">{{ monedaSimbolo }} {{ suma_total().toFixed(2)
+            }}</span>
           </h4>
         </v-row>
       </v-card-text>
-
       <v-divider></v-divider>
-
       <v-data-table :headers="headersCxc" :items="listafiltrada" :items-per-page="-1" class="elevation-0"
         :sort-by.sync="sortBy" :sort-desc.sync="sortDesc" dense fixed-header height="65vh" mobile-breakpoint="1"
         no-data-text="No hay cuentas por cobrar disponibles">
-        <template v-slot:item.cliente="{ item }">
-          <div class="font-weight-medium">{{ item.nombre }}</div>
-          <div class="caption grey--text">{{ item.documento }}</div>
+        <template v-slot:[`item.cliente`]="{ item }">
+          <div class="font-weight-medium">
+            {{ item.nombre }}
+          </div>
+          <div class="caption grey--text d-flex align-center">
+            <span>{{ item.documento }}</span>
+            <v-divider vertical class="mx-2"></v-divider>
+            <span class=" caption blue--text text--darken-1">
+              {{ item.doc_ref }}
+            </span>
+          </div>
         </template>
 
-        <template v-slot:item.fecha="{ item }">
+        <template v-slot:[`item.fecha`]="{ item }">
           <v-chip small color="blue-grey lighten-5" class="font-weight-bold">{{ conviertefecha(item.fecha) }}</v-chip>
         </template>
 
-        <template v-slot:item.fecha_vence="{ item }">
+        <template v-slot:[`item.fecha_vence`]="{ item }">
           <v-chip small
             :color="analiza_fecha(item.fecha_vence) && item.estado === 'PENDIENTE' ? 'red lighten-4' : 'green lighten-4'"
             class="font-weight-bold">
@@ -64,27 +96,32 @@
           </v-chip>
         </template>
 
-        <template v-slot:item.estado="{ item }">
+        <template v-slot:[`item.estado`]="{ item }">
           <v-chip small
             :color="item.estado === 'LIQUIDADO' ? 'green' : (item.estado === 'PENDIENTE' ? 'orange' : 'red')" dark>
             {{ item.estado }}
           </v-chip>
         </template>
+        <template v-slot:[`item.vendedor_nombre`]="{ item }">
+          <v-chip small color="blue-grey lighten-4" class="font-weight-bold">
+            {{ item.vendedor_nombre || 'Sin vendedor' }}
+          </v-chip>
+        </template>
 
-        <template v-slot:item.monto_total="{ item }">
+        <template v-slot:[`item.monto_total`]="{ item }">
           <span class="font-weight-bold">{{ monedaSimbolo }} {{ redondear(item.monto_total) }}</span>
         </template>
 
-        <template v-slot:item.monto_pendiente="{ item }">
+        <template v-slot:[`item.monto_pendiente`]="{ item }">
           <span class="red--text font-weight-bold">{{ monedaSimbolo }} {{ redondear(item.monto_pendiente) }}</span>
         </template>
 
-        <template v-slot:item.pagado="{ item }">
+        <template v-slot:[`item.pagado`]="{ item }">
           <span class="green--text font-weight-bold">{{ monedaSimbolo }}{{ redondear(item.monto_total -
             item.monto_pendiente) }}</span>
         </template>
 
-        <template v-slot:item.accion="{ item }">
+        <template v-slot:[`item.accion`]="{ item }">
           <v-menu offset-y>
             <template v-slot:activator="{ on, attrs }">
               <v-btn icon v-bind="attrs" v-on="on" small>
@@ -113,6 +150,8 @@
         </template>
       </v-data-table>
 
+      <dial-nueva-cuenta-manual v-model="dialogNuevaCuentaManual" :clientes="arra_empleadosCompleto"
+        @cuenta-guardada="cuentaGuardada" />
     </v-card>
 
     <v-dialog v-model="dialog" max-width="590">
@@ -131,14 +170,15 @@
                   <v-list-item-subtitle class="caption"
                     v-text="`${monedaSimbolo}${item.precio} x ${item.medida}`"></v-list-item-subtitle>
                   <v-list-item-subtitle v-if="item.preciodescuento != 0" class="red--text caption font-weight-bold">
-                    Descuento ({{monedaSimbolo}}{{ redondear(item.preciodescuento) }})
+                    Descuento ({{ monedaSimbolo }}{{ redondear(item.preciodescuento) }})
                   </v-list-item-subtitle>
                 </v-list-item-content>
                 <v-list-item-action>
                   <v-chip color="blue-grey lighten-5" small>{{ item.cantidad }} Uds.</v-chip>
                 </v-list-item-action>
                 <v-list-item-action>
-                  <span class="font-weight-bold primary--text">{{ monedaSimbolo }}{{ redondear((item.precioedita * item.cantidad) -
+                  <span class="font-weight-bold primary--text">{{ monedaSimbolo }}{{ redondear((item.precioedita *
+                    item.cantidad) -
                     item.preciodescuento) }}</span>
                 </v-list-item-action>
               </v-list-item>
@@ -257,21 +297,17 @@
                             </v-list-item-icon>
                             <v-list-item-title>Eliminar</v-list-item-title>
                           </v-list-item>
-
                         </v-list>
                       </v-menu>
                     </td>
-
                   </tr>
                 </tbody>
               </template>
             </v-simple-table>
           </v-card>
         </v-card-text>
-
       </v-card>
     </v-dialog>
-
 
     <v-dialog v-model="dialog_detalle_cuota" max-width="350">
       <v-card class="rounded-lg">
@@ -283,7 +319,9 @@
         <v-card-text class="pa-4">
           <h4>Modificado: {{ conviertefecha(detalle.fecha_modificacion) || 'N/A' }} </h4>
           <h4>Responsable: {{ detalle.vendedor || 'N/A' }} </h4>
-          <h4 v-if="detalle.amortizado != undefined">Monto Amortiza: {{ monedaSimbolo }}{{ redondear(detalle.amortizado) }} </h4>
+          <h4 v-if="detalle.amortizado != undefined">Monto Amortiza: {{ monedaSimbolo }}{{
+            redondear(detalle.amortizado) }}
+          </h4>
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -321,6 +359,8 @@ import store from '@/store/index'
 import d_editar from './cuentas_x_cobrar/dial_editar_cuota.vue'
 import d_amortiza from './cuentas_x_cobrar/dial_amortiza.vue'
 import d_nueva_cuota from './cuentas_x_cobrar/dial_nueva_cuota.vue'
+import dialNuevaCuentaManual from './cuentas_x_cobrar/dial_nueva_cuenta_manual.vue'
+import { allClientes } from '../../db'
 import {
   pdfGenera_resumen
 } from '../../pdf_comprobantes'
@@ -336,6 +376,7 @@ export default {
     d_amortiza,
     d_editar,
     d_nueva_cuota,
+    dialNuevaCuentaManual,
   },
 
   data: () => ({
@@ -344,18 +385,17 @@ export default {
       { text: 'Emision', value: 'fecha', sortable: true },
       { text: 'Venci.', value: 'fecha_vence', sortable: true },
       { text: 'Estado', value: 'estado', sortable: true },
+      { text: 'Vendedor', value: 'vendedor_nombre', sortable: true },
       { text: 'Total', value: 'monto_total', sortable: true, align: 'end' },
       { text: 'Pendiente', value: 'monto_pendiente', sortable: true, align: 'end' },
       { text: 'Pagado', value: 'pagado', sortable: true, align: 'end' },
       { text: 'Accion', value: 'accion', sortable: false, align: 'center' },
     ],
 
-    // tabla principal
     desserts: [],
     sortBy: ['cliente'],
     sortDesc: [false],
 
-    // diálogos
     dialog: false,
     dialog_liquidacion: false,
     dialog_detalle_cuota: false,
@@ -363,17 +403,14 @@ export default {
     dialog_editar_cuota: false,
     genera_pdf: false,
 
-    // selección actual (comprobante / cuota)
     item_selecto: [],
     item_selecto_cuota_index: null,
     detalle: [],
 
-    // datos para editar cuota
     cuota_edit_monto: '',
     cuota_edit_fecha_str: '',
     cuota_edit_index: null,
 
-    // consolidado de productos
     arrayConsolidar: [],
 
     // filtros
@@ -383,14 +420,20 @@ export default {
     busca_p: '',
     arra_empleados: [],
 
-    // otros
     date1: moment(String(new Date)).format('YYYY-MM-DD'),
     seleccionado: '',
     a_cuenta: 0,
     dialog_nueva_cuota: false,
+    dialogNuevaCuentaManual: false,
+    arra_empleadosCompleto: [],
+    vendedoresSeleccionados: ['TODOS'],
+    vendedoresPrevios: ['TODOS'],
+    allCuentasRaw: [],
   }),
   created() {
+    this.inicializarVendedores();
     this.filtra()
+    this.cargarClientesCompletos()
   },
   computed: {
     listafiltrada() {
@@ -415,7 +458,6 @@ export default {
       )
     },
 
-    // 🔹 ¿El cronograma NO cuadra con el monto_total del crédito?
     descuadreCronograma() {
       if (!this.item_selecto) return false
       const totalCredito = parseFloat(this.item_selecto.monto_total) || 0
@@ -423,7 +465,15 @@ export default {
     },
     monedaSimbolo() {
       return this.$store.state.moneda.find(m => m.codigo == this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/ ';
-    }
+    },
+    vendedoresItems() {
+      const base = Array.isArray(this.$store.state.array_sedes)
+        ? this.$store.state.array_sedes
+        : [];
+      const tieneTodos = base.some(it => (it.codigo || '').toString().toUpperCase() === 'TODOS');
+      const items = tieneTodos ? base : [{ nombre: 'TODOS', vendedor: 'TODOS' }, ...base];
+      return items;
+    },
 
   },
   watch: {
@@ -434,25 +484,56 @@ export default {
         this.arra_empleados = base.map(it => `${it.id} / ${it.nombre}`)
       }
     },
+    vendedoresSeleccionados() {
+      this.applyVendorFilter();
+    },
+    cuenta_estado() {
+      this.applyVendorFilter();
+    },
   },
   methods: {
+    async cargarClientesCompletos() {
+      try {
+        const snapshot = await allClientes().once('value')
+        const clientes = []
+        snapshot.forEach(child => {
+          const data = child.val()
+          clientes.push({
+            id: child.key,
+            nombre: data.nombre || data.razon_social || '',
+            documento: data.dni || data.ruc || '',
+            direccion: data.direccion || '',
+            telefono: data.telefono || ''
+          })
+        })
+        this.arra_empleadosCompleto = clientes
+      } catch (error) {
+        console.error('Error cargando clientes:', error)
+      }
+    },
+    abrirDialogoNuevaCuenta() {
+      this.dialogNuevaCuentaManual = true
+    },
+
+    cuentaGuardada(nuevaCuenta) {
+      this.filtra()
+    },
 
     imprime_constancia(cuota, index) {
       if (!this.item_selecto) {
         alert('No hay un crédito seleccionado.')
         return
       }
-      // si la cuota tiene los métodos de pago guardados, los usamos
       const pagos = Array.isArray(cuota.pagos) ? cuota.pagos : []
 
       reporte_liquidacion_cuota(
-        this.item_selecto, // cuenta completa
-        cuota,             // cuota específica
-        pagos              // métodos de pago usados
+        this.item_selecto,
+        cuota,
+        pagos
       )
     },
     verCronogramaPDF(item) {
-      reporte_cronograma(item)   // item es el objeto que muestras en la vista de liquidación
+      reporte_cronograma(item)
     },
     actualizarItem(nuevo) {
       this.dialog_amortiza = false
@@ -477,18 +558,13 @@ export default {
 
     abonarCuota(item, index) {
       this.item_selecto_cuota_index = index
-
-      // por defecto, el abono = monto de la cuota
       this.a_cuenta = item.monto
 
       const total = Number(this.a_cuenta || 0)
-
-      // inicializa métodos de pago: el primero lleno con el total
       this.pagosEntrega = (this.$store?.state?.modopagos || []).map((n, idx) => ({
         nombre: n,
         monto: idx === 0 && total > 0 ? total.toFixed(2) : ''
       }))
-
       this.dialog_amortiza = true
     },
 
@@ -496,13 +572,10 @@ export default {
     eliminarCuota(item, index) {
       console.log("Eliminar", item, index)
       if (!this.item_selecto || !Array.isArray(this.item_selecto.datos)) return
-
       const confirmado = confirm(`¿Eliminar esta cuota de ${this.monedaSimbolo}${this.redondear(item.monto)}?`)
       if (!confirmado) return
-
       const datos = [...this.item_selecto.datos]
       datos.splice(index, 1)
-
       // Actualizamos en Firebase
       editaCuentaxCobrar(this.item_selecto.doc_ref, 'datos', datos)
       this.item_selecto = {
@@ -512,7 +585,6 @@ export default {
     },
 
     // 🔹 GUARDAR EDICIÓN DE CUOTA (valida totales y alerta saldo)
-
     async ejecutaConsolida(value) {
       console.log(value)
       store.commit("dialogoprogress", 1)
@@ -528,37 +600,60 @@ export default {
     },
 
     async filtra() {
-      var array = []
-      this.busca_p = this.busca_p || ''
-      var cli = this.busca_p.split('/')[0].trim()
+      try {
+        var array = []
+        this.busca_p = this.busca_p || ''
+        var cli = this.busca_p.split('/')[0].trim()
 
-      let snap
-      if (this.busca_p == '') {
-        snap = await allcuentaxcobrar().once("value")
-      } else {
-        snap = await allcuentaxcobrar()
-          .orderByChild("documento")
-          .equalTo(cli)
-          .once("value")
-      }
-      console.log(snap.val())
-      if (snap.exists()) {
-        snap.forEach(item => {
-          const data = item.val()
+        let snap
 
-          if (data.estado === this.cuenta_estado) {
-            // normalizamos nombre / cliente
+        if (this.busca_p == '') {
+          snap = await allcuentaxcobrar()
+            .orderByChild("estado")
+            .equalTo(this.cuenta_estado)
+            .once("value")
+        } else {
+          snap = await allcuentaxcobrar()
+            .orderByChild("documento")
+            .equalTo(cli)
+            .once("value")
+        }
+
+        if (snap.exists()) {
+          snap.forEach(item => {
+            const data = item.val()
+            if (this.busca_p !== '' && data.estado !== this.cuenta_estado) {
+              return
+            }
+
+            let vendedor_nombre = 'Sin vendedor'
+            if (data.vendedor && Array.isArray(this.$store.state.array_sedes)) {
+              const vendedorInfo = this.$store.state.array_sedes.find(s =>
+                s.codigo === data.vendedor
+              )
+              if (vendedorInfo) {
+                vendedor_nombre = vendedorInfo.nombre
+              }
+            }
+
             const nom = data.nombre || data.cliente || ''
             array.push({
               ...data,
               nombre: nom,
-              cliente: nom, // 👈 clave nueva usada para ordenar en la tabla
+              cliente: nom,
+              vendedor_nombre: vendedor_nombre
             })
-          }
-        })
-      }
+          })
+        }
 
-      this.desserts = array
+        this.allCuentasRaw = array
+        this.applyVendorFilter()
+
+      } catch (error) {
+        console.error('Error en filtra:', error)
+        this.allCuentasRaw = []
+        this.desserts = []
+      }
     },
     async eliminar(item) {
       const confirmado = confirm(`¿Eliminar la cuenta por cobrar del cliente ${item.nombre} con comprobante ${item.doc_ref}? Esta acción no se puede deshacer.`)
@@ -664,9 +759,12 @@ export default {
       const filas = this.listafiltrada.map(item => ({
         Cliente: item.nombre,
         Documento: item.documento,
+        Comprobante: item.doc_ref,
         Emision: this.conviertefecha(item.fecha),
         Vencimiento: this.conviertefecha(item.fecha_vence),
         Estado: item.estado,
+        Vendedor: item.vendedor_nombre || 'Sin vendedor',
+        'Código Vendedor': item.vendedor || '',
         Moneda: item.moneda || 'S/',
         'Monto total': Number(item.monto_total || 0),
         'Monto pendiente': Number(item.monto_pendiente || 0),
@@ -678,7 +776,57 @@ export default {
       XLSX.utils.book_append_sheet(wb, ws, 'CuentasXCobrar')
       XLSX.writeFile(wb, 'cuentas_x_cobrar.xlsx')
     },
+    inicializarVendedores() {
+      if (!store.state.permisos?.es_admin) {
+        this.vendedoresSeleccionados = [store.state.sedeActual?.codigo || 'TODOS'];
+      } else {
+        this.vendedoresSeleccionados = ['TODOS'];
+      }
+    },
 
+    onVendedorChange(val = []) {
+      const TODOS = 'TODOS'
+      const antes = this.vendedoresPrevios
+      const ahora = val
+      if (
+        antes.includes(TODOS) &&
+        ahora.length > 1 &&
+        ahora.some(v => v !== TODOS)
+      ) {
+        this.vendedoresSeleccionados = ahora.filter(v => v !== TODOS)
+      }
+      else if (
+        ahora.includes(TODOS) &&
+        ahora.length > 1
+      ) {
+        this.vendedoresSeleccionados = [TODOS]
+      }
+      this.vendedoresPrevios = [...this.vendedoresSeleccionados]
+    },
+
+    applyVendorFilter() {
+      const seleccionados = this.vendedoresSeleccionados || [];
+
+      if (seleccionados.length === 0) {
+        this.desserts = [];
+        return;
+      }
+
+      if (seleccionados.includes('TODOS')) {
+        this.desserts = this.allCuentasRaw.filter(item =>
+          item.estado === this.cuenta_estado
+        );
+        return;
+      }
+
+      const codigosNormalizados = seleccionados.map(c => String(c).toUpperCase().trim());
+
+      this.desserts = this.allCuentasRaw.filter(p => {
+        if (p.estado !== this.cuenta_estado) return false;
+        const codVendedor = (p.vendedor != null ? String(p.vendedor) : '').toUpperCase().trim();
+        return codigosNormalizados.includes(codVendedor);
+      });
+    },
 
 
   }
