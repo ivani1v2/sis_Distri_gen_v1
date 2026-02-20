@@ -507,7 +507,7 @@ export const impresion80 = (arrays, qr) => {
     .unix(arraycabe.fecha_emision)
     .format("DD/MM/YYYY hh:mm a");
   var fecha_traslado = moment.unix(arrays.fecha_traslado).format("DD/MM/YYYY");
-  var pdfInMM = 75; // width of A4 in mm
+  var pdfInMM = 75; // width of 80mm in mm
   var lMargin = 4; //left margin in mm
   var rMargin = 2; //right margin in mm
   var pageCenter = pdfInMM / 2;
@@ -523,59 +523,83 @@ export const impresion80 = (arrays, qr) => {
   doc.text(".", -1, linea);
   linea = linea + 3;
 
+  // ===== LOGO =====
   if (imagen != "") {
-    doc.addImage(
-      "data:image/png;base64," + imagen,
-      "png",
-      pdfInMM / 2 - 20,
-      linea,
-      40,
-      40
-    );
-    linea = linea + parseInt(store.state.configImpresora.minferior); /// modificar margenes de logo
+    if (store.state.configImpresora.log_largo) {
+      // Logo largo
+      doc.addImage("data:image/png;base64," + imagen, "png", 4, linea, 67, 20);
+      linea = linea + 24; // Espacio después del logo
+    } else {
+      // Logo cuadrado centrado
+      doc.addImage(
+        "data:image/png;base64," + imagen,
+        "png",
+        pdfInMM / 2 - 15,
+        linea,
+        30,
+        20
+      );
+      linea = linea + 22;
+    }
   }
+
+  // ===== NOMBRE EMPRESA (siempre) =====
   doc.setFontSize(8);
   doc.setFont("Helvetica", "Bold");
   var texto = doc.splitTextToSize(
     store.state.baseDatos.name,
     pdfInMM - lMargin - rMargin
   );
-  doc.text(texto, pageCenter, linea, "center"); //EMPRESA
-
+  doc.text(texto, pageCenter, linea, "center");
   linea = linea + 3.5 * texto.length;
 
+  // ===== RUC (siempre) =====
   doc.setFont("Helvetica", "");
   doc.setFontSize(8);
   var texto = doc.splitTextToSize(
-    "Ruc: " + store.state.baseDatos.ruc + "\n" + Direccion,
+    "Ruc: " + store.state.baseDatos.ruc,
     pdfInMM - lMargin - rMargin
   );
-  doc.text(texto, pageCenter, linea, "center"); //RUC
-
+  doc.text(texto, pageCenter, linea, "center");
   linea = linea + 3.5 * texto.length;
 
+  // ===== DIRECCIÓN (solo si NO es logo largo, para ahorrar espacio) =====
+  if (!store.state.configImpresora.log_largo) {
+    var texto = doc.splitTextToSize(Direccion, pdfInMM - lMargin - rMargin);
+    doc.text(texto, pageCenter, linea, "center");
+    linea = linea + 3.5 * texto.length;
+  }
+
+  // ===== CABECERA (si existe) =====
   if (store.state.configImpresora.cabecera != "") {
-    linea = linea + 2;
+    doc.setFont("Helvetica", "");
+    doc.setFontSize(7.5);
     var texto = doc.splitTextToSize(
       store.state.configImpresora.cabecera,
       pdfInMM - lMargin - rMargin
     );
-    doc.text(texto, pageCenter, linea, "center"); //cabecera
+    doc.text(texto, pageCenter, linea, "center");
     linea = linea + 3.5 * texto.length;
   }
+
+  // ===== TELÉFONO (si existe) =====
   if (store.state.configImpresora.telefono != "") {
-    linea = linea + 1;
+    doc.setFont("Helvetica", "");
+    doc.setFontSize(7);
     var texto = doc.splitTextToSize(
       "Telf: " + store.state.configImpresora.telefono,
       pdfInMM - lMargin - rMargin
     );
-    doc.text(texto, pageCenter, linea, "center"); //cabecera
+    doc.text(texto, pageCenter, linea, "center");
     linea = linea + 3.5 * texto.length;
   }
 
+  // ===== LÍNEA DE SEPARACIÓN =====
   doc.setFont("Helvetica", "bold");
   doc.text(separacion, pageCenter, linea, "center");
   linea = linea + 5;
+
+  // ===== TÍTULO DE LA GUÍA =====
   if (arraydatos.tipo_comprobante == "09") {
     var texto = doc.splitTextToSize(
       "GUIA DE REMISION REMITENTE",
@@ -589,8 +613,9 @@ export const impresion80 = (arrays, qr) => {
     );
     doc.text(texto, pageCenter, linea, "center");
   }
-
   linea = linea + 3;
+
+  // ===== NÚMERO DE GUÍA =====
   doc.setFont("Helvetica", "");
   var texto = doc.splitTextToSize(
     arraycabe.serie + "-" + arraycabe.correlativo,
@@ -599,6 +624,7 @@ export const impresion80 = (arrays, qr) => {
   doc.text(texto, pageCenter, linea, "center");
   linea = linea + 5;
 
+  // ===== FECHA EMISIÓN =====
   var texto = doc.splitTextToSize(
     "EMISION: " + fechaImpresion,
     pdfInMM - lMargin - rMargin
@@ -606,6 +632,7 @@ export const impresion80 = (arrays, qr) => {
   doc.text(texto, pageCenter, linea, "center");
   linea = linea + 4;
 
+  // ===== FECHA TRASLADO =====
   var texto = doc.splitTextToSize(
     "TRASLADO: " + fecha_traslado,
     pdfInMM - lMargin - rMargin
@@ -613,11 +640,11 @@ export const impresion80 = (arrays, qr) => {
   doc.text(texto, pageCenter, linea, "center");
   linea = linea + 4;
 
+  // ===== PESO BRUTO =====
   var medida = "KG";
   if (arrays.medida_t != undefined) {
     medida = arrays.medida_t;
   }
-
   doc.setFont("Helvetica", "");
   doc.text(
     "Peso Bruto: " + String(arrays.peso_total) + " " + medida,
@@ -627,7 +654,7 @@ export const impresion80 = (arrays, qr) => {
   );
   linea = linea + 4;
 
-  // Mostrar documentos relacionados debajo de Peso Bruto
+  // ===== DOCUMENTOS RELACIONADOS =====
   if (arrays.doc_relacionados && arrays.doc_relacionados.length > 0) {
     const docRelText = arrays.doc_relacionados
       .map(d => {
@@ -648,11 +675,11 @@ export const impresion80 = (arrays, qr) => {
     }
   }
 
+  // ===== MOTIVO / MODO DE TRANSPORTE =====
   if (arrays.tipo_comprobante == "09") {
     doc.setFont("Helvetica", "");
     var texto = doc.splitTextToSize("MOT TRASLADO: " + arrays.motivo, 63);
     doc.text(texto, 10, linea, "left");
-
     linea = linea + 4 * texto.length;
 
     doc.text(
@@ -668,6 +695,7 @@ export const impresion80 = (arrays, qr) => {
     linea = linea + 4;
   }
 
+  // ===== DATOS DE TRANSPORTE PÚBLICO =====
   if (
     arrays.modo_transporte_desc == "PUBLICO" &&
     arrays.tipo_comprobante != "31"
@@ -680,7 +708,6 @@ export const impresion80 = (arrays, qr) => {
       65
     );
     doc.text(texto, 10, linea, "left");
-
     linea = linea + 4 * texto.length;
 
     doc.text("RUC EMP.T.: " + String(arrays.ruc_transporte), 10, linea, "left");
@@ -696,6 +723,7 @@ export const impresion80 = (arrays, qr) => {
 
   linea = linea + 2;
 
+  // ===== DATOS DE REMITENTE =====
   doc.setFontSize(8);
   doc.setFont("Helvetica", "Bold");
   doc.text("DATOS DE REMITENTE : ", 15, linea, "left");
@@ -722,6 +750,7 @@ export const impresion80 = (arrays, qr) => {
   let finalYsss = doc.previousAutoTable.finalY;
   linea = finalYsss + 5;
 
+  // ===== DATOS DE DESTINATARIO =====
   doc.setFontSize(8);
   doc.setFont("Helvetica", "Bold");
   doc.text("DATOS DE DESTINATARIO : ", 15, linea, "left");
@@ -748,6 +777,7 @@ export const impresion80 = (arrays, qr) => {
   let finalYsssS = doc.previousAutoTable.finalY;
   linea = finalYsssS + 6;
 
+  // ===== INFORMACIÓN DIRECCIÓN =====
   doc.setFontSize(8);
   doc.setFont("Helvetica", "Bold");
   doc.text("INFORMACION DIRECCION : ", 15, linea, "left");
@@ -796,6 +826,7 @@ export const impresion80 = (arrays, qr) => {
   let finalYsssS3 = doc.previousAutoTable.finalY;
   linea = finalYsssS3 + 6;
 
+  // ===== DATOS DE VEHÍCULO (si existen) =====
   var listas = arrays.array_vehiculo;
 
   if (listas != undefined) {
@@ -836,6 +867,7 @@ export const impresion80 = (arrays, qr) => {
 
     let finalYss = doc.previousAutoTable.finalY;
 
+    // ===== DATOS DE CONDUCTOR =====
     var listas2 = arrays.array_conductor;
 
     var nuevoArray3 = new Array(listas2.length);
@@ -871,13 +903,14 @@ export const impresion80 = (arrays, qr) => {
     });
 
     let finalYs = doc.previousAutoTable.finalY;
-
     linea = finalYs + 4.5;
   }
+
+  // ===== PRODUCTOS =====
   doc.setFont("Helvetica", "Bold");
   doc.text("REMITIMOS A UD.(ES) LO SIGUIENTE:", 15, linea, "left");
   linea = linea + 3;
-  //-----------------productos-----------------------
+
   var nuevoArray = new Array(array.length);
   for (var i = 0; i < array.length; i++) {
     nuevoArray[i] = new Array(5);
@@ -912,6 +945,7 @@ export const impresion80 = (arrays, qr) => {
   linea = finalY + 5;
   var lineaqr = linea;
 
+  // ===== TEXTO LEGAL Y QR =====
   lineaqr = lineaqr + 5;
   doc.setFont("Helvetica", "");
   doc.setFontSize(8);
@@ -926,6 +960,7 @@ export const impresion80 = (arrays, qr) => {
   doc.addImage(qr, "png", pdfInMM / 2 - 10, linea, 20, 20);
   linea = linea + 24;
 
+  // ===== OBSERVACIONES =====
   doc.setFont("Helvetica", "Bold");
   var texto = doc.splitTextToSize("Observaciones : ", 200);
   doc.text(texto, 5, linea, "left");
@@ -935,10 +970,10 @@ export const impresion80 = (arrays, qr) => {
   doc.text(texto, 5, linea, "left");
   linea = linea + 4 * texto.length;
   doc.text(".", 0, linea);
-  //doc.text(numeros_a_letras(parseFloat(cuentatotal),'nominal',0,'CENTIMOS','SOLES'),0,linea)
+
   abre_dialogo_impresion(doc.output("bloburi"));
-  //doc.save(arraycabe.serie + "-" + arraycabe.correlativo + '.pdf')
 };
+
 function impresionA4(arrays, qr) {
   console.log(arrays);
   var linea = parseInt(store.state.configImpresora.msuperior);
@@ -969,36 +1004,33 @@ function impresionA4(arrays, qr) {
   linea = linea + 3;
 
   if (imagen != "") {
-    doc.rect(10, 10, 29, 29);
-    doc.addImage("data:image/png;base64," + imagen, "png", 12, 12, 26, 26);
-    linea = linea + 15;
+    // Verificar si se usa logo largo
+    if (store.state.configImpresora.log_largo) {
+      doc.addImage("data:image/png;base64," + imagen, "png", 10, 9, 120, 30);
+    } else {
+      doc.rect(10, 10, 29, 29);
+      doc.addImage("data:image/png;base64," + imagen, "png", 12, 12, 26, 26);
+      linea = linea + 15;
 
-    doc.setFont("Helvetica", "Bold");
-    doc.setFontSize(9.5);
-    var texto = doc.splitTextToSize(store.state.baseDatos.name, 80);
-    doc.text(texto, 55, linea, "left"); //EMPRESA
+      doc.setFont("Helvetica", "Bold");
+      doc.setFontSize(9.5);
+      var texto = doc.splitTextToSize(store.state.baseDatos.name, 80);
+      doc.text(texto, 55, linea, "left"); //EMPRESA
 
-    linea = linea + 4 * texto.length;
+      linea = linea + 4 * texto.length;
 
-    /*if (cabecera != '') {
-      doc.setFont('Helvetica', '');
-      doc.setFontSize(8)
-      var texto = doc.splitTextToSize(cabecera, 70);
-      doc.text(texto, 55, linea, 'left'); //CABECERA
-      linea = linea + (4 * texto.length)
-    }*/
-
-    doc.setFont("Helvetica", "");
-    doc.setFontSize(8);
-    var texto = doc.splitTextToSize(Direccion, 70);
-    doc.text(texto, 55, linea, "left"); //direccion
-
-    linea = linea + 4 * texto.length;
-    if (telefono != "") {
       doc.setFont("Helvetica", "");
       doc.setFontSize(8);
-      var texto = doc.splitTextToSize("TELEFONO: " + telefono, 70);
-      doc.text(texto, 55, linea, "left"); //TELEFONO EMPRESA
+      var texto = doc.splitTextToSize(Direccion, 70);
+      doc.text(texto, 55, linea, "left"); //direccion
+
+      linea = linea + 4 * texto.length;
+      if (telefono != "") {
+        doc.setFont("Helvetica", "");
+        doc.setFontSize(8);
+        var texto = doc.splitTextToSize("TELEFONO: " + telefono, 70);
+        doc.text(texto, 55, linea, "left"); //TELEFONO EMPRESA
+      }
     }
   } else {
     linea = linea + 15;
@@ -1031,39 +1063,41 @@ function impresionA4(arrays, qr) {
     }
   }
   doc.setLineWidth(0.7);
-  doc.rect(140, 10, 60, 25);
+  var recuadroY = store.state.configImpresora.log_largo ? 10 : 10;
+  doc.rect(140, recuadroY, 60, 25);
 
   doc.setFontSize(11);
   doc.setFont("Helvetica", "Bold");
   var texto = doc.splitTextToSize("Ruc: " + store.state.baseDatos.ruc, 50);
-  doc.text(texto, 170, 16, "center");
+  doc.text(texto, 170, recuadroY + 6, "center");
   doc.setFontSize(8);
   var texto = doc.splitTextToSize("GUIA DE REMISIÓN", 50);
-  doc.text(texto, 170, 20, "center");
+  doc.text(texto, 170, recuadroY + 10, "center");
   if (arrays.tipo_comprobante == "09") {
     var texto = doc.splitTextToSize("REMITENTE", 50);
-    doc.text(texto, 170, 24, "center");
+    doc.text(texto, 170, recuadroY + 14, "center");
   } else {
     var texto = doc.splitTextToSize("TRANSPORTISTA", 50);
-    doc.text(texto, 170, 24, "center");
+    doc.text(texto, 170, recuadroY + 14, "center");
   }
 
   doc.setFontSize(9);
   var texto = doc.splitTextToSize(arrays.id, 50);
-  doc.text(texto, 170, 28, "center");
+  doc.text(texto, 170, recuadroY + 18, "center");
   if (arrays.tipo_comprobante != "09") {
     doc.setFontSize(7.5);
     var texto = doc.splitTextToSize(
       "REGISTRO MTC : " + arrays.registro_mtc,
       50
     );
-    doc.text(texto, 170, 33, "center");
+    doc.text(texto, 170, recuadroY + 23, "center");
   }
   doc.setFontSize(8);
   doc.setLineWidth(0.3);
-  doc.rect(10, 42, 190, 20);
+  var datosRectY = store.state.configImpresora.log_largo ? 42 : 42;
+  doc.rect(10, datosRectY, 190, 20);
 
-  linea = 46;
+  linea = datosRectY + 4;
 
   doc.setFont("Helvetica", "Bold");
   doc.text("FECHA EMISION", 15, linea, "left");

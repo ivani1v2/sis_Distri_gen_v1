@@ -111,9 +111,16 @@
                             <td class="text-caption">{{ pedido.fecha }}</td>
 
                             <td>
-                                <v-chip x-small :color="chipColor(pedido.estado)" dark>
-                                    {{ pedido.estado | capitalize }}
-                                </v-chip>
+                                <div class="d-flex align-center">
+                                    <v-chip x-small :color="chipColor(pedido.estado)" dark class="mr-1">
+                                        {{ pedido.estado ? pedido.estado : 'PENDIENTE' | capitalize }}
+                                    </v-chip>
+                                    <v-chip v-if="pedido.resumen?.total_anulados > 0" x-small color="error"
+                                        text-color="white" class="ml-1" title="Pedidos anulados">
+                                        <v-icon x-small left>mdi-alert-triangle</v-icon>
+                                        {{ pedido.resumen.total_anulados }}
+                                    </v-chip>
+                                </div>
                             </td>
 
                             <td class="text-caption">{{ pedido.resumen.total_pedidos }}</td>
@@ -130,12 +137,14 @@
                                         <span class="blue-grey--text text--darken-1 font-weight-medium">Detalle</span>
                                     </v-btn>
 
-                                    <v-btn x-small :color="getCargaButtonColor(pedido)" class="mx-1 my-1" depressed rounded
-                                        elevation="1" @click="abrirCargaProductos(pedido)">
-                                        <v-icon left small :color="getCargaIconColor(pedido)">{{ getCargaIcon(pedido) }}</v-icon>
+                                    <v-btn x-small :color="getCargaButtonColor(pedido)" class="mx-1 my-1" depressed
+                                        rounded elevation="1" @click="abrirCargaProductos(pedido)">
+                                        <v-icon left small :color="getCargaIconColor(pedido)">{{ getCargaIcon(pedido)
+                                            }}</v-icon>
                                         <span :class="getCargaTextClass(pedido)" class="font-weight-medium">
                                             Carga
-                                            <template v-if="pedido.estado_carga && pedido.estado_carga.porcentaje > 0 && !pedido.estado_carga.completo">
+                                            <template
+                                                v-if="pedido.estado_carga && pedido.estado_carga.porcentaje > 0 && !pedido.estado_carga.completo">
                                                 ({{ Math.round(pedido.estado_carga.porcentaje) }}%)
                                             </template>
                                         </span>
@@ -196,9 +205,16 @@
                         </div>
 
                         <div class="d-flex flex-column align-end">
-                            <v-chip x-small :color="chipColor(pedido.estado)" dark class="mb-2">
-                                {{ pedido.estado | capitalize }}
-                            </v-chip>
+                            <div class="d-flex align-center">
+                                <v-chip x-small :color="chipColor(pedido.estado)" dark>
+                                    {{ pedido.estado ? pedido.estado : 'PENDIENTE' | capitalize }}
+                                </v-chip>
+                                <v-chip v-if="pedido.resumen?.total_anulados > 0" x-small color="error"
+                                    text-color="white" class="ml-1" title="Pedidos anulados">
+                                    <v-icon x-small left>mdi-alert-triangle</v-icon>
+                                    {{ pedido.resumen.total_anulados }}
+                                </v-chip>
+                            </div>
                         </div>
                     </div>
                 </v-card-title>
@@ -229,10 +245,13 @@
                         Detalle
                     </v-btn>
 
-                    <v-btn x-small text :color="getCargaIconColor(pedido)" class="ml-1" @click="abrirCargaProductos(pedido)">
+                    <v-btn x-small text :color="getCargaIconColor(pedido)" class="ml-1"
+                        @click="abrirCargaProductos(pedido)">
                         <v-icon left x-small>{{ getCargaIcon(pedido) }}</v-icon>
                         Carga
-                        <span v-if="pedido.estado_carga && pedido.estado_carga.porcentaje > 0 && !pedido.estado_carga.completo" class="ml-1 caption">
+                        <span
+                            v-if="pedido.estado_carga && pedido.estado_carga.porcentaje > 0 && !pedido.estado_carga.completo"
+                            class="ml-1 caption">
                             ({{ Math.round(pedido.estado_carga.porcentaje) }}%)
                         </span>
                     </v-btn>
@@ -355,8 +374,9 @@
 
         <dial_nuevo_rep v-if="nuevo_rep" @cierra="nuevo_rep = false" />
         <dial_sube_rep v-if="dial_sube_excel" @cerrar="dial_sube_excel = false, filtrar" />
-        <cobranza_reparto v-if="dial_cobranza" :pedidos="null" :grupo="repartoActual" @cerrar="dial_cobranza = false" />        
-        <dial_carga_productos v-if="dial_carga" :grupo="grupoCarga" @cerrar="dial_carga = false" @guardado="onCargaGuardada" />
+        <cobranza_reparto v-if="dial_cobranza" :pedidos="null" :grupo="repartoActual" @cerrar="dial_cobranza = false" />
+        <dial_carga_productos v-if="dial_carga" :grupo="grupoCarga" @cerrar="dial_carga = false"
+            @guardado="onCargaGuardada" />
     </v-container>
 </template>
 
@@ -500,9 +520,11 @@ export default {
             })
         },
         chipColor(estado) {
+            if (!estado) return 'orange lighten-1';
             const s = (estado || '').toString().toLowerCase();
             if (s === 'anulado') return 'red';
             if (s === 'enviado') return 'light-blue darken-1';
+            if (s === 'parcial') return 'purple lighten-1';
             if (s === 'liquidado') return 'green lighten-1';
             return 'orange lighten-1';
         },

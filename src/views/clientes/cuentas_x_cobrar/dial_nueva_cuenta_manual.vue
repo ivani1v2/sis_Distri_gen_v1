@@ -51,8 +51,16 @@
           </v-col>
 
           <v-col cols="6">
-            <v-text-field v-model="montoTotal" label="Monto Total *" outlined dense hide-details="auto" class="mb-2"
-              type="number" :prefix="monedaSimbolo"></v-text-field>
+            <v-row>
+              <v-col cols="6">
+                <v-select v-model="monedaSeleccionada" :items="$store.state.moneda" item-text="simbolo"
+                  item-value="simbolo" label="Moneda *" outlined dense hide-details="auto"></v-select>
+              </v-col>
+              <v-col cols="6">
+                <v-text-field v-model="montoTotal" label="Monto *" outlined dense hide-details="auto"
+                  type="number"></v-text-field>
+              </v-col>
+            </v-row>
           </v-col>
 
           <v-col cols="6">
@@ -101,7 +109,7 @@
             <v-alert v-if="cronogramaData && Math.abs(parseFloat(montoTotal || 0) - sumaCuotas) > 0.01" type="warning"
               dense class="mb-2">
               <div class="text-caption">
-                Descuadre: {{ monedaSimbolo }}{{ redondear(parseFloat(montoTotal || 0) - sumaCuotas) }}
+                Descuadre: {{ monedaSeleccionada }}{{ redondear(parseFloat(montoTotal || 0) - sumaCuotas) }}
               </div>
             </v-alert>
 
@@ -118,7 +126,7 @@
                 <tbody>
                   <tr v-for="(cuota, index) in cuotasLista" :key="index">
                     <td class="text-caption px-1">{{ cuota.numero }}</td>
-                    <td class="text-caption px-1">{{ monedaSimbolo }}{{ redondear(cuota.importe) }}</td>
+                    <td class="text-caption px-1">{{ monedaSeleccionada }}{{ redondear(cuota.importe) }}</td>
                     <td class="text-caption px-1">{{ formatearFechaResumida(cuota.vencimiento) }}</td>
                     <td class="px-1">
                       <v-chip x-small color="orange" dark>PEND</v-chip>
@@ -141,7 +149,7 @@
     </v-card>
 
     <cronograma v-if="dialogoCronograma" :totalCredito="parseFloat(montoTotal) || 0" :pagoInicial="0"
-      :moneda="monedaSimbolo" :planExistente="cronogramaData" :fechaInicial="fechaVenceStr"
+      :moneda="monedaSeleccionada" :planExistente="cronogramaData" :fechaInicial="fechaVenceStr"
       @cierra="dialogoCronograma = false" @emite_cronograma="recibirCronograma" />
   </v-dialog>
 </template>
@@ -173,6 +181,7 @@ export default {
       buscandoClientes: false,
       vendedorSeleccionado: null,
       montoTotal: '',
+      monedaSeleccionada: 'S/',
       fechaEmisionStr: moment().format('YYYY-MM-DD'),
       fechaVenceStr: moment().add(30, 'days').format('YYYY-MM-DD'),
       menuFechaEmision: false,
@@ -188,9 +197,6 @@ export default {
     }
   },
   computed: {
-    monedaSimbolo() {
-      return this.$store.state.moneda?.find(m => m.codigo === this.$store.state.configuracion?.moneda_defecto)?.simbolo || 'S/';
-    },
     totalCuotas() {
       return this.cronogramaData?.cuotas?.length || 0;
     },
@@ -354,6 +360,7 @@ export default {
           monto_pendiente: parseFloat(this.montoTotal),
           pagado: 0,
           estado: 'PENDIENTE',
+          moneda: this.monedaSeleccionada,
           vendedor: codigoVendedor,
           cuenta_manual: true,
           usuario_registro: store.state.usuario?.correo || 'sistema'
@@ -408,6 +415,7 @@ export default {
       this.documentoCliente = '';
       this.vendedorSeleccionado = null;
       this.montoTotal = '';
+      this.monedaSeleccionada = 'S/';
       this.fechaEmisionStr = moment().format('YYYY-MM-DD');
       this.fechaVenceStr = moment().add(30, 'days').format('YYYY-MM-DD');
       this.cronogramaData = null;

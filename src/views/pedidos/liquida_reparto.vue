@@ -6,9 +6,28 @@
 
                 <div class="d-flex align-center">
                     <v-icon color="red" large @click="anterior" title="Reparto Anterior">mdi-arrow-left-bold</v-icon>
-                    <h3 class="text-h6 mx-2">
-                        REPARTO N° {{ router_grupo }}
-                    </h3>
+                    <div class="d-flex align-center mx-2">
+                        <span class="text-h6 mr-1">REPARTO N°</span>
+
+                        <template v-if="editandoReparto">
+                            <v-text-field v-model="repartoEditado" @keyup.enter="confirmarCambioReparto" type="number"
+                                dense outlined hide-details style="width: 100px" autofocus
+                                ref="inputReparto"></v-text-field>
+                            <v-btn icon small color="primary" @click="confirmarCambioReparto" class="ml-1"
+                                title="Buscar reparto">
+                                <v-icon>mdi-magnify</v-icon>
+                            </v-btn>
+                            <v-btn icon small @click="cancelarEdicion" class="ml-1" title="Cancelar">
+                                <v-icon>mdi-close</v-icon>
+                            </v-btn>
+                        </template>
+
+                        <span v-else class="text-h6" @click="iniciarEdicion"
+                            style="cursor: pointer; border-bottom: 1px dashed grey;">
+                            {{ router_grupo }}
+                            <v-icon x-small color="grey" class="ml-1">mdi-pencil</v-icon>
+                        </span>
+                    </div>
                     <v-icon color="red" large @click="siguiente" title="Reparto Siguiente">mdi-arrow-right-bold</v-icon>
                 </div>
 
@@ -48,6 +67,12 @@
                             <v-list-item-icon><v-icon color="teal darken-2">mdi-printer</v-icon></v-list-item-icon>
                             <v-list-item-title>Imprimir Comprobantes</v-list-item-title>
                         </v-list-item>
+                        <v-list-item @click="dialogImpresionGuias = true" :disabled="!puedeImprimirGuia">
+                            <v-list-item-icon>
+                                <v-icon :color="puedeImprimirGuia ? 'teal darken-2' : 'grey'">mdi-printer</v-icon>
+                            </v-list-item-icon>
+                            <v-list-item-title>Imprimir Guías (Masivo)</v-list-item-title>
+                        </v-list-item>
                     </v-list>
                 </v-menu>
 
@@ -62,8 +87,10 @@
                             <v-list-item-icon><v-icon color="green">mdi-cloud-upload</v-icon></v-list-item-icon>
                             <v-list-item-title>Enviar a Sunat</v-list-item-title>
                         </v-list-item>
-                        <v-list-item @click="abare_guias()">
-                            <v-list-item-icon><v-icon color="cyan darken-2">mdi-file-send</v-icon></v-list-item-icon>
+                        <v-list-item @click="abare_guias()" :disabled="!puedeGenerarGuia">
+                            <v-list-item-icon>
+                                <v-icon :color="puedeGenerarGuia ? 'cyan darken-2' : 'grey'">mdi-file-send</v-icon>
+                            </v-list-item-icon>
                             <v-list-item-title>Generar Guía</v-list-item-title>
                         </v-list-item>
                         <v-list-item @click="transferir_pedidos()">
@@ -71,7 +98,7 @@
                                     color="deep-purple darken-1">mdi-swap-horizontal</v-icon></v-list-item-icon>
                             <v-list-item-title>Transferir Pedidos</v-list-item-title>
                         </v-list-item>
-                        <v-list-item @click="anular_masivo()">
+                        <v-list-item @click="anular_masivo()" :disabled="!puedeAnularMasivo">
                             <v-list-item-icon><v-icon color="red">mdi-cancel</v-icon></v-list-item-icon>
                             <v-list-item-title>Anular Masivo</v-list-item-title>
                         </v-list-item>
@@ -88,7 +115,7 @@
                     <v-col cols="12" sm="4">
                         <h4 class="text-subtitle-1">
                             FECHA TRASLADO: <span class="primary--text">{{ conviertefecha(cabecera_total.fecha_traslado)
-                                }}</span>
+                            }}</span>
                         </h4>
                     </v-col>
                     <v-col cols="12" sm="4">
@@ -100,9 +127,10 @@
                     </v-col>
                     <v-col cols="12" sm="4">
                         <h4 class="text-subtitle-1">
-                            TOTAL VENTA: <span class="green--text text--darken-2">{{moneda}} {{ t_general }}</span>
+                            TOTAL VENTA: <span class="green--text text--darken-2">{{ moneda }} {{ t_general }}</span>
                         </h4>
-                        <span class="caption">Contado: {{moneda}}  {{ t_contado }} | Crédito: {{moneda}} {{ t_credito }}</span>
+                        <span class="caption">Contado: {{ moneda }} {{ t_contado }} | Crédito: {{ moneda }} {{ t_credito
+                            }}</span>
                     </v-col>
                 </v-row>
             </v-card-text>
@@ -158,7 +186,7 @@
                                 </v-chip>
                             </td>
                             <td class="text-right caption red--text">{{ item.moneda }}{{ redondear(item.pendiente_pago)
-                                }}</td>
+                            }}</td>
                             <td class="text-right caption font-weight-bold">{{ item.moneda }}{{ redondear(item.total) }}
                             </td>
                             <td class="text-center">
@@ -176,7 +204,8 @@
                                                             color="warning">mdi-eye</v-icon></v-list-item-icon>
                                                     <v-list-item-title>Ver Detalle</v-list-item-title>
                                                 </v-list-item>
-                                                <v-list-item @click='genera_guia(item)'>
+                                                <v-list-item @click='genera_guia(item)'
+                                                    v-if="item.estado !== 'ENVIADO' && item.estado !== 'ANULADO'">
                                                     <v-list-item-icon><v-icon
                                                             color="success">mdi-truck</v-icon></v-list-item-icon>
                                                     <v-list-item-title>Genera Guia Rem</v-list-item-title>
@@ -192,7 +221,7 @@
                                                     <v-list-item-title>Editar (PENDIENTE)</v-list-item-title>
                                                 </v-list-item>
                                                 <v-list-item @click='abrirDialogoAnulacion(item)'
-                                                    v-if="item.estado != 'ANULADO'">
+                                                    v-if="item.estado !== 'ANULADO' && item.estado !== 'ENVIADO'">
                                                     <v-list-item-icon><v-icon
                                                             color="error">mdi-delete</v-icon></v-list-item-icon>
                                                     <v-list-item-title>Anular</v-list-item-title>
@@ -230,7 +259,8 @@
                         <tbody>
                             <tr v-for="d in pedidoSeleccionado" :key="`${d.id}-${d.nombre}`">
                                 <td class="caption">
-                                    <strong class="red--text mr-1">{{ d.cantidad }}</strong> x ({{ d.id }}) {{ d.nombre }} 
+                                    <strong class="red--text mr-1">{{ d.cantidad }}</strong> x ({{ d.id }}) {{ d.nombre
+                                    }}
                                     <v-chip v-if="d.operacion == 'GRATUITA'" x-small color="teal" dark
                                         class="ml-1">GRATUITA</v-chip>
                                 </td>
@@ -239,7 +269,7 @@
                                     {{ monedaSimbolo }}{{ d.precio }}
                                     <strong v-if="d.preciodescuento != 0" class="red--text ml-1">(-{{ monedaSimbolo }}{{
                                         d.preciodescuento
-                                        }})</strong>
+                                    }})</strong>
                                 </td>
                                 <td class="text-right caption font-weight-bold">{{ monedaSimbolo }}{{
 
@@ -262,7 +292,7 @@
                 <v-card-text class="pt-4">
                     <div class="mb-3 text-subtitle-2 grey--text text--darken-1">
                         Anulando comprobante: <strong class="error--text">{{ comp_anular ? comp_anular.numeracion : ''
-                            }}</strong>
+                        }}</strong>
                     </div>
 
                     <v-select dense outlined clearable :items="motivos_predeterminados"
@@ -270,6 +300,10 @@
 
                     <v-textarea outlined dense auto-grow rows="2" v-model.trim="motivo_anulacion"
                         label="Detalle del motivo (obligatorio)" :rules="[v => !!v || 'Ingrese el motivo']" />
+
+                    <v-checkbox v-model="regresar_pendiente"
+                        label="Si marca la casilla, el pedido a regresará a PENDIENTE, no se revertirá stock" dense
+                        hide-details class="mt-n3" color="warning" />
 
                     <div v-if="error_motivo" class="red--text text-caption mt-1">{{ error_motivo }}</div>
                 </v-card-text>
@@ -387,6 +421,8 @@
             </v-card>
         </v-dialog>
 
+        <impresion_guias_masivas v-model="dialogImpresionGuias" :desserts="desserts" :router-grupo="router_grupo"
+            @update:impresion-completada="onImpresionCompletada" />
         <genera_guias v-if="dialogo_guia" @cierra="dialogo_guia = false" @graba="carga_Guia()" :data_guia="data_guia" />
         <dialogo_edita_c v-if="dialogo_edita_" @cierra="dialogo_edita_ = false, recalcula_cabecera()"
             :cabecera="cabecera_selecta" :detalle="detalle_selecto" />
@@ -415,6 +451,7 @@ import moment from 'moment'
 import dialogo_edita_c from './dialogos/dialogo_edita_c'
 import genera_guias from './dialogos/genera_guias.vue'
 import fab_periodos from '@/components/fab_periodos'
+import impresion_guias_masivas from './dialogos/impresion_guias_masivas.vue'
 import {
     pdfGenera
 } from '../../pdf_comprobantes'
@@ -437,10 +474,12 @@ export default {
         dialogo_edita_c,
         imprime,
         genera_guias,
+        impresion_guias_masivas,
     },
     data() {
         return {
-            
+
+            dialogImpresionGuias: false,
             dialogo_imprime: false,
             dialogDetalle: false,
             pedidoSeleccionado: null,
@@ -457,6 +496,7 @@ export default {
             ],
             error_motivo: '',
             anulando: false,
+            regresar_pendiente: false,
             seleccionado: [],
             detalle_selecto: [],
             genera_pdf: false,
@@ -509,18 +549,21 @@ export default {
             formato_descarga: 'F1', // 👈 NUEVO: formato por defecto
             moneda: 'S/',
             periodosBD: {},
-            _periodoRef: null
+            _periodoRef: null,
+            buscarReparto: '',
+            editandoReparto: false,
+            repartoEditado: '',
         }
     },
     created() {
-this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
+        this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         this.router_grupo = this.$route.params.id
         this.inicio()
 
     },
     mounted() {
         all_Cabecera_p(this.router_grupo).on("value", this.onDataChange);
-         this.suscribirPeriodos();
+        this.suscribirPeriodos();
     },
     beforeDestroy() {
         all_Cabecera_p(this.router_grupo).off("value", this.onDataChange);
@@ -535,31 +578,54 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
         }
     },
     computed: {
-        monedaSimbolo(){
+        monedaSimbolo() {
             return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/';
         },
         printPercent() {
             return this.printTotal ? (this.printDone / this.printTotal) * 100 : 0;
         },
         periodoCerrado() {
-        const fechaRef = this.cabecera_total?.fecha_comprobantes || this.cabecera_total?.fecha_traslado;
-        if (!fechaRef) return false;
-        
-        const periodoKey = moment.unix(fechaRef).format('YYYY-MM');
-        const periodo = this.periodosBD[periodoKey];
-        
-        if (!periodo) {
-            console.warn(`No se encontró período ${periodoKey} en periodosBD:`, this.periodosBD);
-            return false;
-        }
-        
-        return periodo.estado === 'close';
-    },
+            const fechaRef = this.cabecera_total?.fecha_comprobantes || this.cabecera_total?.fecha_traslado;
+            if (!fechaRef) return false;
+
+            const periodoKey = moment.unix(fechaRef).format('YYYY-MM');
+            const periodo = this.periodosBD[periodoKey];
+
+            if (!periodo) {
+                console.warn(`No se encontró período ${periodoKey} en periodosBD:`, this.periodosBD);
+                return false;
+            }
+
+            return periodo.estado === 'close';
+        },
         periodoActualKey() {
-        const fechaRef = this.cabecera_total?.fecha_comprobantes || this.cabecera_total?.fecha_traslado;
-        if (!fechaRef) return '';
-        return moment.unix(fechaRef).format('YYYY-MM');
-    },
+            const fechaRef = this.cabecera_total?.fecha_comprobantes || this.cabecera_total?.fecha_traslado;
+            if (!fechaRef) return '';
+            return moment.unix(fechaRef).format('YYYY-MM');
+        },
+        tieneEnviados() {
+            return this.desserts.some(p => p.estado === 'ENVIADO');
+        },
+        puedeImprimirGuia() {
+            const seleccionados = this.desserts.filter(d => d.consolida);
+            if (seleccionados.length === 0) return false;
+
+            // Al menos UNO tiene guía y no está anulado
+            return seleccionados.some(p => p.guia_id && p.estado !== 'ANULADO');
+        },
+
+        puedeAnularMasivo() {
+            const seleccionados = this.desserts.filter(d => d.consolida);
+            if (seleccionados.length === 0) return false;
+            return seleccionados.every(p =>
+                p.estado !== 'ENVIADO' && p.estado !== 'ANULADO'
+            );
+        },
+        puedeGenerarGuia() {
+            const seleccionados = this.desserts.filter(d => d.consolida);
+            if (seleccionados.length === 0) return false;
+            return seleccionados.every(p => p.estado !== 'ANULADO');
+        },
         suma_pedidos() {
             let total = 0;
             let sum_soles = 0;
@@ -606,9 +672,13 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
         }
     },
     methods: {
+        onImpresionCompletada() {
+            // Opcional: hacer algo cuando termine la impresión
+            console.log('Impresión completada');
+        },
         async genera_guia(data) {
             store.commit("dialogoprogress", 1)
-            const snapshot = await all_detalle_p(this.router_grupo,data.numeracion).once("value");
+            const snapshot = await all_detalle_p(this.router_grupo, data.numeracion).once("value");
             var array = {
                 arrayCabecera: { ...data, id_grupo: this.router_grupo },
                 array_item: snapshot.val()
@@ -631,7 +701,8 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
                 total_contado: 0,
                 total_credito: 0,
                 total_general: 0,
-                total_pedidos: 0
+                total_pedidos: 0,
+                total_anulados: 0
             };
 
             // Recorremos todos los comprobantes del reparto
@@ -663,6 +734,30 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
             nueva_cabecera_reparto(this.router_grupo + '/total', resumen.total_general);
             nueva_cabecera_reparto(this.router_grupo + '/total_pedidos', resumen.total_pedidos);
             nueva_cabecera_reparto(this.router_grupo + '/resumen', resumen);
+        },
+        actualizaEstadoReparto() {
+            const pedidos = this.desserts || [];
+            if (!pedidos.length) return;
+            const estadosValidos = pedidos.filter(p => p.estado);
+            const totalPedidos = estadosValidos.length;
+            const enviados = estadosValidos.filter(p => p.estado === 'ENVIADO').length;
+            const anulados = estadosValidos.filter(p => p.estado === 'ANULADO').length;
+            const pendientes = estadosValidos.filter(p => p.estado === 'PENDIENTE').length;
+            let nuevoEstado = 'PENDIENTE';
+            if (enviados > 0 && (enviados + anulados) === totalPedidos) {
+                nuevoEstado = 'ENVIADO';
+            }
+            else if (enviados === totalPedidos && totalPedidos > 0) {
+                nuevoEstado = 'ENVIADO';
+            }
+            else if (anulados === totalPedidos && totalPedidos > 0) {
+                nuevoEstado = 'ANULADO';
+            }
+            else if (enviados > 0 || anulados > 0) {
+                nuevoEstado = 'PARCIAL';
+            }
+            nueva_cabecera_reparto(this.router_grupo + '/estado', nuevoEstado);
+            nueva_cabecera_reparto(this.router_grupo + '/resumen/total_anulados', anulados);
         },
 
         async transferir_pedidos() {
@@ -1063,7 +1158,7 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
                     snapshot.forEach((item) => {
                         const producto = item.val();
                         const invet = store.state.productos.find((id) => String(id.id) === String(producto.id));
-                        console.log(producto.id,invet)
+                        console.log(producto.id, invet)
                         if (!invet) return;
 
                         let cantidad = parseFloat(producto.cantidad) * parseFloat(invet.factor);
@@ -1285,6 +1380,47 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
 
             }
         },
+        iniciarEdicion() {
+            this.repartoEditado = this.router_grupo;
+            this.editandoReparto = true;
+            this.$nextTick(() => {
+                if (this.$refs.inputReparto) {
+                    this.$refs.inputReparto.focus();
+                    const input = this.$refs.inputReparto.$el.querySelector('input');
+                    if (input) input.select();
+                }
+            });
+        },
+
+        cancelarEdicion() {
+            this.editandoReparto = false;
+            this.repartoEditado = '';
+        },
+
+        confirmarCambioReparto() {
+            if (!this.repartoEditado) {
+                this.cancelarEdicion();
+                return;
+            }
+
+            const repartoBuscado = this.repartoEditado.padStart(4, '0');
+
+            Cabecera_p(repartoBuscado)
+                .once("value")
+                .then((snapshot) => {
+                    if (snapshot.exists()) {
+                        this.router_grupo = repartoBuscado;
+                        this.cancelarEdicion();
+                    } else {
+                        this.$store.commit('dialogosnackbar', 'El reparto no existe');
+                        this.$nextTick(() => {
+                            if (this.$refs.inputReparto) {
+                                this.$refs.inputReparto.focus();
+                            }
+                        });
+                    }
+                });
+        },
 
         finaliza(data) {
             console.log(data)
@@ -1400,6 +1536,7 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
                 };
 
                 await this.api_rest(array, 'sunat_reparto');
+                this.actualizaEstadoReparto();
 
                 this.$store.commit('dialogosnackbar', 'Envío a Sunat iniciado correctamente.');
             } catch (e) {
@@ -1440,6 +1577,7 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
             this.motivo_anulacion = '';
             this.motivo_seleccion = null;
             this.error_motivo = '';
+            this.regresar_pendiente = false;
         },
         sincronizaMotivo(val) {
             // Si eligen uno rápido, lo pasa al textarea para permitir edición
@@ -1474,7 +1612,8 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
                     cabecera: cabAPI,
                     detalle,
                     control_stock: true,
-                    motivo_anulacion: this.motivo_anulacion, // <-- pásalo para registrar el motivo real
+                    motivo_anulacion: this.motivo_anulacion,
+                    regresar_pendiente: this.regresar_pendiente,
                 };
 
                 // 4) Idempotencia por comprobante
@@ -1490,13 +1629,26 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
                     { headers: { 'X-Idempotency-Key': idem } }
                 );
 
-                this.$store.commit('dialogosnackbar', 'Comprobante anulado y stock revertido.');
+                if (this.regresar_pendiente && this.comp_anular.id_pedido) {
+                    await modifica_pedidos(this.comp_anular.id_pedido + '/estado', 'pendiente');
+                }
+
+                this.recalcula_cabecera();
+                this.actualizaEstadoReparto();
+
+                if (this.regresar_pendiente) {
+                    this.$store.commit('dialogosnackbar', 'Comprobante anulado SIN revertir stock. Pedido regresó a pendiente.');
+                } else {
+                    this.$store.commit('dialogosnackbar', 'Comprobante anulado CON reversión de stock.');
+                }
+
                 this.cerrarDialogoAnulacion();
             } catch (e) {
                 console.error(e);
                 this.$store.commit('dialogosnackbar', 'Ocurrió un error al anular.');
             } finally {
                 this.anulando = false;
+                this.regresar_pendiente = false;
             }
         },
 
@@ -1631,6 +1783,7 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
 
                 // 6. Feedback al usuario
                 this.$store.commit('dialogosnackbar', 'Comprobantes anulados y devueltos a pendiente.');
+                this.actualizaEstadoReparto();
             } catch (e) {
                 console.error('Error en anular_masivo:', e);
                 alert('Ocurrió un error al intentar anular masivamente.');
@@ -1646,7 +1799,7 @@ this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.
             if (this._periodoRef) this._periodoRef.off('value', this.onPeriodoChange);
             this._periodoRef = all_periodos();
             this._periodoRef.on('value', this.onPeriodoChange);
-        }
+        },
     }
 }
 </script>

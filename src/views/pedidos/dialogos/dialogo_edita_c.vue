@@ -40,13 +40,15 @@
                             <th class="text-left">Descripción</th>
                             <th class="text-left">Medida</th>
                             <th class="text-left">Precio Unitario</th>
-                            <th class="text-left" v-if="$store.state.configuracion?.desc_porcentaje_catalogo">Descuentos</th>
+                            <th class="text-left" v-if="$store.state.configuracion?.desc_porcentaje_catalogo">Descuentos
+                            </th>
                             <th class="text-left">Precio Neto</th>
                             <th class="text-left">Total</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="item in lista_productos" :key="item.uuid || item.id" @click.prevent="editaProducto(item)">
+                        <tr v-for="item in lista_productos" :key="item.uuid || item.id"
+                            @click.prevent="editaProducto(item)">
                             <td>{{ item.cantidad }}</td>
                             <td>{{ item.id + "-" + item.nombre }}
                                 <span v-if="item.operacion == 'GRATUITA'" class="red--text"> - TG</span>
@@ -63,8 +65,9 @@
                                 <div v-if="item.descuentos" class="d-flex flex-column">
                                     <span class="orange--text text-center">
                                         {{ item.descuentos.desc_1 }}
-                                        <span v-if="item.descuentos.desc_2 > 0">/ {{ item.descuentos.desc_2 }}
-                                            <span v-if="item.descuentos.desc_3 > 0">/ {{ item.descuentos.desc_3 }}</span>
+                                        <span v-if="item.descuentos.desc_2 !== undefined">/ {{ item.descuentos.desc_2 }}
+                                            <span v-if="item.descuentos.desc_3 !== undefined">/ {{
+                                                item.descuentos.desc_3 }}</span>
                                         </span>
                                     </span>
                                 </div>
@@ -81,7 +84,8 @@
                                 <span :class="{ 'red--text': item.operacion === 'GRATUITA' }">
                                     {{ monedaSimbolo }}{{ calcularTotalItem(item) }}
                                 </span>
-                                <small v-if="item.operacion === 'GRATUITA'" class="caption red--text d-block">GRATUITO</small>
+                                <small v-if="item.operacion === 'GRATUITA'"
+                                    class="caption red--text d-block">GRATUITO</small>
                             </td>
                         </tr>
                     </tbody>
@@ -99,21 +103,28 @@
                 <v-select :items="arrayOperacion" label="Operacion" dense outlined v-model="operacion_edita"></v-select>
                 <v-row class="mx-auto text-center" dense>
                     <v-col cols="12" class="mb-n4 mt-n1">
-                        <v-text-field disabled dense @keyup.enter="grabaEdita()" class="pa-3" v-model="nombreEdita" label="Nombre"></v-text-field>
+                        <v-text-field disabled dense @keyup.enter="grabaEdita()" class="pa-3" v-model="nombreEdita"
+                            label="Nombre"></v-text-field>
                     </v-col>
                     <v-col cols="6" xs="6" class="position-relative">
-                        <v-text-field dense @keyup.enter="grabaEdita()" type="number" class="pa-3" v-model="precioedita" label="Precio Base" @input="onPrecioEditaChange"></v-text-field>
-                        <v-btn v-if="precioCambiado" icon x-small color="blue" class="mt-n2 mr-7" @click="restaurarPrecioBase" title="Restaurar precio base original" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%);">
+                        <v-text-field dense @keyup.enter="grabaEdita()" type="number" class="pa-3" v-model="precioedita"
+                            label="Precio Base" @input="onPrecioEditaChange"></v-text-field>
+                        <v-btn v-if="precioCambiado" icon x-small color="blue" class="mt-n2 mr-7"
+                            @click="restaurarPrecioBase" title="Restaurar precio base original"
+                            style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%);">
                             <v-icon small>mdi-undo</v-icon>
                         </v-btn>
                     </v-col>
                     <v-col cols="6" xs="6">
-                        <v-text-field dense @keyup.enter="grabaEdita()" type="number" class="pa-3" v-model="cantidadEdita" label="Cantidad"></v-text-field>
+                        <v-text-field dense @keyup.enter="grabaEdita()" type="number" class="pa-3"
+                            v-model="cantidadEdita" label="Cantidad"></v-text-field>
                     </v-col>
                     <v-col cols="12" class="mt-n6 mb-3">
                         <div class="caption grey--text text--darken-1">
                             <span v-if="descEdita.precioFinal && descEdita.precioFinal !== Number(precioedita)">
-                                <strong class="green--text">Precio Final: {{ monedaSimbolo }}{{ redondear(descEdita.precioFinal) }}</strong>
+                                <strong class="green--text">Precio Final: {{ monedaSimbolo }}{{
+                                    redondear(descEdita.precioFinal)
+                                    }}</strong>
                             </span>
                             <span v-else class="caption grey--text">Sin descuentos aplicados</span>
                         </div>
@@ -122,7 +133,10 @@
                 <v-alert v-if="precioCambiado" type="warning" dense text class="mt-2 mb-6" style="font-size: 11px;">
                     El precio fue modificado. Ajuste los descuentos si es necesario.
                 </v-alert>
-                <descuentos-porcentaje v-if="dialogoProducto" :key="'desc-edit-' + editKey" ref="descEditaRef" :precio-base="precioBaseEdita" :descuentos-iniciales="descuentosInicialesEdita" :es-bono="operacion_edita === 'GRATUITA'" :decimales="decimales" @cambio="onDescEditaCambio" class="my-3" />
+                <descuentos-porcentaje v-if="dialogoProducto" :key="'desc-edit-' + editKey" ref="descEditaRef"
+                    :precio-base="precioBaseEdita" :descuentos-iniciales="descuentosInicialesEdita"
+                    :es-bono="operacion_edita === 'GRATUITA'" :decimales="decimales" @cambio="onDescEditaCambio"
+                    class="my-3" />
                 <v-card-actions class="mt-n2">
                     <v-btn color="red darken-1" text @click="eliminaedita()">Eliminar</v-btn>
                     <v-spacer></v-spacer>
@@ -140,14 +154,16 @@
             <v-card class="pa-3">
                 <v-row class="mt-1" dense>
                     <v-col cols="4">
-                        <v-select outlined dense v-model="info_cabecera.tipoDocumento" :items="documentos" menu-props="auto" hide-details label="Tipo Doc"></v-select>
+                        <v-select outlined dense v-model="info_cabecera.tipoDocumento" :items="documentos"
+                            menu-props="auto" hide-details label="Tipo Doc"></v-select>
                     </v-col>
                     <v-col cols="8">
                         <v-text-field outlined dense v-model="info_cabecera.dni" label="Documento"></v-text-field>
                     </v-col>
                 </v-row>
                 <v-text-field outlined dense v-model="info_cabecera.cliente" label="Nombre"></v-text-field>
-                <v-text-field outlined dense v-model="info_cabecera.direccion" label="Dirección" prepend-inner-icon="mdi-home-map-marker" append-outer-icon="mdi-map-marker" />
+                <v-text-field outlined dense v-model="info_cabecera.direccion" label="Dirección"
+                    prepend-inner-icon="mdi-home-map-marker" append-outer-icon="mdi-map-marker" />
                 <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn @click="dial_edita_cli = false" color="orange">GRABA</v-btn>
@@ -166,9 +182,11 @@
                     <v-radio @click="cambia_modo('CONTADO')" label="CONTADO" value="CONTADO"></v-radio>
                     <v-radio @click="cambia_modo('CREDITO')" label="CREDITO" value="CREDITO"></v-radio>
                 </v-radio-group>
-                <v-text-field outlined label="Monto Pendiente de Pago" type="number" v-model="info_cabecera.pendiente_pago" dense></v-text-field>
+                <v-text-field outlined label="Monto Pendiente de Pago" type="number"
+                    v-model="info_cabecera.pendiente_pago" dense></v-text-field>
                 <div v-if="info_cabecera.forma_pago == 'CREDITO'">
-                    <v-text-field outlined label="Fecha Pago Credito" type="date" v-model="date_vence" dense></v-text-field>
+                    <v-text-field outlined label="Fecha Pago Credito" type="date" v-model="date_vence"
+                        dense></v-text-field>
                     <v-btn block color="indigo" dark class="mt-2 mb-3" @click="abrirCronogramaDesdeModo">
                         <v-icon left>mdi-calendar-clock</v-icon>
                         Configurar Cronograma de Cuotas
@@ -176,7 +194,9 @@
                     </v-btn>
                     <div v-if="tieneCronograma" class="caption success--text mb-2">
                         <v-icon small color="success">mdi-check</v-icon>
-                        {{ totalCuotas }} cuota(s) programada(s) - Total: {{ monedaSimbolo }} {{ totalCuotasImporte.toFixed(2) }}
+                        {{ totalCuotas }} cuota(s) programada(s) - Total: {{ monedaSimbolo }} {{
+                        totalCuotasImporte.toFixed(2)
+                        }}
                     </div>
                 </div>
                 <v-card-actions>
@@ -186,7 +206,9 @@
             </v-card>
         </v-dialog>
 
-        <cronograma v-if="dialogoCronograma" :totalCredito="Number(info_cabecera.pendiente_pago) || 0" @cierra="dialogoCronograma = false" @emite_cronograma="guarda_cronograma($event)" :pagoInicial="0" :moneda="monedaSimbolo" :planExistente="planExistenteFormateado" />
+        <cronograma v-if="dialogoCronograma" :totalCredito="Number(info_cabecera.pendiente_pago) || 0"
+            @cierra="dialogoCronograma = false" @emite_cronograma="guarda_cronograma($event)" :pagoInicial="0"
+            :moneda="monedaSimbolo" :planExistente="planExistenteFormateado" />
 
         <v-dialog v-model="edita_numeracion" max-width="500">
             <div>
@@ -201,7 +223,8 @@
                     <v-radio label="FACTURA" value="F"></v-radio>
                 </v-radio-group>
                 <h4 class="text-center">
-                    ESTE PROCESO ANULARA EL COMPROBANTE {{ info_cabecera.serie }}-{{ info_cabecera.correlativoDocEmitido }}
+                    ESTE PROCESO ANULARA EL COMPROBANTE {{ info_cabecera.serie }}-{{ info_cabecera.correlativoDocEmitido
+                    }}
                     ESTA SEGURO DE PROSEGUIR?
                 </h4>
                 <v-card-actions>
@@ -219,7 +242,9 @@
                 </v-system-bar>
             </div>
             <v-card class="pa-1">
-                <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true" :x_categoria="false"></cat_fijo>
+                <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true"
+                    :x_categoria="false">
+                </cat_fijo>
             </v-card>
         </v-dialog>
         <dial_stock v-model="dialStock" :items="sinStock" @close="dialStock = false" />
