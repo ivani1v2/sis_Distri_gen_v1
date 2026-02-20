@@ -2386,8 +2386,8 @@ function tabla_A4(array, linea) {
       // SIN DESCUENTOS
       nuevoArray.push([
         item.cantidad,
-        item.nombre + tg,
         item.medida,
+        item.nombre + tg,
         precioBase.toFixed(2),
         totalLinea.toFixed(2) + obs,
       ]);
@@ -2395,8 +2395,8 @@ function tabla_A4(array, linea) {
       // CON DESCUENTOS
       nuevoArray.push([
         item.cantidad,
-        item.nombre + tg,
         item.medida,
+        item.nombre + tg,
         precioBase.toFixed(2),
         textoDescuento,
         precioNeto.toFixed(2),
@@ -2407,14 +2407,14 @@ function tabla_A4(array, linea) {
 
   // CABECERA SEGÚN MODO
   const headSinDescuento = [
-    ["Cantidad", "Descripcion", "Medida", "P.Unitario", "P.Total"],
+    ["Cantidad", "Medida","Descripcion" , "P.Unitario", "P.Total"],
   ];
 
   const headConDescuento = [
     [
       "Cant",
-      "Descripcion",
       "Medida",
+      "Descripcion",
       "P.Unitario",
       "%Desc",
       "P.Neto",
@@ -2425,16 +2425,16 @@ function tabla_A4(array, linea) {
   // COLUMNAS SIMPLES Y LIMPIAS
   const columnStylesSinDesc = {
     0: { columnWidth: 20 },
-    1: { columnWidth: 110, halign: "left" },
-    2: { columnWidth: 20 },
+    1: { columnWidth: 20 },
+    2: { columnWidth: 110, halign: "left" },
     3: { columnWidth: 20 },
     4: { columnWidth: 20 },
   };
 
   const columnStylesConDesc = {
     0: { columnWidth: 12 },
-    1: { columnWidth: 80, halign: "left" },
-    2: { columnWidth: 18 },
+    1: { columnWidth: 18 },
+    2: { columnWidth: 80, halign: "left" },
     3: { columnWidth: 20 },
     4: { columnWidth: 20 }, // %Desc
     5: { columnWidth: 20 }, // P.Neto
