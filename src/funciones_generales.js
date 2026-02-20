@@ -42,18 +42,18 @@ async function completa_items(arrays) {
   var totalIGV_GRATUITA = 0;
   const porcentaje_igv = store.state.configuracion.igv / 100;
   const porcentaje_cargo = 0;
-  
+
   for (const data of arrays) {
     // USAR precioedita (precio final con descuentos)
     const precioFinal = parseFloat(data.precioedita) || parseFloat(data.precio) || 0;
-    
+
     // Extraer descuentos correctamente
     const d1 = data.descuentos?.desc_1 ?? data.desc_1 ?? 0;
     const d2 = data.descuentos?.desc_2 ?? data.desc_2 ?? 0;
     const d3 = data.descuentos?.desc_3 ?? data.desc_3 ?? 0;
-    
+
     const descuentositem = parseFloat(data.preciodescuento) || 0;
-    
+
     // Calcular precio item considerando descuentos globales
     const precio_item = parseFloat(
       redondear(precioFinal - descuentositem / data.cantidad)
@@ -78,14 +78,14 @@ async function completa_items(arrays) {
       totaloperaGravada += antesimpuesto;
       totalIGV += totalImpuesto;
       igv = totalImpuesto;
-      
+
     }
 
     if (data.operacion === "EXONERADA") {
       antesimpuesto = precio_item * data.cantidad;
       valorTotal = antesimpuesto; // ← EXONERADA: no tiene IGV
       totaloperaExonerada += antesimpuesto;
-      
+
     }
 
     if (data.operacion === "INAFECTA") {
@@ -93,7 +93,7 @@ async function completa_items(arrays) {
       valorTotal = antesimpuesto;
       totaloperaInfafecta += antesimpuesto;
     }
-    
+
     if (data.operacion == "GRATUITA") {
       var precioVentaUnitario = precio_item;
       valor_unitario = precioVentaUnitario;
@@ -108,7 +108,7 @@ async function completa_items(arrays) {
       valor_unitario = 0.0;
       totalImpuesto = 0.0;
     }
-    
+
     const tieneDescuentosPorcentaje = (d1 !== 0 || d2 !== 0 || d3 !== 0);
 
     const itemProcesado = {
@@ -118,14 +118,14 @@ async function completa_items(arrays) {
       factor: data.factor || 1,
       medida: data.medida,
       cod_medida: obtencodigomedida(data.medida, data.tipoproducto || "BIEN"),
-      precio: precioFinal,
+      precio: data.precio || precioFinal,
       precioedita: precioFinal,
       precio_base: data.precio_base || precioFinal,
       preciodescuento: data.preciodescuento,
       tipoproducto: data.tipoproducto || "BIEN",
       operacion: data.operacion,
       valor_unitario: valor_unitario.toFixed(5),
-      valor_total: redondear(valorTotal), 
+      valor_total: redondear(valorTotal),
       igv: redondear(igv),
       total_antes_impuestos: redondear(antesimpuesto),
       total_impuestos: redondear(totalImpuesto),
@@ -133,20 +133,12 @@ async function completa_items(arrays) {
       uuid: crypto.randomUUID() || "",
     };
 
-    // Solo agregamos el nodo "descuentos" si hay algún porcentaje distinto de 0
     if (tieneDescuentosPorcentaje) {
       itemProcesado.descuentos = {
         desc_1: d1,
         desc_2: d2,
-        desc_3: d3,
-        precioFinal: precioFinal,
-        precioBase: data.precio_base || precioFinal,
-        precioCatalogo: data.descuentos?.precioCatalogo || data.precio_base || precioFinal
+        desc_3: d3
       };
-      
-      itemProcesado.desc_1 = d1;
-      itemProcesado.desc_2 = d2;
-      itemProcesado.desc_3 = d3;
     }
 
     items.push(itemProcesado);
