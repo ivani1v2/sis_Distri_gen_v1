@@ -22,50 +22,50 @@ async function abre_dialogo_impresion(doc) {
       abre_dialogo_impresion_original(doc);
       return;
     }
-    
+
     const configHost = store?.state?.permisos?.config_impresion_host || {};
     const IP_PC = configHost.ip_dispositivo || "192.168.1.19";
     const PORT = configHost.puerto_dispositivo || 8090;
     const BRIDGE_URL = `http://${IP_PC}:${PORT}/bridge-pdf`;
     const token = store?.state?.configImpresora?.token_host || configHost.token || "1234";
-    
+
     const meta = {
       bd: store?.state?.baseDatos?.bd || "",
       usuario: store?.state?.permisos?.nombre || "",
       tipo: "comprobante",
       ts: Date.now(),
     };
-    
+
     const buffer = doc.output("arraybuffer");
 
     const ventana = window.open(
-      BRIDGE_URL, 
-      "_blank", 
+      BRIDGE_URL,
+      "_blank",
       "width=500,height=400,menubar=no,toolbar=no,location=no,status=no"
     );
-    
+
     if (!ventana) {
       alert("Permite ventanas emergentes para imprimir.");
       return;
     }
-    
-    const mensaje = { 
-      type: "PRINT_PDF", 
-      token, 
-      printer: configHost.nombre_impresora || "POS-80-Series", 
+
+    const mensaje = {
+      type: "PRINT_PDF",
+      token,
+      printer: configHost.nombre_impresora || "POS-80-Series",
       copies: 1,
-      meta, 
-      pdf: buffer 
+      meta,
+      pdf: buffer
     };
-    
+
     const timer = setInterval(() => {
       try {
         ventana.postMessage(mensaje, "*", [buffer]);
         clearInterval(timer);
 
-      } catch (e) {}
+      } catch (e) { }
     }, 250);
-    
+
   } catch (e) {
     console.error("Error impresión host:", e);
     abre_dialogo_impresion_original(doc);
@@ -78,7 +78,7 @@ async function abre_dialogo_impresion_original(doc) {
     axios_imp(doc.output("arraybuffer"));
     return;
   }
-  
+
   var blob = doc.output("bloburi");
   var Ancho = screen.width;
   var Alto = screen.height;
@@ -354,10 +354,14 @@ async function impresion58(arraydatos, qr, cabecera) {
         array[i].precio = "0.00";
       }
     }
-    nuevoArray[i] = new Array(4);
+
+    var codigoProducto = array[i].id || "";
+    var descripcionConcatenada = codigoProducto + " - " + array[i].nombre + tg;
+
+    nuevoArray[i] = new Array(5);
     nuevoArray[i][0] = array[i].cantidad;
     //nuevoArray[i][1] = array[i].nombre + "\n" + "-" + array[i].medida + tg;
-    nuevoArray[i][1] = array[i].nombre + tg;
+    nuevoArray[i][1] = descripcionConcatenada;
     nuevoArray[i][2] = Number(array[i].precio).toFixed(2);
     nuevoArray[i][3] = totals + obs;
   }
@@ -844,9 +848,11 @@ async function impresion80(arraydatos, qr, cabecera) {
         array[i].precio = "0.00";
       }
     }
+    var codigoProducto = array[i].id || "";
+    var descripcionConcatenada = codigoProducto + " - " + array[i].nombre + tg;
     nuevoArray[i] = new Array(4);
     nuevoArray[i][0] = array[i].cantidad;
-    nuevoArray[i][1] = array[i].nombre + "\n" + "-" + array[i].medida + tg;
+    nuevoArray[i][1] = descripcionConcatenada;
     nuevoArray[i][2] = Number(array[i].precio).toFixed(2);
     nuevoArray[i][3] = totals + obs;
   }
@@ -1087,8 +1093,8 @@ async function impresion80(arraydatos, qr, cabecera) {
 
   switch (modo_genera) {
     case "abre":
- if (store.state.esmovil) {
-      const arrayBuffer = doc.output("arraybuffer");
+      if (store.state.esmovil) {
+        const arrayBuffer = doc.output("arraybuffer");
         const blob = new Blob([arrayBuffer], { type: "application/pdf" });
         const file = new File(
           [blob],
@@ -1860,11 +1866,15 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
       tg = " / TG: " + moneda + (array[i].valor_total || 0);
       array[i].precioedita = "0.00";
     }
+
+    var codigoProducto = array[i].id || "";
+
     nuevoArray[i] = new Array(5);
     nuevoArray[i][0] = array[i].cantidad || 0;
-    nuevoArray[i][1] = (array[i].nombre || "") + tg;
-    nuevoArray[i][2] = array[i].medida || "";
-    nuevoArray[i][3] =
+    nuevoArray[i][1] = codigoProducto
+    nuevoArray[i][2] = (array[i].nombre || "") + tg;
+    nuevoArray[i][3] = array[i].medida || "";
+    nuevoArray[i][4] =
       array[i].precioedita ||
       array[i].precio ||
       array[i].precioVentaUnitario ||
@@ -1881,14 +1891,20 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
   }
 
   // Con más ancho disponible en horizontal
-  const colW = { c0: 18, c2: 22, c3: 20, c4: 22 };
-  const descW = usable - (colW.c0 + colW.c2 + colW.c3 + colW.c4); // ~118 mm aprox.
+  const colW = {
+    c0: 14,
+    c1: 20,
+    c3: 16,
+    c4: 18,
+    c5: 20
+  };
+  const descW = usable - (colW.c0 + colW.c1 + colW.c2 + colW.c3 + colW.c4);  // ~118 mm aprox.
 
   doc.autoTable({
     startY: linea,
     margin: { top: 10, left: margin, right: margin },
     styles: {
-      fontSize: 8,
+      fontSize: 7.5,
       cellPadding: 0.6,
       valign: "middle",
       halign: "center",
@@ -1903,13 +1919,14 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
     },
     columnStyles: {
       0: { columnWidth: colW.c0, halign: "center" },
-      1: { columnWidth: descW, halign: "left" },
-      2: { columnWidth: colW.c2, halign: "center" },
-      3: { columnWidth: colW.c3, halign: "right" },
-      4: { columnWidth: colW.c4, halign: "right" },
+      1: { columnWidth: colW.c1, halign: "center" },
+      2: { columnWidth: descW, halign: "left" },
+      3: { columnWidth: colW.c2, halign: "center" },
+      4: { columnWidth: colW.c3, halign: "right" },
+      5: { columnWidth: colW.c4, halign: "right" },
     },
     theme: "plain",
-    head: [["Cantidad", "Descripcion", "Medida", "P.Unitario", "P.Total"]],
+    head: [["Cantidad", "Codigo", "Descripcion", "Medida", "P.Unitario", "P.Total"]],
     body: nuevoArray,
   });
 
@@ -2381,12 +2398,15 @@ function tabla_A4(array, linea) {
       totalLinea = 0;
     }
 
+    const codigoProducto = item.id || "";
+
     // Estructura según exista o no descuento
     if (!existeDescuento) {
       // SIN DESCUENTOS
       nuevoArray.push([
         item.cantidad,
         item.medida,
+        codigoProducto,
         item.nombre + tg,
         precioBase.toFixed(2),
         totalLinea.toFixed(2) + obs,
@@ -2396,6 +2416,7 @@ function tabla_A4(array, linea) {
       nuevoArray.push([
         item.cantidad,
         item.medida,
+        codigoProducto,
         item.nombre + tg,
         precioBase.toFixed(2),
         textoDescuento,
@@ -2407,13 +2428,14 @@ function tabla_A4(array, linea) {
 
   // CABECERA SEGÚN MODO
   const headSinDescuento = [
-    ["Cantidad", "Medida","Descripcion" , "P.Unitario", "P.Total"],
+    ["Cantidad", "Medida", "Código", "Descripcion", "P.Unitario", "P.Total"],
   ];
 
   const headConDescuento = [
     [
       "Cant",
       "Medida",
+      "Código",
       "Descripcion",
       "P.Unitario",
       "%Desc",
@@ -2426,26 +2448,28 @@ function tabla_A4(array, linea) {
   const columnStylesSinDesc = {
     0: { columnWidth: 20 },
     1: { columnWidth: 20 },
-    2: { columnWidth: 110, halign: "left" },
-    3: { columnWidth: 20 },
+    2: { columnWidth: 25 },
+    3: { columnWidth: 110, halign: "left" },
     4: { columnWidth: 20 },
+    5: { columnWidth: 20 },
   };
 
   const columnStylesConDesc = {
     0: { columnWidth: 12 },
     1: { columnWidth: 18 },
-    2: { columnWidth: 80, halign: "left" },
-    3: { columnWidth: 20 },
-    4: { columnWidth: 20 }, // %Desc
-    5: { columnWidth: 20 }, // P.Neto
-    6: { columnWidth: 20 }, // Total
+    2: { columnWidth: 25 },
+    3: { columnWidth: 80, halign: "left" },
+    4: { columnWidth: 20 },
+    5: { columnWidth: 20 }, // %Desc
+    6: { columnWidth: 20 }, // P.Neto
+    7: { columnWidth: 20 }, // Total
   };
 
   // TABLA A DEVOLVER
   const table = {
     margin: { top: linea, left: 10 },
     styles: {
-      fontSize: 8,
+      fontSize: 7,
       cellPadding: 1,
       valign: "middle",
       halign: "center",
