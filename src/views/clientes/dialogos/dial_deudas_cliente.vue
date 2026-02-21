@@ -65,7 +65,8 @@
                                         {{ cuenta.moneda || monedaSimbolo }}{{ parseFloat(cuenta.monto_pendiente ||
                                             0).toFixed(2) }}
                                     </div>
-                                    <v-btn small color="primary" outlined @click="abrirLiquidacion(cuenta)">
+                                    <v-btn v-if="puedeLiquidarCuenta(cuenta)" small color="primary" outlined
+                                        @click="abrirLiquidacion(cuenta)">
                                         <v-icon small left>mdi-cash-plus</v-icon>
                                         Abonar
                                     </v-btn>
@@ -103,7 +104,8 @@
             </v-card-actions>
         </v-card>
 
-        <dial_liquidacion_cliente v-model="dialog_liquidacion" :cuenta="cuenta_seleccionada" @actualizar="onActualizarCuenta" @cerrar="dialog_liquidacion = false" />
+        <dial_liquidacion_cliente v-model="dialog_liquidacion" :cuenta="cuenta_seleccionada"
+            @actualizar="onActualizarCuenta" @cerrar="onCerrarLiquidacion" />
     </v-dialog>
 </template>
 
@@ -249,13 +251,28 @@ export default {
             this.cuenta_seleccionada = cuenta
             this.dialog_liquidacion = true
         },
+        puedeLiquidarCuenta(cuenta) {
+            const esAdmin = this.$store.state.permisos?.es_admin === true;
+            const permisoVendedor = this.$store.state.permisos?.cuentasxcobrar_vendedor === true;
+            const codigoVendedorSesion = this.$store.state.sedeActual?.codigo || '';
+            const vendedorCuenta = cuenta.vendedor || '';
+            if (esAdmin) return true;
+            if (permisoVendedor) {
+                return vendedorCuenta === codigoVendedorSesion;
+            }
+            return false;
+        },
+        onCerrarLiquidacion() {
+            this.dialog_liquidacion = false
+            this.cuenta_seleccionada = null
+            this.consultarDeudas()
+        },
+
         onActualizarCuenta(cuentaActualizada) {
             if (cuentaActualizada.estado === 'LIQUIDADO' || cuentaActualizada.estado === 'ELIMINADO') {
                 this.cuentas_pendientes = this.cuentas_pendientes.filter(
                     c => c.doc_ref !== cuentaActualizada.doc_ref
                 )
-                this.dialog_liquidacion = false
-                this.cuenta_seleccionada = null
             } else {
                 const idx = this.cuentas_pendientes.findIndex(
                     c => c.doc_ref === cuentaActualizada.doc_ref
@@ -270,6 +287,11 @@ export default {
                 0
             )
         },
+
+        abrirLiquidacion(cuenta) {
+            this.cuenta_seleccionada = cuenta
+            this.dialog_liquidacion = true
+        }
     }
 }
 </script>

@@ -10,7 +10,7 @@ export function copiarUrlMaps(pedido) {
     if (pedido.latitud && pedido.longitud) {
         const url = `https://www.google.com/maps?q=${pedido.latitud},${pedido.longitud}`;
         navigator.clipboard.writeText(url).then(() => {
-            // Opcional: mostrar notificación de éxito
+            alert("URL de Google Maps copiada al portapapeles");
         }).catch(err => {
             console.error('Error al copiar URL:', err);
             alert("No se pudo copiar al portapapeles");

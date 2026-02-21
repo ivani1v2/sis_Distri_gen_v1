@@ -29,20 +29,10 @@
 
         <v-row dense v-for="pago in pagos" :key="pago.nombre" class="align-center">
           <v-col cols="12">
-            <v-text-field
-              :label="pago.nombre.toUpperCase()"
-              :prefix="moneda"
-              v-model.number="pago.monto"
-              @input="ajustarMetodoPago(pago)"
-              :type="$store.state.esmovil ? 'tel' : 'number'"
-              inputmode="decimal"
-              step="0.01"
-              outlined
-              dense
-              hide-details
-              :class="{ 'mpago-activo': pago.monto > 0 }"
-              @focus="$event.target.select()"
-            >
+            <v-text-field :label="pago.nombre.toUpperCase()" :prefix="moneda" v-model.number="pago.monto"
+              @input="ajustarMetodoPago(pago)" :type="$store.state.esmovil ? 'tel' : 'number'" inputmode="decimal"
+              step="0.01" outlined dense hide-details :class="{ 'mpago-activo': pago.monto > 0 }"
+              @focus="$event.target.select()">
               <template v-slot:prepend-inner>
                 <v-avatar size="28" class="mr-2" tile>
                   <v-img :src="buscarIcono(pago.nombre)" @click.stop="cambiarMetodoPago(pago)" />
@@ -83,7 +73,7 @@ export default {
   name: 'dial_amortiza',
   props: {
     item_selecto: { type: Object, required: true },
-    item_selecto_cuota_index: { type: Number, required: true },
+    item_selecto_cuota_index: { type: Number, required: false, default: null },
     moneda: { type: String, default: 'S/' }
   },
   data() {
@@ -94,22 +84,7 @@ export default {
       cargando: false
     }
   },
-  created() {
-    const idx = this.item_selecto_cuota_index
-    this.montoCuota = this.item_selecto?.datos?.[idx]?.monto || this.item_selecto.monto_pendiente || 0
-    this.montoCuota = Number(this.montoCuota)
 
-    this.pagos = (this.$store?.state?.modopagos || []).map(nombre => ({
-      nombre,
-      monto: 0
-    }))
-
-    if (this.montoCuota > 0 && this.pagos.length > 0) {
-      this.pagos[0].monto = this.montoCuota
-    }
-
-    this.dial = true
-  },
   computed: {
     sumaPagos() {
       return this.pagos.reduce((acc, p) => acc + (Number(p.monto) || 0), 0)
@@ -118,7 +93,42 @@ export default {
       return Number((this.montoCuota - this.sumaPagos).toFixed(2))
     }
   },
+  watch: {
+    item_selecto_cuota_index: {
+      immediate: true,
+      handler(newIndex) {
+        if (newIndex !== null && newIndex >= 0) {
+          this.actualizarDatos()
+        } else {
+          this.dial = false
+        }
+      }
+    },
+    item_selecto: {
+      deep: true,
+      handler() {
+        if (this.item_selecto_cuota_index !== null && this.item_selecto_cuota_index >= 0) {
+          this.actualizarDatos()
+        }
+      }
+    }
+  },
   methods: {
+    actualizarDatos() {
+      const idx = this.item_selecto_cuota_index
+      this.montoCuota = this.item_selecto?.datos?.[idx]?.monto || this.item_selecto.monto_pendiente || 0
+      this.montoCuota = Number(this.montoCuota)
+
+      this.pagos = (this.$store?.state?.modopagos || []).map(nombre => ({
+        nombre,
+        monto: 0
+      }))
+
+      if (this.montoCuota > 0 && this.pagos.length > 0) {
+        this.pagos[0].monto = this.montoCuota
+      }
+      this.dial = true
+    },
     async amortizar() {
       this.cargando = true
       store.commit('dialogoprogress')
@@ -183,7 +193,7 @@ export default {
           estado: todoPagado ? 'LIQUIDADO' : 'PENDIENTE'
         })
 
-        this.dial = false
+        this.cerrar()
 
       } catch (error) {
         console.error('Error:', error)
@@ -260,7 +270,7 @@ export default {
     ajustarMetodoPago(editado) {
       const saldo = this.obtenerMetodoSaldo()
       if (!saldo || editado.nombre === saldo.nombre) return
-      
+
       const otros = this.calcularSumaSin(saldo.nombre)
       let restante = Number((this.montoCuota - otros).toFixed(2))
       saldo.monto = restante > 0 ? restante : 0

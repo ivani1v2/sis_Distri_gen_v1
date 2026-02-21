@@ -236,6 +236,15 @@ export default {
                         ],
                     ],
                 },
+                {
+                    titulo: 'Cuentas por Cobrar',
+                    items: [
+                        [
+                            {label: 'Cuentas x Cobrar Vendedor', value: 'cuentasxcobrar_vendedor'},
+                        ],
+                    ]
+
+                }
             ],
             dial_config_host: false,
         };

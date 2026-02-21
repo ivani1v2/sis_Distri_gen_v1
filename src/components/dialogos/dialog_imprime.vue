@@ -4,9 +4,9 @@
             <v-system-bar window dark>
                 <v-icon @click="cierra()">mdi-close</v-icon>
                 <v-spacer></v-spacer>
-                <v-btn  v-if="!isMobile" x-small color="orange" dark  @click="dial_config_host = true">
+                <v-btn v-if="!isMobile" x-small color="orange" dark @click="dial_config_host = true">
                     Config
-                </v-btn>       
+                </v-btn>
                 <v-spacer></v-spacer>
                 <v-radio-group class="" v-model="medida_comprobante" row dense>
                     <v-radio label="A4" value="A4"></v-radio>
@@ -293,7 +293,8 @@ export default {
             if (this.detalle) {
                 arraydatos = this.detalle
             } else {
-                let snapshot = await consultaDetalle(item.numeracion).once("value")
+                const referencia = item.numeracion || item.doc_ref
+                let snapshot = await consultaDetalle(referencia).once("value")
                 arraydatos = snapshot.val()
             }
             console.log(this.datos_cliente)
@@ -315,7 +316,6 @@ export default {
             this.progress = false
             this.cierra()
         },
-
         getReferenciaPrincipal(cliente) {
             if (!cliente || !Array.isArray(cliente.direcciones) || cliente.direcciones.length === 0) return '';
             const dir = cliente.direcciones.find(d => d && d.principal) || cliente.direcciones[0];

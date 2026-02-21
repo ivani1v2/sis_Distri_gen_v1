@@ -83,9 +83,11 @@
                                     <div class="flex-grow-1 mr-2">
                                         <div class="text-caption grey--text text--darken-1">
                                             <span>
-                                                Precio: {{ moneda }} {{ redondear(it.es_rechazo_parcial ? unitPrice(it) / (it.factor || 1) : unitPrice(it)) }}
+                                                Precio: {{ moneda }} {{ redondear(it.es_rechazo_parcial ? unitPrice(it)
+                                                    / (it.factor || 1) : unitPrice(it)) }}
                                             </span>
-                                            <v-chip v-if="it.medida" x-small class="ml-1" label>{{ it.es_rechazo_parcial ? 'UNIDAD' : it.medida }}</v-chip>
+                                            <v-chip v-if="it.medida" x-small class="ml-1" label>{{ it.es_rechazo_parcial
+                                                ? 'UNIDAD' : it.medida }}</v-chip>
                                             <v-chip v-if="it.operacion === 'GRATUITA'" x-small class="ml-1" color="pink"
                                                 text-color="white" label>
                                                 Gratuita
@@ -289,7 +291,8 @@
             </v-card>
         </v-dialog>
 
-        <v-dialog v-model="dialogoDetalle" :max-width="$vuetify.breakpoint.smAndDown ? '100%' : '700px'" :fullscreen="$vuetify.breakpoint.smAndDown">
+        <v-dialog v-model="dialogoDetalle" :max-width="$vuetify.breakpoint.smAndDown ? '100%' : '700px'"
+            :fullscreen="$vuetify.breakpoint.smAndDown">
             <v-card>
                 <v-toolbar flat dense color="grey lighten-3">
                     <v-toolbar-title class="text-subtitle-2">
@@ -303,13 +306,15 @@
                 </v-toolbar>
 
                 <v-card-text class="pa-3">
-                    <div :class="$vuetify.breakpoint.smAndDown ? 'd-flex flex-column' : 'd-flex justify-space-between align-center'" class="mb-3">
+                    <div :class="$vuetify.breakpoint.smAndDown ? 'd-flex flex-column' : 'd-flex justify-space-between align-center'"
+                        class="mb-3">
                         <div>
                             <span class="font-weight-medium">{{ item_selecto.cliente }}</span>
                             <span class="grey--text text-caption ml-2">{{ item_selecto.dni }}</span>
                         </div>
                         <div :class="$vuetify.breakpoint.smAndDown ? 'mt-1' : 'text-right'">
-                            <span class="font-weight-bold primary--text">{{ moneda }} {{ redondear(item_selecto.total) }}</span>
+                            <span class="font-weight-bold primary--text">{{ moneda }} {{ redondear(item_selecto.total)
+                            }}</span>
                         </div>
                     </div>
 
@@ -319,12 +324,14 @@
                                 <div class="flex-grow-1" style="max-width: 70%;">
                                     <div class="text-body-2 font-weight-medium">{{ item.nombre }}</div>
                                     <div class="text-caption grey--text">{{ item.codigo }}</div>
-                                    <v-chip v-if="item.operacion === 'GRATUITA'" x-small color="pink" text-color="white" class="mt-1">Gratis</v-chip>
+                                    <v-chip v-if="item.operacion === 'GRATUITA'" x-small color="pink" text-color="white"
+                                        class="mt-1">Gratis</v-chip>
                                 </div>
                                 <div class="text-right">
                                     <div class="text-caption grey--text">{{ item.cantidad }} {{ item.medida }}</div>
                                     <div class="text-caption">{{ moneda }} {{ item.precio_unit.toFixed(2) }}</div>
-                                    <div class="font-weight-bold" :class="{ 'red--text': item.operacion === 'GRATUITA' }">
+                                    <div class="font-weight-bold"
+                                        :class="{ 'red--text': item.operacion === 'GRATUITA' }">
                                         {{ moneda }} {{ item.total.toFixed(2) }}
                                     </div>
                                 </div>
@@ -333,7 +340,8 @@
                         <v-card color="grey lighten-4" class="pa-3">
                             <div class="d-flex justify-space-between">
                                 <span class="font-weight-bold">TOTAL</span>
-                                <span class="font-weight-bold primary--text">{{ moneda }} {{ detallePedidoTotal }}</span>
+                                <span class="font-weight-bold primary--text">{{ moneda }} {{ detallePedidoTotal
+                                }}</span>
                             </div>
                         </v-card>
                     </div>
@@ -385,7 +393,7 @@
 
 <script>
 
-import { all_detalle_p, grabaCabecera_p, nuevo_detalle_entrega, nuevaCuentaxcobrar, incrementa_procesados_reparto } from "../../../db";
+import { all_detalle_p, grabaCabecera_p, nuevo_detalle_entrega, nuevaCuentaxcobrar, incrementa_procesados_reparto, marcaPedidoComoContabilizado, db } from "../../../db";
 
 export default {
     props: { grupo: null, item_selecto: { type: Object, required: true } },
@@ -730,6 +738,22 @@ export default {
                 fecha_vence_credito: fechaVenceUnix
             };
 
+            let yaFueContabilizado = false;
+            try {
+                const contabilizadosRef = db.database().ref(this.$store.state.baseDatos.bd)
+                    .child("pedidos")
+                    .child("cabecera_reparto")
+                    .child(this.item_selecto.id_grupo)
+                    .child("resumen")
+                    .child("pedidos_contabilizados");
+
+                const snapshot = await contabilizadosRef.child(this.item_selecto.id).once('value');
+                yaFueContabilizado = snapshot.exists();
+                console.log(`Verificando si pedido ${this.item_selecto.id} ya fue contabilizado:`, yaFueContabilizado);
+            } catch (error) {
+                console.error("Error al verificar contador:", error);
+                yaFueContabilizado = false;
+            }
             const promesas = [
                 nuevo_detalle_entrega(this.item_selecto.id_grupo, this.item_selecto.id, data),
                 grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/estado_entrega`, estadoEntrega),
@@ -776,21 +800,19 @@ export default {
                 promesas.push(nuevaCuentaxcobrar(id, payloadCredito));
             }
 
+            if (!yaFueContabilizado) {
+                console.log('Primera vez que se procesa. Incrementando contador...');
+
+                promesas.push(incrementa_procesados_reparto(this.item_selecto.id_grupo));
+                promesas.push(marcaPedidoComoContabilizado(this.item_selecto.id_grupo, this.item_selecto.id));
+
+            } else {
+                console.log('Pedido ya fue contabilizado previamente, no se incrementa.');
+            }
+
             try {
                 this.$store.commit("dialogoprogress");
                 await Promise.all(promesas);
-                
-                // Incrementar contador de procesados si es la PRIMERA VEZ que se procesa
-                // Usamos el campo 'contador_procesado' para evitar doble conteo
-                if (!this.item_selecto.contador_procesado) {
-                    await incrementa_procesados_reparto(this.item_selecto.id_grupo);
-                    // Marcar como ya contabilizado para evitar doble conteo
-                    await grabaCabecera_p(this.item_selecto.id_grupo, `${this.item_selecto.id}/contador_procesado`, true);
-                    console.log('✅ Contador de pedidos procesados incrementado para reparto:', this.item_selecto.id_grupo);
-                } else {
-                    console.log('⏭️ Pedido ya fue contabilizado, no se incrementa (contador_procesado = true)');
-                }
-                
                 this.$store.commit("dialogoprogress");
 
                 if (montoCred > 0) {
@@ -801,6 +823,7 @@ export default {
 
                 this.dialPagos = false;
                 this.$emit("guardado", { grupo: this.item_selecto.id_grupo });
+
             } catch (e) {
                 console.error("Error al finalizar entrega:", e);
                 this.$store.commit("dialogoprogress");

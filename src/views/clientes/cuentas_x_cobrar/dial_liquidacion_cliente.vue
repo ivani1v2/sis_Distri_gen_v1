@@ -5,27 +5,33 @@
         <v-btn icon @click="cerrar" color="red"><v-icon>mdi-close</v-icon></v-btn>
         <v-toolbar-title>Liquidación de Crédito</v-toolbar-title>
         <v-spacer></v-spacer>
-        <v-icon color="red" @click.prevent="eliminarCuenta">mdi-delete</v-icon>
+
+        <v-icon v-if="esAdmin" color="red" @click.prevent="eliminarCuenta">mdi-delete</v-icon>
       </v-toolbar>
 
       <v-card-text class="pa-4">
         <v-row dense class="mb-2">
           <v-col cols="6">
-            <h4 class="font-weight-medium">Comprobante: <span class="blue-grey--text text--darken-2">{{ cuentaLocal.doc_ref }}</span></h4>
+            <h4 class="font-weight-medium">Comprobante: <span class="blue-grey--text text--darken-2">{{
+              cuentaLocal.doc_ref }}</span></h4>
           </v-col>
           <v-col cols="6" class="text-right">
-            <h4 class="font-weight-medium">Vence: <span class="red--text text--darken-1">{{ conviertefecha(cuentaLocal.fecha_vence) }}</span></h4>
+            <h4 class="font-weight-medium">Vence: <span class="red--text text--darken-1">{{
+              conviertefecha(cuentaLocal.fecha_vence) }}</span></h4>
           </v-col>
         </v-row>
         <h4 class="mb-2">Cliente: <span class="blue-grey--text text--darken-2">{{ cuentaLocal.nombre }}</span></h4>
-        <h4 class="mb-4">Total Pendiente: <span class="red--text text--darken-2">{{ monedaSimbolo }}{{ redondear(cuentaLocal.monto_pendiente) }}</span></h4>
+        <h4 class="mb-4">Total Pendiente: <span class="red--text text--darken-2">{{ monedaSimbolo }}{{
+          redondear(cuentaLocal.monto_pendiente) }}</span></h4>
 
         <v-card outlined class="pa-2 mb-4">
           <h5 class="text-subtitle-2 mb-1">Cronograma de pago</h5>
 
-          <v-alert v-if="descuadreCronograma" type="warning" border="left" colored-border icon="mdi-alert-circle" class="mb-3">
+          <v-alert v-if="descuadreCronograma" type="warning" border="left" colored-border icon="mdi-alert-circle"
+            class="mb-3">
             <div class="font-weight-medium">
-              El total de las cuotas (<strong>{{ moneda }}{{ redondear(sumaCuotas) }}</strong>) no coincide con el monto total del crédito (<strong>{{ moneda }}{{ redondear(cuentaLocal.monto_total) }}</strong>).
+              El total de las cuotas (<strong>{{ moneda }}{{ redondear(sumaCuotas) }}</strong>) no coincide con el monto
+              total del crédito (<strong>{{ moneda }}{{ redondear(cuentaLocal.monto_total) }}</strong>).
             </div>
             <div class="mt-1">Es necesario agregar una nueva cuota para completar el cronograma.</div>
             <template v-slot:append>
@@ -52,8 +58,10 @@
                   </td>
                   <td class="font-weight-bold">{{ monedaSimbolo }}{{ redondear(item.monto) }}</td>
                   <td>
-                    <v-chip small color="grey lighten-4" class="font-weight-bold">{{ conviertefecha(item.fecha_vence) }}</v-chip>
-                    <v-chip v-if="item.estado === 'PAGADO'" color="info" x-small>PAGADO {{ conviertefecha(item.fecha_pagado) }}</v-chip>
+                    <v-chip small color="grey lighten-4" class="font-weight-bold">{{ conviertefecha(item.fecha_vence)
+                    }}</v-chip>
+                    <v-chip v-if="item.estado === 'PAGADO'" color="info" x-small>PAGADO {{
+                      conviertefecha(item.fecha_pagado) }}</v-chip>
                   </td>
                   <td>
                     <v-menu offset-y>
@@ -88,8 +96,9 @@
       </v-card-text>
     </v-card>
 
-    <d_amortiza v-if="dialog_amortiza" :item_selecto="cuentaLocal" :item_selecto_cuota_index="item_selecto_cuota_index"
-      :moneda="monedaSimbolo" @actualizar-item="actualizarDespuesDeAbono" @cerrar="cerrarAmortiza" />
+    <d_amortiza v-show="dialog_amortiza" :item_selecto="cuentaLocal"
+      :item_selecto_cuota_index="item_selecto_cuota_index" key="item_selecto_cuota_index" :moneda="monedaSimbolo"
+      @actualizar-item="actualizarDespuesDeAbono" @cerrar="cerrarAmortiza" />
 
     <d_editar v-if="dialog_editar_cuota" :item_selecto="cuentaLocal" :cuota_edit_index="cuota_edit_index"
       :cuota_edit_monto="cuota_edit_monto" :cuota_edit_fecha_str="cuota_edit_fecha_str"
@@ -149,7 +158,10 @@ export default {
       if (!this.cuentaLocal) return false
       const totalCredito = parseFloat(this.cuentaLocal.monto_total) || 0
       return Math.abs(totalCredito - this.sumaCuotas) > 0.01
-    }
+    },
+    esAdmin() {
+      return store.state.permisos?.es_admin === true || store.state.permisos?.master === true;
+    },
   },
   methods: {
     // Utilidades
@@ -164,8 +176,18 @@ export default {
       return colores[estado] || 'grey'
     },
 
-    // Acciones de cuotas
     abonarCuota(index) {
+      if (!this.cuentaLocal?.datos || !Array.isArray(this.cuentaLocal.datos)) {
+        console.error('Error: cuentaLocal.datos no es un array válido')
+        return
+      }
+
+      if (!this.cuentaLocal.datos[index]) {
+        console.error('Error: No existe cuota en el índice', index)
+        return
+      }
+
+      console.log('Abriendo abono para índice:', index)
       this.item_selecto_cuota_index = index
       this.dialog_amortiza = true
     },
@@ -198,7 +220,7 @@ export default {
 
     async eliminarCuenta() {
       if (!confirm(`¿Eliminar la cuenta del cliente ${this.cuentaLocal.nombre} (${this.cuentaLocal.doc_ref})?`)) return
-      
+
       store.commit('dialogoprogress', 1)
       try {
         await editaCuentaxCobrar(this.cuentaLocal.doc_ref, 'estado', 'ELIMINADO')
@@ -221,13 +243,16 @@ export default {
       this.item_selecto_cuota_index = null
       this.$emit('actualizar', nuevo)
     },
-    actualizarDespuesDeAbono(nuevo) {
-      this.cuentaLocal = nuevo
-      this.$emit('actualizar', nuevo)
-    },
     cerrarAmortiza() {
+      console.log('cerrarAmortiza - cerrando solo dial_amortiza')
       this.dialog_amortiza = false
       this.item_selecto_cuota_index = null
+    },
+
+    actualizarDespuesDeAbono(nuevo) {
+      console.log('actualizarDespuesDeAbono - actualizando cuenta')
+      this.cuentaLocal = nuevo
+      this.$emit('actualizar', nuevo)
     },
     cerrar() {
       this.$emit('input', false)

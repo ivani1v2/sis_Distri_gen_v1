@@ -10,7 +10,6 @@
           <v-btn color="info" small @click="exportarExcel" class="ml-2 font-weight-medium">
             <v-icon left small>mdi-file-excel</v-icon>
             <span>Exportar</span>
-
           </v-btn>
         </div>
 
@@ -171,14 +170,8 @@
       </v-card>
     </v-dialog>
 
-    <!-- Diálogo de Liquidación (componente reutilizable) -->
-    <dial_liquidacion_cliente 
-      v-model="dialog_liquidacion" 
-      :cuenta="item_selecto"
-      @actualizar="actualizarItem"
-      @cerrar="dialog_liquidacion = false"
-    />
-
+    <dial_liquidacion_cliente v-model="dialog_liquidacion" :cuenta="item_selecto" @actualizar="actualizarItem"
+      @cerrar="dialog_liquidacion = false" />
 
     <v-dialog v-model="dialog_detalle_cuota" max-width="350">
       <v-card class="rounded-lg">
@@ -199,11 +192,6 @@
 
     <v-dialog v-model="genera_pdf" max-width="550">
       <v-card class="rounded-lg">
-        <v-toolbar color="red darken-2" dark dense>
-          <v-toolbar-title>Vista Previa de Comprobante</v-toolbar-title>
-          <v-spacer></v-spacer>
-          <v-btn icon @click="(genera_pdf = !genera_pdf)"><v-icon>mdi-close</v-icon></v-btn>
-        </v-toolbar>
         <imprime v-if="genera_pdf" :data="seleccionado" @cierra="genera_pdf = $event" />
       </v-card>
     </v-dialog>
@@ -586,15 +574,67 @@ export default {
     redondear(valor) {
       return parseFloat(valor).toFixed(store.state.configuracion.decimal);
     },
-
     async verPDF(item) {
-      var a = await consulta_Cabecera(item.doc_ref).once('value');
-      if (!a.exists()) {
-        alert('COMPROBANTE NO EXISTE');
+      if (!item || !item.doc_ref) {
+        store.commit('dialogosnackbar', 'Error: El comprobante no tiene número de referencia');
         return;
       }
-      this.seleccionado = a.val();
-      this.genera_pdf = true;
+
+      try {
+        store.commit("dialogoprogress", 1);
+        const cabeceraSnap = await consulta_Cabecera(item.doc_ref).once('value');
+
+        if (!cabeceraSnap.exists()) {
+          console.warn('No existe cabecera para:', item.doc_ref);
+          store.commit('dialogosnackbar', 'El comprobante no existe');
+          store.commit("dialogoprogress", 1);
+          return;
+        }
+        const detallesSnap = await consultaDetalle(item.doc_ref).once('value');
+
+        if (!detallesSnap.exists()) {
+          console.warn('El comprobante no tiene detalles:', item.doc_ref);
+          store.commit('dialogosnackbar', 'Este comprobante no tiene productos');
+          store.commit("dialogoprogress", 1);
+          return;
+        }
+        const detallesVal = detallesSnap.val();
+        let tieneDetalles = false;
+
+        if (Array.isArray(detallesVal) && detallesVal.length > 0) {
+          tieneDetalles = true;
+        } else if (typeof detallesVal === 'object' && detallesVal !== null) {
+          const keys = Object.keys(detallesVal);
+          if (keys.length > 0) {
+            tieneDetalles = true;
+          }
+        }
+
+        if (!tieneDetalles) {
+          console.warn('Los detalles están vacíos');
+          store.commit('dialogosnackbar', 'El comprobante no tiene productos');
+          store.commit("dialogoprogress", 1);
+          return;
+        }
+
+        const cabeceraData = cabeceraSnap.val();
+        this.seleccionado = {
+          ...cabeceraData,
+          ...item,
+          doc_ref: item.doc_ref,
+          numeracion: item.doc_ref,
+          cliente_nombre: item.nombre ,
+          cliente_documento: item.documento ,
+        };
+
+        this.genera_pdf = true;
+
+      } catch (error) {
+        console.error('Error en verPDF:', error);
+        store.commit('dialogosnackbar', 'Error al consultar el comprobante');
+      } finally {
+        store.commit("dialogoprogress", 1);
+      }
     },
 
     ejecuta_liquidacion(value) {

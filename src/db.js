@@ -1674,6 +1674,19 @@ export const incrementa_procesados_reparto = (grupo) => {
     .transaction((current) => (current || 0) + 1);
 };
 
+export const marcaPedidoComoContabilizado = (grupo, pedidoId) => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("pedidos")
+    .child("cabecera_reparto")
+    .child(grupo)
+    .child("resumen")
+    .child("pedidos_contabilizados")
+    .child(pedidoId)
+    .set(true);
+};
+
 export const all_Cabecera_p = (grupo) => {
   return db
     .database()
