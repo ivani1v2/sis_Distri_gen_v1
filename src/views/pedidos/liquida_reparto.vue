@@ -877,25 +877,43 @@ export default {
             // Generar reporte de transporte
             reporte_transporte(r);
         },
-        async pdf_clientes_transporte() {
-            store.commit("dialogoprogress");
+    async pdf_clientes_transporte() {
+    store.commit("dialogoprogress");
 
-            const array = this.desserts.filter(
-                (item) => item.consolida && item.estado !== "ANULADO"
-            );
+    // Solo comprobantes seleccionados y no anulados
+    const array = this.desserts.filter(
+        (item) => item.consolida && item.estado !== "ANULADO"
+    );
 
-            if (!array.length) {
-                store.commit("dialogoprogress");
-                this.$store.commit('dialogosnackbar', 'Seleccione al menos un pedido.');
-                return;
-            }
+    if (!array.length) {
+        store.commit("dialogoprogress");
+        this.$store.commit('dialogosnackbar', 'Seleccione al menos un pedido.');
+        return;
+    }
 
-            const r = await this.consultadetalles_pdf(array);
-            store.commit("dialogoprogress");
+    // Ordenar por vendedor (ej: V00, V01, V02). Si el vendedor es igual, ordenar por numeración.
+    array.sort((a, b) => {
+        const va = String(a.vendedor || '').toUpperCase();
+        const vb = String(b.vendedor || '').toUpperCase();
 
-            // Generar reporte de lista de clientes
-            reporte_clientes_transporte(r);
-        },
+        if (va === vb) {
+            // aseguramos orden consistente por numeración (alfanumérico)
+            return String(a.numeracion || '').localeCompare(String(b.numeracion || ''));
+        }
+        return va.localeCompare(vb);
+    });
+
+    try {
+        const r = await this.consultadetalles_pdf(array);
+        // r ya corresponde al array ordenado, lo enviamos al generador de PDF
+        reporte_clientes_transporte(r);
+    } catch (e) {
+        console.error(e);
+        this.$store.commit('dialogosnackbar', 'Error generando reporte de clientes transporte.');
+    } finally {
+        store.commit("dialogoprogress");
+    }
+},
         async pdf_almacen() {
             store.commit("dialogoprogress");
             this.arrayConsolidar = [];
