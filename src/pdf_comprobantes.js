@@ -2447,9 +2447,9 @@ function tabla_A4(array, linea) {
   // COLUMNAS SIMPLES Y LIMPIAS
   const columnStylesSinDesc = {
     0: { columnWidth: 20 },
-    1: { columnWidth: 20 },
-    2: { columnWidth: 25 },
-    3: { columnWidth: 110, halign: "left" },
+    1: { columnWidth: 15 },
+    2: { columnWidth: 20 },
+    3: { columnWidth: 95, halign: "left" },
     4: { columnWidth: 20 },
     5: { columnWidth: 20 },
   };

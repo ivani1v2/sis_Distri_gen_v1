@@ -82,6 +82,12 @@
                                 <v-list-item-icon><v-icon color="teal darken-2">mdi-printer</v-icon></v-list-item-icon>
                                 <v-list-item-title>Imprimir Comprobantes</v-list-item-title>
                             </v-list-item>
+                            <v-list-item @click="dialogImpresionGuias = true" :disabled="!puedeImprimirGuia">
+                                <v-list-item-icon>
+                                    <v-icon :color="puedeImprimirGuia ? 'cyan darken-2' : 'grey'">mdi-file-document-multiple</v-icon>
+                                </v-list-item-icon>
+                                <v-list-item-title>Imprimir Guías</v-list-item-title>
+                            </v-list-item>
                         </v-list>
                     </v-menu>
 
@@ -442,6 +448,10 @@
                 </div>
             </v-card>
         </v-dialog>
+        
+        <impresion_guias_masivas v-model="dialogImpresionGuias" :desserts="desserts" :router-grupo="router_grupo"
+            @update:impresion-completada="onImpresionCompletada" />
+            
         <genera_guias v-if="dialogo_guia" @cierra="dialogo_guia = false" @graba="carga_Guia()" :data_guia="data_guia" />
         <dialogo_edita_c v-if="dialogo_edita_" @cierra="dialogo_edita_ = false, recalcula_cabecera()"
             :cabecera="cabecera_selecta" :detalle="detalle_selecto" />
@@ -494,18 +504,21 @@ import { reporteProductoClientePDF } from './reportes_pdf'
 import axios from "axios"
 import { colClientes } from '../../db_firestore'
 import dial_transporte from '../reparto/dialogos/dial_transporte.vue'
+import impresion_guias_masivas from './dialogos/impresion_guias_masivas.vue'
 export default {
     components: {
         dialogo_edita_c,
         imprime,
         genera_guias,
         impresorahost,
-        dial_transporte
+        dial_transporte,
+        impresion_guias_masivas
     },
     data() {
         return {
             dial_transporte_show: false,
             dialogo_imprime: false,
+            dialogImpresionGuias: false,
             dialogDetalle: false,
             pedidoSeleccionado: null,
             dialogo_motivo_anulacion: false,
@@ -648,6 +661,11 @@ export default {
             if (seleccionados.length === 0) return false;
             return seleccionados.every(p => p.estado !== 'ANULADO');
         },
+        puedeImprimirGuia() {
+            const seleccionados = this.desserts.filter(d => d.consolida);
+            if (seleccionados.length === 0) return false;
+            return seleccionados.some(p => p.guia_id && p.estado !== 'ANULADO');
+        },
         suma_pedidos() {
             let total = 0;
             let sum_soles = 0;
@@ -696,6 +714,10 @@ export default {
     methods: {
         abrirDialTransporte() {
             this.dial_transporte_show = true;
+        },
+        onImpresionCompletada() {
+            this.dialogImpresionGuias = false;
+            console.log('Impresión de guías completada');
         },
         async genera_guia(data) {
             store.commit("dialogoprogress", 1)

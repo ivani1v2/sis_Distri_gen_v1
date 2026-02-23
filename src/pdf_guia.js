@@ -5,6 +5,96 @@ import moment from "moment";
 import "jspdf-autotable";
 import QR from "qrcode-base64";
 
+function permite_impresion_host() {
+  if (store?.state?.esmovil) return false;
+  const tienePermiso = store?.state?.permisos?.permite_impresion_host === true;
+  const tieneConfig = store?.state?.permisos?.config_impresion_host?.ip_dispositivo;
+  return tienePermiso && tieneConfig;
+}
+
+async function abre_dialogo_impresion_host(doc) {
+  try {
+    if (!permite_impresion_host()) {
+      abre_dialogo_impresion_original(doc);
+      return;
+    }
+
+    const configHost = store?.state?.permisos?.config_impresion_host || {};
+    const IP_PC = configHost.ip_dispositivo;
+    const PORT = configHost.puerto_dispositivo || 8090;
+    const BRIDGE_URL = `http://${IP_PC}:${PORT}/bridge-pdf`;
+    const token = store?.state?.configImpresora?.token_host || configHost.token || "1234";
+
+    const meta = {
+      bd: store?.state?.baseDatos?.bd || "",
+      usuario: store?.state?.permisos?.nombre || "",
+      tipo: "guia_remision",
+      ts: Date.now(),
+    };
+
+    const buffer = doc.output("arraybuffer");
+
+    const ventana = window.open(
+      BRIDGE_URL,
+      "_blank",
+      "width=500,height=400,menubar=no,toolbar=no,location=no,status=no"
+    );
+
+    if (!ventana) {
+      alert("Permite ventanas emergentes para imprimir.");
+      return;
+    }
+
+    const mensaje = {
+      type: "PRINT_PDF",
+      token,
+      printer: configHost.nombre_impresora || "POS-80-Series",
+      copies: 1,
+      meta,
+      pdf: buffer
+    };
+
+    const timer = setInterval(() => {
+      try {
+        ventana.postMessage(mensaje, "*", [buffer]);
+        clearInterval(timer);
+      } catch (e) { }
+    }, 250);
+
+  } catch (e) {
+    console.error("Error impresión host guía:", e);
+    abre_dialogo_impresion_original(doc);
+  }
+}
+
+function abre_dialogo_impresion_original(doc) {
+  var blob = doc.output("bloburi");
+  var Ancho = screen.width;
+  var Alto = screen.height;
+  var A = (Ancho * 50) / 100;
+  var H = (Alto * 50) / 100;
+  var difA = Ancho - A;
+  var difH = Alto - H;
+  var tope = difH / 2;
+  var lado = difA / 2;
+  var Opciones =
+    "status=no, menubar=no, directories=no, location=no, toolbar=no, scrollbars=yes, resizable=no, width=" +
+    A +
+    ", height=" +
+    H +
+    ", top=" +
+    tope +
+    ", left=" +
+    lado +
+    "";
+  var w = window.open(blob, "_blank", Opciones);
+  if (w) {
+    w.print();
+  } else {
+    console.error("No se pudo abrir ventana de impresión");
+  }
+}
+
 export const generaGuia = (array, formato) => {
   var qrs = generaQR(array);
   switch (formato) {
@@ -465,7 +555,7 @@ export const impresion58 = (arrays, qr) => {
   linea = linea + 4 * texto.length;
   doc.text(".", 0, linea);
   //doc.text(numeros_a_letras(parseFloat(cuentatotal),'nominal',0,'CENTIMOS','SOLES'),0,linea)
-  abre_dialogo_impresion(doc.output("bloburi"));
+  abre_dialogo_impresion_host(doc);
   //doc.save(arraycabe.serie + "-" + arraycabe.correlativo + '.pdf')
 };
 
@@ -901,7 +991,7 @@ export const impresion80 = (arrays, qr) => {
   linea = linea + 4 * texto.length;
   doc.text(".", 0, linea);
   //doc.text(numeros_a_letras(parseFloat(cuentatotal),'nominal',0,'CENTIMOS','SOLES'),0,linea)
-  abre_dialogo_impresion(doc.output("bloburi"));
+  abre_dialogo_impresion_host(doc);
   //doc.save(arraycabe.serie + "-" + arraycabe.correlativo + '.pdf')
 };
 function impresionA4(arrays, qr) {
@@ -1465,7 +1555,7 @@ function impresionA4(arrays, qr) {
   linea = linea + 4 * texto.length;
   doc.text(".", 0, linea);
   //doc.text(numeros_a_letras(parseFloat(cuentatotal),'nominal',0,'CENTIMOS','SOLES'),0,linea)
-  abre_dialogo_impresion(doc.output("bloburi"));
+  abre_dialogo_impresion_host(doc);
 }
 export const generaQR = (array) => {
   if (array.qr == undefined) {
@@ -1479,25 +1569,3 @@ export const generaQR = (array) => {
   });
   return imgData;
 };
-function abre_dialogo_impresion(blob) {
-  var Ancho = screen.width;
-  var Alto = screen.height;
-  var A = (Ancho * 50) / 100;
-  var H = (Alto * 50) / 100;
-  var difA = Ancho - A;
-  var difH = Alto - H;
-  var tope = difH / 2;
-  var lado = difA / 2;
-  var Opciones =
-    "status=no, menubar=no, directories=no, location=no, toolbar=no, scrollbars=yes, resizable=no, width=" +
-    A +
-    ", height=" +
-    H +
-    ", top=" +
-    tope +
-    ", left=" +
-    lado +
-    "";
-  var w = window.open(blob, "_blank", Opciones);
-  w.print();
-}

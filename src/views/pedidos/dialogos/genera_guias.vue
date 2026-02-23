@@ -7,7 +7,8 @@
                 <h3>Genera Reparto</h3>
                 <v-spacer></v-spacer>
 
-                <v-icon color="green" large @click="emitirMasivo()">mdi-content-save</v-icon>
+                <v-icon color="green" large @click="emitirMasivo()"
+                    style="z-index: 1000; position: relative;">mdi-content-save</v-icon>
             </v-system-bar>
         </div>
 
@@ -169,7 +170,7 @@
                                                 <div class="d-flex justify-space-between" style="width:100%">
                                                     <span>{{ item.nombre }}</span>
                                                     <small class="grey--text">{{ item.ubigeo_sunat || item.ubigeo
-                                                    }}</small>
+                                                        }}</small>
                                                 </div>
                                             </template>
                                         </v-autocomplete>
@@ -182,7 +183,7 @@
                                                 <div class="d-flex justify-space-between" style="width:100%">
                                                     <span>{{ item.nombre }}</span>
                                                     <small class="grey--text">{{ item.ubigeo_sunat || item.ubigeo
-                                                    }}</small>
+                                                        }}</small>
                                                 </div>
                                             </template>
                                         </v-autocomplete>
@@ -196,7 +197,7 @@
                                                 <div class="d-flex justify-space-between" style="width:100%">
                                                     <span>{{ item.nombre }}</span>
                                                     <small class="grey--text">{{ item.ubigeo_sunat || item.ubigeo
-                                                    }}</small>
+                                                        }}</small>
                                                 </div>
                                             </template>
                                         </v-autocomplete>
@@ -510,6 +511,9 @@ export default {
         },
 
         async emitirMasivo() {
+            if (!confirm('¿Seguro de emitir guías masivamente?')) {
+                return;
+            }
             this.erroresGenerales = ''
             this.resultados = []
 
@@ -535,6 +539,7 @@ export default {
             }
 
             this.procesando = true
+            this.$store.commit("dialogoprogress", 1)
             try {
                 // Fechas y serie como en unitaria
                 const Emision = this.unix(this.date_emision)
@@ -656,10 +661,15 @@ export default {
                 } else {
                     await sumaContador('orden_guia_t', nuevo)
                 }
+
+                this.$store.commit('dialogosnackbar', 'Guías generadas correctamente')
+                this.cierra()
+
             } catch (e) {
                 this.erroresGenerales = (e && e.message) ? e.message : 'Error general emitiendo guías.'
             } finally {
                 this.procesando = false
+                this.$store.commit("dialogoprogress")
             }
         },
 
