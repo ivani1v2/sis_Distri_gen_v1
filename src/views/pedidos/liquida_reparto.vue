@@ -84,7 +84,8 @@
                             </v-list-item>
                             <v-list-item @click="dialogImpresionGuias = true" :disabled="!puedeImprimirGuia">
                                 <v-list-item-icon>
-                                    <v-icon :color="puedeImprimirGuia ? 'cyan darken-2' : 'grey'">mdi-file-document-multiple</v-icon>
+                                    <v-icon
+                                        :color="puedeImprimirGuia ? 'cyan darken-2' : 'grey'">mdi-file-document-multiple</v-icon>
                                 </v-list-item-icon>
                                 <v-list-item-title>Imprimir Guías</v-list-item-title>
                             </v-list-item>
@@ -307,6 +308,7 @@
             </v-card>
         </v-dialog>
 
+        <!-- Diálogo Anulación Individual -->
         <v-dialog v-model="dialogo_motivo_anulacion" max-width="520px" persistent>
             <v-card class="rounded-lg">
                 <v-toolbar color="error" dense dark>
@@ -327,7 +329,7 @@
                         label="Detalle del motivo (obligatorio)" :rules="[v => !!v || 'Ingrese el motivo']" />
 
                     <v-checkbox v-model="regresar_pendiente"
-                        label="Si marca la casilla, el pedido a regresará a PENDIENTE, no se revertirá stock" dense
+                        label="Si marca la casilla, el pedido regresará a PENDIENTE, no se revertirá stock" dense
                         hide-details class="mt-n3" color="warning" />
 
                     <div v-if="error_motivo" class="red--text text-caption mt-1">{{ error_motivo }}</div>
@@ -337,6 +339,43 @@
                     <v-spacer></v-spacer>
                     <v-btn color="error" :loading="anulando" @click="confirmarAnulacion">
                         <v-icon left>mdi-delete</v-icon> Anular comprobante
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Diálogo Anulación Masiva -->
+        <v-dialog v-model="dial_anular_masivo" max-width="520px" persistent>
+            <v-card class="rounded-lg">
+                <v-toolbar color="error" dense dark>
+                    <v-toolbar-title>Anulación Masiva de Comprobantes</v-toolbar-title>
+                    <v-spacer></v-spacer>
+                    <v-btn icon @click="dial_anular_masivo = false"><v-icon>mdi-close</v-icon></v-btn>
+                </v-toolbar>
+                <v-card-text class="pt-4">
+                    <div class="mb-3 text-subtitle-2 grey--text text--darken-1">
+                        Se anularán <strong class="error--text">{{ comprobantesSeleccionadosAnular.length }}</strong>
+                        comprobante(s)
+                    </div>
+
+                    <v-select dense outlined clearable :items="motivos_predeterminados"
+                        label="Motivo (selección rápida)" v-model="motivo_seleccion_masivo"
+                        @change="sincronizaMotivoMasivo" />
+
+                    <v-textarea outlined dense auto-grow rows="2" v-model.trim="motivo_anulacion_masivo"
+                        label="Detalle del motivo (obligatorio)" :rules="[v => !!v || 'Ingrese el motivo']" />
+
+                    <v-checkbox v-model="regresar_pendiente_masivo"
+                        label="Regresar pedidos a PENDIENTE (no revertir stock)" dense hide-details class="mt-n3"
+                        color="warning" />
+
+                    <div v-if="error_motivo_masivo" class="red--text text-caption mt-1">{{ error_motivo_masivo }}</div>
+                </v-card-text>
+                <v-card-actions class="px-4 pb-4">
+                    <v-btn text @click="dial_anular_masivo = false">Cancelar</v-btn>
+                    <v-spacer></v-spacer>
+                    <v-btn color="error" :loading="anulando_masivo" @click="confirmarAnulacionMasiva">
+                        <v-icon left>mdi-delete</v-icon> Anular comprobantes
                     </v-btn>
                 </v-card-actions>
             </v-card>
@@ -448,10 +487,10 @@
                 </div>
             </v-card>
         </v-dialog>
-        
+
         <impresion_guias_masivas v-model="dialogImpresionGuias" :desserts="desserts" :router-grupo="router_grupo"
             @update:impresion-completada="onImpresionCompletada" />
-            
+
         <genera_guias v-if="dialogo_guia" @cierra="dialogo_guia = false" @graba="carga_Guia()" :data_guia="data_guia" />
         <dialogo_edita_c v-if="dialogo_edita_" @cierra="dialogo_edita_ = false, recalcula_cabecera()"
             :cabecera="cabecera_selecta" :detalle="detalle_selecto" />
@@ -532,6 +571,13 @@ export default {
                 'Duplicado',
                 'Solicitud del cliente'
             ],
+            dial_anular_masivo: false,
+            motivo_anulacion_masivo: '',
+            motivo_seleccion_masivo: null,
+            error_motivo_masivo: '',
+            anulando_masivo: false,
+            regresar_pendiente_masivo: false,
+            comprobantesSeleccionadosAnular: [],
             error_motivo: '',
             anulando: false,
             regresar_pendiente: false,
@@ -592,6 +638,7 @@ export default {
             buscarReparto: '',
             editandoReparto: false,
             repartoEditado: '',
+
         }
     },
     created() {
@@ -694,6 +741,13 @@ export default {
 
             return total;
         },
+        apiBaseUrl() {
+            const hostname = window.location.hostname;
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                return 'http://localhost:5001/sis-distri/southamerica-east1/api_distribucion';
+            }
+            return 'https://api-distribucion-6sfc6tum4a-rj.a.run.app';
+        }
     },
     watch: {
         router_grupo() {
@@ -805,35 +859,56 @@ export default {
         },
 
         async transferir_pedidos() {
-            const seleccionados = this.desserts.filter(d => d.consolida);
+            const seleccionados = this.desserts.filter(d =>
+                d.consolida &&
+                d.estado !== 'ANULADO' &&
+                d.estado !== 'ENVIADO'
+            );
+
             if (seleccionados.length === 0) {
-                alert('No hay pedidos seleccionados para transferir.');
+                this.$store.commit('dialogosnackbar', 'No hay pedidos pendientes seleccionados para transferir.');
                 return;
             }
+
             const nuevo_reparto = prompt('Ingrese el número del nuevo reparto:');
             if (!nuevo_reparto) {
                 alert('Operación cancelada. No se ingresó un número de reparto válido.');
                 return;
             }
-            store.commit("dialogoprogress")
+
+            store.commit("dialogoprogress");
             var array = [];
+
             for (const pedido of seleccionados) {
-                console.log('Transferiendo pedido:', pedido);
+                console.log('Transfiriendo pedido:', pedido);
                 const snapshot = await all_detalle_p(this.router_grupo, pedido.numeracion).once("value");
                 array.push({
                     cabecera: { ...pedido, id_grupo: nuevo_reparto },
                     items: snapshot.val()
-                })
+                });
             }
+
             const payload = {
                 grupo_antiguo: this.router_grupo,
                 grupo_nuevo: nuevo_reparto,
                 data: array
             };
 
-            await this.api_rest(payload, 'tranferir_pedido');
-            store.commit("dialogoprogress")
+            try {
+                const idem = `transfer-${this.router_grupo}-${nuevo_reparto}-${Date.now()}`;
 
+                const resultado = await this.api_rest(payload, 'tranferir_pedido', {
+                    'X-Idempotency-Key': idem
+                });
+                console.log('Transferencia exitosa:', resultado);
+                this.$store.commit('dialogosnackbar', 'Pedidos transferidos correctamente');
+                this.inicio();
+            } catch (error) {
+                console.error(' Error transfiriendo pedidos:', error);
+                this.$store.commit('dialogosnackbar', error.message || 'Error al transferir pedidos');
+            } finally {
+                store.commit("dialogoprogress");
+            }
         },
         async imprimir(data) {
             store.commit("dialogoprogress");
@@ -877,43 +952,37 @@ export default {
             // Generar reporte de transporte
             reporte_transporte(r);
         },
-    async pdf_clientes_transporte() {
-    store.commit("dialogoprogress");
+        async pdf_clientes_transporte() {
+            store.commit("dialogoprogress");
+            const array = this.desserts.filter(
+                (item) => item.consolida && item.estado !== "ANULADO"
+            );
 
-    // Solo comprobantes seleccionados y no anulados
-    const array = this.desserts.filter(
-        (item) => item.consolida && item.estado !== "ANULADO"
-    );
+            if (!array.length) {
+                store.commit("dialogoprogress");
+                this.$store.commit('dialogosnackbar', 'Seleccione al menos un pedido.');
+                return;
+            }
+            array.sort((a, b) => {
+                const va = String(a.vendedor || '').toUpperCase();
+                const vb = String(b.vendedor || '').toUpperCase();
 
-    if (!array.length) {
-        store.commit("dialogoprogress");
-        this.$store.commit('dialogosnackbar', 'Seleccione al menos un pedido.');
-        return;
-    }
+                if (va === vb) {
+                    return String(a.numeracion || '').localeCompare(String(b.numeracion || ''));
+                }
+                return va.localeCompare(vb);
+            });
 
-    // Ordenar por vendedor (ej: V00, V01, V02). Si el vendedor es igual, ordenar por numeración.
-    array.sort((a, b) => {
-        const va = String(a.vendedor || '').toUpperCase();
-        const vb = String(b.vendedor || '').toUpperCase();
-
-        if (va === vb) {
-            // aseguramos orden consistente por numeración (alfanumérico)
-            return String(a.numeracion || '').localeCompare(String(b.numeracion || ''));
-        }
-        return va.localeCompare(vb);
-    });
-
-    try {
-        const r = await this.consultadetalles_pdf(array);
-        // r ya corresponde al array ordenado, lo enviamos al generador de PDF
-        reporte_clientes_transporte(r);
-    } catch (e) {
-        console.error(e);
-        this.$store.commit('dialogosnackbar', 'Error generando reporte de clientes transporte.');
-    } finally {
-        store.commit("dialogoprogress");
-    }
-},
+            try {
+                const r = await this.consultadetalles_pdf(array);
+                reporte_clientes_transporte(r);
+            } catch (e) {
+                console.error(e);
+                this.$store.commit('dialogosnackbar', 'Error generando reporte de clientes transporte.');
+            } finally {
+                store.commit("dialogoprogress");
+            }
+        },
         async pdf_almacen() {
             store.commit("dialogoprogress");
             this.arrayConsolidar = [];
@@ -1199,7 +1268,11 @@ export default {
 
         consolida_todo() {
             for (var i = 0; i < this.desserts.length; i++) {
-                this.desserts[i].consolida = this.consolida_t
+                if (this.desserts[i].estado !== 'ANULADO') {
+                    this.desserts[i].consolida = this.consolida_t;
+                } else {
+                    this.desserts[i].consolida = false;
+                }
             }
         },
         async cargaData(value) {
@@ -1621,24 +1694,15 @@ export default {
             return regresa
         },
         async anular(data) {
-            if (confirm('Seguro de anular?')) {
-                store.commit("dialogoprogress")
-                await grabaCabecera_p(this.router_grupo, data.numeracion + '/estado', 'ANULADO')
-                this.recalcula_cabecera()
-                store.commit("dialogoprogress")
-            }
+            this.abrirDialogoAnulacion(data);
         },
         async envia_sunat() {
-            // ✅ Solo COMPROBANTES SELECCIONADOS (checkbox consolida) y en estado PENDIENTE
             const seleccionados = this.listafiltrada.filter(
                 x => x.consolida && x.estado === 'PENDIENTE'
             );
 
             if (!seleccionados.length) {
-                this.$store.commit(
-                    'dialogosnackbar',
-                    'Seleccione comprobantes con estado PENDIENTE para enviar.'
-                );
+                this.$store.commit('dialogosnackbar', 'Seleccione comprobantes con estado PENDIENTE para enviar.');
                 return;
             }
 
@@ -1646,7 +1710,7 @@ export default {
                 store.commit("dialogoprogress");
 
                 const array = {
-                    cabeceras: seleccionados,      // 👈 solo los seleccionados y pendientes
+                    cabeceras: seleccionados,
                     id_reparto: this.router_grupo
                 };
 
@@ -1662,30 +1726,38 @@ export default {
             }
         },
 
-        async api_rest(data, metodo) {
-            console.log(data)
-            var a = axios({
-                method: 'POST',
-                url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
-                //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
-                headers: {},
-                data: {
-                    "bd": store.state.baseDatos.bd,
-                    "data": data,
-                    "metodo": metodo
+        async api_rest(data, metodo, headers = {}) {
+            console.log('Llamando a API:', { metodo, data, url: this.apiBaseUrl });
+            try {
+                const response = await axios({
+                    method: 'POST',
+                    url: this.apiBaseUrl,
+                    headers: headers,
+                    data: {
+                        "bd": this.$store.state.baseDatos.bd,
+                        "data": data,
+                        "metodo": metodo
+                    }
+                });
+
+                return response.data;
+            } catch (error) {
+                console.error('Error en api_rest:', error);
+                if (error.message === 'Network Error') {
+                    throw new Error(`No se pudo conectar al servidor. Verifica que la API esté disponible en ${this.apiBaseUrl}`);
                 }
-            }).then(response => {
-                return response
-            })
-            return a
+                throw error;
+            }
         },
         abrirDialogoAnulacion(item) {
             this.comp_anular = item;
             this.motivo_anulacion = '';
             this.motivo_seleccion = null;
             this.error_motivo = '';
+            this.regresar_pendiente = false;
             this.dialogo_motivo_anulacion = true;
         },
+
         cerrarDialogoAnulacion() {
             this.dialogo_motivo_anulacion = false;
             this.comp_anular = null;
@@ -1694,8 +1766,8 @@ export default {
             this.error_motivo = '';
             this.regresar_pendiente = false;
         },
+
         sincronizaMotivo(val) {
-            // Si eligen uno rápido, lo pasa al textarea para permitir edición
             if (val && !this.motivo_anulacion) this.motivo_anulacion = val;
         },
 
@@ -1710,14 +1782,14 @@ export default {
                 this.anulando = true;
 
                 const snap = await all_detalle_p(this.router_grupo, this.comp_anular.numeracion).once('value');
-                const val = snap.val() || [];
-                const detalle = Array.isArray(val) ? val : Object.values(val);
+                const detalle = snap.val() || [];
 
                 const cabAPI = {
                     ...this.comp_anular,
                     id: `${this.router_grupo}-${this.comp_anular.numeracion}`,
                     id_grupo: this.router_grupo,
                     id_documento: this.comp_anular.numeracion,
+                    id_pedido: this.comp_anular.id_pedido,
                 };
 
                 const payload = {
@@ -1730,28 +1802,18 @@ export default {
 
                 const idem = `anula-${this.router_grupo}-${this.comp_anular.numeracion}`;
 
-                await axios.post(
-                    'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
-                    {
-                        bd: this.$store.state.baseDatos.bd,
-                        data: payload,
-                        metodo: 'anular_pedido',
-                    },
-                    { headers: { 'X-Idempotency-Key': idem } }
-                );
-
-                if (this.regresar_pendiente && this.comp_anular.id_pedido) {
-                    await modifica_pedidos(this.comp_anular.id_pedido + '/estado', 'pendiente');
-                }
+                await this.api_rest(payload, 'anular_pedido', {
+                    'X-Idempotency-Key': idem
+                });
 
                 this.recalcula_cabecera();
                 this.actualizaEstadoReparto();
 
-                if (this.regresar_pendiente) {
-                    this.$store.commit('dialogosnackbar', 'Comprobante anulado SIN revertir stock. Pedido regresó a pendiente.');
-                } else {
-                    this.$store.commit('dialogosnackbar', 'Comprobante anulado CON reversión de stock.');
-                }
+                this.$store.commit('dialogosnackbar',
+                    this.regresar_pendiente
+                        ? 'Comprobante anulado SIN revertir stock. Pedido regresó a pendiente.'
+                        : 'Comprobante anulado CON reversión de stock.'
+                );
 
                 this.cerrarDialogoAnulacion();
             } catch (e) {
@@ -1759,10 +1821,84 @@ export default {
                 this.$store.commit('dialogosnackbar', 'Ocurrió un error al anular.');
             } finally {
                 this.anulando = false;
-                this.regresar_pendiente = false;
             }
         },
+        async anular_masivo() {
+            const seleccionados = this.desserts.filter(d => d.consolida && d.estado !== 'ANULADO');
 
+            if (seleccionados.length === 0) {
+                this.$store.commit('dialogosnackbar', 'No hay comprobantes válidos seleccionados.');
+                return;
+            }
+
+            this.comprobantesSeleccionadosAnular = seleccionados;
+            this.motivo_anulacion_masivo = '';
+            this.motivo_seleccion_masivo = null;
+            this.error_motivo_masivo = '';
+            this.regresar_pendiente_masivo = false;
+            this.dial_anular_masivo = true;
+        },
+
+        sincronizaMotivoMasivo(val) {
+            if (val && !this.motivo_anulacion_masivo) this.motivo_anulacion_masivo = val;
+        },
+
+        async confirmarAnulacionMasiva() {
+            if (!this.motivo_anulacion_masivo) {
+                this.error_motivo_masivo = 'Ingrese el motivo';
+                return;
+            }
+
+            try {
+                this.anulando_masivo = true;
+
+                for (const comp of this.comprobantesSeleccionadosAnular) {
+                    try {
+                        const snap = await all_detalle_p(this.router_grupo, comp.numeracion).once('value');
+                        const detalle = snap.val() || [];
+
+                        const cabAPI = {
+                            ...comp,
+                            id: `${this.router_grupo}-${comp.numeracion}`,
+                            id_grupo: this.router_grupo,
+                            id_documento: comp.numeracion,
+                            id_pedido: comp.id_pedido,
+                        };
+
+                        const payload = {
+                            cabecera: cabAPI,
+                            detalle,
+                            control_stock: !this.regresar_pendiente_masivo,
+                            motivo_anulacion: this.motivo_anulacion_masivo,
+                            regresar_pendiente: this.regresar_pendiente_masivo,
+                        };
+
+                        const idem = `anula-${this.router_grupo}-${comp.numeracion}`;
+
+                        await this.api_rest(payload, 'anular_pedido', {
+                            'X-Idempotency-Key': idem
+                        });
+
+                    } catch (e) {
+                        console.error(`Error anulando ${comp.numeracion}:`, e);
+                    }
+                }
+
+                this.recalcula_cabecera();
+                this.actualizaEstadoReparto();
+
+                this.$store.commit('dialogosnackbar',
+                    `${this.comprobantesSeleccionadosAnular.length} comprobantes anulados.`
+                );
+
+                this.dial_anular_masivo = false;
+            } catch (e) {
+                console.error('Error en anulación masiva:', e);
+                this.error_motivo_masivo = 'Ocurrió un error al anular masivamente.';
+            } finally {
+                this.anulando_masivo = false;
+            }
+        },
 
         // (Tu método anular viejo ya no se usa, lo puedes retirar o dejar redirigiendo)
         async anular(data) {
@@ -1832,77 +1968,7 @@ export default {
             // Aquí puedes abrir un diálogo o hacer lo que necesites con el detalle
 
         },
-        async anular_masivo() {
-            // 1. Filtramos sólo los comprobantes seleccionados (checkbox consolida)
-            const seleccionados = this.desserts.filter(d => d.consolida);
 
-            if (seleccionados.length === 0) {
-                this.$store.commit('dialogosnackbar', 'No hay comprobantes seleccionados.');
-                return;
-            }
-
-            // 2. Confirmación al usuario
-            const ok = confirm(
-                '¿Seguro que quieres ANULAR estos comprobantes?\n' +
-                '- Se marcarán como ANULADO en este reparto.\n' +
-                '- Volverán a estado PENDIENTE en la pantalla de Pedidos.'
-            );
-            if (!ok) return;
-
-            try {
-                // 3. Mostrar loader global
-                this.$store.commit("dialogoprogress");
-
-                // 4. Armamos todas las tareas async por cada comprobante seleccionado
-                const tareas = seleccionados.map(comp => {
-                    const subtareas = [];
-
-                    // 4a. Regresar el pedido original a "pendiente"
-                    // asumimos que comp.id_pedido es la key del pedido en /pedidos
-                    if (comp.id_pedido) {
-                        subtareas.push(
-                            modifica_pedidos(
-                                comp.id_pedido + '/estado',
-                                'pendiente'
-                            )
-                        );
-                    } else {
-                        console.warn('⚠️ Sin id_pedido para', comp);
-                    }
-
-                    // 4b. Marcar la cabecera del reparto como ANULADO
-                    // esto escribe en /Cabecera_p/<grupo>/<numeracion>/estado = 'ANULADO'
-                    // usamos this.router_grupo (el reparto actual) y comp.numeracion
-                    if (comp.numeracion) {
-                        subtareas.push(
-                            grabaCabecera_p(
-                                this.router_grupo,
-                                comp.numeracion + '/estado',
-                                'ANULADO'
-                            )
-                        );
-                    } else {
-                        console.warn('⚠️ Sin numeracion para', comp);
-                    }
-
-                    // Devolvemos una promesa que espera ambas subtareas
-                    return Promise.all(subtareas);
-                });
-
-                // 5. Esperar que TODAS las cabeceras+pedidos terminen
-                await Promise.all(tareas);
-
-                // 6. Feedback al usuario
-                this.$store.commit('dialogosnackbar', 'Comprobantes anulados y devueltos a pendiente.');
-                this.actualizaEstadoReparto();
-            } catch (e) {
-                console.error('Error en anular_masivo:', e);
-                alert('Ocurrió un error al intentar anular masivamente.');
-            } finally {
-                // 7. Cerrar loader SIEMPRE
-                this.$store.commit("dialogoprogress");
-            }
-        },
         onPeriodoChange(snapshot) {
             this.periodosBD = snapshot.val() || {};
         },
