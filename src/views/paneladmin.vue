@@ -1,6 +1,7 @@
 <template>
     <div class="pa-6">
         <!-- Acciones y búsqueda -->
+         <v-btn x-small color="primary" class="mr-2" @click="fcunionExportCSV()">Exportar a CSV</v-btn>
         <v-btn v-if="false" x-small color="success" block @click="copiar_ruc">copiar</v-btn>
         <v-row class="mb-2" dense>
             <v-col cols="12" md="6">
@@ -154,14 +155,14 @@
                                 <v-col cols="12" sm="6" md="4">
                                     <v-checkbox v-model="form.kardex_avanzado" label="Kardex Avanzado" />
                                 </v-col>
-                                    <v-col cols="12" sm="6" md="4">
+                                <v-col cols="12" sm="6" md="4">
                                     <v-checkbox v-model="form.mod_activos" label="Modulo activos" />
                                 </v-col>
                                 <v-col cols="6" sm="6" md="4">
                                     <v-text-field dense outlined v-model.trim="form.ruc_asociado"
                                         label="RUC ASOCIADO" />
                                 </v-col>
-                                  <v-col cols="6" sm="6" md="4">
+                                <v-col cols="6" sm="6" md="4">
                                     <v-text-field dense outlined v-model.trim="form.num_usuarios"
                                         label="Limite de usuarios" />
                                 </v-col>
@@ -238,7 +239,7 @@ export default {
             ruc_asociado: '',
             bigquery: false,
             kardex_avanzado: false,
-            num_usuarios:''
+            num_usuarios: ''
         },
 
         // reglas
@@ -321,7 +322,7 @@ export default {
                 ruc_asociado: '',
                 bigquery: false,
                 kardex_avanzado: false,
-                num_usuarios:''
+                num_usuarios: ''
             })
         },
 
@@ -406,7 +407,7 @@ export default {
                 es_admin: true,
                 es_master: true,
                 ruc: Number(this.form.ruc || 0),
-                num_usuarios:''
+                num_usuarios: ''
             }
             await nuevoUsuario(usuario.token, usuario)
         },
@@ -472,6 +473,90 @@ export default {
 
             }
         },
+        // ---- util: normaliza y evita undefined ----
+        normalizeForExport(obj) {
+            if (obj === null || obj === undefined) return ''
+            if (typeof obj === 'object') {
+                try {
+                    // Aplanar objetos simples, si quieres puedes adaptar
+                    return Object.keys(obj).map(k => this.normalizeForExport(obj[k])).join(' | ')
+                } catch (e) {
+                    return String(obj)
+                }
+            }
+            return String(obj)
+        },
+
+        // ---- función que crea y descarga CSV ----
+        fcunionExportCSV(filename = 'empresas_export.csv') {
+            // columnas que quieres exportar (orden y cabeceras)
+            const headers = [
+                { key: 'bd', label: 'BD' },
+                { key: 'ruc', label: 'RUC' },
+                { key: 'name', label: 'EMPRESA' },
+                { key: 'namecomercial', label: 'NOMBRE COMERCIAL' },
+                { key: 'usuario', label: 'USUARIO' },
+                { key: 'pruebas', label: 'PRUEBA' },
+                { key: 'direccion', label: 'DIRECCIÓN' },
+                { key: 'departamento', label: 'DEPARTAMENTO' },
+                { key: 'provincia', label: 'PROVINCIA' },
+                { key: 'distrito', label: 'DISTRITO' },
+                { key: 'ubigeo', label: 'UBIGEO' },
+                { key: 'num_usuarios', label: 'LÍMITE USUARIOS' },
+                { key: 'anexo', label: 'ANEXO' },
+                { key: 'es_tienda', label: 'ES TIENDA' },
+                { key: 'transporte', label: 'TRANSPORTES' },
+                { key: 'caja2', label: 'CAJA V2' },
+                { key: 'multi_empresa', label: 'MULTI EMPRESA' },
+                { key: 'bigquery', label: 'BIGQUERY' },
+                { key: 'kardex_avanzado', label: 'KARDEX AVANZADO' },
+                { key: 'mod_activos', label: 'MODULO ACTIVOS' },
+                { key: 'ruc_asociado', label: 'RUC ASOCIADO' },
+                // agrega más campos si los necesitas
+            ]
+
+            // usa la lista filtrada (lo que ves) — cambia a this.ordenadas o this.desserts si quieres exportar todo
+            const rows = this.listaFiltrada.map(item => {
+                const row = {}
+                headers.forEach(h => {
+                    row[h.key] = this.normalizeForExport(item[h.key])
+                })
+                return row
+            })
+
+            // construir CSV
+            const csvRows = []
+            // encabezados
+            csvRows.push(headers.map(h => `"${h.label.replace(/"/g, '""')}"`).join(','))
+            // filas
+            rows.forEach(r => {
+                const line = headers.map(h => {
+                    const v = r[h.key] ?? ''
+                    // escapado básico y envoltura en comillas
+                    return `"${String(v).replace(/"/g, '""')}"`
+                }).join(',')
+                csvRows.push(line)
+            })
+
+            const csvString = csvRows.join('\r\n')
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' })
+
+            // descarga
+            if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+                // IE/Edge
+                window.navigator.msSaveOrOpenBlob(blob, filename)
+            } else {
+                const link = document.createElement('a')
+                const url = URL.createObjectURL(blob)
+                link.setAttribute('href', url)
+                link.setAttribute('download', filename)
+                link.style.visibility = 'hidden'
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+                URL.revokeObjectURL(url)
+            }
+        }
     },
 }
 </script>

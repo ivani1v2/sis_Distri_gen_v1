@@ -297,7 +297,7 @@ export default {
         }
     },
     mounted() {
-        allUsuarios().orderByChild('ruc').equalTo(Number(store.state.baseDatos.ruc_asociado)).on("value", this.onDataChange);
+        allUsuarios().orderByChild('ruc').equalTo((store.state.baseDatos.ruc_asociado)).on("value", this.onDataChange);
         // allUsuarios().on("value", this.onDataChange);
     },
     beforeDestroy() {

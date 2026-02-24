@@ -39,7 +39,7 @@
                 <v-container>
                     <v-row dense>
                         <v-col cols="12" sm="6">
-                            <v-text-field outlined dense v-model="ruc" type="number" append-icon="mdi-magnify"
+                            <v-text-field outlined dense v-model="ruc"  append-icon="mdi-magnify"
                                 @click:append="BuscarDocumento()" @keyup.enter="BuscarDocumento()"
                                 label="RUC"></v-text-field>
                         </v-col>

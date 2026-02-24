@@ -615,9 +615,9 @@ export default {
         async obtener_multi(data) {
             
             if (data.multi_empresa) {
-                const snap = await lee_multiEmpresas(data.ruc).once('value');
+                const snap = await lee_multiEmpresas(data.ruc_asociado).once('value');
                 const empresa = snap.val();
-
+                    console.log(empresa)
                 if (empresa && empresa.sedes) {
 
                     store.commit('array_sedes', empresa.sedes);

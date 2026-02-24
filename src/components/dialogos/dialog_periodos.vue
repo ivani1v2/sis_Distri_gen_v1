@@ -41,7 +41,19 @@
                                     </span>
                                 </v-list-item-subtitle>
                             </v-list-item-content>
-
+                            <!-- Mostrar bandera solo si NO hay inicio marcado, o si este mes es el marcado -->
+                            <v-tooltip bottom v-if="!inicioSistemaKey || mes.inicio_sistema">
+                                <template v-slot:activator="{ on, attrs }">
+                                    <div v-bind="attrs" v-on="on">
+                                        <v-btn icon x-small :color="mes.inicio_sistema ? 'orange' : 'grey'"
+                                            :disabled="loading" @click.stop="toggleInicioSistema(mes)">
+                                            <v-icon small>mdi-flag</v-icon>
+                                        </v-btn>
+                                    </div>
+                                </template>
+                                <span>{{ mes.inicio_sistema ? 'Inicio del sistema' : 'Marcar como inicio del sistema'
+                                    }}</span>
+                            </v-tooltip>
                             <v-list-item-action>
                                 <v-tooltip bottom :disabled="!getTooltipMensaje(mes)">
                                     <template v-slot:activator="{ on, attrs }">
@@ -161,7 +173,7 @@ export default {
     },
     data() {
         const nombresMeses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-        
+
         return {
             dialog: this.value,
             dialogConfirm: false,
@@ -174,37 +186,65 @@ export default {
             nombresMeses,
             snackbar: false,
             snackbarText: '',
-            snackbarColor: 'success'
+            snackbarColor: 'success',
+            inicioSistemaKey: null,
         };
     },
     computed: {
         listaAnios() {
             const anioActual = moment().year();
-            return Array.from({ length: anioActual - 2021 }, (_, i) => anioActual - i);
+            return Array.from({ length: anioActual - 2025 }, (_, i) => anioActual - i);
         },
 
         mesesDisponibles() {
             const anioActual = moment().year();
-            const mesActual = moment().month();
+            const mesActual = moment().month(); // 0-based (enero = 0)
 
-            return this.nombresMeses.map((nombre, index) => {
-                const mesNum = (index + 1).toString().padStart(2, '0');
-                const periodoKey = `${this.anioSeleccionado}-${mesNum}`;
+            // helper para comparar periodos "YYYY-MM" con números enteros YYYYMM
+            const periodoToNumber = (k) => {
+                if (!k) return null;
+                const [y, m] = k.split('-').map(Number);
+                if (!y || !m) return null;
+                return y * 100 + m;
+            }
+
+            const inicioNum = periodoToNumber(this.inicioSistemaKey); // null si no hay inicio marcado
+            const anioSel = Number(this.anioSeleccionado);
+
+            const meses = this.nombresMeses.map((nombre, index) => {
+                const mesNumStr = (index + 1).toString().padStart(2, '0');
+                const periodoKey = `${this.anioSeleccionado}-${mesNumStr}`;
                 const periodoBD = this.periodosBD[periodoKey];
                 const estado = periodoBD?.estado || 'open';
-
+                const inicioSistema = !!periodoBD?.inicio_sistema;
                 const disponible = this.esMesDisponible(index, anioActual, mesActual, periodoBD);
-                
+
                 return {
                     index,
-                    numero: mesNum,
+                    numero: mesNumStr,
                     nombre,
                     key: periodoKey,
                     estado,
                     abierto: estado === 'open',
-                    disponible
+                    disponible,
+                    inicio_sistema: inicioSistema
                 };
             });
+
+            // Si no hay inicioSistemaKey, devolvemos los meses calculados (como antes)
+            if (!inicioNum) return meses;
+
+            // Filtrar: solo incluir meses cuyo periodo >= inicioSistemaKey
+            const resultado = meses.filter(m => {
+                const mNum = periodoToNumber(m.key);
+                if (!mNum) return false;
+                // Si el mes pertenece a un año menor al inicio, se excluye. Si mayor o igual, se incluye.
+                return mNum >= inicioNum;
+            });
+
+            // Si el inicio marcado pertenece a un año anterior al año seleccionado, y por tanto todos los meses del
+            // año seleccionado son >= inicio, se mostrarán todos; la lógica anterior lo cubre.
+            return resultado;
         },
 
         accionConfirm() {
@@ -256,7 +296,7 @@ export default {
                 'success--text': 'paso-text-success',
                 'warning--text': 'paso-text-warning'
             };
-            
+
             for (const [key, value] of Object.entries(clases)) {
                 if (paso.class?.includes(key)) return value;
             }
@@ -273,6 +313,10 @@ export default {
             try {
                 const snapshot = await all_periodos().once('value');
                 this.periodosBD = snapshot.val() || {};
+
+                // detectar si existe un periodo marcado como inicio_sistema
+                const entrada = Object.entries(this.periodosBD).find(([key, val]) => !!val && !!val.inicio_sistema);
+                this.inicioSistemaKey = entrada ? entrada[0] : null;
             } catch (error) {
                 console.error('Error al cargar períodos:', error);
                 this.mostrarMensaje('Error al cargar períodos', 'error');
@@ -297,10 +341,10 @@ export default {
         puedeModificar(mes) {
             if (!mes.disponible) return false;
             if (mes.estado === 'open') return true;
-            
+
             const periodoSiguiente = this.getPeriodoSiguiente(mes);
             const estadoSiguiente = this.periodosBD[periodoSiguiente]?.estado;
-            
+
             if (estadoSiguiente === 'open') return true;
             if (!this.periodosBD[periodoSiguiente]) {
                 const [anioSig, mesSig] = periodoSiguiente.split('-').map(Number);
@@ -308,7 +352,7 @@ export default {
                 const mesActual = moment().month() + 1;
                 return anioSig > anioActual || (anioSig === anioActual && mesSig > mesActual);
             }
-            
+
             return false;
         },
 
@@ -343,7 +387,7 @@ export default {
             const estadoSiguiente = this.periodosBD[periodoSiguiente]?.estado;
             const [anioSig, mesSig] = periodoSiguiente.split('-').map(Number);
             const nombreMesSig = this.nombresMeses[mesSig - 1];
-            
+
             this.esAperturaRetroactiva = this.esAperturaRetroactivaDePeriodo(mes);
 
             if (estadoSiguiente === 'close') {
@@ -415,7 +459,7 @@ export default {
             const periodoSiguiente = this.getPeriodoSiguiente(mes);
             const [anioSig, mesSig] = periodoSiguiente.split('-').map(Number);
             const nombreMesSig = this.nombresMeses[mesSig - 1];
-            
+
             this.pasosConfirm.push({
                 icon: 'mdi-lock',
                 text: `Cerrar ${mes.nombre} ${this.anioSeleccionado}`,
@@ -424,7 +468,7 @@ export default {
                 periodo: mes.key,
                 ejecutarCierre: true
             });
-            
+
             this.pasosConfirm.push({
                 icon: 'mdi-lock-open-variant',
                 text: `Próximo período: ${nombreMesSig} ${anioSig}`,
@@ -447,7 +491,7 @@ export default {
 
             try {
                 const pasosAccion = this.pasosConfirm.filter(p => p.accion);
-                
+
                 for (const paso of pasosAccion) {
                     if (paso.accion === 'cerrar') {
                         await this.ejecutarCierrePeriodo(paso.periodo);
@@ -481,11 +525,11 @@ export default {
             const periodoData = {
                 estado,
                 actualizado: moment().unix(),
-                usuario: store.state.usuario?.email || 'sistema'
+                usuario: store.state.permisos.usuario || 'sistema'
             };
 
             await nuevo_periodo_k(periodoKey, periodoData);
-            
+
             this.periodosBD[periodoKey] = {
                 ...this.periodosBD[periodoKey],
                 ...periodoData
@@ -516,7 +560,7 @@ export default {
 
                 if (response.data.data?.periodo_siguiente) {
                     const periodoSigKey = response.data.data.periodo_siguiente.split('-').reverse().join('-');
-                    
+
                     if (!this.periodosBD[periodoSigKey]) {
                         await nuevo_periodo_k(periodoSigKey, {
                             estado: 'open',
@@ -536,7 +580,60 @@ export default {
         cerrar() {
             this.dialog = false;
             this.$emit('cerrar');
-        }
+        },
+        async toggleInicioSistema(mes) {
+            // Si ya está marcado, lo desmarcamos; si no, marcamos este y desmarcamos el anterior
+            try {
+                this.loading = true;
+
+                const periodoKey = mes.key;
+                const yaInicio = !!(this.periodosBD[periodoKey] && this.periodosBD[periodoKey].inicio_sistema);
+
+                if (yaInicio) {
+                    // desmarcarlo
+                    await this._setInicioSistema(periodoKey, false);
+                    this.mostrarMensaje(`Se desmarcó ${mes.nombre} ${this.anioSeleccionado} como inicio del sistema`, 'success');
+                } else {
+                    // buscar si hay otro marcado y desmarcarlo
+                    const anteriorKey = Object.keys(this.periodosBD).find(k => this.periodosBD[k]?.inicio_sistema);
+                    if (anteriorKey) {
+                        await this._setInicioSistema(anteriorKey, false);
+                    }
+                    // marcar el nuevo
+                    await this._setInicioSistema(periodoKey, true);
+                    this.mostrarMensaje(`${mes.nombre} ${this.anioSeleccionado} marcado como inicio del sistema`, 'success');
+                }
+
+                // recargar periodos en memoria
+                await this.cargarPeriodos();
+            } catch (err) {
+                console.error('Error toggleInicioSistema:', err);
+                this.mostrarMensaje('Error al actualizar inicio del sistema', 'error');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        // helper privado que escribe en BD y actualiza periodosBD localmente
+        async _setInicioSistema(periodoKey, valorBool) {
+            const periodoData = {
+                inicio_sistema: !!valorBool,
+                actualizado: moment().unix(),
+                usuario: store.state.permisos.usuario || 'sistema'
+            };
+
+            // preserva estado si existe; solo actualiza inicio_sistema y actualizado/usuario
+            await nuevo_periodo_k(periodoKey, {
+                ...(this.periodosBD[periodoKey] || {}),
+                ...periodoData
+            });
+
+            // actualizar cache local
+            this.periodosBD[periodoKey] = {
+                ...this.periodosBD[periodoKey],
+                ...periodoData
+            };
+        },
     }
 };
 </script>

@@ -26,7 +26,7 @@
 
               <v-btn color="primary" @click="cargarCierrePeriodo" :loading="cargando" :disabled="!periodoSeleccionado"
                 height="35" class="px-3">
-                <v-icon left small>mdi-magnify</v-icon> 
+                <v-icon left small>mdi-magnify</v-icon>
               </v-btn>
             </div>
           </v-col>
@@ -134,7 +134,8 @@
       </v-card-title>
       <v-alert v-if="filtrosCambiados && datosCargados" type="warning" dense text border="left" class="mx-4 mt-2 mb-2">
         <div class="d-flex align-center">
-          <span class="caption font-weight-medium">Periodo cambiado: {{ meses[filtros.mes - 1] }} {{ filtros.anio}}</span>
+          <span class="caption font-weight-medium">Periodo cambiado: {{ meses[filtros.mes - 1] }} {{
+            filtros.anio}}</span>
           <v-spacer></v-spacer>
           <v-btn x-small color="success" @click="cargarCierrePeriodo" :loading="cargando" class="ml-2">
             <v-icon x-small left>mdi-refresh</v-icon>
@@ -514,11 +515,20 @@ export default {
 
     async cargarDatosPeriodoAbierto(productosStore) {
       try {
+        // construir periodoKey en el mismo formato que usas en periodosBD (YYYY-MM)
+        const periodoKey = `${this.filtros.anio}-${String(this.filtros.mes).padStart(2, '0')}`;
+
+        // Determinar allowFullScan según el flag inicio_sistema del periodo
+        const allowFullScan = !!(this.periodosBD[periodoKey] && this.periodosBD[periodoKey].inicio_sistema);
+
+        console.debug('cargarDatosPeriodoAbierto -> periodoKey:', periodoKey, 'allowFullScan:', allowFullScan);
+        if (allowFullScan) this.mostrarSnackbar('allowFullScan habilitado por inicio_sistema', 'info');
+
         const response = await axios.post(
           'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
           {
             bd: store.state.baseDatos.bd,
-            data: { periodo: this.periodoSeleccionado },
+            data: { periodo: this.periodoSeleccionado, allowFullScan }, // <-- aquí usamos la variable
             metodo: 'reporte_stock_actual'
           },
           { timeout: 30000 }
