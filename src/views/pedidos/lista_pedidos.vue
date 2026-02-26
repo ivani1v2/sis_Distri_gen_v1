@@ -123,82 +123,75 @@
         </v-card>
 
         <v-card v-if="$vuetify.breakpoint.mdAndUp">
-            <v-simple-table dense fixed-header height="65vh">
-                <thead>
-                    <tr>
-                        <th>Vend.</th>
-                        <th>Cliente</th>
-                        <th>Obs</th>
-                        <th>Fecha</th>
-                        <th>Estado</th>
-                        <th>Total</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="pedido in pedidosFiltrados" :key="pedido.id">
-                        <td style="font-size:75%;">{{ pedido.id }}</td>
-                        <td style="font-size:75%;">{{ pedido.doc_numero }} - {{ pedido.cliente_nombre }}</td>
-                        <td style="font-size:75%;">{{ pedido.observacion }}</td>
-                        <td style="font-size:75%;">{{ pedido.fecha }}</td>
-                        <td>
-                            <v-chip x-small :color="chipColor(pedido.estado)" dark>
-                                {{ (pedido.estado || '').toString().toUpperCase() }}
-                            </v-chip>
-                        </td>
-                        <td style="font-size:75%;"><Strong>{{ pedido.moneda }}</Strong>{{ number2(pedido.total) }}</td>
-
-                        <td>
-                            <v-row dense>
-                                <v-col cols='6'>
-                                    <v-btn icon small @click="verDetalle(pedido)">
-                                        <v-icon color="blue">mdi-eye</v-icon>
+            <v-data-table dense :headers="headersTabla" :items="pedidosFiltrados" :items-per-page="15" :footer-props="{
+                'items-per-page-options': [10, 15, 25, 50, -1],
+                'items-per-page-text': 'Filas por página'
+            }" fixed-header height="65vh" class="elevation-0">
+                <template v-slot:[`item.id`]="{ item }">
+                    <span style="font-size:75%;">{{ item.id }}</span>
+                </template>
+                <template v-slot:[`item.cliente`]="{ item }">
+                    <span style="font-size:75%;">{{ item.doc_numero }} - {{ item.cliente_nombre }}</span>
+                </template>
+                <template v-slot:[`item.observacion`]="{ item }">
+                    <span style="font-size:75%;">{{ item.observacion }}</span>
+                </template>
+                <template v-slot:[`item.fecha`]="{ item }">
+                    <span style="font-size:75%;">{{ item.fecha }}</span>
+                </template>
+                <template v-slot:[`item.estado`]="{ item }">
+                    <v-chip x-small :color="chipColor(item.estado)" dark>
+                        {{ (item.estado || '').toString().toUpperCase() }}
+                    </v-chip>
+                </template>
+                <template v-slot:[`item.total`]="{ item }">
+                    <span style="font-size:75%;"><strong>{{ item.moneda }}</strong>{{ number2(item.total) }}</span>
+                </template>
+                <template v-slot:[`item.acciones`]="{ item }">
+                    <v-row dense>
+                        <v-col cols='6'>
+                            <v-btn icon small @click="verDetalle(item)">
+                                <v-icon color="blue">mdi-eye</v-icon>
+                            </v-btn>
+                        </v-col>
+                        <v-col cols='6'>
+                            <v-menu>
+                                <template v-slot:activator="{ on, attrs }">
+                                    <v-btn icon v-bind="attrs" v-on="on">
+                                        <v-icon>mdi-dots-vertical</v-icon>
                                     </v-btn>
-                                </v-col>
-                                <v-col cols='6'>
-                                    <v-menu>
-                                        <template v-slot:activator="{ on, attrs }">
-                                            <v-btn icon v-bind="attrs" v-on="on">
-                                                <v-icon>mdi-dots-vertical</v-icon>
-                                            </v-btn>
-                                        </template>
-                                        <v-list dense>
-                                            <v-list-item @click='pedidoSeleccionado = pedido, imprimir(pedido)'>
-                                                <v-list-item-icon>
-                                                    <v-icon color="success"> mdi-printer</v-icon>
-                                                </v-list-item-icon>
-                                                <v-list-item-title>Imprimir</v-list-item-title>
-                                            </v-list-item>
-                                            <v-list-item @click='descargar(pedido)'>
-                                                <v-list-item-icon>
-                                                    <v-icon color="info"> mdi-download</v-icon>
-                                                </v-list-item-icon>
-                                                <v-list-item-title>Descargar</v-list-item-title>
-                                            </v-list-item>
-                                            <v-list-item @click='editar(pedido)' v-if="pedido.estado === 'pendiente'">
-                                                <v-list-item-icon>
-                                                    <v-icon color="success"> mdi-pencil</v-icon>
-                                                </v-list-item-icon>
-                                                <v-list-item-title>Editar</v-list-item-title>
-                                            </v-list-item>
-
-                                            <v-list-item @click='anular(pedido)' v-if="pedido.estado === 'pendiente'">
-                                                <v-list-item-icon>
-                                                    <v-icon color="error"> mdi-delete</v-icon>
-                                                </v-list-item-icon>
-                                                <v-list-item-title>Anular</v-list-item-title>
-                                            </v-list-item>
-                                        </v-list>
-                                    </v-menu>
-                                </v-col>
-                            </v-row>
-
-
-
-                        </td>
-                    </tr>
-                </tbody>
-            </v-simple-table>
+                                </template>
+                                <v-list dense>
+                                    <v-list-item @click='pedidoSeleccionado = item, imprimir(item)'>
+                                        <v-list-item-icon>
+                                            <v-icon color="success"> mdi-printer</v-icon>
+                                        </v-list-item-icon>
+                                        <v-list-item-title>Imprimir</v-list-item-title>
+                                    </v-list-item>
+                                    <v-list-item @click='descargar(item)'>
+                                        <v-list-item-icon>
+                                            <v-icon color="info"> mdi-download</v-icon>
+                                        </v-list-item-icon>
+                                        <v-list-item-title>Descargar</v-list-item-title>
+                                    </v-list-item>
+                                    <v-list-item @click='editar(item)' v-if="item.estado === 'pendiente'">
+                                        <v-list-item-icon>
+                                            <v-icon color="success"> mdi-pencil</v-icon>
+                                        </v-list-item-icon>
+                                        <v-list-item-title>Editar</v-list-item-title>
+                                    </v-list-item>
+                                    <v-list-item @click='anular(item)' v-if="item.estado === 'pendiente'">
+                                        <v-list-item-icon>
+                                            <v-icon color="error"> mdi-delete</v-icon>
+                                        </v-list-item-icon>
+                                        <v-list-item-title>Anular</v-list-item-title>
+                                    </v-list-item>
+                                </v-list>
+                            </v-menu>
+                        </v-col>
+                    </v-row>
+                </template>
+            </v-data-table>
         </v-card>
         <!-- LISTA MÓVIL (CARDS) -->
         <div v-else class="mb-12">
@@ -413,6 +406,15 @@ export default {
             dialFiltroMovil: false,
             moneda: 'S/',
             dialogBuscaClientes: false,
+            headersTabla: [
+                { text: 'Vend.', value: 'id', sortable: true },
+                { text: 'Cliente', value: 'cliente', sortable: false },
+                { text: 'Obs', value: 'observacion', sortable: false },
+                { text: 'Fecha', value: 'fecha', sortable: true },
+                { text: 'Estado', value: 'estado', sortable: true },
+                { text: 'Total', value: 'total', sortable: true },
+                { text: 'Acciones', value: 'acciones', sortable: false },
+            ],
             dialogDeudasCliente: false,
             clienteParaNuevoPedido: null,
             dialogNuevoCliente: false
