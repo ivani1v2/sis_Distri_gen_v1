@@ -9,6 +9,10 @@
 
                 <v-spacer></v-spacer>
 
+                <v-btn v-if="false" x-small color="error" @click="obtener_usuarios()">
+                    OBTENER USUARIOS
+                </v-btn>
+                <v-spacer></v-spacer>
                 <!-- Contador de usuarios -->
 
                 <v-chip small label class="mr-3" v-if="desserts && desserts.length">
@@ -334,6 +338,36 @@ export default {
     },
 
     methods: {
+        async obtener_usuarios() {
+            try {
+                const snap = await allUsuarios().once("value");
+                if (!snap.exists()) return console.log("No hay usuarios");
+
+                const updates = {};
+                let cambiados = 0;
+
+                snap.forEach(child => {
+                    const uid = child.key;
+                    const data = child.val();
+
+                    if (data.ruc !== undefined && typeof data.ruc === "number") {
+                        // convertir a texto
+                        updates[`${uid}/ruc`] = String(data.ruc);
+                        cambiados++;
+                    }
+                });
+
+                if (Object.keys(updates).length) {
+                    await allUsuarios().update(updates);
+                    console.log(`RUC convertidos a string: ${cambiados}`);
+                } else {
+                    console.log("Todos los RUC ya están en formato texto");
+                }
+
+            } catch (err) {
+                console.error("Error convirtiendo RUC:", err);
+            }
+        },
         abrirCrearUsuario() {
             if (!this.puedeCrearUsuario) {
                 const max = this.maxUsuarios;
@@ -523,7 +557,7 @@ export default {
                     correo: this.email + "@domotica.com",
                     pass: this.password,
                     bd: store.state.baseDatos.bd,
-                    ruc: Number(store.state.baseDatos.ruc_asociado)
+                    ruc: String(store.state.baseDatos.ruc_asociado)
                 };
 
                 await nuevoUsuario(token, array);

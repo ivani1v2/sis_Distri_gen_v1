@@ -1409,7 +1409,7 @@ function tabla_A4(array, linea) {
       nuevoArray.push([
         item.cantidad,
         item.medida,
-        item.nombre + tg,
+        item.id +' - ' + item.nombre + tg,
         precioBase.toFixed(2),
         totalLinea.toFixed(2) + obs,
       ]);
@@ -1418,7 +1418,7 @@ function tabla_A4(array, linea) {
       nuevoArray.push([
         item.cantidad,
         item.medida,
-        item.nombre + tg,
+        item.id +' - ' +item.nombre + tg,
         precioBase.toFixed(2), // P.Unitario base
         textoDescuento, // %Desc 1/2/3
         precioNeto.toFixed(2), // P.Neto

@@ -457,7 +457,14 @@ export default {
             this.filtra()
         },
         estado(nv) { saveFiltros({ estado: nv }); this.filtra(); },
-        busca_p(nv) { saveFiltros({ busca_p: nv }); },
+         busca_p(nv) {
+    clearTimeout(this._buscaTimeout);
+    this._buscaTimeout = setTimeout(() => {
+      saveFiltros({ busca_p: nv });
+      // si la búsqueda requiere recargar del servidor:
+      this._refreshClientesYFiltrado();
+    }, 350); // 300-500 ms suele ir bien
+  },
         async sede_actual(nv) {
             saveFiltros({ sede: nv });
             await this._refreshClientesYFiltrado();   // 👈 resuscribe + filtra
@@ -540,7 +547,7 @@ export default {
                 }
 
                 const snap = await q.get();
-
+                console.log(snap.size)
                 this.array_clientes = snap.docs.map(d => {
                     //console.log(d.data())
                     const c = { id: d.id, ...d.data() };
@@ -696,7 +703,7 @@ export default {
                 //console.log(this.sede_actual)
                 // 1️⃣ Armar query optimizada (usa índices ya creados)
                 let q = colRuta_x_dia()
-                    //.where('sede', '==', String(this.sede_actual))
+                    .where('sede', '==', String(this.sede_actual))
                     .where('fecha', '>=', start)
                     .where('fecha', '<=', end);
 
@@ -706,8 +713,7 @@ export default {
 
                 // 2️⃣ Obtener datos directamente
                 const snap = await q.get();
-                //   console.log('filtra(): visitas encontradas', snap.size);
-
+                  console.log('filtra(): visitas encontradas', snap.size);
                 // 3️⃣ Mapear cliente_id -> estado prioritario
 
                 const bestByCliente = new Map();
@@ -756,6 +762,192 @@ export default {
                 this.cargando = false;
             }
         },
+
+      async filtra() {
+            const start = moment(this.date, 'YYYY-MM-DD').startOf('day').unix();
+            const end = moment(this.date, 'YYYY-MM-DD').endOf('day').unix();
+
+            if (!this.sede_actual) {
+                this.lista_clientes = [];
+                return;
+            }
+
+            this.cargando = true;
+            this.error = null;
+
+            // prioridad: venta > pre-venta > visita
+            const rank = { 'venta': 3, 'pre-venta': 2, 'visita': 1 };
+
+            try {
+                //console.log(this.sede_actual)
+                // 1️⃣ Armar query optimizada (usa índices ya creados)
+                let q = colRuta_x_dia()
+                    .where('sede', '==', String(this.sede_actual))
+                    .where('fecha', '>=', start)
+                    .where('fecha', '<=', end);
+
+                /*  if (this.zona && this.zona.toUpperCase() !== 'TODAS') {
+                      q = q.where('zona', '==', this.zona);
+                  }*/
+
+                // 2️⃣ Obtener datos directamente
+                const snap = await q.get();
+                  console.log('filtra(): visitas encontradas', snap.size);
+                // 3️⃣ Mapear cliente_id -> estado prioritario
+
+                const bestByCliente = new Map();
+                snap.forEach(d => {
+                    //console.log(d.data())
+                    const r = d.data() || {};
+                    const id = String(r.cliente_id || '').trim();
+                    const est = String(r.estado || '').toLowerCase();
+                    if (!id) return;
+
+                    const prev = bestByCliente.get(id);
+                    if (!prev || (rank[est] || 0) > (rank[String(prev).toLowerCase()] || 0)) {
+                        bestByCliente.set(id, r.estado);
+                    }
+                });
+
+                // 4️⃣ Armar la lista base con estados aplicados
+                const base = Array.isArray(this.array_clientes) ? this.array_clientes : [];
+                var arrDia = base;
+                if (this.isMobile) {
+                    //   arrDia = base.length > 300 ? base.slice(0, 300) : base;
+                }
+
+
+                this.lista_clientes = arrDia.map(c => {
+                    const id = String(c.documento || c.id || '').trim();
+                    const estado = bestByCliente.get(id) || 'pendiente';
+                    return { ...c, estado };
+                });
+
+                // 5️⃣ Filtro visual (por estado)
+                if (this.estado && this.estado !== 'todos') {
+                    const e = String(this.estado).toLowerCase();
+                    const include = e === 'atendido'
+                        ? new Set(['atendido', 'venta', 'pre-venta'])
+                        : new Set([e]);
+                    this.lista_clientes = this.lista_clientes.filter(
+                        x => include.has(String(x.estado || '').toLowerCase())
+                    );
+                }
+            } catch (e) {
+                console.error('Error en filtra():', e);
+                this.error = 'No se pudo cargar la lista de clientes.';
+                this.lista_clientes = [];
+            } finally {
+                this.cargando = false;
+            }
+        },
+
+        /*        async filtra() {
+            const start = moment(this.date, 'YYYY-MM-DD').startOf('day').unix();
+            const end = moment(this.date, 'YYYY-MM-DD').endOf('day').unix();
+
+            if (!this.sede_actual) {
+                this.lista_clientes = [];
+                return;
+            }
+
+            this.cargando = true;
+            this.error = null;
+
+            // prioridad: venta > pre-venta > visita
+            const rank = { 'venta': 3, 'pre-venta': 2, 'visita': 1 };
+
+            try {
+                // 0️⃣ Si no tienes clientes cargados, evitar hacer queries innecesarias
+                const base = Array.isArray(this.array_clientes) ? this.array_clientes : [];
+                if (base.length === 0) {
+                    this.lista_clientes = [];
+                    this.cargando = false;
+                    return;
+                }
+
+                // 1️⃣ Preparar array de ids (documento o id)
+                const clientIds = base.map(c => String(c.documento || c.id || '').trim()).filter(Boolean);
+
+                // si no hay ids válidos
+                if (clientIds.length === 0) {
+                    this.lista_clientes = base.map(c => ({ ...c, estado: 'pendiente' }));
+                    this.cargando = false;
+                    return;
+                }
+
+                // Helper para chunking (Firestore 'in' permite hasta 10 items)
+                const chunkArray = (arr, size = 10) => {
+                    const out = [];
+                    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+                    return out;
+                };
+
+                const chunks = chunkArray(clientIds, 10);
+
+                // 2️⃣ Ejecutar queries por chunk en paralelo
+                const promises = chunks.map(chunk => {
+                    // Construir query: sede + cliente_id in chunk + rango fecha
+                    let q = colRuta_x_dia()
+                        .where('sede', '==', String(this.sede_actual))
+                        .where('cliente_id', 'in', chunk)    // <= 10 ids
+                        .where('fecha', '>=', start)
+                        .where('fecha', '<=', end);
+
+                    // Opcional: pedir solo campos necesarios si tu SDK lo permite
+                    // q = q.select('cliente_id','estado','fecha');
+
+                    return q.get();
+                });
+
+                const snaps = await Promise.all(promises);
+
+                // 3️⃣ Construir map id -> mejor estado
+                const bestByCliente = new Map();
+
+                for (const snap of snaps) {
+                    snap.forEach(d => {
+                        const r = d.data() || {};
+                        const id = String(r.cliente_id || '').trim();
+                        if (!id) return;
+                        const est = String(r.estado || '').toLowerCase();
+                        const prev = bestByCliente.get(id);
+                        if (!prev || (rank[est] || 0) > (rank[String(prev).toLowerCase()] || 0)) {
+                            bestByCliente.set(id, r.estado);
+                        }
+                    });
+                }
+
+                // 4️⃣ Construir lista_clientes aplicando el estado y filtros de UI
+                this.lista_clientes = base.map(c => {
+                    const id = String(c.documento || c.id || '').trim();
+                    const estado = bestByCliente.get(id) || 'pendiente';
+                    return { ...c, estado };
+                });
+
+                // 5️⃣ Filtro visual por estado si corresponde
+                if (this.estado && this.estado !== 'todos') {
+                    const e = String(this.estado).toLowerCase();
+                    const include = e === 'atendido'
+                        ? new Set(['atendido', 'venta', 'pre-venta'])
+                        : new Set([e]);
+                    this.lista_clientes = this.lista_clientes.filter(
+                        x => include.has(String(x.estado || '').toLowerCase())
+                    );
+                }
+
+                // 6️⃣ (Opcional) ordenar aquí si lo deseas
+                // this.lista_clientes = this.getSortedList(this.lista_clientes);
+
+            } catch (e) {
+                console.error('Error en filtra():', e);
+                this.error = 'No se pudo cargar la lista de clientes.';
+                this.lista_clientes = [];
+            } finally {
+                this.cargando = false;
+            }
+        },*/
+
 
 
         abre_mapa(cliente) {

@@ -406,7 +406,7 @@ export default {
                 reportes_operaciones: true,
                 es_admin: true,
                 es_master: true,
-                ruc: Number(this.form.ruc || 0),
+                ruc: String(this.form.ruc || 0),
                 num_usuarios: ''
             }
             await nuevoUsuario(usuario.token, usuario)
