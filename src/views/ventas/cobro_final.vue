@@ -605,7 +605,7 @@ export default {
             this.cabecera.placa_cliente = this.placa_cliente
             this.cabecera.automata = auto
             this.cabecera.modopago = this.modopagos
-
+            this.cabecera.cliente_zona = this.cliente_selecto?.zona || ''
             const metodosConMonto = this.pagoInicialCredito.filter(p => parseFloat(p.monto) > 0)
 
             // Solo guarda si hay alguno

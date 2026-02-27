@@ -21,6 +21,7 @@
                 <div class="text-subtitle-2 grey--text">Cliente seleccionado</div>
                 <div><b>DOC:</b> {{ selectedCli.documento || '—' }}</div>
                 <div>{{ selectedCli.nombre || '—' }}</div>
+                <div><b>Zona:</b> {{ selectedCli.zona || '—' }}</div>
                 <div>{{ selectedCli.nota || '—' }}</div>
             </v-card>
 
