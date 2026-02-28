@@ -1,43 +1,64 @@
 <template>
   <div class="pa-4">
     <v-card outlined class="pa-4 mb-4">
-      <v-row justify="space-between" align="center">
-        <v-col cols="12" sm="4">
+      <v-row align="center">
+        <v-col cols="12" md="4" class="text-center text-md-left">
           <h2 class="text-h6">Bonos y Precios Globales</h2>
         </v-col>
-        <v-col cols="12" sm="8" class="text-right">
-          <v-btn color="primary" @click="abrirNuevo()" class="mr-2">
-            <v-icon left>mdi-plus</v-icon>Nuevo Movimiento
-          </v-btn>
-          <v-btn color="success" :disabled="!seleccionados.length" @click="activarMasivo(true)">
-            <v-icon left>mdi-check-all</v-icon>Activar ({{ seleccionados.length }})
-          </v-btn>
-          <v-btn color="error" class="ml-2" :disabled="!seleccionados.length" @click="activarMasivo(false)">
-            <v-icon left>mdi-close-box-multiple</v-icon>Desactivar
-          </v-btn>
+        <v-col cols="12" md="8">
+          <v-row class="justify-center justify-md-end" dense>
+            <v-col cols="6" md="auto">
+              <v-btn block color="primary" @click="abrirNuevo">
+                <v-icon left>mdi-plus</v-icon>
+                Nuevo
+              </v-btn>
+            </v-col>
+            <v-col cols="6" md="auto">
+              <v-btn block color="green" dark @click="exportarExcel" :loading="exportando">
+                <v-icon left>mdi-microsoft-excel</v-icon>
+                Exportar
+              </v-btn>
+            </v-col>
+            <v-col cols="6" md="auto">
+              <v-btn block color="success" :disabled="!seleccionados.length" @click="activarMasivo(true)">
+                <v-icon left>mdi-check-all</v-icon>
+                Activar ({{ seleccionados.length }})
+              </v-btn>
+            </v-col>
+            <v-col cols="6" md="auto">
+              <v-btn block color="error" :disabled="!seleccionados.length" @click="activarMasivo(false)">
+                <v-icon left>mdi-close-box-multiple</v-icon>
+                Desactivar
+              </v-btn>
+            </v-col>
+          </v-row>
         </v-col>
       </v-row>
     </v-card>
 
-    <v-card outlined class="pa-3 mb-4">
-      <v-row dense align="center">
-        <v-col cols="12" sm="3">
-          <v-autocomplete v-model="filtroProductos" :items="productosItems" item-text="nombre" item-value="id" multiple
-            chips small-chips deletable-chips outlined dense clearable label="Filtrar por Producto"
-            prepend-inner-icon="mdi-package-variant" :menu-props="{ maxHeight: 300 }">
+    <v-card outlined class="pa-3">
+      <v-row no-gutters>
+        <v-col cols="12" sm="3" class="pb-1 pb-sm-0 pr-sm-2">
+          <v-autocomplete v-model="filtroProductos" :items="productosItems" :item-text="p => p.id + ' - ' + p.nombre"
+            item-value="id" multiple chips small-chips deletable-chips outlined dense clearable
+            label="Filtrar por Producto" prepend-inner-icon="mdi-package-variant">
+            <template v-slot:item="{ item }">
+              <v-list-item-content>
+                <v-list-item-title>{{ item.id }} - {{ item.nombre }}</v-list-item-title>
+              </v-list-item-content>
+            </template>
           </v-autocomplete>
         </v-col>
-        <v-col cols="12" sm="3">
+        <v-col cols="12" sm="3" class="pb-1 pb-sm-0 px-sm-2">
           <v-autocomplete v-model="filtroProveedores" :items="proveedoresItems" multiple chips small-chips
-            deletable-chips outlined dense clearable label="Filtrar por Proveedor"
-            prepend-inner-icon="mdi-truck"></v-autocomplete>
+            deletable-chips outlined dense clearable label="Filtrar por Proveedor" prepend-inner-icon="mdi-truck" />
         </v-col>
-        <v-col cols="12" sm="3">
+        <v-col cols="12" sm="3" class="pb-1 pb-sm-0 px-sm-2">
           <v-text-field v-model="filtroNombre" outlined dense clearable label="Buscar por nombre"
-            prepend-inner-icon="mdi-magnify"></v-text-field>
+            prepend-inner-icon="mdi-magnify" />
         </v-col>
-        <v-col cols="12" sm="3">
-          <v-btn-toggle v-model="filtroEstado" mandatory dense>
+        <v-col cols="12" sm="3" class="pb-0 pb-sm-0 pl-sm-2">
+          <v-btn-toggle v-model="filtroEstado" mandatory dense class="d-flex justify-center justify-sm-start">
             <v-btn small value="todos">Todos</v-btn>
             <v-btn small value="activos" color="success">Activos</v-btn>
             <v-btn small value="inactivos" color="error">Inactivos</v-btn>
@@ -46,11 +67,12 @@
       </v-row>
     </v-card>
 
+
     <v-card outlined class="d-none d-md-block">
       <v-data-table v-model="seleccionados" :headers="headers" :items="movimientosFiltrados" dense class="elevation-1"
         show-select item-key="id" :items-per-page="15">
 
-        <template v-slot:item.activo="{ item }">
+        <template v-slot:[`item.activo`]="{ item }">
           <v-chip x-small :color="item.activo ? 'success' : 'error'" text-color="white">
             {{ item.activo ? 'Activo' : 'Inactivo' }}
           </v-chip>
@@ -59,36 +81,36 @@
           </v-chip>
         </template>
 
-        <template v-slot:item.tipo="{ item }">
+        <template v-slot:[`item.tipo`]="{ item }">
           <v-chip x-small :color="item.tipo === 'precio' ? 'blue' : 'orange'" text-color="white">
             <v-icon x-small left>{{ item.tipo === 'precio' ? 'mdi-tag-multiple' : 'mdi-gift' }}</v-icon>
             {{ item.tipo === 'precio' ? 'Precio' : 'Bono' }}
           </v-chip>
         </template>
 
-        <template v-slot:item.observacion="{ item }">
+        <template v-slot:[`item.observacion`]="{ item }">
           <span class="text-caption">{{ item.observacion || '-' }}</span>
         </template>
 
-        <template v-slot:item.proveedor="{ item }">
+        <template v-slot:[`item.proveedor`]="{ item }">
           <span class="text-caption">{{ item.proveedor || '-' }}</span>
         </template>
 
-        <template v-slot:item.fecha_vencimiento="{ item }">
+        <template v-slot:[`item.fecha_vencimiento`]="{ item }">
           <span v-if="item.fecha_vencimiento" class="text-caption">
             {{ formatearFecha(item.fecha_vencimiento) }}
           </span>
           <span v-else class="text-caption grey--text">-</span>
         </template>
 
-        <template v-slot:item.productos_asignados="{ item }">
+        <template v-slot:[`item.productos_asignados`]="{ item }">
           <v-chip x-small outlined color="primary" @click="verProductosAsignados(item)">
             <v-icon x-small left class="mr-1">mdi-package-variant</v-icon>
             {{ contarProductosAsignados(item) }}
           </v-chip>
         </template>
 
-        <template v-slot:item.accion="{ item }">
+        <template v-slot:[`item.accion`]="{ item }">
           <v-menu bottom left>
             <template v-slot:activator="{ on, attrs }">
               <v-btn icon small v-bind="attrs" v-on="on">
@@ -111,11 +133,6 @@
                   </v-icon>
                 </v-list-item-icon>
                 <v-list-item-content>{{ item.activo ? 'Desactivar' : 'Activar' }}</v-list-item-content>
-              </v-list-item>
-              <v-divider></v-divider>
-              <v-list-item @click="anularTransferencia(item)">
-                <v-list-item-icon><v-icon color="red">mdi-delete</v-icon></v-list-item-icon>
-                <v-list-item-content>Eliminar</v-list-item-content>
               </v-list-item>
             </v-list>
           </v-menu>
@@ -214,6 +231,7 @@ import { allBono, nuevoBono, eliminabono } from "../../db";
 import VisorProductosBono from './components/VisorProductosBono.vue';
 import dial_agregar_regla from "./dialogos/dial_agregar_regla.vue";
 import dial_config_bono from "./dialogos/dial_config_bono.vue";
+import * as XLSX from 'xlsx';
 
 export default {
   components: {
@@ -245,6 +263,23 @@ export default {
       filtroEstado: 'todos',
       editIndex: -1,
       editId: null,
+      exportando: false,
+      modo_bono: 'precio',
+      array_bono2: [],
+      activo: true,
+      nombre: '',
+      observacion: '',
+      proveedor: null,
+      fecha_vencimiento: null,
+      escala_may1: null,
+      precio_may1: null,
+      escala_may2: null,
+      precio_may2: null,
+      producto_sele: null,
+      apartir_de: null,
+      cantidad_bono: null,
+      cantidad_max: null,
+      editTipo: null,
     };
   },
 
@@ -466,6 +501,10 @@ export default {
 
     _resetForm() {
       this.modo_bono = "precio";
+      this.bonoSeleccionado = {};
+      //this.proveedoresItems = [];
+      //this.productosItems = [];
+      this.seleccionados = [];
       this.activo = true;
       this.nombre = "";
       this.observacion = "";
@@ -497,7 +536,7 @@ export default {
       return count + 1;
     },
     editarTransferencia(item) {
-      console.log(item)
+      console.log('Editando item:', item);
       const idx = this.movimientos.findIndex((x) => String(x.id) === String(item.id));
       if (idx < 0) return;
 
@@ -505,32 +544,34 @@ export default {
       this.editIndex = idx;
       this.editId = item.id;
       this.editTipo = item.tipo;
-
       this.modo_bono = item.tipo;
       this.activo = !!item.activo;
       this.nombre = item.nombre || "";
       this.observacion = item.observacion || "";
       this.proveedor = item.proveedor || null;
       this.fecha_vencimiento = item.fecha_vencimiento || null;
-
       if (item.tipo === "precio") {
-        this.escala_may1 = item.escala_may1 ?? null;
-        this.precio_may1 = item.precio_may1 ?? null;
-        this.escala_may2 = item.escala_may2 ?? null;
-        this.precio_may2 = item.precio_may2 ?? null;
+        this.escala_may1 = item.escala_may1 || null;
+        this.precio_may1 = item.precio_may1 || null;
+        this.escala_may2 = item.escala_may2 || null;
+        this.precio_may2 = item.precio_may2 || null;
+        this.array_bono2 = [];
       } else {
-        const bonos = Array.isArray(item.data) ? item.data : [];
-        this.array_bono2 = bonos.map((b) => ({
-          apartir_de: b.apartir_de,
-          cantidad_bono: b.cantidad_bono,
-          cantidad_max: b.cantidad_max,
-          codigo: b.codigo,
-        }));
+        this.array_bono2 = Array.isArray(item.data) ? item.data : [];
+        this.escala_may1 = null;
+        this.precio_may1 = null;
+        this.escala_may2 = null;
+        this.precio_may2 = null;
       }
-
+      this.bonoSeleccionado = { ...item };
+      console.log('Datos asignados:', {
+        nombre: this.nombre,
+        modo_bono: this.modo_bono,
+        array_bono2: this.array_bono2,
+        escala_may1: this.escala_may1
+      });
       this.dial_mov = true;
     },
-
     async anularTransferencia(item) {
       if (confirm('¿Seguro de eliminar este bono?')) {
         store.commit("dialogoprogress");
@@ -601,6 +642,232 @@ export default {
 
     vernombre(idProd) {
       return store.state.productos.find((x) => x.id === idProd)?.nombre || "Sin Nombre";
+    },
+
+    async exportarExcel() {
+      try {
+        this.exportando = true;
+        const productos = store.state.productos || [];
+        const productosMap = productos.reduce((map, prod) => {
+          map[prod.id] = prod;
+          return map;
+        }, {});
+        const datosExportar = [];
+
+        this.movimientosFiltrados.forEach(bono => {
+          let estado = bono.activo ? 'Activo' : 'Inactivo';
+          if (bono.activo && this.estaVencido(bono)) {
+            estado = 'Vencido';
+          }
+          if (bono.tipo === 'bono' && Array.isArray(bono.data)) {
+            bono.data.forEach((regla, indexRegla) => {
+              const productosAsignados = this.obtenerProductosAsignados(bono);
+              let nombreProductoRegla = 'Bono general';
+              if (regla.codigo) {
+                const productoRegla = productosMap[regla.codigo];
+                if (productoRegla) {
+                  nombreProductoRegla = productoRegla.nombre || productoRegla.id || regla.codigo;
+                } else {
+                  const prodEncontrado = productos.find(p => p.id === regla.codigo);
+                  nombreProductoRegla = prodEncontrado ? prodEncontrado.nombre : regla.codigo;
+                }
+              }
+              const nombresProductosAfectados = productosAsignados
+                .map(id => {
+                  const prod = productosMap[id];
+                  return prod ? prod.nombre : id;
+                })
+                .join(', ');
+
+              datosExportar.push({
+                'Código Bono': bono.codigo || '',
+                'Tipo': 'Bono',
+                'Estado': estado,
+                'Nombre Bono': bono.nombre || '',
+                'Observación': bono.observacion || '',
+                'Proveedor': bono.proveedor || '',
+                'Fecha Vencimiento': bono.fecha_vencimiento ? this.formatearFechaExcel(bono.fecha_vencimiento) : '',
+                'Regla N°': indexRegla + 1,
+                'Producto en Regla': nombreProductoRegla,
+                'A partir de (und)': regla.apartir_de || 0,
+                'Cantidad a recibir': regla.cantidad_bono || 0,
+                'Límite máximo': regla.cantidad_max || 'Sin límite',
+                'Escala 1 (und)': '-',
+                'Precio escala 1': '-',
+                'Escala 2 (und)': '-',
+                'Precio escala 2': '-',
+                'Productos Afectados': productosAsignados.length,
+                'Lista Productos Afectados': nombresProductosAfectados,
+                'Creado': bono.creado ? new Date(bono.creado).toLocaleDateString() : '',
+              });
+            });
+          } else if (bono.tipo === 'precio') {
+            const productosAsignados = this.obtenerProductosAsignados(bono);
+            const nombresProductos = productosAsignados
+              .map(id => {
+                const prod = productosMap[id];
+                return prod ? prod.nombre : id;
+              })
+              .join(', ');
+
+            datosExportar.push({
+              'Código Bono': bono.codigo || '',
+              'Tipo': 'Precio',
+              'Estado': estado,
+              'Nombre Bono': bono.nombre || '',
+              'Observación': bono.observacion || '',
+              'Proveedor': bono.proveedor || '',
+              'Fecha Vencimiento': bono.fecha_vencimiento ? this.formatearFechaExcel(bono.fecha_vencimiento) : '',
+              'Regla N°': '-',
+              'Producto en Regla': 'Precio por escala',
+              'A partir de (und)': '-',
+              'Cantidad a recibir': '-',
+              'Límite máximo': '-',
+              'Escala 1 (und)': bono.escala_may1 || '-',
+              'Precio escala 1': bono.precio_may1 ? `S/ ${bono.precio_may1}` : '-',
+              'Escala 2 (und)': bono.escala_may2 || '-',
+              'Precio escala 2': bono.precio_may2 ? `S/ ${bono.precio_may2}` : '-',
+              'Productos Afectados': productosAsignados.length,
+              'Lista Productos Afectados': nombresProductos,
+              'Creado': bono.creado ? new Date(bono.creado).toLocaleDateString() : '',
+            });
+          }
+        });
+        const wb = XLSX.utils.book_new();
+        if (datosExportar.length === 0) {
+          const ws = XLSX.utils.aoa_to_sheet([
+            ['REPORTE DETALLADO DE BONOS Y PRECIOS'],
+            ['Fecha exportación:', new Date().toLocaleDateString('es-PE')],
+            ['Hora exportación:', new Date().toLocaleTimeString('es-PE')],
+            ['Filtro estado:', this.filtroEstado === 'todos' ? 'Todos' : (this.filtroEstado === 'activos' ? 'Activos' : 'Inactivos')],
+            ['Filtro productos:', this.filtroProductos.length > 0 ? this.filtroProductos.length + ' seleccionados' : 'Ninguno'],
+            ['Filtro proveedores:', this.filtroProveedores.length > 0 ? this.filtroProveedores.join(', ') : 'Ninguno'],
+            ['Búsqueda nombre:', this.filtroNombre || 'Ninguna'],
+            ['Total registros:', 0],
+            [''],
+            ['No hay datos para exportar con los filtros aplicados']
+          ]);
+
+          XLSX.utils.book_append_sheet(wb, ws, 'Bonos y Precios');
+        } else {
+          const ws = XLSX.utils.json_to_sheet(datosExportar);
+          const wscols = [
+            { wch: 12 },
+            { wch: 8 },
+            { wch: 10 },
+            { wch: 25 },
+            { wch: 25 },
+            { wch: 20 },
+            { wch: 15 },
+            { wch: 8 },
+            { wch: 30 },
+            { wch: 12 },
+            { wch: 15 },
+            { wch: 15 },
+            { wch: 12 },
+            { wch: 15 },
+            { wch: 12 },
+            { wch: 15 },
+            { wch: 12 },
+            { wch: 50 },
+            { wch: 12 },
+            { wch: 15 }
+          ];
+          ws['!cols'] = wscols;
+          const encabezadoInfo = [
+            ['REPORTE DETALLADO DE BONOS Y PRECIOS'],
+            ['Se muestra una fila por cada regla en los bonos'],
+            ['Fecha exportación:', new Date().toLocaleDateString('es-PE')],
+            ['Hora exportación:', new Date().toLocaleTimeString('es-PE')],
+            ['Filtro estado:', this.filtroEstado === 'todos' ? 'Todos' : (this.filtroEstado === 'activos' ? 'Activos' : 'Inactivos')],
+            ['Filtro productos:', this.filtroProductos.length > 0 ? this.filtroProductos.length + ' seleccionados' : 'Ninguno'],
+            ['Filtro proveedores:', this.filtroProveedores.length > 0 ? this.filtroProveedores.join(', ') : 'Ninguno'],
+            ['Búsqueda nombre:', this.filtroNombre || 'Ninguna'],
+            ['Total registros:', datosExportar.length],
+            ['']
+          ];
+          const hojaCompleta = XLSX.utils.aoa_to_sheet([]);
+          XLSX.utils.sheet_add_aoa(hojaCompleta, encabezadoInfo, { origin: 'A1' });
+          const inicioDatos = encabezadoInfo.length + 1;
+          XLSX.utils.sheet_add_json(hojaCompleta, datosExportar, { origin: `A${inicioDatos}` });
+          hojaCompleta['!autofilter'] = {
+            ref: `A${inicioDatos}:T${inicioDatos}`
+          };
+
+          XLSX.utils.book_append_sheet(wb, hojaCompleta, 'Bonos y Precios');
+          const resumenBonos = this.crearResumenBonos(datosExportar);
+          const wsResumen = XLSX.utils.json_to_sheet(resumenBonos);
+          XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen por Bono');
+        }
+        const fecha = new Date().toISOString().split('T')[0];
+        const hora = new Date().toLocaleTimeString('es-PE').replace(/:/g, '-').split(' ')[0];
+        const nombreArchivo = `Bonos_Precios_Detalle_${fecha}_${hora}.xlsx`;
+        XLSX.writeFile(wb, nombreArchivo);
+        this._toast(`Exportado ${datosExportar.length} registros a Excel`);
+      } catch (error) {
+        console.error('Error al exportar a Excel:', error);
+        this._toast('Error al exportar a Excel');
+      } finally {
+        this.exportando = false;
+      }
+    },
+
+    crearResumenBonos(datosDetalle) {
+      const resumenMap = new Map();
+      datosDetalle.forEach(fila => {
+        const codigoBono = fila['Código Bono'];
+        if (!resumenMap.has(codigoBono)) {
+          resumenMap.set(codigoBono, {
+            'Código Bono': codigoBono,
+            'Tipo': fila['Tipo'],
+            'Estado': fila['Estado'],
+            'Nombre Bono': fila['Nombre Bono'],
+            'Proveedor': fila['Proveedor'],
+            'Fecha Vencimiento': fila['Fecha Vencimiento'],
+            'Total Reglas': 0,
+            'Total Productos Afectados': 0,
+            'Detalle': ''
+          });
+        }
+        const resumen = resumenMap.get(codigoBono);
+        if (fila['Tipo'] === 'Bono' && fila['Regla N°'] !== '-') {
+          resumen['Total Reglas'] += 1;
+        } else if (fila['Tipo'] === 'Precio') {
+          resumen['Total Reglas'] = 1;
+        }
+        resumen['Total Productos Afectados'] = Math.max(
+          resumen['Total Productos Afectados'],
+          fila['Productos Afectados'] || 0
+        );
+        let detalle = '';
+        if (fila['Tipo'] === 'Bono' && fila['Regla N°'] !== '-') {
+          detalle = `Regla ${fila['Regla N°']}: ${fila['A partir de (und)']} und → ${fila['Cantidad a recibir']}x ${fila['Producto en Regla']}`;
+          if (fila['Límite máximo'] !== 'Sin límite' && fila['Límite máximo'] !== '-') {
+            detalle += ` (Max: ${fila['Límite máximo']})`;
+          }
+        } else if (fila['Tipo'] === 'Precio') {
+          detalle = `Escala1: ${fila['Escala 1 (und)']} und → ${fila['Precio escala 1']}`;
+          if (fila['Escala 2 (und)'] !== '-') {
+            detalle += ` | Escala2: ${fila['Escala 2 (und)']} und → ${fila['Precio escala 2']}`;
+          }
+        }
+        if (resumen['Detalle']) {
+          resumen['Detalle'] += ' | ' + detalle;
+        } else {
+          resumen['Detalle'] = detalle;
+        }
+      });
+
+      return Array.from(resumenMap.values());
+    },
+    formatearFechaExcel(fecha) {
+      if (!fecha) return '';
+      const d = new Date(fecha);
+      return d.toLocaleDateString('es-PE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
     },
   },
 };
