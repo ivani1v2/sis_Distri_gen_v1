@@ -101,7 +101,7 @@
                         <v-list dense class="py-1">
                             <v-list-item @click="envia_sunat" :disabled="periodoCerrado">
                                 <v-list-item-icon><v-icon color="green">mdi-cloud-upload</v-icon></v-list-item-icon>
-                                <v-list-item-title>Enviar a Sunat</v-list-item-title>
+                                <v-list-item-title>Procesar</v-list-item-title>
                             </v-list-item>
                             <v-list-item @click="abare_guias()" :disabled="!puedeGenerarGuia">
                                 <v-list-item-icon>
@@ -1697,6 +1697,9 @@ export default {
             this.abrirDialogoAnulacion(data);
         },
         async envia_sunat() {
+             if(!confirm("Esta seguro de procesar reparto?, solo Boletas y facturas seran enviadas a sunat")){
+                return
+            }
             const seleccionados = this.listafiltrada.filter(
                 x => x.consolida && x.estado === 'PENDIENTE'
             );
