@@ -792,3 +792,27 @@ export default {
 
 }
 </script>
+<style scoped>
+.overlay-mensaje {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  backdrop-filter: blur(2px);
+
+  /* CLAVE: no bloquear clics */
+  pointer-events: none;
+}
+
+/* Si quieres que el alert/spinner sí pueda recibir clics, deja esto */
+.overlay-mensaje :deep(.v-alert),
+.overlay-mensaje :deep(.v-progress-circular) {
+  pointer-events: auto;
+}
+</style>
