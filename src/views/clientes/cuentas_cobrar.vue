@@ -14,7 +14,7 @@
         </div>
 
         <v-row dense>
-          <v-col cols="12" md="3">
+          <v-col cols="12" md="2">
             <v-select outlined dense hide-details v-model="cuenta_estado" :items="array_estado" label="Estado"
               prepend-inner-icon="mdi-list-status" @change="filtra" />
           </v-col>
@@ -29,13 +29,13 @@
               label="Vendedor" multiple outlined dense chips small-chips deletable-chips clearable
               :menu-props="{ closeOnContentClick: true }" @change="onVendedorChange" class="mb-n6" />
           </v-col>
-          <v-col cols="6" md="2">
+          <v-col cols="6" md="3">
             <v-select v-model="zonasSeleccionadas" :items="zonasItems" item-text="nombre" item-value="codigo"
               label="Zona/Cliente" multiple outlined dense chips small-chips deletable-chips clearable
               :menu-props="{ closeOnContentClick: true }" @change="onZonaChange" class="mb-n6" />
           </v-col>
           <v-col cols="12" md="2" class="d-flex align-center">
-            <v-btn block color="primary" class="elevation-2" @click="filtra">
+            <v-btn block color="primary" outlined class="elevation-2" @click="filtra">
               <v-icon left>mdi-filter</v-icon>
               Aplicar filtros
             </v-btn>
@@ -291,7 +291,7 @@ export default {
         codigo: zona
       }));
 
-      return [{ nombre: 'TODAS LAS ZONAS', codigo: 'TODOS' }, ...items];
+      return [{ nombre: 'TODAS', codigo: 'TODOS' }, ...items];
     },
 
     listafiltrada() {

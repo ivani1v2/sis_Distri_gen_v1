@@ -351,7 +351,9 @@ import {
     nuevoflujo_historial,
     nuevo_histo_stock,
     all_histo_stock,
-    nuevoflujo_teso
+    nuevoflujo_teso,
+    allcuentaxcobrar,
+    editaCuentaxCobrar
 } from '../../db'
 import XLSX from 'xlsx'
 import moment from 'moment'
@@ -990,15 +992,100 @@ export default {
             this.dialogoExporta = false
         },
         async anular() {
+            this.dialogoprogress = true;
 
-            this.dialogoprogress = true
-            var id = this.itemelecto.id
-            console.log(this.itemelecto)
-            await estadoFlujo(id, "anulado")
-            this.dialogoObservacion = false
-            this.pre_anular = false
-            this.dialogoprogress = false
+            try {
+                if (this.esPagoCredito()) {
+                    await this.revertirPagoCredito();
+                }
+                await this.anularFlujo();
 
+                this.cerrarDialogos();
+                this.$store.commit('dialogosnackbar', 'Flujo anulado correctamente');
+
+            } catch (error) {
+                console.error('Error en anulación:', error);
+                this.$store.commit('dialogosnackbar', 'Error al anular: ' + error.message);
+            } finally {
+                this.dialogoprogress = false;
+            }
+        },
+        esPagoCredito() {
+            return this.itemelecto.observacion &&
+                this.itemelecto.observacion.toUpperCase().includes('PAGO CREDITO');
+        },
+
+        async revertirPagoCredito() {
+            if (!this.itemelecto.numeracion_doc) {
+                console.warn('No hay numeracion_doc para revertir');
+                return;
+            }
+            const docRef = this.itemelecto.numeracion_doc;
+            const montoARevertir = parseFloat(this.itemelecto.total) || 0;
+            if (montoARevertir <= 0) {
+                console.warn('Monto a revertir inválido:', montoARevertir);
+                return;
+            }
+            const snapshot = await allcuentaxcobrar().child(docRef).once('value');
+            if (!snapshot.exists()) {
+                console.warn(`No se encontró CxC con referencia: ${docRef}`);
+                return;
+            }
+            const cxc = snapshot.val();
+            await this.actualizarCabeceraCxC(cxc, docRef, montoARevertir);
+            if (cxc.datos && Array.isArray(cxc.datos)) {
+                await this.actualizarCuotasCxC(cxc.datos, docRef, montoARevertir);
+            }
+            console.log(`Pago revertido en CxC ${docRef}: -S/.${montoARevertir}`);
+        },
+
+        async actualizarCabeceraCxC(cxc, docRef, montoARevertir) {
+            const nuevoPagado = Math.max(0, (parseFloat(cxc.pagado) || 0) - montoARevertir);
+            const montoTotal = parseFloat(cxc.monto_total) || 0;
+            const nuevoMontoPendiente = montoTotal - nuevoPagado;
+            const nuevoEstado = nuevoMontoPendiente > 0 ? 'PENDIENTE' : 'LIQUIDADO';
+
+            const actualizaciones = [
+                editaCuentaxCobrar(docRef, 'pagado', parseFloat(nuevoPagado.toFixed(2))),
+                editaCuentaxCobrar(docRef, 'monto_pendiente', parseFloat(nuevoMontoPendiente.toFixed(2))),
+                editaCuentaxCobrar(docRef, 'estado', nuevoEstado),
+                editaCuentaxCobrar(docRef, 'fecha_modificacion', moment().unix())
+            ];
+
+            await Promise.all(actualizaciones);
+        },
+
+        async actualizarCuotasCxC(datos, docRef, montoARevertir) {
+            for (let i = datos.length - 1; i >= 0; i--) {
+                const cuota = datos[i];
+                if (cuota?.estado === 'PAGADO' && parseFloat(cuota.monto_pagado_acum) > 0) {
+                    await this.actualizarCuotaEspecifica(cuota, i, docRef, montoARevertir);
+                    break;
+                }
+            }
+        },
+
+        async actualizarCuotaEspecifica(cuota, index, docRef, montoARevertir) {
+            const montoCuota = parseFloat(cuota.monto) || 0;
+            const nuevoPagadoAcum = Math.max(0, (parseFloat(cuota.monto_pagado_acum) || 0) - montoARevertir);
+            const nuevoEstadoCuota = nuevoPagadoAcum < montoCuota ? 'PENDIENTE' : 'PAGADO';
+
+            const actualizaciones = [
+                editaCuentaxCobrar(docRef, `datos/${index}/monto_pagado_acum`, parseFloat(nuevoPagadoAcum.toFixed(2))),
+                editaCuentaxCobrar(docRef, `datos/${index}/estado`, nuevoEstadoCuota),
+                editaCuentaxCobrar(docRef, `datos/${index}/fecha_modificacion`, moment().unix())
+            ];
+
+            await Promise.all(actualizaciones);
+        },
+
+        async anularFlujo() {
+            await estadoFlujo(this.itemelecto.id, 'anulado');
+        },
+
+        cerrarDialogos() {
+            this.dialogoObservacion = false;
+            this.pre_anular = false;
         },
         create_UUID() {
             var dt = new Date().getTime();
