@@ -185,13 +185,13 @@ function impresion58(arrays) {
     if (!existeDescuento) {
       nuevoArray.push([
         array[i].cantidad,
-        array[i].nombre + "\n" + "- " + moneda + array[i].precioedita + " X " + array[i].medida,
+        array[i].nombre + "\n" + "- " + moneda + array[i].precioedita + " X " + array[i].medida + (array[i]._presentacion_nombre ? " - " + array[i]._presentacion_nombre : ""),
         parseFloat(array[i].precioedita * array[i].cantidad).toFixed(store.state.configuracion.decimal)
       ]);
     } else {
       nuevoArray.push([
         array[i].cantidad,
-        array[i].nombre + "\n" + "- " + moneda + array[i].precioedita + " X " + array[i].medida,
+        array[i].nombre + "\n" + "- " + moneda + array[i].precioedita + " X " + array[i].medida + (array[i]._presentacion_nombre ? " - " + array[i]._presentacion_nombre : ""),
         textoDescuento,
         parseFloat(array[i].precioedita * array[i].cantidad).toFixed(store.state.configuracion.decimal)
       ]);
@@ -469,14 +469,14 @@ function impresion80(arrays) {
     if (!existeDescuento) {
       nuevoArray.push([
         array[i].cantidad,
-        array[i].nombre + "\n" + "-" + array[i].medida,
+        array[i].nombre + "\n" + "-" + array[i].medida + (array[i]._presentacion_nombre ? " - " + array[i]._presentacion_nombre : ""),
         array[i].precioedita,
         parseFloat(array[i].precioedita * array[i].cantidad).toFixed(store.state.configuracion.decimal)
       ]);
     } else {
       nuevoArray.push([
         array[i].cantidad,
-        array[i].nombre + "\n" + "-" + array[i].medida,
+        array[i].nombre + "\n" + "-" + array[i].medida + (array[i]._presentacion_nombre ? " - " + array[i]._presentacion_nombre : ""),
         array[i].precioedita,
         textoDescuento,
         parseFloat(array[i].precioedita * array[i].cantidad).toFixed(store.state.configuracion.decimal)
@@ -836,7 +836,7 @@ function impresionA4(arrays) {
     if (!existeDescuento) {
       nuevoArray.push([
         array[i].cantidad,
-        array[i].id +' - ' +array[i].nombre,
+        array[i].id +' - ' +array[i].nombre + (array[i]._presentacion_nombre ? " - " + array[i]._presentacion_nombre : ""),
         array[i].medida,
         precioBase.toFixed(2),
         totalLinea
@@ -844,7 +844,7 @@ function impresionA4(arrays) {
     } else {
       nuevoArray.push([
         array[i].cantidad,
-        array[i].id +' - ' +array[i].nombre,
+        array[i].id +' - ' +array[i].nombre + (array[i]._presentacion_nombre ? " - " + array[i]._presentacion_nombre : ""),
         array[i].medida,
         precioBase.toFixed(2),
         textoDescuento,

@@ -1203,6 +1203,17 @@ const routes = [
     },
   },
   {
+    path: "/seguimiento",
+    name: "seguimiento",
+    // route level code-splitting
+    // this generates a separate chunk (Produc.[hash].js) for this route
+    // which is lazy-loaded when the route is visited.
+    component: () => import("../views/Validacion-stock/seguimiento-stock.vue"),
+    meta: {
+      requireAuth: true,
+    },
+  },
+  {
     path: "/venta_x_pago",
     name: "venta_x_pago",
     // route level code-splitting
