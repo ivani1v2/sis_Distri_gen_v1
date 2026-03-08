@@ -36,11 +36,11 @@
                     icon="mdi-alert-octagon">
                     <div class="d-flex flex-wrap justify-space-between align-center text-caption">
                         <span>Línea de crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2)
-                                }}</strong></span>
+                        }}</strong></span>
                         <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2)
-                                }}</strong></span>
+                        }}</strong></span>
                         <span>Disponible: <strong class="red--text">{{ moneda }} {{ saldoDisponible.toFixed(2)
-                                }}</strong></span>
+                        }}</strong></span>
                     </div>
                     <div class="mt-1 red--text text-caption font-weight-medium">
                         El monto del pedido ({{ moneda }} {{ totalDetalle.toFixed(2) }}) supera el saldo disponible
@@ -95,7 +95,7 @@
                                                         style="max-width: 70vw;">
                                                         <span class="font-weight-bold red--text">{{
                                                             Number(item.cantidad)
-                                                            }}×</span>
+                                                        }}×</span>
                                                         {{ item.nombre }}
                                                     </div>
                                                 </div>
@@ -780,6 +780,7 @@ export default {
         },
         async api_rest(data, metodo) {
             try {
+                console.log(data.cabecera)
                 const idem = this.buildIdemKeyPedido({
                     bd: store.state.baseDatos.bd,
                     cabecera: data.cabecera,
@@ -817,20 +818,32 @@ export default {
         },
 
         buildIdemKeyPedido({ bd, cabecera = {}, detalle = [] }) {
-            const day = cabecera.fecha_emision
-                ? moment.unix(Number(cabecera.fecha_emision)).format("YYYY-MM-DD")
-                : moment().format("YYYY-MM-DD");
+            const normalizar = (v) =>
+                String(v || "")
+                    .trim()
+                    .replace(/\s+/g, " ")
+                    .toUpperCase();
+
+            const ts = cabecera.fecha_emision
+                ? Number(cabecera.fecha_emision)
+                : moment().unix();
+
+            const bucket3min = Math.floor(ts / 180);
+
             const base = {
-                day,
-                t: cabecera.tipo_comprobante || "",
-                d: cabecera.doc_numero || "",
-                tot: cabecera.total || "",
-                det: (detalle || [])
-                    .map(d => `${d.id}:${d.cantidad}:${d.precio_base || d.precio || 0}`)
+                bucket: bucket3min,
+                tipo: cabecera.tipo_comprobante || "",
+                doc: cabecera.doc_numero || "",
+                nombre: normalizar(cabecera.cliente_nombre),
+                direccion: normalizar(cabecera.cliente_direccion || ''),
+                zona: normalizar(cabecera.cliente_zona),
+                total: Number(cabecera.total || 0).toFixed(2),
+                detalle: (detalle || [])
+                    .map(d => `${d.id}:${d.cantidad}:${Number(d.precio_base || d.precio || 0).toFixed(4)}`)
                     .sort()
                     .join("|"),
-                ruc: cabecera.ruc_asociado || "",
-                vend: cabecera.cod_vendedor || ""
+                vendedor: cabecera.cod_vendedor || "",
+                ruc: cabecera.ruc_asociado || ""
             };
 
             const raw = JSON.stringify(base);
