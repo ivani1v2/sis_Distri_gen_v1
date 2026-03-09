@@ -44,15 +44,14 @@
                 <v-col cols="12" sm="12" md="4" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6 ' : 'mt-n4'">
                     <v-layout dense align-center>
                         <v-flex>
-                            <v-text-field outlined dense v-model="busca_p" label="Buscar (nombre)" :disabled="cargando"
-                                clearable />
+                            <v-text-field outlined dense v-model="busca_p"
+                                label="Buscar (nombre)" :disabled="cargando" clearable />
                         </v-flex>
                         <v-btn icon small color="info" class="ml-2 mt-n6 mr-6" @click="_refreshClientesYFiltrado"
                             :loading="cargando">
                             <v-icon>mdi-filter</v-icon>
                         </v-btn>
                     </v-layout>
-
                 </v-col>
 
                 <v-col cols="6" sm="6" md="3" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6 ' : 'mt-n2'">
@@ -94,7 +93,7 @@
             <div v-if="!isMobile">
                 <v-data-table :headers="headers" :items="listafiltrada" dense fixed-header height="65vh"
                     :items-per-page="50" :loading="cargando" class="elevation-1"
-                    :footer-props="{ itemsPerPageOptions: [25, 50, 100, 200] }">
+                    :footer-props="{ itemsPerPageOptions: [25, 50, 100, 200] }" :item-key="getRowKey">
                     <!-- Cliente -->
                     <template v-slot:[`item.nombre`]="{ item }">
                         <span style="font-size:85%">
@@ -181,7 +180,7 @@
                     <v-alert v-if="listafiltrada.length === 0" type="info" outlined dense class="my-2">No hay clientes
                         para mostrar.</v-alert>
 
-                    <v-card v-for="(item, idx) in displayed" :key="item.id || idx" class="mb-2" outlined>
+                    <v-card v-for="(item, idx) in displayed" :key="item.id + '_' + idx" class="mb-2" outlined>
                         <v-list-item>
                             <v-list-item-content>
                                 <v-list-item-title class="font-weight-medium">
@@ -373,6 +372,7 @@ export default {
         dialog_deudas: false,
         cliente_deuda: null,
         accion_pendiente: null, // 'vender' o 'pre_venta'
+
     }),
     computed: {
         displayed() {
@@ -389,6 +389,7 @@ export default {
                 .toLowerCase();   // "lun", "mar", "mié", ... // lun, mar, mié...
         },
         listafiltrada() {
+
             let lista = Array.isArray(this.lista_clientes) ? this.lista_clientes : []
 
             // Filtro por estado
@@ -399,35 +400,24 @@ export default {
                     : new Set([e]);
                 lista = lista.filter(c => include.has(String(c.estado || '').toLowerCase()));
             }
-            // 🔹 Filtro por zona (omite si es "TODAS")
+
+            // Filtro por zona
             if (this.zona && this.zona.toUpperCase() !== 'TODAS') {
                 const z = this.zona.toLowerCase().trim()
                 lista = lista.filter(c => (c.zona || '').toLowerCase().trim() === z)
             }
 
-            // Búsqueda por nombre o zona
+            // Búsqueda por nombre
             const q = (this.busca_p || '').trim().toLowerCase()
             if (q) {
                 lista = lista.filter(c => {
                     const nombre = (c.nombre || '').toLowerCase()
-                    const zona = (c.zona || '').toLowerCase()
-                    return nombre.includes(q) || zona.includes(q)
+                    const coincide = nombre.includes(q)
+                    return coincide
                 })
             }
 
-            // Ordenar por el número al inicio de 'nombre' (asc). Si no hay número, va al final.
-            return lista.slice().sort((a, b) => {
-                const leadNum = s => {
-                    const m = String(s || '').match(/^\s*(\d+)/);  // captura dígitos del inicio
-                    return m ? Number(m[1]) : Number.POSITIVE_INFINITY;
-                };
-                const na = leadNum(a.nombre);
-                const nb = leadNum(b.nombre);
-                if (na !== nb) return na - nb;
-                // desempate por nombre alfabético
-                return (a.nombre || '').localeCompare(b.nombre || '');
-            });
-
+            return lista;
         },
 
         zonasConTodas() {
@@ -453,18 +443,10 @@ export default {
     },
 
     watch: {
-        date() {
-            this.filtra()
-        },
         estado(nv) { saveFiltros({ estado: nv }); this.filtra(); },
-         busca_p(nv) {
-    clearTimeout(this._buscaTimeout);
-    this._buscaTimeout = setTimeout(() => {
-      saveFiltros({ busca_p: nv });
-      // si la búsqueda requiere recargar del servidor:
-      this._refreshClientesYFiltrado();
-    }, 350); // 300-500 ms suele ir bien
-  },
+        busca_p(nv) {
+            saveFiltros({ busca_p: nv });
+        },
         async sede_actual(nv) {
             saveFiltros({ sede: nv });
             await this._refreshClientesYFiltrado();   // 👈 resuscribe + filtra
@@ -509,6 +491,9 @@ export default {
         if (this.observer) this.observer.disconnect();
     },
     methods: {
+        getRowKey(item) {
+            return item.id || `row_${Math.random()}`;
+        },
         dial_ubica_gps(data) {
             console.log(data)
             if ((data.latitud == null || data.longitud == null) && data.id !== '') {
@@ -531,14 +516,13 @@ export default {
         },
         async obtener_clientes() {
             this.cargando = true;
-            // Si antes tenías un listener, límpialo
             try {
-
                 const diaActual = this.dia;
                 let q = colClientes()
                     .where('activo', '==', true)
                     .where('sede', '==', this.sede_actual)
-                if (this.filtrarPorDia) {                // ⬅️ condicional
+
+                if (this.filtrarPorDia) {
                     q = q.where('dia', 'array-contains', diaActual);
                 }
 
@@ -547,21 +531,21 @@ export default {
                 }
 
                 const snap = await q.get();
-                console.log(snap.size)
                 this.array_clientes = snap.docs.map(d => {
-                    //console.log(d.data())
-                    const c = { id: d.id, ...d.data() };
-                    const dir = this.getDireccion(c);               // usa tu helper actual
+                    const data = d.data();
+                    const dir = this.getDireccion(data);
                     return {
-                        ...c,
-                        _dir: dir,                                     // dirección completa
-                        _dirTrunc: this.trunc(dir, 50),                // dirección truncada para la lista
+                        id: d.id,
+                        ...data,
+                        _dir: dir,
+                        _dirTrunc: this.trunc(dir, 50),
                     };
                 });
-                this.filtra();        // mantiene tu lógica actual
+
+                await this.filtra();
+
             } catch (e) {
-                // Si no hay datos en caché, Firestore lanza error
-                //console.error('Cache get clientes:', e);
+                console.error('Error:', e);
                 this.array_clientes = [];
             } finally {
                 this.cargando = false;
@@ -694,31 +678,18 @@ export default {
             }
 
             this.cargando = true;
-            this.error = null;
 
-            // prioridad: venta > pre-venta > visita
             const rank = { 'venta': 3, 'pre-venta': 2, 'visita': 1 };
 
             try {
-                //console.log(this.sede_actual)
-                // 1️⃣ Armar query optimizada (usa índices ya creados)
                 let q = colRuta_x_dia()
                     .where('sede', '==', String(this.sede_actual))
                     .where('fecha', '>=', start)
                     .where('fecha', '<=', end);
 
-                /*  if (this.zona && this.zona.toUpperCase() !== 'TODAS') {
-                      q = q.where('zona', '==', this.zona);
-                  }*/
-
-                // 2️⃣ Obtener datos directamente
                 const snap = await q.get();
-                  console.log('filtra(): visitas encontradas', snap.size);
-                // 3️⃣ Mapear cliente_id -> estado prioritario
-
                 const bestByCliente = new Map();
                 snap.forEach(d => {
-                    //console.log(d.data())
                     const r = d.data() || {};
                     const id = String(r.cliente_id || '').trim();
                     const est = String(r.estado || '').toLowerCase();
@@ -730,225 +701,28 @@ export default {
                     }
                 });
 
-                // 4️⃣ Armar la lista base con estados aplicados
                 const base = Array.isArray(this.array_clientes) ? this.array_clientes : [];
-                var arrDia = base;
-                if (this.isMobile) {
-                    //   arrDia = base.length > 300 ? base.slice(0, 300) : base;
-                }
 
+                this.lista_clientes = base.map((c, index) => {
+                    const docId = c.id;
+                    const uniqueId = docId || `temp_${index}_${Date.now()}`;
+                    const estadoId = String(c.documento || c.id || '').trim();
+                    const estado = bestByCliente.get(estadoId) || 'pendiente';
 
-                this.lista_clientes = arrDia.map(c => {
-                    const id = String(c.documento || c.id || '').trim();
-                    const estado = bestByCliente.get(id) || 'pendiente';
-                    return { ...c, estado };
+                    return {
+                        ...c,
+                        id: uniqueId,
+                        estado
+                    };
                 });
 
-                // 5️⃣ Filtro visual (por estado)
-                if (this.estado && this.estado !== 'todos') {
-                    const e = String(this.estado).toLowerCase();
-                    const include = e === 'atendido'
-                        ? new Set(['atendido', 'venta', 'pre-venta'])
-                        : new Set([e]);
-                    this.lista_clientes = this.lista_clientes.filter(
-                        x => include.has(String(x.estado || '').toLowerCase())
-                    );
-                }
             } catch (e) {
                 console.error('Error en filtra():', e);
-                this.error = 'No se pudo cargar la lista de clientes.';
                 this.lista_clientes = [];
             } finally {
                 this.cargando = false;
             }
         },
-
-      async filtra() {
-            const start = moment(this.date, 'YYYY-MM-DD').startOf('day').unix();
-            const end = moment(this.date, 'YYYY-MM-DD').endOf('day').unix();
-
-            if (!this.sede_actual) {
-                this.lista_clientes = [];
-                return;
-            }
-
-            this.cargando = true;
-            this.error = null;
-
-            // prioridad: venta > pre-venta > visita
-            const rank = { 'venta': 3, 'pre-venta': 2, 'visita': 1 };
-
-            try {
-                //console.log(this.sede_actual)
-                // 1️⃣ Armar query optimizada (usa índices ya creados)
-                let q = colRuta_x_dia()
-                    .where('sede', '==', String(this.sede_actual))
-                    .where('fecha', '>=', start)
-                    .where('fecha', '<=', end);
-
-                /*  if (this.zona && this.zona.toUpperCase() !== 'TODAS') {
-                      q = q.where('zona', '==', this.zona);
-                  }*/
-
-                // 2️⃣ Obtener datos directamente
-                const snap = await q.get();
-                  console.log('filtra(): visitas encontradas', snap.size);
-                // 3️⃣ Mapear cliente_id -> estado prioritario
-
-                const bestByCliente = new Map();
-                snap.forEach(d => {
-                    //console.log(d.data())
-                    const r = d.data() || {};
-                    const id = String(r.cliente_id || '').trim();
-                    const est = String(r.estado || '').toLowerCase();
-                    if (!id) return;
-
-                    const prev = bestByCliente.get(id);
-                    if (!prev || (rank[est] || 0) > (rank[String(prev).toLowerCase()] || 0)) {
-                        bestByCliente.set(id, r.estado);
-                    }
-                });
-
-                // 4️⃣ Armar la lista base con estados aplicados
-                const base = Array.isArray(this.array_clientes) ? this.array_clientes : [];
-                var arrDia = base;
-                if (this.isMobile) {
-                    //   arrDia = base.length > 300 ? base.slice(0, 300) : base;
-                }
-
-
-                this.lista_clientes = arrDia.map(c => {
-                    const id = String(c.documento || c.id || '').trim();
-                    const estado = bestByCliente.get(id) || 'pendiente';
-                    return { ...c, estado };
-                });
-
-                // 5️⃣ Filtro visual (por estado)
-                if (this.estado && this.estado !== 'todos') {
-                    const e = String(this.estado).toLowerCase();
-                    const include = e === 'atendido'
-                        ? new Set(['atendido', 'venta', 'pre-venta'])
-                        : new Set([e]);
-                    this.lista_clientes = this.lista_clientes.filter(
-                        x => include.has(String(x.estado || '').toLowerCase())
-                    );
-                }
-            } catch (e) {
-                console.error('Error en filtra():', e);
-                this.error = 'No se pudo cargar la lista de clientes.';
-                this.lista_clientes = [];
-            } finally {
-                this.cargando = false;
-            }
-        },
-
-        /*        async filtra() {
-            const start = moment(this.date, 'YYYY-MM-DD').startOf('day').unix();
-            const end = moment(this.date, 'YYYY-MM-DD').endOf('day').unix();
-
-            if (!this.sede_actual) {
-                this.lista_clientes = [];
-                return;
-            }
-
-            this.cargando = true;
-            this.error = null;
-
-            // prioridad: venta > pre-venta > visita
-            const rank = { 'venta': 3, 'pre-venta': 2, 'visita': 1 };
-
-            try {
-                // 0️⃣ Si no tienes clientes cargados, evitar hacer queries innecesarias
-                const base = Array.isArray(this.array_clientes) ? this.array_clientes : [];
-                if (base.length === 0) {
-                    this.lista_clientes = [];
-                    this.cargando = false;
-                    return;
-                }
-
-                // 1️⃣ Preparar array de ids (documento o id)
-                const clientIds = base.map(c => String(c.documento || c.id || '').trim()).filter(Boolean);
-
-                // si no hay ids válidos
-                if (clientIds.length === 0) {
-                    this.lista_clientes = base.map(c => ({ ...c, estado: 'pendiente' }));
-                    this.cargando = false;
-                    return;
-                }
-
-                // Helper para chunking (Firestore 'in' permite hasta 10 items)
-                const chunkArray = (arr, size = 10) => {
-                    const out = [];
-                    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-                    return out;
-                };
-
-                const chunks = chunkArray(clientIds, 10);
-
-                // 2️⃣ Ejecutar queries por chunk en paralelo
-                const promises = chunks.map(chunk => {
-                    // Construir query: sede + cliente_id in chunk + rango fecha
-                    let q = colRuta_x_dia()
-                        .where('sede', '==', String(this.sede_actual))
-                        .where('cliente_id', 'in', chunk)    // <= 10 ids
-                        .where('fecha', '>=', start)
-                        .where('fecha', '<=', end);
-
-                    // Opcional: pedir solo campos necesarios si tu SDK lo permite
-                    // q = q.select('cliente_id','estado','fecha');
-
-                    return q.get();
-                });
-
-                const snaps = await Promise.all(promises);
-
-                // 3️⃣ Construir map id -> mejor estado
-                const bestByCliente = new Map();
-
-                for (const snap of snaps) {
-                    snap.forEach(d => {
-                        const r = d.data() || {};
-                        const id = String(r.cliente_id || '').trim();
-                        if (!id) return;
-                        const est = String(r.estado || '').toLowerCase();
-                        const prev = bestByCliente.get(id);
-                        if (!prev || (rank[est] || 0) > (rank[String(prev).toLowerCase()] || 0)) {
-                            bestByCliente.set(id, r.estado);
-                        }
-                    });
-                }
-
-                // 4️⃣ Construir lista_clientes aplicando el estado y filtros de UI
-                this.lista_clientes = base.map(c => {
-                    const id = String(c.documento || c.id || '').trim();
-                    const estado = bestByCliente.get(id) || 'pendiente';
-                    return { ...c, estado };
-                });
-
-                // 5️⃣ Filtro visual por estado si corresponde
-                if (this.estado && this.estado !== 'todos') {
-                    const e = String(this.estado).toLowerCase();
-                    const include = e === 'atendido'
-                        ? new Set(['atendido', 'venta', 'pre-venta'])
-                        : new Set([e]);
-                    this.lista_clientes = this.lista_clientes.filter(
-                        x => include.has(String(x.estado || '').toLowerCase())
-                    );
-                }
-
-                // 6️⃣ (Opcional) ordenar aquí si lo deseas
-                // this.lista_clientes = this.getSortedList(this.lista_clientes);
-
-            } catch (e) {
-                console.error('Error en filtra():', e);
-                this.error = 'No se pudo cargar la lista de clientes.';
-                this.lista_clientes = [];
-            } finally {
-                this.cargando = false;
-            }
-        },*/
-
-
 
         abre_mapa(cliente) {
             this.verTodosMapa = false
@@ -1106,8 +880,6 @@ export default {
             this.cliente_selecto = item;   // 👉 pasa el cliente al diálogo
             this.dial_cliente = true;      // 👉 abre el diálogo de edición
         },
-
-
     }
 
 }

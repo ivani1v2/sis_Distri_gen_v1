@@ -7,28 +7,52 @@
             @keydown.native="detectarEntrada" :autofocus="!$store.state.esmovil && muestra_tabla"
             append-icon="mdi-magnify" :loading="cargando" :search-input.sync="buscar"
             no-data-text="No se encontraron productos" @change="prod_selecto">
-            <template v-slot:item="{ item }">
-                <v-list-item-content>
-                    <v-list-item-title>
-                        <span class="text-caption grey--text text--darken-2">
-                            {{ (item.categoria || '').slice(0, 4).toUpperCase() }}
-                        </span>
-                        — {{ item.nombre }}
-                        <small v-if="$store.state.configuracion && $store.state.configuracion.mostrar_codigo"
-                            class="grey--text text--darken-1">
-                            ({{ item.id }})
-                        </small>
-                        — <strong class="red--text"> {{ moneda }} {{ Number(item.precio || 0).toFixed(2) }}</strong>
-                    </v-list-item-title>
-                    <v-list-item-subtitle class="mt-n1 mb-n2">
-                        <span class="text-caption"
-                            :class="Number(item.stock) > 0 ? 'green--text text--darken-2' : 'orange--text text--darken-1'">
-                            Stock: <strong> {{ convierte_stock(item.stock, item.factor) }}</strong>
-                        </span>
-                    </v-list-item-subtitle>
-                </v-list-item-content>
-            </template>
+           <template v-slot:item="{ item }">
 
+  <v-list-item class="item-compact">
+
+    <v-list-item-content class="py-1">
+
+      <!-- meta -->
+      <div class="producto-meta">
+        <span class="categoria">
+          {{ (item.categoria || '').slice(0,4).toUpperCase() }}
+        </span>
+
+        <span
+          v-if="$store.state.configuracion && $store.state.configuracion.mostrar_codigo"
+          class="codigo"
+        >
+          {{ item.id }}
+        </span>
+      </div>
+
+      <!-- nombre + precio -->
+      <div class="producto-linea">
+
+        <span class="producto-nombre">
+          {{ item.nombre }}
+        </span>
+
+        <span class="producto-precio">
+          {{ moneda }}{{ Number(item.precio || 0).toFixed(2) }}
+        </span>
+
+      </div>
+
+      <!-- stock -->
+      <div
+        class="producto-stock"
+        :class="Number(item.stock) > 0 ? 'stock-ok' : 'stock-bajo'"
+      >
+        Stock: <strong>{{ convierte_stock(item.stock, item.factor) }}</strong>
+      </div>
+
+    </v-list-item-content>
+
+  </v-list-item>
+
+</template>
         </v-autocomplete>
         <v-card class="elevation-6" v-show="muestra_tabla" v-if="x_categoria">
 
@@ -128,7 +152,7 @@
                     <div class="text-caption grey--text text--darken-1" v-if="getFactor(producto_selecto) > 1">
                         Stock:
                         <strong>{{ Math.floor(Number(producto_selecto.stock || 0) / getFactor(producto_selecto))
-                        }}</strong>
+                            }}</strong>
                         cajas
                         + <strong>{{ Number(producto_selecto.stock || 0) % getFactor(producto_selecto) }}</strong> und
                         (total <strong>{{ producto_selecto.stock }}</strong> und)
@@ -877,5 +901,64 @@ export default {
     /* centra vertical */
     justify-content: center !important;
     /* centra horizontal */
+}
+
+.wrap-text {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+}
+
+.wrap-text {
+    white-space: normal !important;
+}
+
+/* linea principal */
+.producto-linea {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.item-compact{
+  min-height:32px !important;
+  padding-top:2px !important;
+  padding-bottom:2px !important;
+}
+
+/* meta */
+.producto-meta{
+  font-size:12px;
+  color:#777;
+  line-height:1.1;
+}
+
+/* nombre */
+.producto-nombre{
+  font-size:14px;
+  line-height:1.15;
+  white-space:normal;
+}
+
+/* precio */
+.producto-precio{
+  font-size:12px;
+  font-weight:600;
+  color:#d32f2f;
+  margin-left:8px;
+}
+
+/* stock */
+.producto-stock{
+  font-size:11px;
+  line-height:1.1;
+}
+
+.stock-ok {
+    color: #2e7d32;
+}
+
+.stock-bajo {
+    color: #ef6c00;
 }
 </style>

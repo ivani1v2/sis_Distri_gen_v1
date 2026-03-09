@@ -151,7 +151,7 @@
 
                                 <v-list-item-content>
                                     <v-list-item-title class="font-weight-medium wrap">{{ dir.direccion
-                                        }}</v-list-item-title>
+                                    }}</v-list-item-title>
                                     <v-list-item-subtitle class="wrap">
                                         <span v-if="dir.referencia">{{ dir.referencia }} • </span>
                                         {{ nombreDep(dir) }} / {{ nombreProv(dir) }} / {{ nombreDist(dir) }}
@@ -214,14 +214,16 @@
                 </v-col>
 
                 <v-col cols="6" class="mt-n4">
-                    <v-select :disabled="permiso_edita" :items="arrayTipoComprobante" item-text="text" item-value="value"
-                        label="Tipo Comprobante" dense outlined v-model="clienteForm.tipocomprobante">
+                    <v-select :disabled="permiso_edita" :items="arrayTipoComprobante" item-text="text"
+                        item-value="value" label="Tipo Comprobante" dense outlined
+                        v-model="clienteForm.tipocomprobante">
                         <template v-slot:append>
                             <v-tooltip bottom>
                                 <template v-slot:activator="{ on, attrs }">
                                     <v-icon small color="blue" v-bind="attrs" v-on="on">mdi-help-circle</v-icon>
                                 </template>
-                                <span>Tipo de comprobante por defecto para este cliente (Nota venta, Boleta, Factura)</span>
+                                <span>Tipo de comprobante por defecto para este cliente (Nota venta, Boleta,
+                                    Factura)</span>
                             </v-tooltip>
                         </template>
                     </v-select>
@@ -315,9 +317,9 @@
                     <v-btn color="primary" @click="guardarDireccion">Guardar</v-btn>
                 </div>
             </v-card>
-        </v-dialog>        
+        </v-dialog>
         <!-- Diálogo ADICIONAL -->
-        <v-dialog v-model="dial_config" max-width="520">
+        <v-dialog v-model="dial_config" max-width="650">
             <v-card class="pa-3">
                 <div class="d-flex align-center">
                     <h3 class="subtitle-1 mb-0">Configuración adicional</h3>
@@ -328,31 +330,43 @@
                 <v-divider class="my-2"></v-divider>
 
                 <v-row dense>
-                    <v-col cols="12">
-                        <v-switch inset :disabled="permiso_edita || !lineaCreditoHabilitado" 
-                            v-model="clienteForm.permite_credito"
-                            label="Permite ventas al crédito" />
+                    <v-col cols="12" sm="6">
+
+                        <v-switch inset :disabled="permiso_edita || !lineaCreditoHabilitado"
+                            v-model="clienteForm.permite_credito" label="Permite ventas al crédito" />
+
                         <small v-if="!lineaCreditoHabilitado" class="grey--text">
                             La línea de crédito está deshabilitada en configuración general.
                         </small>
-                    </v-col>
 
-                    <v-col cols="12" sm="6">
-                        <v-text-field 
-                            :disabled="permiso_edita || !clienteForm.permite_credito || !lineaCreditoHabilitado" 
-                            type="number" min="0" outlined dense 
-                            v-model.number="clienteForm.linea_credito" prefix="S/."
-                            label="Línea de crédito" 
+                        <v-text-field class="mt-2"
+                            :disabled="permiso_edita || !clienteForm.permite_credito || !lineaCreditoHabilitado"
+                            type="number" min="0" outlined dense v-model.number="clienteForm.linea_credito" prefix="S/."
+                            label="Línea de crédito"
                             :rules="clienteForm.permite_credito ? [v => v > 0 || 'Debe ser mayor a 0'] : []"
                             :error="clienteForm.permite_credito && clienteForm.linea_credito <= 0"
                             :error-messages="clienteForm.permite_credito && clienteForm.linea_credito <= 0 ? 'Requerido mayor a 0' : ''" />
+
+                        <v-text-field class="mt-2"
+                            :disabled="permiso_edita || !clienteForm.permite_credito || !lineaCreditoHabilitado"
+                            type="number" min="0" outlined dense v-model.number="clienteForm.dias_credito"
+                            label="Días de crédito"
+                            :rules="clienteForm.permite_credito ? [v => v > 0 || 'Debe ser mayor a 0'] : []"
+                            :error="clienteForm.permite_credito && clienteForm.dias_credito <= 0"
+                            :error-messages="clienteForm.permite_credito && clienteForm.dias_credito <= 0 ? 'Requerido mayor a 0' : ''" />
+
                     </v-col>
 
                     <v-col cols="12" sm="6">
                         <v-select :disabled="permiso_edita" outlined dense multiple chips small-chips
-                            v-model="clienteForm.listas_precios" :items="listasPrecioOpc"
-                            label="Listas de precios disponibles" hint="Selecciona una o varias" persistent-hint />
+                            v-model="clienteForm.listas_precios" :items="listasPrecioOpc" item-text="text"
+                            item-value="value" label="Listas de precios disponibles" hint="Selecciona una o varias"
+                            persistent-hint @change="mensajeListaPrecio" />
+                        <v-alert v-if="mensajePrecio" type="info" dense class="mt-2">
+                            {{ mensajePrecio }}
+                        </v-alert>
                     </v-col>
+
                 </v-row>
 
                 <v-card-actions>
@@ -413,6 +427,7 @@ export default {
             arrayDists2: [],
 
             indicePrincipal: 0, // radio de dirección principal
+            mensajePrecio: '',
 
             clienteForm: {
                 activo: true,
@@ -486,12 +501,12 @@ export default {
         },
         // 🔽 si tienes algo en store.state.listas_precio lo usa; si no, cae en 3 por defecto
         listasPrecioOpc() {
-            const ls = this.$store?.state?.listas_precio;
-            if (Array.isArray(ls) && ls.length) {
-                return ls.map(x => typeof x === 'string' ? x : (x.nombre || x.label || x.value || 'LISTA'));
-            }
-            return ['1', '2', '3'];
-        },
+            return [
+                { text: 'MAYORISTA', value: 'mayorista' },
+                { text: 'DISTRIBUIDOR', value: 'distribuidor' },
+                { text: 'MINORISTA', value: 'minorista' }
+            ]
+        }
     },
     watch: {
         // Normalización doc + detección DNI/RUC
@@ -728,7 +743,7 @@ export default {
                 }
                 if (this.clienteForm.permite_credito && this.lineaCreditoHabilitado) {
                     const credito = Number(this.clienteForm.linea_credito || 0)
-                    if(credito <= 0) {
+                    if (credito <= 0) {
                         this.error = 'si habilita crédito, la línea de crédito debe ser mayor a 0'
                         this.dial_config = true
                         return
@@ -795,6 +810,7 @@ export default {
                 permite_credito: typeof c.permite_credito === 'boolean' ? c.permite_credito : this.clienteForm.permite_credito,
                 linea_credito: Number.isFinite(Number(c.linea_credito)) ? Number(c.linea_credito) : this.clienteForm.linea_credito,
                 listas_precios: Array.isArray(c.listas_precios) ? [...c.listas_precios] : (this.clienteForm.listas_precios || []),
+                dias_credito: Number.isFinite(Number(c.dias_credito)) ? Number(c.dias_credito) : this.clienteForm.dias_credito,
             };
 
             // 2) Si viene formato antiguo (campos sueltos), migrar a direcciones[]
@@ -1015,7 +1031,28 @@ export default {
                 this.cargando = false;
             }
         },
+        mensajeListaPrecio(valores) {
 
+            let mensajes = []
+
+            if (valores.includes('minorista')) {
+                mensajes.push('Precio regular')
+            }
+
+            if (valores.includes('distribuidor')) {
+                mensajes.push('Escala 1')
+            }
+
+            if (valores.includes('mayorista')) {
+                mensajes.push('Escala 2')
+            }
+
+            if (mensajes.length) {
+                this.mensajePrecio = 'Este cliente podrá comprar con: ' + mensajes.join(', ')
+            } else {
+                this.mensajePrecio = ''
+            }
+        }
     }
 }
 </script>
