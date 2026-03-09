@@ -162,7 +162,7 @@
 
 <script>
 import { mapState } from 'vuex'
-import { all_pedidos, detalle_pedido,editaProducto  } from '@/db'
+import { all_pedidos, detalle_pedido,editaProducto  } from '../../db'
 import axios from 'axios'
 import moment from 'moment'
 import * as XLSX from 'xlsx'

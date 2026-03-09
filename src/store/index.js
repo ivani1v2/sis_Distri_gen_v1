@@ -353,6 +353,7 @@ export default new Vuex.Store({
       "TRASLADO EMISOR ITINERANTE CP",
       "EXPORTACION",
       "TRASLADO A ZONA PRIMARIA",
+      "DEVOLUCION",
       "OTROS",
     ],
     motivosSunat_guia: [
@@ -387,6 +388,10 @@ export default new Vuex.Store({
       {
         nombre: "TRASLADO A ZONA PRIMARIA",
         codigo: "19",
+      },
+      {
+        nombre: "DEVOLUCION",
+        codigo: "06",
       },
       {
         nombre: "OTROS",

@@ -1,19 +1,35 @@
 <template>
     <div class="pa-4">
         <v-card>
-            <v-row dense>
-                <v-col cols="6" sm="4">
+               <v-row dense class="pa-2">
+                <v-col cols="12" sm="3">
                     <v-text-field class="mx-1" outlined dense type="date" v-model="date" label="Inicio"></v-text-field>
                 </v-col>
-                <v-col cols="6" sm="4">
+                <v-col cols="12" sm="3">
                     <v-text-field class="mx-1" outlined dense type="date" v-model="date2" label="Fin"></v-text-field>
                 </v-col>
-                <v-col cols="12" sm="4" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
-                    <v-text-field class="mx-1" outlined dense v-model="num_doc" label="Busca Documento"
-                        append-icon="mdi-magnify" @click:append="busca()" :prepend-inner-icon="tipo_doc"
-                        @click:prepend-inner="cambia_doc()" @keyup.enter="busca()"></v-text-field>
+                <v-col cols="12" sm="4">
+                    <v-text-field
+                        class="mx-1"
+                        outlined
+                        dense
+                        v-model="num_doc"
+                        label="Busca Documento"
+                        append-icon="mdi-magnify"
+                        @click:append="busca()"
+                        :prepend-inner-icon="tipo_doc"
+                        @click:prepend-inner="cambia_doc()"
+                        @keyup.enter="busca()"
+                    ></v-text-field>
+                </v-col>
+                <v-col cols="12" sm="2">
+                    <v-btn block color="error" depressed @click="dial_nueva_nota = true">
+                        <v-icon left>mdi-plus</v-icon>
+                        Nueva NC
+                    </v-btn>
                 </v-col>
             </v-row>
+
 
             <v-simple-table fixed-header height="65vh" dense>
                 <template v-slot:default>
@@ -117,6 +133,11 @@
                 </v-row>
             </v-card>
         </v-dialog>
+            <nota-nueva
+            v-if="dial_nueva_nota"
+            @cierra="dial_nueva_nota = false"
+            @generado="onNotaGenerada"
+        />
     </div>
 </template>
 
@@ -144,7 +165,11 @@ import {
     pdfGenera
 } from '../../pdf_notaCD'
 import store from '@/store/index'
+import NotaNueva from './dialogos/dial_nota_nueva.vue'
 export default {
+       components: {
+        NotaNueva
+    },
     data: () => ({
         dialogoprogress: false,
         ordenresumen: '',
@@ -154,7 +179,8 @@ export default {
         dialogocomprobante: false,
         seleccionado: '',
         num_doc: '',
-        tipo_doc: 'BN'
+        tipo_doc: 'BN',
+        dial_nueva_nota: false
     }),
     created() {
         this.busca()
@@ -166,7 +192,10 @@ export default {
         }
     },
     methods: {
-
+onNotaGenerada() {
+    this.dial_nueva_nota = false
+    this.busca()
+},
         conviertefecha(date) {
             return moment.unix(date).format('DD/MM/YYYY hh:mm A')
         },
