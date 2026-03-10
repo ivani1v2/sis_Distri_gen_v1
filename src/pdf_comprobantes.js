@@ -5,6 +5,7 @@ import QR from "qrcode-base64";
 import moment from "moment";
 import { NumerosALetras } from "numero-a-letras";
 let modo_genera = "abre";
+let copias_genera = 1;
 import axios from "axios";
 
 let moneda = "S/";
@@ -16,7 +17,7 @@ function permite_impresion_host() {
   return tienePermiso && tieneConfig;
 }
 
-async function abre_dialogo_impresion(doc) {
+async function abre_dialogo_impresion(doc,  copias = 1) {
   try {
     if (!permite_impresion_host()) {
       abre_dialogo_impresion_original(doc);
@@ -53,7 +54,7 @@ async function abre_dialogo_impresion(doc) {
       type: "PRINT_PDF", 
       token, 
       printer: configHost.nombre_impresora || "POS-80-Series", 
-      copies: 1,
+      copies: copias,
       meta, 
       pdf: buffer 
     };
@@ -68,7 +69,7 @@ async function abre_dialogo_impresion(doc) {
     
   } catch (e) {
     console.error("Error impresión host:", e);
-    abre_dialogo_impresion_original(doc);
+    abre_dialogo_impresion_original(doc, copias_genera);
   }
 }
 
@@ -105,10 +106,11 @@ async function abre_dialogo_impresion_original(doc) {
     console.error("❌ No se pudo abrir ventana de impresión");
   }
 }
-export const pdfGenera = (arraydatos, cabecera, medida, modo) => {
+export const pdfGenera = (arraydatos, cabecera, medida, modo, copias = 1) => {
   //console.log(arraydatos, cabecera, medida, modo);
   moneda = cabecera.moneda || "S/";
   modo_genera = modo;
+  copias_genera = copias; 
   var qrs = generaQR(cabecera);
   switch (medida) {
     case "A4":
@@ -615,7 +617,7 @@ async function impresion58(arraydatos, qr, cabecera) {
           window.open(url, "_blank");
         }
       } else {
-        abre_dialogo_impresion(doc);
+        abre_dialogo_impresion(doc, copias_genera);
       }
       break;
     case "host":
@@ -1112,14 +1114,14 @@ async function impresion80(arraydatos, qr, cabecera) {
           window.open(url, "_blank");
         }
       } else {
-        abre_dialogo_impresion(doc);
+        abre_dialogo_impresion(doc, copias_genera);
       }
       break;
     case "host":
       envia_host(
         doc.output("blob"),
         arraycabe.serie + "-" + arraycabe.correlativoDocEmitido + ".pdf",
-        "caja"
+        "caja",
       );
       break;
     case "descarga":
@@ -1608,7 +1610,7 @@ function impresionA4(array, qr, arraycabecera) {
       if (store.state.esmovil) {
         window.open(doc.output("bloburi"));
       } else {
-        abre_dialogo_impresion(doc);
+        abre_dialogo_impresion(doc, copias_genera);
       }
       break;
     case "host":
@@ -2174,7 +2176,7 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
       if (store.state.esmovil) {
         window.open(doc.output("bloburi"));
       } else {
-        abre_dialogo_impresion(doc);
+        abre_dialogo_impresion(doc, copias_genera);
       }
       break;
     case "host":

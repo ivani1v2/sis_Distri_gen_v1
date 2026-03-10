@@ -428,23 +428,117 @@
                         title="Configurar Impresión Host">mdi-cog</v-icon>
                 </v-toolbar>
                 <v-card-text class="pa-4">
+                    <v-btn-toggle v-model="modo_impresion_comp" mandatory class="mb-4 d-flex justify-center" rounded>
+                        <v-btn value="abre" small :color="modo_impresion_comp === 'abre' ? 'teal' : ''"
+                            :class="modo_impresion_comp === 'abre' ? 'white--text' : ''">
+                            <v-icon left small>mdi-printer</v-icon> Imprimir
+                        </v-btn>
+                        <v-btn value="descarga" small :color="modo_impresion_comp === 'descarga' ? 'teal' : ''"
+                            :class="modo_impresion_comp === 'descarga' ? 'white--text' : ''">
+                            <v-icon left small>mdi-download</v-icon> Descargar
+                        </v-btn>
+                    </v-btn-toggle>
+                    <v-row justify="center" class="mb-4">
+                        <v-col cols="8" sm="6" md="5">
+                            <v-text-field v-model.number="copias_comprobante" label="Copias" type="number" min="1"
+                                max="10" dense outlined hide-details prepend-inner-icon="mdi-content-copy"
+                                background-color="grey lighten-4" class="rounded-lg">
+                                <template v-slot:append>
+                                    <v-btn icon small
+                                        @click="copias_comprobante = Math.min(copias_comprobante + 1, 10)">
+                                        <v-icon small>mdi-plus</v-icon>
+                                    </v-btn>
+                                    <v-btn icon small @click="copias_comprobante = Math.max(copias_comprobante - 1, 1)">
+                                        <v-icon small>mdi-minus</v-icon>
+                                    </v-btn>
+                                </template>
+                            </v-text-field>
+                        </v-col>
+                    </v-row>
+
                     <v-row dense>
                         <v-col cols="12" md="4">
-                            <v-card outlined class="pa-3 text-center" @click.prevent="imprime_comprobante('A4')">
+                            <v-card outlined class="pa-3 text-center hover-card"
+                                @click.prevent="imprime_comprobante('A4')">
                                 <v-icon size="35" color="red">mdi-file-pdf-box</v-icon>
                                 <h5 class="text-caption mt-1">PDF A4</h5>
                             </v-card>
                         </v-col>
                         <v-col cols="12" md="4">
-                            <v-card outlined class="pa-3 text-center" @click.prevent="imprime_comprobante('80')">
+                            <v-card outlined class="pa-3 text-center hover-card"
+                                @click.prevent="imprime_comprobante('80')">
                                 <v-icon size="35" color="red">mdi-printer-pos</v-icon>
                                 <h5 class="text-caption mt-1">Ticket 80mm</h5>
                             </v-card>
                         </v-col>
                         <v-col cols="12" md="4">
-                            <v-card outlined class="pa-3 text-center" @click.prevent="imprime_comprobante('58')">
+                            <v-card outlined class="pa-3 text-center hover-card"
+                                @click.prevent="imprime_comprobante('58')">
                                 <v-icon size="35" color="red">mdi-printer-pos</v-icon>
                                 <h5 class="text-caption mt-1">Ticket 58mm</h5>
+                            </v-card>
+                        </v-col>
+                    </v-row>
+                </v-card-text>
+            </v-card>
+        </v-dialog>
+        <v-dialog v-model="dialogo_guia_individual" max-width="490px">
+            <v-card class="rounded-lg">
+                <v-toolbar class="text-caption"
+                    :color="guia_individual_tipo === 'transporte' ? 'purple darken-1' : 'cyan darken-1'" dense dark>
+                    <v-toolbar-title>{{ guia_individual_tipo === 'transporte' ? 'Guía Transporte' : 'Guía Remisión'
+                    }}</v-toolbar-title>
+                    <v-spacer></v-spacer>
+                    <v-btn icon @click="dialogo_guia_individual = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-toolbar>
+                <v-card-text class="pa-4">
+                    <v-btn-toggle v-model="modo_guia_individual" mandatory class="mb-4 d-flex justify-center" rounded>
+                        <v-btn value="abre" small
+                            :color="modo_guia_individual === 'abre' ? (guia_individual_tipo === 'transporte' ? 'purple' : 'cyan') : ''"
+                            :class="modo_guia_individual === 'abre' ? 'white--text' : ''">
+                            <v-icon left small>mdi-printer</v-icon> Imprimir
+                        </v-btn>
+                        <v-btn value="descarga" small
+                            :color="modo_guia_individual === 'descarga' ? (guia_individual_tipo === 'transporte' ? 'purple' : 'cyan') : ''"
+                            :class="modo_guia_individual === 'descarga' ? 'white--text' : ''">
+                            <v-icon left small>mdi-download</v-icon> Descargar
+                        </v-btn>
+                    </v-btn-toggle>
+
+                    <v-row v-if="modo_guia_individual === 'abre'" justify="center" class="mb-4">
+                        <v-col cols="8" sm="6" md="5">
+                            <v-text-field v-model.number="copias_guia_individual" label="Copias" type="number" min="1"
+                                max="10" dense outlined hide-details prepend-inner-icon="mdi-content-copy"
+                                background-color="grey lighten-4" class="rounded-lg">
+                                <template v-slot:append>
+                                    <v-btn icon small
+                                        @click="copias_guia_individual = Math.min(copias_guia_individual + 1, 10)">
+                                        <v-icon small>mdi-plus</v-icon>
+                                    </v-btn>
+                                    <v-btn icon small
+                                        @click="copias_guia_individual = Math.max(copias_guia_individual - 1, 1)">
+                                        <v-icon small>mdi-minus</v-icon>
+                                    </v-btn>
+                                </template>
+                            </v-text-field>
+                        </v-col>
+                    </v-row>
+
+                    <v-row dense>
+                        <v-col cols="6">
+                            <v-card outlined class="pa-3 text-center hover-card"
+                                @click.prevent="ejecutarImpresionGuia('A4')">
+                                <v-icon size="35" color="red">mdi-file-pdf-box</v-icon>
+                                <h5 class="text-caption mt-1">PDF A4</h5>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="6">
+                            <v-card outlined class="pa-3 text-center hover-card"
+                                @click.prevent="ejecutarImpresionGuia('80')">
+                                <v-icon size="35" color="red">mdi-printer-pos</v-icon>
+                                <h5 class="text-caption mt-1">Ticket 80mm</h5>
                             </v-card>
                         </v-col>
                     </v-row>
@@ -638,7 +732,13 @@ export default {
             buscarReparto: '',
             editandoReparto: false,
             repartoEditado: '',
-
+            modo_impresion_comp: 'abre',
+            copias_comprobante: 1,
+            dialogo_guia_individual: false,
+            modo_guia_individual: 'abre',
+            copias_guia_individual: 1,
+            guia_individual_tipo: 'remision',
+            guia_individual_data: null,
         }
     },
     created() {
@@ -776,8 +876,13 @@ export default {
         async genera_guia(data) {
             store.commit("dialogoprogress", 1)
             const snapshot = await all_detalle_p(this.router_grupo, data.numeracion).once("value");
+            // Agregar id_grupo al data para que gr_remitente pueda regresar aquí
+            const cabeceraConGrupo = {
+                ...data,
+                id_grupo: this.router_grupo
+            }
             var array = {
-                arrayCabecera: data,
+                arrayCabecera: cabeceraConGrupo,
                 array_item: snapshot.val()
             }
             store.commit("array_guia", array)
@@ -1136,13 +1241,19 @@ export default {
 
 
         async imprime_guia(data) {
+            this.guia_individual_tipo = 'remision';
+            this.guia_individual_data = data.guia_id;
+            this.dialogo_guia_individual = true;
+        },
+
+        /* async imprime_guia(data) {
             var snapshot = await buscaGuiaremision(data.guia_id).once("value")
             console.log(snapshot.val())
             if (snapshot.exists()) {
                 var arraydatos = snapshot.val()
                 generaGuia(arraydatos, store.state.configImpresora.tamano)
             }
-        },
+        }, */
         inicio() {
             Cabecera_p(this.router_grupo)
                 .once("value").then((snapshot) => {
@@ -1420,39 +1531,61 @@ export default {
                 return;
             }
 
+            this.dialogo_imprime = false;
             this.printTotal = array.length;
             this.printDone = 0;
             this.printError = '';
             this.printDialog = true;
 
-            this.impresion_comp(array, 0, tamano);
+            this.impresion_comp(array, 0, tamano, this.modo_impresion_comp, this.copias_comprobante);
         },
 
-        async impresion_comp(array, i, tamano) {
+        async impresion_comp(array, i, tamano, modo = 'abre', copias = 1) {
             try {
                 if (i < array.length) {
                     const data = array[i];
                     const snapshot = await all_detalle_p(this.router_grupo, data.numeracion).once("value");
                     const arraydatos = snapshot.val();
+
                     if (snapshot.exists()) {
                         const doc = await colClientes().doc(String(data.dni)).get();
                         if (doc.exists) {
                             const datas = doc.data() || {}
                             data.referencia = this.getReferenciaPrincipal(datas) || datas.referencia || '';
                         }
-                        await pdfGenera(arraydatos, data, tamano, 'abre');
+
+                        if (modo === 'descarga') {
+                            for (let c = 1; c <= copias; c++) {
+                                if (c > 1) {
+                                    await new Promise(resolve => setTimeout(resolve, 500));
+                                }
+
+                                const dataConCopia = {
+                                    ...data,
+                                    numero_copia: c,
+                                    total_copias: copias
+                                };
+
+                                await pdfGenera(arraydatos, dataConCopia, tamano, modo, 1);
+                            }
+                        } else {
+                            await pdfGenera(arraydatos, data, tamano, modo, copias);
+                        }
                     }
+
                     this.printDone = i + 1;
-                    await this.impresion_comp(array, i + 1, tamano);
+
+                    setTimeout(() => this.impresion_comp(array, i + 1, tamano, modo, copias), 3500);
                 } else {
-                    this.$store.commit('dialogosnackbar', 'Impresión finalizada.');
+                    const mensaje = modo === 'descarga' ? 'Descarga completada.' : 'Impresión finalizada.';
+                    this.$store.commit('dialogosnackbar', mensaje);
                     this.printDialog = false;
                 }
             } catch (e) {
                 console.error(e);
                 this.printError = 'Ocurrió un error durante la impresión.';
                 this.printDone = Math.min(i + 1, this.printTotal);
-                await this.impresion_comp(array, i + 1, tamano);
+                setTimeout(() => this.impresion_comp(array, i + 1, tamano, modo, copias), 3500);
             }
         },
         getReferenciaPrincipal(cliente) {
@@ -1697,7 +1830,7 @@ export default {
             this.abrirDialogoAnulacion(data);
         },
         async envia_sunat() {
-             if(!confirm("Esta seguro de procesar reparto?, solo Boletas y facturas seran enviadas a sunat")){
+            if (!confirm("Esta seguro de procesar reparto?, solo Boletas y facturas seran enviadas a sunat")) {
                 return
             }
             const seleccionados = this.listafiltrada.filter(
@@ -2056,6 +2189,57 @@ export default {
 
             this.$store.commit('dialogosnackbar', 'No se encontraron repartos anteriores accesibles');
             return null;
+        },
+        async ejecutarImpresionGuia(formato) {
+            this.dialogo_guia_individual = false;
+            this.$store.commit('dialogoprogress', 1);
+
+            try {
+                let snapshot;
+
+                if (this.guia_individual_tipo === 'transporte') {
+                    // snapshot = await buscarGuiaTransporte(this.guia_individual_data).once('value');
+                    this.$store.commit('dialogosnackbar', 'Función de guía transporte en desarrollo');
+                    return;
+                } else {
+                    snapshot = await buscaGuiaremision(this.guia_individual_data).once('value');
+                }
+
+                if (snapshot.exists()) {
+                    const arraydatos = snapshot.val();
+
+                    if (this.modo_guia_individual === 'descarga') {
+                        for (let c = 1; c <= this.copias_guia_individual; c++) {
+                            if (c > 1) {
+                                await new Promise(resolve => setTimeout(resolve, 500));
+                            }
+
+                            const dataConCopia = {
+                                ...arraydatos,
+                                numero_copia: c,
+                                total_copias: this.copias_guia_individual
+                            };
+
+                            generaGuia(dataConCopia, formato, this.modo_guia_individual, 1);
+                        }
+                    } else {
+                        generaGuia(arraydatos, formato, this.modo_guia_individual, this.copias_guia_individual);
+                    }
+
+                    this.$store.commit('dialogosnackbar',
+                        this.modo_guia_individual === 'descarga'
+                            ? 'Descarga de guía completada'
+                            : 'Impresión de guía enviada'
+                    );
+                } else {
+                    this.$store.commit('dialogosnackbar', 'No se encontró la guía');
+                }
+            } catch (e) {
+                console.error('Error procesando guía:', e);
+                this.$store.commit('dialogosnackbar', 'Error al procesar la guía');
+            } finally {
+                this.$store.commit('dialogoprogress');
+            }
         },
     }
 }

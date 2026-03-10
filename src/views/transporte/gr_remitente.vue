@@ -558,7 +558,8 @@ import {
     nuevo_transporte,
     buscaGuiaremision,
     grabaConfigura,
-    nuevo_tablas_transporte
+    nuevo_tablas_transporte,
+    grabaCabecera_p
 } from '../../db'
 import vehiculos from '@/views/transporte/vehiculos'
 import choferes from '@/views/transporte/choferes'
@@ -676,7 +677,10 @@ export default {
         cascadaLock: false,
         dialogo_dire: false,
         modo_direccion: '',
-        numero: ''
+        numero: '',
+        id_grupo_pedido: '',
+        numeracion_pedido: '',
+        vieneDeReparto: false
     }),
     watch: {
         'departamento_p'(depa) {
@@ -793,6 +797,13 @@ export default {
             this.documento_dest = cabecera.tipoDocumento
             this.razonsocial_destinatario = cabecera.cliente
 
+            // Capturar datos del pedido de origen para regresar después
+            if (cabecera.id_grupo) {
+                this.id_grupo_pedido = cabecera.id_grupo
+                this.numeracion_pedido = cabecera.numeracion
+                this.vieneDeReparto = true
+            }
+
             for (let i = 0; i < detalle.length; i++) {
                 const data = detalle[i]
                 this.lista_items.push({
@@ -808,7 +819,7 @@ export default {
             const clean = v => (v == null ? '' : String(v)).replace(/\s+/g, '');
 
             const docRel = {
-                ruc: clean(cabecera?.dni),                // RUC/DNI del emisor del doc relacionado
+                ruc: clean(store.state.baseDatos?.ruc),   // RUC del emisor (la empresa)
                 tipo: clean(cabecera?.cod_comprobante),   // 03/01/07/08/etc
                 id: clean(cabecera?.numeracion || cabecera?.serie + '-' + cabecera?.correlativoDocEmitido),
             };
@@ -997,6 +1008,20 @@ export default {
         },
 
         async finaliza_(array) {
+            // Guardar guia_id en el pedido si viene de reparto
+            if (this.vieneDeReparto && this.id_grupo_pedido && this.numeracion_pedido) {
+                try {
+                    await grabaCabecera_p(
+                        this.id_grupo_pedido,
+                        `${this.numeracion_pedido}/guia_id`,
+                        array.id
+                    )
+                    console.log('guia_id guardado:', array.id, 'en pedido:', this.numeracion_pedido)
+                } catch (e) {
+                    console.error('Error guardando guia_id en pedido:', e)
+                }
+            }
+
             await new Promise(resolve => setTimeout(resolve, 2000))
             store.commit("dialogoprogress")
             store.commit('array_guia', '')
@@ -1418,9 +1443,15 @@ export default {
             }
         },
         regresa() {
-            this.$router.push({
-                path: '/reporte_Guia'
-            })
+            if (this.vieneDeReparto && this.id_grupo_pedido) {
+                this.$router.push({
+                    path: `/liquida_reparto/${this.id_grupo_pedido}`
+                })
+            } else {
+                this.$router.push({
+                    path: '/reporte_Guia'
+                })
+            }
         },
         conviertefecha_unix(date) {
             return moment(String(date)) / 1000

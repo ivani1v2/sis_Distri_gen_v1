@@ -14,6 +14,34 @@
 
             <v-card-text class="pa-4">
                 <template v-if="!imprimiendo">
+                    <v-btn-toggle v-model="modo_impresion_guia" mandatory class="mb-4 d-flex justify-center" rounded>
+                        <v-btn value="abre" small :color="modo_impresion_guia === 'abre' ? 'teal' : ''"
+                            :class="modo_impresion_guia === 'abre' ? 'white--text' : ''">
+                            <v-icon left small>mdi-printer</v-icon> Imprimir
+                        </v-btn>
+                        <v-btn value="descarga" small :color="modo_impresion_guia === 'descarga' ? 'teal' : ''"
+                            :class="modo_impresion_guia === 'descarga' ? 'white--text' : ''">
+                            <v-icon left small>mdi-download</v-icon> Descargar
+                        </v-btn>
+                    </v-btn-toggle>
+
+                    <v-row justify="center" class="mb-1">
+                        <v-col cols="8" sm="6" md="5">
+                            <v-text-field v-model.number="copias_guia" label="Copias" type="number" min="1"
+                                max="10" dense outlined hide-details prepend-inner-icon="mdi-content-copy"
+                                background-color="grey lighten-4" class="rounded-lg">
+                                <template v-slot:append>
+                                    <v-btn icon small @click="copias_guia = Math.min(copias_guia + 1, 10)">
+                                        <v-icon small>mdi-plus</v-icon>
+                                    </v-btn>
+                                    <v-btn icon small @click="copias_guia = Math.max(copias_guia - 1, 1)">
+                                        <v-icon small>mdi-minus</v-icon>
+                                    </v-btn>
+                                </template>
+                            </v-text-field>
+                        </v-col>
+                    </v-row>
+
                     <p class="text-subtitle-2 text-center mb-3">
                         Imprimir <strong>{{ guiasSeleccionadas }}</strong> guía(s) de remisión
                     </p>
@@ -41,7 +69,9 @@
                 <template v-else>
                     <div class="text-center">
                         <v-icon color="teal" size="40" class="mb-2">mdi-printer</v-icon>
-                        <h5 class="text-subtitle-1 font-weight-bold mb-1">Imprimiendo guías...</h5>
+                        <h5 class="text-subtitle-1 font-weight-bold mb-1">
+                            {{ modo_impresion_guia === 'descarga' ? 'Descargando guías...' : 'Imprimiendo guías...' }}
+                        </h5>
                         <div class="caption mb-2">Formato: {{ formatoGuiaActual === 'A4' ? 'PDF A4' : 'Ticket 80mm' }}</div>
                         <div class="caption mb-2">{{ printGuiaDone }} de {{ printGuiaTotal }}</div>
                         <v-progress-linear :value="printGuiaPercent" height="15" color="teal" rounded>
@@ -99,6 +129,8 @@ export default {
             printGuiaDone: 0,
             printGuiaError: '',
             dial_config_host: false,
+            modo_impresion_guia: 'abre',
+            copias_guia: 1,
         }
     },
     computed: {
@@ -185,16 +217,37 @@ export default {
 
                     if (snapshot.exists()) {
                         const datosGuia = snapshot.val();
-                        generaGuia(datosGuia, formato);
-                        await new Promise(resolve => setTimeout(resolve, 500));
+                        
+                        if (this.modo_impresion_guia === 'descarga') {
+                            for (let c = 1; c <= this.copias_guia; c++) {
+                                if (c > 1) {
+                                    await new Promise(resolve => setTimeout(resolve, 500));
+                                }
+                                
+                                const datosGuiaConCopia = {
+                                    ...datosGuia,
+                                    numero_copia: c,
+                                    total_copias: this.copias_guia
+                                };
+                                
+                                generaGuia(datosGuiaConCopia, formato, this.modo_impresion_guia, 1);
+                            }
+                        } else {
+                            generaGuia(datosGuia, formato, this.modo_impresion_guia, this.copias_guia);
+                        }
+                        
+                        await new Promise(resolve => setTimeout(resolve, 2500));
                     }
 
                     await this.imprimir_guia_recursivo(array, index + 1, formato);
                 } else {
                     this.printGuiaDone = array.length;
-                    store.commit('dialogosnackbar',
-                        `${array.length} guía(s) impresa(s) en formato ${formato === 'A4' ? 'PDF A4' : 'Ticket 80mm'}.`
-                    );
+                    
+                    const mensaje = this.modo_impresion_guia === 'descarga' 
+                        ? `${array.length} guía(s) descargada(s) en formato ${formato === 'A4' ? 'PDF A4' : 'Ticket 80mm'} con ${this.copias_guia} copia(s) cada una.`
+                        : `${array.length} guía(s) impresa(s) en formato ${formato === 'A4' ? 'PDF A4' : 'Ticket 80mm'} con ${this.copias_guia} copia(s) cada una.`;
+                    
+                    store.commit('dialogosnackbar', mensaje);
 
                     this.$emit('update:impresion-completada', true);
 
@@ -217,6 +270,8 @@ export default {
             this.printGuiaTotal = 0;
             this.printGuiaDone = 0;
             this.printGuiaError = '';
+            this.modo_impresion_guia = 'abre';
+            this.copias_guia = 1;
         }
     }
 }

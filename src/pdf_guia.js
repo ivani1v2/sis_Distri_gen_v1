@@ -12,7 +12,7 @@ function permite_impresion_host() {
   return tienePermiso && tieneConfig;
 }
 
-async function abre_dialogo_impresion_host(doc) {
+async function abre_dialogo_impresion_host(doc, copias = 1) {
   try {
     if (!permite_impresion_host()) {
       abre_dialogo_impresion_original(doc);
@@ -49,7 +49,7 @@ async function abre_dialogo_impresion_host(doc) {
       type: "PRINT_PDF",
       token,
       printer: configHost.nombre_impresora || "POS-80-Series",
-      copies: 1,
+      copies: copias,
       meta,
       pdf: buffer
     };
@@ -95,21 +95,21 @@ function abre_dialogo_impresion_original(doc) {
   }
 }
 
-export const generaGuia = (array, formato) => {
+export const generaGuia = (array, formato, modo = 'abre', copias = 1) => {
   var qrs = generaQR(array);
   switch (formato) {
     case "A4":
-      impresionA4(array, qrs);
+      impresionA4(array, qrs, modo, copias);
       break;
     case "80":
-      impresion80(array, qrs);
+      impresion80(array, qrs, modo, copias);
       break;
     case "58":
-      impresion58(array, qrs);
+      impresion58(array, qrs, modo, copias);
       break;
   }
 };
-export const impresion58 = (arrays, qr) => {
+export const impresion58 = (arrays, qr, modo = 'abre', copias = 1) => {
   var linea = parseInt(store.state.configImpresora.msuperior);
   var Direccion =
     store.state.baseDatos.direccion +
@@ -364,23 +364,23 @@ export const impresion58 = (arrays, qr) => {
     body: [
       [
         "Partida : " +
-          arrays.dir_origen +
-          " " +
-          arrays.distrito_p +
-          " " +
-          arrays.provincia_p +
-          " " +
-          arrays.departamento_p,
+        arrays.dir_origen +
+        " " +
+        arrays.distrito_p +
+        " " +
+        arrays.provincia_p +
+        " " +
+        arrays.departamento_p,
       ],
       [
         "Llegada : " +
-          arrays.dir_destino +
-          " " +
-          arrays.distrito_l +
-          " " +
-          arrays.provincia_l +
-          " " +
-          arrays.departamento_l,
+        arrays.dir_destino +
+        " " +
+        arrays.distrito_l +
+        " " +
+        arrays.provincia_l +
+        " " +
+        arrays.departamento_l,
       ],
     ],
   });
@@ -536,7 +536,7 @@ export const impresion58 = (arrays, qr) => {
   doc.setFontSize(8);
   var texto = doc.splitTextToSize(
     "Representación Impresa de la GUIA DE REMISION ELECTRONICA" +
-      " Consultar su validez en https://domo.pe/buscardocumentos",
+    " Consultar su validez en https://domo.pe/buscardocumentos",
     pdfInMM - lMargin - rMargin
   );
   doc.text(texto, pageCenter, linea, "center");
@@ -555,11 +555,15 @@ export const impresion58 = (arrays, qr) => {
   linea = linea + 4 * texto.length;
   doc.text(".", 0, linea);
   //doc.text(numeros_a_letras(parseFloat(cuentatotal),'nominal',0,'CENTIMOS','SOLES'),0,linea)
-  abre_dialogo_impresion_host(doc);
-  //doc.save(arraycabe.serie + "-" + arraycabe.correlativo + '.pdf')
+
+  if (modo === 'descarga') {
+    doc.save(arrays.serie + "-" + arrays.correlativo + '.pdf');
+  } else {
+    abre_dialogo_impresion_host(doc, copias);
+  }
 };
 
-export const impresion80 = (arrays, qr) => {
+export const impresion80 = (arrays, qr, modo = 'abre', copias = 1) => {
   console.log(arrays);
   var linea = parseInt(store.state.configImpresora.msuperior);
   var Direccion =
@@ -829,22 +833,22 @@ export const impresion80 = (arrays, qr) => {
       [
         "PARTIDA : ",
         arrays.dir_origen +
-          " " +
-          arrays.distrito_p +
-          " " +
-          arrays.provincia_p +
-          " " +
-          arrays.departamento_p,
+        " " +
+        arrays.distrito_p +
+        " " +
+        arrays.provincia_p +
+        " " +
+        arrays.departamento_p,
       ],
       [
         "LLEGADA : ",
         arrays.dir_destino +
-          " " +
-          arrays.distrito_l +
-          " " +
-          arrays.provincia_l +
-          " " +
-          arrays.departamento_l,
+        " " +
+        arrays.distrito_l +
+        " " +
+        arrays.provincia_l +
+        " " +
+        arrays.departamento_l,
       ],
     ],
   });
@@ -972,7 +976,7 @@ export const impresion80 = (arrays, qr) => {
   doc.setFontSize(8);
   var texto = doc.splitTextToSize(
     "Representación Impresa de la GUIA DE REMISION ELECTRONICA" +
-      " Consultar su validez en https://domo.pe/buscardocumentos",
+    " Consultar su validez en https://domo.pe/buscardocumentos",
     pdfInMM - lMargin - rMargin
   );
   doc.text(texto, pageCenter, linea, "center");
@@ -991,10 +995,14 @@ export const impresion80 = (arrays, qr) => {
   linea = linea + 4 * texto.length;
   doc.text(".", 0, linea);
   //doc.text(numeros_a_letras(parseFloat(cuentatotal),'nominal',0,'CENTIMOS','SOLES'),0,linea)
-  abre_dialogo_impresion_host(doc);
-  //doc.save(arraycabe.serie + "-" + arraycabe.correlativo + '.pdf')
+
+  if (modo === 'descarga') {
+    doc.save(arrays.serie + "-" + arrays.correlativo + '.pdf');
+  } else {
+    abre_dialogo_impresion_host(doc, copias);
+  }
 };
-function impresionA4(arrays, qr) {
+function impresionA4(arrays, qr, modo = 'abre', copias = 1) {
   console.log(arrays);
   var linea = parseInt(store.state.configImpresora.msuperior);
   var Direccion =
@@ -1315,22 +1323,22 @@ function impresionA4(arrays, qr) {
       [
         "DIR. PARTIDA : ",
         arrays.dir_origen +
-          " " +
-          arrays.distrito_p +
-          " " +
-          arrays.provincia_p +
-          " " +
-          arrays.departamento_p,
+        " " +
+        arrays.distrito_p +
+        " " +
+        arrays.provincia_p +
+        " " +
+        arrays.departamento_p,
       ],
       [
         "DIR. LLEGADA : ",
         arrays.dir_destino +
-          " " +
-          arrays.distrito_l +
-          " " +
-          arrays.provincia_l +
-          " " +
-          arrays.departamento_l,
+        " " +
+        arrays.distrito_l +
+        " " +
+        arrays.provincia_l +
+        " " +
+        arrays.departamento_l,
       ],
     ],
   });
@@ -1555,7 +1563,12 @@ function impresionA4(arrays, qr) {
   linea = linea + 4 * texto.length;
   doc.text(".", 0, linea);
   //doc.text(numeros_a_letras(parseFloat(cuentatotal),'nominal',0,'CENTIMOS','SOLES'),0,linea)
-  abre_dialogo_impresion_host(doc);
+
+  if (modo === 'descarga') {
+    doc.save(arrays.serie + "-" + arrays.correlativo + '.pdf');
+  } else {
+    abre_dialogo_impresion_host(doc, copias);
+  }
 }
 export const generaQR = (array) => {
   if (array.qr == undefined) {
