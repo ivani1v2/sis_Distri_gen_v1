@@ -3,56 +3,40 @@
         <v-autocomplete v-if="!activaproductos && x_categoria" v-model="producto_sele" :items="productosFiltrados"
             item-text="displayText" item-value="id" :filter="filtrarProductos"
             :label="muestra_tabla ? 'Buscar Productos (F1)' : 'Buscar Productos'" clearable :auto-select-first="true"
-            menu-props="{ maxHeight: '300px', auto: true }" outlined dense ref="buscarField"
+            :menu-props="{ maxHeight: '300px', auto: true }" outlined dense ref="buscarField"
             @keydown.native="detectarEntrada" :autofocus="!$store.state.esmovil && muestra_tabla"
             append-icon="mdi-magnify" :loading="cargando" :search-input.sync="buscar"
             no-data-text="No se encontraron productos" @change="prod_selecto">
-           <template v-slot:item="{ item }">
+            <template v-slot:item="{ item, on, attrs }">
+                <v-list-item v-bind="attrs" v-on="on" class="item-compact">
+                    <v-list-item-content class="py-1">
+                        <div class="producto-meta">
+                            <span class="categoria">
+                                {{ (item.categoria || '').slice(0, 4).toUpperCase() }}
+                            </span>
 
-  <v-list-item class="item-compact">
+                            <span v-if="$store.state.configuracion && $store.state.configuracion.mostrar_codigo"
+                                class="codigo">
+                                {{ item.id }}
+                            </span>
+                        </div>
 
-    <v-list-item-content class="py-1">
+                        <div class="producto-linea">
+                            <span class="producto-nombre">
+                                {{ item.nombre }}
+                            </span>
 
-      <!-- meta -->
-      <div class="producto-meta">
-        <span class="categoria">
-          {{ (item.categoria || '').slice(0,4).toUpperCase() }}
-        </span>
+                            <span class="producto-precio">
+                                {{ moneda }}{{ Number(item.precio || 0).toFixed(2) }}
+                            </span>
+                        </div>
 
-        <span
-          v-if="$store.state.configuracion && $store.state.configuracion.mostrar_codigo"
-          class="codigo"
-        >
-          {{ item.id }}
-        </span>
-      </div>
-
-      <!-- nombre + precio -->
-      <div class="producto-linea">
-
-        <span class="producto-nombre">
-          {{ item.nombre }}
-        </span>
-
-        <span class="producto-precio">
-          {{ moneda }}{{ Number(item.precio || 0).toFixed(2) }}
-        </span>
-
-      </div>
-
-      <!-- stock -->
-      <div
-        class="producto-stock"
-        :class="Number(item.stock) > 0 ? 'stock-ok' : 'stock-bajo'"
-      >
-        Stock: <strong>{{ convierte_stock(item.stock, item.factor) }}</strong>
-      </div>
-
-    </v-list-item-content>
-
-  </v-list-item>
-
-</template>
+                        <div class="producto-stock" :class="Number(item.stock) > 0 ? 'stock-ok' : 'stock-bajo'">
+                            Stock: <strong>{{ convierte_stock(item.stock, item.factor) }}</strong>
+                        </div>
+                    </v-list-item-content>
+                </v-list-item>
+            </template>
         </v-autocomplete>
         <v-card class="elevation-6" v-show="muestra_tabla" v-if="x_categoria">
 
@@ -152,7 +136,7 @@
                     <div class="text-caption grey--text text--darken-1" v-if="getFactor(producto_selecto) > 1">
                         Stock:
                         <strong>{{ Math.floor(Number(producto_selecto.stock || 0) / getFactor(producto_selecto))
-                            }}</strong>
+                        }}</strong>
                         cajas
                         + <strong>{{ Number(producto_selecto.stock || 0) % getFactor(producto_selecto) }}</strong> und
                         (total <strong>{{ producto_selecto.stock }}</strong> und)
@@ -895,6 +879,12 @@ export default {
 }
 </script>
 <style scoped>
+.border-bottom {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+.v-list-item--active {
+    background-color: var(--v-primary-lighten5) !important;
+}
 .dialogo-cantidad-centrado {
     display: flex !important;
     align-items: center !important;
@@ -920,38 +910,38 @@ export default {
     align-items: flex-start;
 }
 
-.item-compact{
-  min-height:32px !important;
-  padding-top:2px !important;
-  padding-bottom:2px !important;
+.item-compact {
+    min-height: 32px !important;
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
 }
 
 /* meta */
-.producto-meta{
-  font-size:12px;
-  color:#777;
-  line-height:1.1;
+.producto-meta {
+    font-size: 12px;
+    color: #777;
+    line-height: 1.1;
 }
 
 /* nombre */
-.producto-nombre{
-  font-size:14px;
-  line-height:1.15;
-  white-space:normal;
+.producto-nombre {
+    font-size: 14px;
+    line-height: 1.15;
+    white-space: normal;
 }
 
 /* precio */
-.producto-precio{
-  font-size:12px;
-  font-weight:600;
-  color:#d32f2f;
-  margin-left:8px;
+.producto-precio {
+    font-size: 12px;
+    font-weight: 600;
+    color: #d32f2f;
+    margin-left: 8px;
 }
 
 /* stock */
-.producto-stock{
-  font-size:11px;
-  line-height:1.1;
+.producto-stock {
+    font-size: 11px;
+    line-height: 1.1;
 }
 
 .stock-ok {
