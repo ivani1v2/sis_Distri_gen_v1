@@ -112,18 +112,27 @@
               </v-btn>
             </template>
             <v-list dense>
-              <v-list-item @click="ejecuta_liquidacion(item)" :disabled="item.estado === 'LIQUIDADO'">
+              <v-list-item v-if="esAdmin && item.estado === 'ELIMINADO'" @click="revertirEstado(item)">
+                <v-list-item-icon><v-icon color="success">mdi-restore</v-icon></v-list-item-icon>
+                <v-list-item-title>Revertir Estado (Activar)</v-list-item-title>
+              </v-list-item>
+
+              <v-list-item v-if="esAdmin && item.estado !== 'ELIMINADO'" @click="ejecuta_liquidacion(item)"
+                :disabled="item.estado === 'LIQUIDADO'">
                 <v-list-item-icon><v-icon color="warning">mdi-hand-heart</v-icon></v-list-item-icon>
                 <v-list-item-title>Liquidación / Abono</v-list-item-title>
               </v-list-item>
+
               <v-list-item @click.prevent="ejecutaConsolida(item)">
                 <v-list-item-icon><v-icon color="info">mdi-eye</v-icon></v-list-item-icon>
                 <v-list-item-title>Ver Detalle Productos</v-list-item-title>
               </v-list-item>
+
               <v-list-item @click.prevent="verCronogramaPDF(item)">
                 <v-list-item-icon><v-icon color="success">mdi-calendar</v-icon></v-list-item-icon>
                 <v-list-item-title>Ver Cronograma</v-list-item-title>
               </v-list-item>
+
               <v-list-item @click.prevent="verPDF(item)">
                 <v-list-item-icon><v-icon color="red">mdi-file-pdf-box</v-icon></v-list-item-icon>
                 <v-list-item-title>Ver Comprobante (PDF)</v-list-item-title>
@@ -253,7 +262,7 @@ export default {
 
     arrayConsolidar: [],
 
-    array_estado: ['PENDIENTE', 'LIQUIDADO'],
+    array_estado: ['PENDIENTE', 'LIQUIDADO', 'ELIMINADO'],
     cuenta_estado: 'PENDIENTE',
     buscar: '',
     busca_p: '',
@@ -318,6 +327,9 @@ export default {
 
     monedaSimbolo() {
       return this.$store.state.moneda.find(m => m.codigo == this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/ ';
+    },
+    esAdmin() {
+      return this.$store.state.permisos?.es_admin === true;
     }
   },
 
@@ -623,8 +635,8 @@ export default {
           ...item,
           doc_ref: item.doc_ref,
           numeracion: item.doc_ref,
-          cliente_nombre: item.nombre ,
-          cliente_documento: item.documento ,
+          cliente_nombre: item.nombre,
+          cliente_documento: item.documento,
         };
 
         this.genera_pdf = true;
@@ -675,6 +687,24 @@ export default {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'CuentasXCobrar');
       XLSX.writeFile(wb, 'cuentas_x_cobrar.xlsx');
+    },
+    async revertirEstado(item) {
+      if (!confirm(`¿Revertir la cuenta eliminada del cliente ${item.nombre} (${item.doc_ref})?`)) return
+
+      store.commit('dialogoprogress', 1)
+      try {
+        await editaCuentaxCobrar(item.doc_ref, 'estado', 'PENDIENTE')
+        await editaCuentaxCobrar(item.doc_ref, 'fecha_anulacion', null)
+
+        alert('Cuenta revertida correctamente.')
+        await this.filtra()
+
+      } catch (error) {
+        console.error('Error al revertir:', error)
+        alert('Ocurrió un error al revertir la cuenta.')
+      } finally {
+        store.commit('dialogoprogress', 1)
+      }
     },
   }
 }

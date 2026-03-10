@@ -44,8 +44,8 @@
                 <v-col cols="12" sm="12" md="4" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6 ' : 'mt-n4'">
                     <v-layout dense align-center>
                         <v-flex>
-                            <v-text-field outlined dense v-model="busca_p"
-                                label="Buscar (nombre)" :disabled="cargando" clearable />
+                            <v-text-field outlined dense v-model="busca_p" label="Buscar (nombre)" :disabled="cargando"
+                                clearable />
                         </v-flex>
                         <v-btn icon small color="info" class="ml-2 mt-n6 mr-6" @click="_refreshClientesYFiltrado"
                             :loading="cargando">
@@ -93,7 +93,7 @@
             <div v-if="!isMobile">
                 <v-data-table :headers="headers" :items="listafiltrada" dense fixed-header height="65vh"
                     :items-per-page="50" :loading="cargando" class="elevation-1"
-                    :footer-props="{ itemsPerPageOptions: [25, 50, 100, 200] }" :item-key="getRowKey">
+                    :footer-props="{ itemsPerPageOptions: [25, 50, 100, 200] }" item-key="id">
                     <!-- Cliente -->
                     <template v-slot:[`item.nombre`]="{ item }">
                         <span style="font-size:85%">
@@ -688,6 +688,8 @@ export default {
                     .where('fecha', '<=', end);
 
                 const snap = await q.get();
+                console.log('filtra(): visitas encontradas', snap.size);
+
                 const bestByCliente = new Map();
                 snap.forEach(d => {
                     const r = d.data() || {};
@@ -703,15 +705,14 @@ export default {
 
                 const base = Array.isArray(this.array_clientes) ? this.array_clientes : [];
 
-                this.lista_clientes = base.map((c, index) => {
-                    const docId = c.id;
-                    const uniqueId = docId || `temp_${index}_${Date.now()}`;
-                    const estadoId = String(c.documento || c.id || '').trim();
-                    const estado = bestByCliente.get(estadoId) || 'pendiente';
+                this.lista_clientes = base.map(c => {
+                    const clienteId = String(c.id || '').trim();
+                    const estadoRaw = bestByCliente.get(clienteId) || 'pendiente';
+                    const estado = String(estadoRaw).toLowerCase();
 
                     return {
                         ...c,
-                        id: uniqueId,
+                        id: c.id,
                         estado
                     };
                 });
@@ -769,25 +770,23 @@ export default {
             this.accion_pendiente = null
             this.cliente_deuda = null
         },
-        onContinuarDeudas(payload) {
+        async onContinuarDeudas(payload) {
             const { accion, cliente } = payload
             this.cerrarDialogDeudas()
             if (accion === 'vender') {
+                await this.guardarEstadoRuta(cliente, 'venta');
                 this.ejecutarVenta(cliente)
             } else if (accion === 'pre_venta') {
+                await this.guardarEstadoRuta(cliente, 'pre-venta');
                 this.ejecutarPreVenta(cliente)
             }
         },
         async marcar_visita(cliente) {
-
-            const RADIO_PERMITIDO_M = this.$store.state.configuracion.distancia_visita || 15; // metros
-            console.log('marcar_visita para cliente:', RADIO_PERMITIDO_M);
+            const RADIO_PERMITIDO_M = this.$store.state.configuracion.distancia_visita || 15;
 
             try {
-                // 1) ¿El cliente tiene coordenadas?
                 const tieneCoordsCliente = cliente.latitud != null && cliente.longitud != null;
 
-                // 2) Solo si el cliente tiene coordenadas, validamos ubicación + radio
                 if (tieneCoordsCliente) {
                     const ua = store.state.ubicacion_actual;
                     if (!ua || ua.lat == null || ua.lng == null) {
@@ -812,27 +811,19 @@ export default {
                         return;
                     }
                 }
-                // Si NO tiene coordenadas, simplemente no se valida distancia ni GPS
-                // y se permite marcar la visita.
 
                 if (!confirm('¿Está seguro de marcar visita?')) {
                     return;
                 }
 
-                const fecha = moment().unix();
+                const fecha = moment(this.date).unix();
                 const visita = {
-                    fecha,                                   // timestamp
+                    fecha,
                     sede: this.sede_actual || '',
                     cliente_id: cliente.id || '',
                     zona: cliente.zona || '',
-                    estado: 'VISITA'
+                    estado: 'visita'
                 };
-
-                const clienteId = String(cliente.id || cliente.documento || '').trim();
-                if (!clienteId) {
-                    store.commit('dialogosnackbar', 'Cliente sin ID/DOC válido.');
-                    return;
-                }
 
                 await colRuta_x_dia().add(visita);
                 store.commit('dialogosnackbar', 'Visita marcada correctamente.');
@@ -879,6 +870,21 @@ export default {
             console.log(item)
             this.cliente_selecto = item;   // 👉 pasa el cliente al diálogo
             this.dial_cliente = true;      // 👉 abre el diálogo de edición
+        },
+        async guardarEstadoRuta(cliente, estado) {
+            try {
+                const fecha = moment(this.date).unix();
+                const registro = {
+                    fecha,
+                    sede: this.sede_actual || '',
+                    cliente_id: cliente.id, // Usar ID de Firestore
+                    zona: cliente.zona || '',
+                    estado: estado // 'venta' o 'pre-venta'
+                };
+                await colRuta_x_dia().add(registro);
+            } catch (e) {
+                console.error('Error guardando estado:', e);
+            }
         },
     }
 
