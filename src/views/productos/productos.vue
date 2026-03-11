@@ -264,7 +264,8 @@
                         </v-col>
                         <v-col cols="6" sm="6" md="6">
                             <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" type="number"
-                                dense v-model="precio" label="Precio Regular"></v-text-field>
+                                dense v-model="precio"
+                                :label="`Precio Regular ${formatearPrecioConMoneda(precio, factor)}`"></v-text-field>
                         </v-col>
                     </v-row>
 
@@ -279,24 +280,28 @@
                         <v-col cols="6">
                             <v-text-field outlined
                                 :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect" type="number"
-                                dense v-model="escala_may1" label="Escala may 1" persistent-hint></v-text-field>
+                                dense v-model="escala_may1"  :label="`A partir de: ${formatearEscala(escala_may1, factor, 'label')}`" persistent-hint></v-text-field>
                         </v-col>
                         <v-col cols="6">
                             <v-text-field outlined
                                 :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect" type="number"
-                                dense v-model="precio_may1" label="Precio may 1" persistent-hint></v-text-field>
+                                dense v-model="precio_may1"
+                                :label="`Precio may 1 ${formatearPrecioConMoneda(precio_may1, factor)}`"
+                                persistent-hint></v-text-field>
                         </v-col>
                     </v-row>
                     <v-row class="mt-n6" dense>
                         <v-col cols="6">
                             <v-text-field outlined
                                 :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect" type="number"
-                                dense v-model="escala_may2" label="Escala may 2" persistent-hint></v-text-field>
+                                dense v-model="escala_may2"  :label="`A partir de: ${formatearEscala(escala_may2, factor, 'label')}`" persistent-hint></v-text-field>
                         </v-col>
                         <v-col cols="6">
                             <v-text-field outlined
                                 :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect" type="number"
-                                dense v-model="precio_may2" label="Precio may 2" persistent-hint></v-text-field>
+                                dense v-model="precio_may2"
+                                :label="`Precio may 2 ${formatearPrecioConMoneda(precio_may2, factor)}`"
+                                persistent-hint></v-text-field>
                         </v-col>
                     </v-row>
                 </template>
@@ -389,14 +394,14 @@
 
                     <v-col cols="6">
                         <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" dense type="number"
-                            v-model="costo" label="Costo"></v-text-field>
+                            v-model="costo" :label="`Costo ${formatearCostoConMoneda(costo, factor)}`"></v-text-field>
                     </v-col>
                     <v-col cols="6">
                         <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" dense type="number"
-                            v-model="peso" label="Peso (KG)"></v-text-field>
+                            v-model="peso" :label="`Peso (KG) ${formatearPesoConUnidad(peso, factor)}`"></v-text-field>
                     </v-col>
                 </v-row>
-                <v-card  v-if="!esListaPreciosActivo" flat outlined class="mt-n4 rounded-lg overflow-hidden">
+                <v-card v-if="!esListaPreciosActivo" flat outlined class="mt-n4 rounded-lg overflow-hidden">
                     <v-tabs v-model="tabBonos" dense grow color="primary" background-color="grey lighten-5">
                         <v-tab class="text-none">
                             <v-icon small left color="orange">mdi-gift-outline</v-icon>
@@ -1873,8 +1878,49 @@ export default {
         },
 
         onProductoSincronizado(resultado) {
-
         },
+        formatearPrecioConMoneda(valor, factor = 1) {
+            const precio = Number(valor) || 0;
+            const factorCalculado = Number(factor) || 1;
+            const total = (precio * factorCalculado).toFixed(2);
+            const moneda = this.$store.state.moneda?.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || "S/";
+            return ` → ${moneda} ${total}`;
+        },
+        formatearPesoConUnidad(valor, factor = 1) {
+            const pesoNum = Number(valor) || 0;
+            const factorNum = Number(factor) || 1;
+            const total = (pesoNum * factorNum).toFixed(2);
+            return ` → ${total} kg`;
+        },
+        formatearEscala(valor, factor = 1, tipo = 'escala') {
+            if (this.factor <= 1) return '';
+
+            const escala = Number(valor) || 0;
+            if (escala === 0) return '';
+
+            const factorNum = Number(this.factor) || 1;
+            const cajas = Math.floor(escala / factorNum);
+            const unidades = escala % factorNum;
+            const medidaBase = (this.medida || 'CAJA').toUpperCase();
+
+            let texto = '';
+            if (cajas > 0 && unidades > 0) {
+                texto = `${cajas} ${medidaBase} + ${unidades} UND`;
+            } else if (cajas > 0) {
+                texto = `${cajas} ${medidaBase}`;
+            } else {
+                texto = `${unidades} UND`;
+            }
+
+            return tipo === 'label' ? ` (${texto})` : texto;
+        },
+        formatearCostoConMoneda(valor, factor = 1) {
+    const costoNum = Number(valor) || 0;
+    const factorNum = Number(factor) || 1;
+    const total = (costoNum * factorNum).toFixed(2);
+    const moneda = this.$store.state.moneda?.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || "S/";
+    return ` → ${moneda} ${total}`;
+}
     },
 
 }

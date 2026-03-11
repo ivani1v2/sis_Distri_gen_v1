@@ -13,7 +13,8 @@
             <v-autocomplete :disabled="cargando" outlined dense clearable hide-selected
                 label="Busca Cliente (código, DNI/RUC o nombre)" :menu-props="{ maxHeight: '300' }" v-model="selectedId"
                 :items="filtrados" item-text="label" item-value="id" :search-input.sync="busca_p" :loading="cargando"
-                :no-data-text="busca_p ? 'Sin resultados' : 'Escribe para buscar'" @change="onSelect" class="mt-1 mb-n4"/>
+                :no-data-text="busca_p ? 'Sin resultados' : 'Escribe para buscar'" @change="onSelect"
+                class="mt-1 mb-n4" />
 
             <v-card v-if="selectedCli" class="pa-3 mb-6" outlined>
                 <div class="text-subtitle-2 grey--text">Cliente seleccionado</div>
@@ -26,16 +27,18 @@
             </v-card>
 
             <v-row dense>
-                <v-col :cols="$store.state.permisos.venta_directa ? 6 : 12">
-                    <v-btn block color="#42A5F5" class="mt-n2 white--text" :disabled="!selectedCli || guardando || cargando"
-                        @click="seleccionarCliente">
+                <v-col v-if="$store.state.permisos.pre_venta"
+                    :cols="($store.state.permisos.pre_venta && $store.state.permisos.venta_directa) ? 6 : 12">
+                    <v-btn block color="green" class="mt-n2 white--text"
+                        :disabled="!selectedCli || guardando || cargando" @click="seleccionarCliente">
                         <v-icon left>mdi-cart</v-icon>
                         {{ guardando ? 'Cargando...' : 'Pre-venta' }}
                     </v-btn>
                 </v-col>
-                <v-col cols="6" v-if="$store.state.permisos.venta_directa">
-                    <v-btn block color="info" class="mt-n2 white--text" :disabled="!selectedCli || guardando || cargando"
-                        @click="ventaDirecta">
+                <v-col v-if="$store.state.permisos.venta_directa"
+                    :cols="($store.state.permisos.pre_venta && $store.state.permisos.venta_directa) ? 6 : 12">
+                    <v-btn block color="info" class="mt-n2 white--text"
+                        :disabled="!selectedCli || guardando || cargando" @click="ventaDirecta">
                         <v-icon left>mdi-cash-register</v-icon>
                         Vender
                     </v-btn>
@@ -49,9 +52,7 @@
 
         </v-card>
 
-        <nuevo_cli v-if="dial_crear_cliente" 
-            @cierra="dial_crear_cliente = false" 
-            @actualizar="onClienteCreado($event)"
+        <nuevo_cli v-if="dial_crear_cliente" @cierra="dial_crear_cliente = false" @actualizar="onClienteCreado($event)"
             :cliente_selecto="null" />
     </v-dialog>
 </template>
@@ -87,14 +88,14 @@ export default {
     created() {
         this.filtrados = this.todos
     },
-    
+
     watch: {
         busca_p(q) {
             if (this._pauseFilter) return
             const v = this.norm(q)
-            if (!v) { 
-                this.filtrados = this.todos; 
-                return 
+            if (!v) {
+                this.filtrados = this.todos;
+                return
             }
 
             this.filtrados = this.todos.filter(row =>
@@ -125,9 +126,9 @@ export default {
                         _nNota: this.norm(nota),
                     }
                 })
-                
+
                 if (!this.busca_p) this.filtrados = this.todos
-                
+
                 if (this.selectedId && !this.todos.some(t => t.id === this.selectedId)) {
                     this.selectedId = null
                     this.selectedCli = null
@@ -142,7 +143,7 @@ export default {
                 .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
                 .trim()
         },
-        
+
         async onSelect(id) {
             this.selectedCli = null
             if (!id) return
@@ -153,10 +154,10 @@ export default {
 
                 const liviano = this.todos.find(c => c.id === id)
                 if (liviano) {
-                    this.selectedCli = { 
-                        id: liviano.id, 
+                    this.selectedCli = {
+                        id: liviano.id,
                         documento: liviano.id,
-                        ...liviano 
+                        ...liviano
                     }
                 }
 
@@ -164,10 +165,10 @@ export default {
                     const docCache = await colClientes().doc(String(id)).get()
                     if (docCache.exists) {
                         const data = docCache.data()
-                        this.selectedCli = { 
-                            id: docCache.id, 
+                        this.selectedCli = {
+                            id: docCache.id,
                             documento: docCache.id,
-                            ...data 
+                            ...data
                         }
                         console.log('Cliente seleccionado:', this.selectedCli)
                     }
@@ -185,18 +186,18 @@ export default {
 
         seleccionarCliente() {
             if (!this.selectedCli) return
-            
+
             this.$emit('seleccionar', this.selectedCli)
             this.cierra()
         },
 
         ventaDirecta() {
             if (!this.selectedCli) return
-            
+
             this.$emit('venta-directa', this.selectedCli)
             this.cierra()
         },
-        
+
         abrirCrearCliente() {
             this.dial_crear_cliente = true
         },
@@ -207,7 +208,7 @@ export default {
                 try {
                     this.cargando = true
                     const docId = String(clienteNuevo.documento || clienteNuevo.id || '').trim()
-                    
+
                     const docSnap = await colClientes().doc(docId).get()
                     if (docSnap.exists) {
                         const data = docSnap.data()
@@ -235,7 +236,7 @@ export default {
                 }
             }
         },
-        
+
         cierra() {
             this.dial = false
             this.$emit('cerrar')

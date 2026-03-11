@@ -16,6 +16,7 @@
                         El producto ya fue guardado en la sede actual.
                         Selecciona las sedes adicionales donde deseas copiarlo.
                     </v-alert>
+
                     <div class="d-flex justify-space-between mb-3">
                         <span class="text-subtitle-2">Sedes disponibles: {{ sedesDisponibles.length }}</span>
                         <div>
@@ -52,15 +53,12 @@
                     </div>
                 </v-card-text>
                 <v-card-actions>
-                    <v-btn text color="grey" @click="cerrarDialogoSedes" :disabled="copiandoSedes">
-                        Cancelar
-                    </v-btn>
                     <v-spacer></v-spacer>
-                    <v-btn color="success" @click="copiarASedesSeleccionadas" :loading="copiandoSedes"
-                        :disabled="copiandoSedes">
-                        <v-icon left>mdi-content-copy</v-icon>
-                        Copiar a {{ sedesSeleccionadas.length }} {{ sedesSeleccionadas.length === 1 ? 'sede' : 'sedes'
-                        }}
+                    <v-btn color="primary" @click="manejarAccion" :loading="copiandoSedes" :disabled="copiandoSedes">
+                        <v-icon left>{{ sedesSeleccionadas.length > 0 ? 'mdi-content-copy' : 'mdi-check' }}</v-icon>
+                        {{ sedesSeleccionadas.length > 0 ? `Copiar a ${sedesSeleccionadas.length}
+                        ${sedesSeleccionadas.length
+                                === 1 ? 'sede' : 'sedes'}` : 'Continuar sin copiar' }}
                     </v-btn>
                 </v-card-actions>
             </v-card>
@@ -83,7 +81,9 @@
                         <div class="d-flex align-center">
                             <div>
                                 <strong>{{ productoActual.nombre }}</strong> (ID: {{ productoActual.id }})<br>
-                                <small class="grey--text">{{ productoActual.categoria }} | Precio: S/{{ productoActual.precio }} | Stock: {{ productoActual.stock }}</small>
+                                <small class="grey--text">{{ productoActual.categoria }} | Precio: S/{{
+                                    productoActual.precio }}
+                                    | Stock: {{ productoActual.stock }}</small>
                             </div>
                         </div>
                     </v-alert>
@@ -157,10 +157,7 @@
                         </v-list-item>
                     </v-list>
                 </v-card-text>
-                <v-card-actions class="pa-3">
-                    <v-btn text color="grey" @click="cerrarDialogoSincronizar" :disabled="sincronizando">
-                        Cancelar
-                    </v-btn>
+                <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn color="teal" dark @click="ejecutarSincronizacion" :loading="sincronizando"
                         :disabled="sincronizando || !sedesSincronizacion.some(s => s.seleccionada)" elevation="2">
@@ -259,19 +256,23 @@ export default {
             this.dialogoSedesLocal = false;
             this.$emit('cerrar-sedes');
         },
+        continuarSinCopiar() {
+            this.$emit('copiado', { exitosas: 0, sinCopiar: true });
+            this.dialogoSedesLocal = false;
+        },
+        manejarAccion() {
+            if (this.sedesSeleccionadas.length > 0) {
+                this.copiarASedesSeleccionadas();
+            } else {
+                this.continuarSinCopiar();
+            }
+        },
         async copiarASedesSeleccionadas() {
             if (!this.productoACopiar) {
                 console.error('No hay producto seleccionado para copiar');
                 return;
             }
-            if (this.sedesSeleccionadas.length === 0) {
-                if (!confirm('No has seleccionado ninguna sede. ¿Deseas continuar?')) {
-                    return;
-                }
-                this.$emit('copiado', { exitosas: 0 });
-                this.dialogoSedesLocal = false;
-                return;
-            }
+
             this.copiandoSedes = true;
             store.commit("dialogoprogress");
 
@@ -359,88 +360,88 @@ export default {
             this.$emit('cerrar-sincronizar');
         },
         async ejecutarSincronizacion() {
-    store.commit("dialogoprogress");
-    this.sincronizando = true;
+            store.commit("dialogoprogress");
+            this.sincronizando = true;
 
-    const p = this.productoActual;
-    
-    const productoData = {
-        id: p.id,
-        activo: p.activo === undefined ? true : p.activo,
-        codbarra: p.codbarra || '',
-        nombre: (p.nombre || '').trim(),
-        categoria: p.categoria || '',
-        proveedor: p.proveedor || null,
-        medida: p.medida || 'UNIDAD',
-        factor: p.factor || 1,
-        precio: p.precio || 0,
-        escala_may1: p.escala_may1 || 0,
-        precio_may1: p.precio_may1 || 0,
-        escala_may2: p.escala_may2 || 0,
-        precio_may2: p.precio_may2 || 0,
-        peso: p.peso || 0,
-        costo: p.costo || 0,
-        tipoproducto: p.tipoproducto || 'BIEN',
-        operacion: p.operacion || 'GRAVADA',
-        icbper: p.icbper || false,
-        controstock: p.controstock === undefined ? true : p.controstock,
-        lista_bono: p.lista_bono || [],
-        tiene_bono: p.tiene_bono || false,
-        marca: p.marca || '',
-        grupo_precio: p.grupoPrecioSelect || p.grupo_precio || null,
-        grupo_bono: p.grupoBonoSelect || p.grupo_bono || null,
-        obs1: p.obs1 || '',
-        stock_minimo: Number(p.stock_minimo) || 0,
-    };
+            const p = this.productoActual;
 
-    Object.keys(productoData).forEach(key => {
-        if (productoData[key] === undefined) {
-            delete productoData[key];
-        }
-    });
+            const productoData = {
+                id: p.id,
+                activo: p.activo === undefined ? true : p.activo,
+                codbarra: p.codbarra || '',
+                nombre: (p.nombre || '').trim(),
+                categoria: p.categoria || '',
+                proveedor: p.proveedor || null,
+                medida: p.medida || 'UNIDAD',
+                factor: p.factor || 1,
+                precio: p.precio || 0,
+                escala_may1: p.escala_may1 || 0,
+                precio_may1: p.precio_may1 || 0,
+                escala_may2: p.escala_may2 || 0,
+                precio_may2: p.precio_may2 || 0,
+                peso: p.peso || 0,
+                costo: p.costo || 0,
+                tipoproducto: p.tipoproducto || 'BIEN',
+                operacion: p.operacion || 'GRAVADA',
+                icbper: p.icbper || false,
+                controstock: p.controstock === undefined ? true : p.controstock,
+                lista_bono: p.lista_bono || [],
+                tiene_bono: p.tiene_bono || false,
+                marca: p.marca || '',
+                grupo_precio: p.grupoPrecioSelect || p.grupo_precio || null,
+                grupo_bono: p.grupoBonoSelect || p.grupo_bono || null,
+                obs1: p.obs1 || '',
+                stock_minimo: Number(p.stock_minimo) || 0,
+            };
 
-    const sedesSeleccionadas = this.sedesSincronizacion.filter(s => s.seleccionada);
-    let exitos = 0;
-    let errores = 0;
+            Object.keys(productoData).forEach(key => {
+                if (productoData[key] === undefined) {
+                    delete productoData[key];
+                }
+            });
 
-    for (const sede of sedesSeleccionadas) {
-        try {
-            if (sede.existe) {
-                const stockOriginal = sede.productoData?.stock || 0;
-                await nuevoProductoOtraBase(sede.base, p.id, {
-                    ...productoData,
-                    stock: stockOriginal
-                });
-                exitos++;
-            } else {
-                await nuevoProductoOtraBase(sede.base, p.id, {
-                    ...productoData,
-                    stock: 0
-                });
-                exitos++;
+            const sedesSeleccionadas = this.sedesSincronizacion.filter(s => s.seleccionada);
+            let exitos = 0;
+            let errores = 0;
+
+            for (const sede of sedesSeleccionadas) {
+                try {
+                    if (sede.existe) {
+                        const stockOriginal = sede.productoData?.stock || 0;
+                        await nuevoProductoOtraBase(sede.base, p.id, {
+                            ...productoData,
+                            stock: stockOriginal
+                        });
+                        exitos++;
+                    } else {
+                        await nuevoProductoOtraBase(sede.base, p.id, {
+                            ...productoData,
+                            stock: 0
+                        });
+                        exitos++;
+                    }
+                } catch (error) {
+                    console.error(`Error en sede ${sede.base}:`, error);
+                    console.error('Datos del producto:', productoData);
+                    errores++;
+                }
             }
-        } catch (error) {
-            console.error(`Error en sede ${sede.base}:`, error);
-            console.error('Datos del producto:', productoData);
-            errores++;
-        }
-    }
 
-    store.commit("dialogoprogress");
-    this.sincronizando = false;
-    this.dialogoSincronizarLocal = false;
+            store.commit("dialogoprogress");
+            this.sincronizando = false;
+            this.dialogoSincronizarLocal = false;
 
-    if (errores === 0) {
-        store.commit("dialogosnackbar",
-            `Sincronización completada: ${exitos} ${exitos === 1 ? 'sede actualizada' : 'sedes actualizadas'}`
-        );
-    } else {
-        store.commit("dialogosnackbar",
-            `Sincronización con errores: ${exitos} exitosas, ${errores} fallidas`
-        );
-    }
-    this.$emit('sincronizado', { exitos, errores });
-},
+            if (errores === 0) {
+                store.commit("dialogosnackbar",
+                    `Sincronización completada: ${exitos} ${exitos === 1 ? 'sede actualizada' : 'sedes actualizadas'}`
+                );
+            } else {
+                store.commit("dialogosnackbar",
+                    `Sincronización con errores: ${exitos} exitosas, ${errores} fallidas`
+                );
+            }
+            this.$emit('sincronizado', { exitos, errores });
+        },
     }
 }
 </script>
