@@ -416,7 +416,13 @@ export default {
                     return coincide
                 })
             }
-
+    // Orden alfabético por nombre
+    lista = [...lista].sort((a, b) =>
+        String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es', {
+            sensitivity: 'base',
+            numeric: true
+        })
+    )
             return lista;
         },
 
