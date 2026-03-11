@@ -359,8 +359,7 @@
                                                 <v-col cols="12" :md="esListaPreciosActivo ? 12 : 6">
                                                     <v-text-field v-model.number="clienteForm.dias_credito"
                                                         label="Plazo de pago (días)" outlined dense class="mt-n3"
-                                                        prepend-inner-icon="mdi-clock-outline"
-                                                        hint="7 días por defecto si se deja en 0" persistent-hint
+                                                        prepend-inner-icon="mdi-clock-outline" persistent-hint
                                                         type="number" />
                                                 </v-col>
                                             </v-row>

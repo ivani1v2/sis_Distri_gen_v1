@@ -7,9 +7,13 @@
           <span :class="{ 'text-h5': $vuetify.breakpoint.mdAndUp, 'text-h6': $vuetify.breakpoint.smAndDown }"
             class="font-weight-bold blue-grey--text text--darken-3">Cx Cobrar</span>
           <v-spacer></v-spacer>
-          <v-btn color="info" small @click="exportarExcel" class="ml-2 font-weight-medium">
+          <v-btn color="green" small @click="exportarExcel" class="ml-2 white--text font-weight-medium">
             <v-icon left small>mdi-file-excel</v-icon>
             <span>Exportar</span>
+          </v-btn>
+          <v-btn color="error" small @click="exportarPdf" class="ml-2 font-weight-medium">
+            <v-icon left small>mdi-file</v-icon>
+            <span>PDF</span>
           </v-btn>
         </div>
 
@@ -24,7 +28,7 @@
               clearable />
 
           </v-col>
-          <v-col cols="6" md="2">
+          <v-col cols="6" md="3">
             <v-select v-model="vendedoresSeleccionados" :items="vendedoresItems" item-text="nombre" item-value="codigo"
               label="Vendedor" multiple outlined dense chips small-chips deletable-chips clearable
               :menu-props="{ closeOnContentClick: true }" @change="onVendedorChange" class="mb-n6" />
@@ -34,10 +38,10 @@
               label="Zona/Cliente" multiple outlined dense chips small-chips deletable-chips clearable
               :menu-props="{ closeOnContentClick: true }" @change="onZonaChange" class="mb-n6" />
           </v-col>
-          <v-col cols="12" md="2" class="d-flex align-center">
+          <v-col cols="12" md="1" class="d-flex align-center">
             <v-btn block color="primary" outlined class="elevation-2" @click="filtra">
               <v-icon left>mdi-filter</v-icon>
-              Aplicar filtros
+              Filtrar
             </v-btn>
           </v-col>
         </v-row>
@@ -232,6 +236,8 @@ import {
   pdf_liquida_prestamo
 } from '../../pdf_reportes'
 import XLSX from 'xlsx'
+import jsPDF from 'jspdf'
+import 'jspdf-autotable'
 
 export default {
   components: {
@@ -712,6 +718,60 @@ export default {
         store.commit('dialogoprogress', 1)
       }
     },
+    exportarPdf() {
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+      })
+
+      const fechaImpresion = moment().format('DD/MM/YYYY hh:mm a')
+      const total = this.suma_total()
+
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.text('REPORTE CUENTAS POR COBRAR', 105, 15, { align: 'center' })
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Fecha: ${fechaImpresion}`, 10, 25)
+      doc.text(`Total Pendiente: ${this.monedaSimbolo} ${total.toFixed(2)}`, 200, 25, { align: 'right' })
+
+      const rows = this.desserts.map(item => [
+        item.doc_ref || '',
+        `${item.documento || ''} - ${item.nombre || ''}`,
+        item.cliente_zona || 'SIN ZONA',
+        item.vendedor || '',
+        moment.unix(item.fecha).format('DD/MM/YY'),
+        moment.unix(item.fecha_vence).format('DD/MM/YY'),
+        item.dias_credito || 7,
+        item.estado || '',
+        `${this.monedaSimbolo} ${parseFloat(item.monto_total || 0).toFixed(2)}`,
+        `${this.monedaSimbolo} ${parseFloat(item.monto_pendiente || 0).toFixed(2)}`
+      ])
+
+      doc.autoTable({
+        startY: 30,
+        margin: { left: 10, right: 5 },
+        head: [['Comprobante', 'Doc - Cliente', 'Zona', 'Vend', 'Emisión', 'Vence', 'Días', 'Estado', 'Total', 'Pendiente']],
+        body: rows,
+        styles: { fontSize: 6.5, cellPadding: 1,textColor: [0, 0, 0], fillColor: [255, 255, 255]},
+        headStyles: { fillColor: [66, 66, 66], textColor: 255, halign: 'center' },
+        columnStyles: {
+          0: { cellWidth: 20 },
+          1: { cellWidth: 55 },
+          2: { cellWidth: 17 },
+          3: { cellWidth: 10, halign: 'center' },
+          4: { cellWidth: 14 },
+          5: { cellWidth: 14 },
+          6: { cellWidth: 8, halign: 'center' },
+          7: { cellWidth: 15 },
+          8: { cellWidth: 18, halign: 'right' },
+          9: { cellWidth: 18, halign: 'right' }
+        }
+      })
+
+      window.open(doc.output('bloburl'))
+    }
   }
 }
 </script>

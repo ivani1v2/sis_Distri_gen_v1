@@ -44,11 +44,11 @@
                     icon="mdi-alert-octagon">
                     <div class="d-flex flex-wrap justify-space-between align-center text-caption">
                         <span>Línea de crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2)
-                        }}</strong></span>
+                                }}</strong></span>
                         <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2)
-                        }}</strong></span>
+                                }}</strong></span>
                         <span>Disponible: <strong class="red--text">{{ moneda }} {{ saldoDisponible.toFixed(2)
-                        }}</strong></span>
+                                }}</strong></span>
                     </div>
                     <div class="mt-1 red--text text-caption font-weight-medium">
                         El monto del pedido ({{ moneda }} {{ totalDetalle.toFixed(2) }}) supera el saldo disponible
@@ -111,7 +111,7 @@
                                                         style="max-width: 70vw;">
                                                         <span class="font-weight-bold red--text">{{
                                                             Number(item.cantidad)
-                                                        }}×</span>
+                                                            }}×</span>
                                                         {{ item.nombre }}
                                                     </div>
                                                 </div>
@@ -622,7 +622,11 @@ export default {
         },
         guarda_cronograma(cronograma) {
             this.fechaVencimiento = cronograma.fecha_ultima_cuota
-            this.cronograma = cronograma; // Guarda el cronograma recibido
+            this.cronograma = cronograma;
+            if ((!this.cliente_s?.dias_credito || this.cliente_s.dias_credito === 0) &&
+                cronograma.dias_credito_calculados > 0) {
+                this.cliente_s.dias_credito = cronograma.dias_credito_calculados;
+            }
             this.dialogoCronograma = false; // Cierra el diálogo después de guardar
         },
         onDireccionSeleccionada(dir) {
@@ -760,7 +764,7 @@ export default {
                     fecha_emision: moment().unix(),
                     condicion_pago: this.formaPago,
                     fecha_vencimiento: this.formaPago === 'CREDITO' ? this.fechaVencimiento : null,
-                    dias_credito: this.cliente_s?.dias_credito || 0,
+                    dias_credito: this.cronograma?.dias_credito_calculados || this.cliente_s?.dias_credito || 0,
                     cronograma: cronogramaCabecera,
                     doc_tipo: this.documento,
                     doc_numero: this.numero,

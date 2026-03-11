@@ -192,6 +192,7 @@ export default {
 
             // Control de fecha automática por días de crédito
             fechaAutomatica: false,
+            diasCreditoCalculados: 0,
         };
     },
 
@@ -212,6 +213,7 @@ export default {
             const ultima = this.cuotas[this.cuotas.length - 1];
             if (ultima) {
                 this.nuevaFecha = moment(ultima.vencimiento).add(1, 'day').format('YYYY-MM-DD');
+                this.diasCreditoCalculados = moment(ultima.vencimiento).diff(moment(), 'days');
             }
         }
 
@@ -259,11 +261,25 @@ export default {
             if (this.cuotaIndex !== -1 && nuevaFecha) {
                 // Usamos Vue.set para asegurar la reactividad en el array
                 this.$set(this.cuotas[this.cuotaIndex], 'vencimiento', nuevaFecha);
+                this.calcularDiasCredito();
 
                 // Cierra el diálogo y resetea los estados
                 this.dialogEditarFecha = false;
                 this.cuotaIndex = -1;
                 this.cuotaSeleccionada = {};
+            }
+        },
+        calcularDiasCredito() {
+            if (this.cuotas.length > 0) {
+                const cuotasOrdenadas = [...this.cuotas].sort((a, b) =>
+                    moment(a.vencimiento).diff(moment(b.vencimiento))
+               );
+                const ultimaCuota = cuotasOrdenadas[cuotasOrdenadas.length - 1];
+                const hoy = moment().startOf('day');
+                const fechaVenc = moment(ultimaCuota.vencimiento).startOf('day');
+                this.diasCreditoCalculados = fechaVenc.diff(hoy, 'days');
+                if (this.diasCreditoCalculados < 0) this.diasCreditoCalculados = 0;
+                console.log(`Días de crédito calculados: ${this.diasCreditoCalculados} (desde ${hoy.format('DD/MM/YYYY')} hasta ${fechaVenc.format('DD/MM/YYYY')})`);
             }
         },
 
@@ -286,13 +302,16 @@ export default {
             })
 
             this.nuevaFecha = moment(this.nuevaFecha).add(this.frecuenciaDias, 'days').format('YYYY-MM-DD');
+            this.nuevaFecha = moment(this.nuevaFecha).add(this.frecuenciaDias, 'days').format('YYYY-MM-DD');
             this.nuevoMonto = null
             this.renumerarCuotas()
+            this.calcularDiasCredito()
         },
 
         eliminarCuota(index) {
             this.cuotas.splice(index, 1)
             this.renumerarCuotas()
+            this.calcularDiasCredito()
         },
 
         renumerarCuotas() {
@@ -326,7 +345,7 @@ export default {
             let ajuste = saldo - (montoFijo * num)
 
             const nuevasCuotas = []
-            let fechaActual = moment(this.nuevaFecha)
+            let fechaActual = moment(this.nuevaFecha || moment())
 
             for (let i = 0; i < num; i++) {
                 let importeCuota = montoFijo
@@ -354,6 +373,7 @@ export default {
 
             this.cuotas = nuevasCuotas
             this.renumerarCuotas()
+            this.calcularDiasCredito()
             this.dialogGenerar = false
 
             this.nuevaFecha = fechaActual.format('YYYY-MM-DD');
@@ -375,6 +395,8 @@ export default {
                 if (!ok) return
             }
 
+            this.calcularDiasCredito()
+
             const fechaUltima =
                 this.cuotas.length ? this.cuotas[this.cuotas.length - 1].vencimiento : null
 
@@ -382,7 +404,8 @@ export default {
                 total_credito: Number(this.totalCredito),
                 pago_inicial: Number(this.pagoInicial || 0),
                 fecha_ultima_cuota: fechaUltima,
-                cuotas: this.cuotas
+                cuotas: this.cuotas,
+                dias_credito_calculados: this.diasCreditoCalculados
             }
 
             this.$emit("emite_cronograma", payload)
