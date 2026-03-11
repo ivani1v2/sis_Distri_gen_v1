@@ -5,73 +5,58 @@ import { consultaArchivo } from '../../db'
 import QR from 'qrcode-base64'
 import moment from 'moment'
 
-export const reporte_almacen = async (cabecera, peso, arraydatos, observacion, formato = "F1") => {
+export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, totalCajas, totalUnd, observacion, formato = "F1") => {
+  console.log("arraydatos consolidado", arraydatos)
   const array = arraydatos || []
-  let linea = 10
   const fechaImpresion = moment(String(new Date)).format('DD/MM/YYYY hh:mm a')
   const lMargin = store.state.configImpresora.lMargin
   const rMargin = store.state.configImpresora.rMargin
   const pdfInMM = 210
-
   const doc = new jspdf({
     orientation: 'portrait',
     unit: 'mm',
     format: [297, pdfInMM],
   })
-
   doc.setFontSize(10)
   doc.setFont('Helvetica', '')
 
-  linea += 13
-
+  let linea = 23
   const nuevoArray = []
-  let totalCajas = 0
-  let totalUnd = 0
 
   for (let i = 0; i < array.length; i++) {
-    const invet = store.state.productos.find(
-      (id) => String(id.id) === String(array[i].id)
-    )
-    const valor = await convierte_stock(array[i].cantidad, invet?.factor || 1)
+    const item = array[i]
 
-    const cajas = Number(valor?.entero || 0)
-    const und = Number(valor?.und || 0)
-
-    totalCajas += cajas
-    totalUnd += und
-
-    const peso = array[i].peso
+    const cajas = item.enteros || 0
+    const und = item.unidades_sueltas || 0
+    const peso = item.peso || 0
 
     if (formato === 'F1') {
-      // F1: CODIGO - DESCRIPCION - MEDIDA - CAJAS - UND - PESO
       nuevoArray.push([
-        array[i].id,
-        array[i].nombre,
-        array[i].medida,
+        item.id,
+        item.nombre,
         cajas,
         und,
-        peso,
+        peso.toFixed(2),
       ])
     } else {
-      // F2: CAJAS/UND - MEDIDA - DESCRIPCION - PESO
       let cajasUndStr = ''
 
-      if (und === 0) {
-        // Solo cajas
-        cajasUndStr = String(cajas)
-      } else if (cajas === 0) {
-        // Solo unidades
+      if (cajas > 0 && und > 0) {
+        cajasUndStr = `${cajas}/${und}`
+      } else if (cajas > 0) {
+        cajasUndStr = `${cajas}`
+      } else if (und > 0) {
         cajasUndStr = `0/${und}`
       } else {
-        // Cajas y unidades
-        cajasUndStr = `${cajas}/${und}`
+        cajasUndStr = '0'
       }
 
+      const descripcionConCodigo = `${item.id} - ${item.nombre}`
+
       nuevoArray.push([
-        cajasUndStr,         // Columna combinada Cajas / Und
-        array[i].medida,     // Medida
-        array[i].nombre,     // Descripción
-        peso,                // Peso
+        cajasUndStr,
+        descripcionConCodigo,
+        peso.toFixed(2),
       ])
     }
   }
@@ -91,30 +76,28 @@ export const reporte_almacen = async (cabecera, peso, arraydatos, observacion, f
     headStyles: {
       lineWidth: 0.2,
       lineColor: 1,
-      fillColor: [1, 0, 0]
+      fillColor: [0, 0, 0],
+      textColor: [255, 255, 255]
     },
     columnStyles: esF1
       ? {
-        0: { columnWidth: 15, halign: 'center', fontStyle: 'bold' }, // CODIGO
-        1: { columnWidth: 115, halign: 'left' },                     // DESCRIPCION
-        2: { columnWidth: 20, halign: 'center' },                    // MEDIDA
-        3: { columnWidth: 12, halign: 'center' },                    // CAJAS
-        4: { columnWidth: 12, halign: 'center' },                    // UND
-        5: { columnWidth: 20, halign: 'center' },                    // PESO
+        0: { columnWidth: 15, halign: 'center', fontStyle: 'bold' },
+        1: { columnWidth: 135, halign: 'left' },
+        2: { columnWidth: 12, halign: 'center' },
+        3: { columnWidth: 12, halign: 'center' },
+        4: { columnWidth: 20, halign: 'center' },
       }
       : {
-        0: { columnWidth: 15, halign: 'center' },                    // CAJAS/UND
-        1: { columnWidth: 25, halign: 'center' },                    // MEDIDA
-        2: { columnWidth: 130, halign: 'left' },                     // DESCRIPCION
-        3: { columnWidth: 25, halign: 'center' },                    // PESO
+        0: { columnWidth: 20, halign: 'center' },
+        1: { columnWidth: 155, halign: 'left' },
+        2: { columnWidth: 25, halign: 'center' },
       },
     head: esF1
-      ? [['Codigo', 'Descripcion', 'Medida', 'Cajas', 'Und', 'Peso(KG)']]
-      : [['Caj/Und', 'Medida', 'Descripcion', 'Peso(KG)']],
+      ? [['Codigo', 'Descripcion', 'Cajas', 'Und', 'Peso(KG)']]
+      : [['Caj/Und', 'Descripcion', 'Peso(KG)']],
     body: nuevoArray,
   })
 
-  // Header + paginación por página
   const pageCount = doc.internal.getNumberOfPages()
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i)
@@ -145,7 +128,6 @@ export const reporte_almacen = async (cabecera, peso, arraydatos, observacion, f
     doc.text(170, 290, 'PAG :' + pageCurrent + '/' + pageCount)
   }
 
-  // Totales al final
   const finalY = doc.previousAutoTable.finalY || 0
   const yTotales = finalY + 6
 
@@ -157,7 +139,6 @@ export const reporte_almacen = async (cabecera, peso, arraydatos, observacion, f
   doc.setFontSize(10)
   doc.text(`Cajas: ${totalCajas}`, 35, yTotales)
   doc.text(`Und: ${totalUnd}`, 65, yTotales)
-
   window.open(doc.output('bloburl'))
 }
 

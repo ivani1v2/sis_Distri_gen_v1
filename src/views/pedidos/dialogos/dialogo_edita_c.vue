@@ -101,7 +101,7 @@
                             <span v-if="descEdita.precioFinal && descEdita.precioFinal !== Number(precioedita)">
                                 <strong class="green--text">Precio Final: {{ monedaSimbolo }}{{
                                     redondear(descEdita.precioFinal)
-                                    }}</strong>
+                                }}</strong>
                             </span>
                             <span v-else class="caption grey--text">
                                 Sin descuentos aplicados
@@ -180,7 +180,7 @@
                     <div v-if="tieneCronograma" class="caption success--text mb-2">
                         <v-icon small color="success">mdi-check</v-icon>
                         {{ totalCuotas }} cuota(s) programada(s) - Total: {{ monedaSimbolo }} {{
-                        totalCuotasImporte.toFixed(2)
+                            totalCuotasImporte.toFixed(2)
                         }}
                     </div>
                 </div>
@@ -322,8 +322,8 @@ export default {
 
     computed: {
         monedaSimbolo() {
-        return this.$store.state.moneda?.find(m => m.codigo === this.$store.state.configuracion?.moneda_defecto)?.simbolo || 'S/';
-    },
+            return this.$store.state.moneda?.find(m => m.codigo === this.$store.state.configuracion?.moneda_defecto)?.simbolo || 'S/';
+        },
         lista_productos() {
             return this.listaproductos
         },
@@ -536,8 +536,13 @@ export default {
         },
 
         agregar_lista(value) {
-            // value puede ser objeto o array de objetos
             const items = Array.isArray(value) ? value : [value];
+
+            const decimal = store.state.configuracion.decimal || 2;
+            const aplicarRecargo = this.info_cabecera.forma_pago === 'CREDITO' &&
+                this.aplicarRecargo &&
+                this.porcentajeSeleccionado > 0;
+            const factorRecargo = aplicarRecargo ? this.porcentajeSeleccionado / 100 : 0;
 
             items.forEach(val => {
                 // Determinar medida de la línea entrante
@@ -557,28 +562,49 @@ export default {
                 }
 
                 const esGratuita = String(val.operacion || '').toUpperCase() === 'GRATUITA';
-                const totalLinea = esGratuita ? 0 : Math.max(0, val.cantidad * val.precio);
-                // Insertar línea nueva (precio siempre por unidad)
-                this.listaproductos.push({
-                    uuid: this.create_UUID().substring(29),
+
+                let precioBase = Number(val.precio || 0);
+                let precioFinal = precioBase;
+
+                if (aplicarRecargo && !esGratuita) {
+                    precioFinal = Number((precioBase * (1 + factorRecargo)).toFixed(decimal));
+                }
+
+                const totalLinea = esGratuita ? 0 : Number(this.redondear(Number(val.cantidad || 0) * precioFinal));
+
+                const nuevoUuid = this.create_UUID().substring(29);
+                var peso_ = val.peso * val.cantidad
+                if (medidaLinea != "UNIDAD") {
+                    peso_ = val.peso * val.cantidad * val.factor
+                }
+
+
+                const nuevaLinea = {
+                    uuid: nuevoUuid,
                     factor: val.factor,
                     id: val.id,
-                    cantidad: Number(val.cantidad || 0),       // en UNIDADES
+                    cantidad: Number(val.cantidad || 0),
                     nombre: val.nombre,
-                    medida: medidaLinea,                // 'UNIDAD' o 'CAJA' (o medida real de caja)
-                    precio: Number(val.precio || 0),    // precio por UNIDAD
-                    precioedita: Number(val.precio || 0),    // precio por UNIDAD
+                    medida: medidaLinea,
+                    precio: precioFinal,
+                    precioedita: precioFinal,
+                    precio_original: precioBase,
                     preciodescuento: 0,
                     costo: val.costo,
                     tipoproducto: val.tipoproducto,
-                    operacion: val.operacion,           // 'GRATUITA' o 'GRAVADA'
-                    peso: 0,
+                    operacion: val.operacion,
+                    peso: Number(peso_.toFixed(2) || 0),
                     controstock: val.controstock,
-                    totalLinea: totalLinea
-                });
-            });
-        },
+                    totalLinea: totalLinea,
+                    recargo_aplicado: aplicarRecargo && !esGratuita,
+                    porcentaje_recargo: aplicarRecargo && !esGratuita ? this.porcentajeSeleccionado : 0
+                };
 
+                this.listaproductos.push(nuevaLinea);
+            });
+
+            this.recalcularTotales();
+        },
 
         editaProducto(id) {
             console.log(id);
@@ -790,7 +816,7 @@ export default {
             try {
                 const resp = await axios({
                     method: "POST",
-                     url: "https://api-distribucion-6sfc6tum4a-rj.a.run.app",
+                    url: "https://api-distribucion-6sfc6tum4a-rj.a.run.app",
                     //url: "http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion",
                     headers: {
                         // 👇 usa la MISMA cabecera que lee tu backend: req.get("x-idempotency-key")

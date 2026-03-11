@@ -41,6 +41,10 @@
                         <v-list-item-icon><v-icon color="info">mdi-chart-bar</v-icon></v-list-item-icon>
                         <v-list-item-title>Reporte Consolidado</v-list-item-title>
                     </v-list-item>
+                    <v-list-item @click="dial_rep_almacen_consolidado = true">
+                        <v-list-item-icon><v-icon color="orange">mdi-warehouse</v-icon></v-list-item-icon>
+                        <v-list-item-title>Reporte Almacén Consolidado</v-list-item-title>
+                    </v-list-item>
                 </v-list>
             </v-menu>
         </v-toolbar>
@@ -154,7 +158,7 @@
                                     <v-btn v-if="esAdmin" x-small :color="getCargaButtonColor(pedido)" class="mx-1 my-1"
                                         depressed rounded elevation="1" @click="abrirCargaProductos(pedido)">
                                         <v-icon left small :color="getCargaIconColor(pedido)">{{ getCargaIcon(pedido)
-                                        }}</v-icon>
+                                            }}</v-icon>
                                         <span :class="getCargaTextClass(pedido)" class="font-weight-medium">
                                             Carga
                                             <template
@@ -166,7 +170,7 @@
                                     <v-btn x-small :color="getMapaButtonColor(pedido)" class="mx-1 my-1" depressed
                                         rounded elevation="1" @click="reparto_transporte(pedido)">
                                         <v-icon left small :color="getMapaIconColor(pedido)">{{ getMapaIcon(pedido)
-                                        }}</v-icon>
+                                            }}</v-icon>
                                         <span :class="getMapaTextClass(pedido)" class="font-weight-medium">
                                             {{ getPorcentajeEntregados(pedido) >= 100 ? 'ENTREGADO' : 'EN REPARTO' }}
                                             <template
@@ -206,7 +210,8 @@
                                                                 pedido.d_transporte?.usuario_id ? 'mdi-truck-check' :
                                                                     'mdi-truck' }}</v-icon>
                                                     </v-list-item-icon>
-                                                    <v-list-item-title>{{ pedido.d_transporte?.usuario_id ? 'Editar Transporte' : 'Asignar Transporte' }}</v-list-item-title>
+                                                    <v-list-item-title>{{ pedido.d_transporte?.usuario_id ? 'Editar
+                                                        Transporte' : 'Asignar Transporte' }}</v-list-item-title>
                                                 </v-list-item>
                                             </template>
                                         </v-list>
@@ -401,6 +406,70 @@
             </v-card>
         </v-dialog>
 
+        <v-dialog v-model="dial_rep_almacen_consolidado" max-width="700">
+            <v-card class="rounded-lg">
+                <v-toolbar dense color="teal darken-1" dark>
+                    <v-icon left>mdi-warehouse</v-icon>
+                    <v-toolbar-title>Reporte Almacén</v-toolbar-title>
+                    <v-spacer></v-spacer>
+                    <span class="caption mr-2">Seleccionados: {{ selectedIdsAlmacen.length }}</span>
+                    <v-btn color="success" small @click="generarPDFAlmacenMultiReparto">
+                        <v-icon left>mdi-file-pdf-box</v-icon>
+                        Generar PDF
+                    </v-btn>
+                    <v-btn icon @click="dial_rep_almacen_consolidado = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-toolbar>
+
+                <v-card-text class="pa-3">
+                    <!-- Opciones de formato -->
+                    <v-row dense class="mb-3">
+                        <v-col cols="12">
+                            <h4 class="text-subtitle-2 mb-1">Formato de descarga</h4>
+                            <v-radio-group v-model="formato_descarga_consolidado" row dense>
+                                <v-radio value="F1" label="CODIGO - DESCRIPCION - MEDIDA - CAJAS - UND - PESO" />
+                                <v-radio value="F2" label="CAJAS - UND - MEDIDA - DESCRIPCION - PESO" />
+                            </v-radio-group>
+                        </v-col>
+                        <v-col cols="12">
+                            <v-textarea v-model="observacion_reporte_consolidado" label="Observación (opcional)"
+                                outlined dense rows="2" auto-grow class="mt-1"></v-textarea>
+                        </v-col>
+                    </v-row>
+
+                    <!-- Tabla de selección de repartos -->
+                    <v-simple-table dense fixed-header height="30vh">
+                        <thead>
+                            <tr>
+                                <th style="width:36px;">
+                                    <v-checkbox hide-details dense class="mt-0" :input-value="allCheckedAlmacen"
+                                        :indeterminate="isIndeterminateAlmacen" @change="toggleAllAlmacen($event)"
+                                        color="teal darken-1" />
+                                </th>
+                                <th class="text-left"># ID</th>
+                                <th class="text-left">Fecha</th>
+                                <th class="text-left">N°Pedidos</th>
+                                <th class="text-left">Peso Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="pedido in repartosarray" :key="pedido.id">
+                                <td>
+                                    <v-checkbox hide-details dense class="mt-0" :value="pedido.id"
+                                        v-model="selectedIdsAlmacen" color="teal darken-1" />
+                                </td>
+                                <td class="text-caption">{{ pedido.id }}</td>
+                                <td class="text-caption">{{ pedido.fecha }}</td>
+                                <td class="text-caption">{{ pedido.resumen.total_pedidos }}</td>
+                                <td class="text-caption">{{ Number(pedido.resumen.peso_total || 0).toFixed(2) }} KG</td>
+                            </tr>
+                        </tbody>
+                    </v-simple-table>
+                </v-card-text>
+            </v-card>
+        </v-dialog>
+
         <v-dialog v-model="dial_reporte_liq" max-width="400">
             <v-card class="pa-5 rounded-lg">
                 <h4 class="text-center mb-4">Seleccione Orientación del Reporte Manual</h4>
@@ -447,6 +516,7 @@ import cobranza_reparto from '../reparto/dialogos/cobranza_reparto.vue'
 import dial_carga_productos from './dialogos/dial_carga_productos.vue'
 import dial_transporte from './dialogos/dial_transporte.vue'
 import { pdf_a4_t } from './formatos/formato_liq_manual'
+import axios from "axios"
 export default {
     name: "lista_repartos",
     components: {
@@ -483,7 +553,11 @@ export default {
             dial_reporte_liq: false,
             // transporte
             dial_asignar_transporte: false,
-            repartoTransporteActual: ''
+            repartoTransporteActual: '',
+            dial_rep_almacen_consolidado: false,
+            selectedIdsAlmacen: [],
+            formato_descarga_consolidado: 'F1',
+            observacion_reporte_consolidado: '',
         };
     },
     created() {
@@ -514,6 +588,21 @@ export default {
         },
         monedaSimbolo() {
             return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/';
+        },
+        allCheckedAlmacen() {
+            return this.selectedIdsAlmacen.length &&
+                this.selectedIdsAlmacen.length === this.repartosarray.length;
+        },
+        isIndeterminateAlmacen() {
+            return this.selectedIdsAlmacen.length > 0 &&
+                this.selectedIdsAlmacen.length < this.repartosarray.length;
+        },
+        apiBaseUrl() {
+            const hostname = window.location.hostname;
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                return 'http://127.0.0.1:5001/sis-distribucion/southamerica-east1/api_distribucion';
+            }
+            return 'https://api-distribucion-6sfc6tum4a-rj.a.run.app';
         }
     },
 
@@ -803,6 +892,58 @@ export default {
                 this.$store.commit('dialogosnackbar', 'No se pudo generar el reporte.');
             } finally {
                 store.commit("dialogoprogress");
+            }
+        },
+        toggleAllAlmacen(val) {
+            this.selectedIdsAlmacen = val ? this.repartosarray.map(r => r.id) : [];
+        },
+
+        async generarPDFAlmacenMultiReparto() {
+            if (!this.selectedIdsAlmacen.length) {
+                this.$store.commit('dialogosnackbar', 'Seleccione al menos un reparto');
+                return;
+            }
+
+            try {
+                store.commit("dialogoprogress", true);
+                const response = await axios.post(this.apiBaseUrl, {
+                    bd: this.$store.state.baseDatos.bd,
+                    metodo: "productos_consolidados_almacen",
+                    data: {
+                        repartos: this.selectedIdsAlmacen
+                    }
+                });
+                if (!response.data?.data) {
+                    throw new Error('No se recibieron datos');
+                }
+                const {
+                    productos,
+                    pesoTotal,
+                    totalCajas,
+                    totalUnd
+                } = response.data.data;
+                const cabeceraTexto = this.selectedIdsAlmacen.length === 1
+                    ? this.selectedIdsAlmacen[0]
+                    : `REPARTOS ${this.selectedIdsAlmacen.join('-')}`;
+                const { reporte_almacen_consolidado } = await import('../pedidos/reportes_pdf');
+                reporte_almacen_consolidado(
+                    cabeceraTexto,
+                    pesoTotal,
+                    productos,
+                    totalCajas,
+                    totalUnd,
+                    this.observacion_reporte_consolidado,
+                    this.formato_descarga_consolidado
+                );
+                this.dial_rep_almacen_consolidado = false;
+                this.selectedIdsAlmacen = [];
+                this.observacion_reporte_consolidado = '';
+
+            } catch (e) {
+                console.error('Error:', e);
+                this.$store.commit('dialogosnackbar', 'Error al generar el reporte');
+            } finally {
+                store.commit("dialogoprogress", false);
             }
         }
     },
