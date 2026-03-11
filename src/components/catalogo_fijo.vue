@@ -112,7 +112,7 @@
                 </v-simple-table>
             </div>
         </v-card>
-        <v-dialog v-model="dialo_cantidad" max-width="300px">
+        <v-dialog v-model="dialo_cantidad" max-width="325px">
             <v-card>
                 <v-system-bar window dark>
                     <v-icon @click="dialo_cantidad = false">mdi-close</v-icon>
@@ -128,7 +128,7 @@
                     <div class="text-caption grey--text text--darken-1" v-if="getFactor(producto_selecto) > 1">
                         Stock:
                         <strong>{{ Math.floor(Number(producto_selecto.stock || 0) / getFactor(producto_selecto))
-                        }}</strong>
+                            }}</strong>
                         cajas
                         + <strong>{{ Number(producto_selecto.stock || 0) % getFactor(producto_selecto) }}</strong> und
                         (total <strong>{{ producto_selecto.stock }}</strong> und)
@@ -167,11 +167,14 @@
                                 <div class="d-flex flex-column">
                                     <div class="font-weight-medium d-flex align-center">
                                         <v-chip x-small :color="item.color" text-color="white" class="mr-2">
-                                            {{ item.value }}
+                                            {{ item.value === 'distribuidor' ? 'D' : (item.value === 'mayorista' ? 'M' :
+                                                'm') }}
                                         </v-chip>
                                         {{ item.text }}
                                     </div>
-                                    <div class="text-caption grey--text">{{ item.sub }}</div>
+                                    <div class="text-caption grey--text d-flex align-center">
+                                        {{ item.sub }}
+                                    </div>
                                 </div>
                             </template>
                         </v-select>
@@ -329,6 +332,7 @@
 import store from '@/store/index'
 import DescuentosPorcentaje from '@/components/descuentos_porcentaje.vue'
 import IndicadorBono from '@/views/productos/components/IndicadorBono.vue'
+import { determinarPrecioPorLista } from '@/views/funciones/calculo_lista_precios';
 export default {
     name: 'catalogo_fijo',
     components: {
@@ -515,14 +519,31 @@ export default {
             if (!this.esListaPreciosActivo || !this.producto_selecto) return [];
 
             const p = this.producto_selecto;
+            const factor = this.getFactor(p);
+            const esCaja = (this.modoVenta === 'entero' && factor > 1);
+
             const opts = [];
             const listasCliente = this.listasPreciosCliente;
 
-            // Mapeo de listas a precios
             const mapa = {
-                'distribuidor': { precio: p.precio_may1, nombre: 'Distribuidor', color: 'purple', prioridad: 1 },
-                'mayorista': { precio: p.precio_may2, nombre: 'Mayorista', color: 'blue', prioridad: 2 },
-                'minorista': { precio: p.precio, nombre: 'Minorista', color: 'green', prioridad: 3 }
+                'distribuidor': {
+                    precio: Number(p.precio_may1) || 0,
+                    nombre: 'Distribuidor',
+                    color: 'purple',
+                    prioridad: 1
+                },
+                'mayorista': {
+                    precio: Number(p.precio_may2) || 0,
+                    nombre: 'Mayorista',
+                    color: 'blue',
+                    prioridad: 2
+                },
+                'minorista': {
+                    precio: Number(p.precio) || 0,
+                    nombre: 'Minorista',
+                    color: 'green',
+                    prioridad: 3
+                }
             };
 
             // Ordenar por prioridad
@@ -533,12 +554,16 @@ export default {
             // Crear opciones en orden de prioridad
             for (const lista of listasOrdenadas) {
                 const config = mapa[lista];
-                if (config && config.precio > 0) {
+                if (!config) continue;
+                if (config.precio && config.precio > 0) {
+                    const precioMostrado = esCaja ? config.precio * factor : config.precio;
+
                     opts.push({
                         value: lista,
-                        text: `${config.nombre} — S/ ${this.fmt(config.precio)}`,
-                        sub: this.descripcionLista(lista),
+                        text: `${config.nombre} — ${this.moneda} ${this.fmt(precioMostrado)}`,
+                        sub: this.descripcionLista(lista) + (esCaja ? ` (x${factor})` : ''),
                         precio: config.precio,
+                        precio_con_factor: precioMostrado,
                         color: config.color
                     });
                 }
@@ -801,12 +826,17 @@ export default {
                 const tieneClienteValido = this.cliente_selecto &&
                     typeof this.cliente_selecto === 'object' &&
                     !Array.isArray(this.cliente_selecto);
-
                 if (this.esListaPreciosActivo && tieneClienteValido && this.listasPreciosCliente.length) {
-                    const prioridad = { distribuidor: 1, mayorista: 2, minorista: 3 };
-                    this.listaPrecioSeleccionada = [...this.listasPreciosCliente]
-                        .sort((a, b) => (prioridad[a] || 999) - (prioridad[b] || 999))[0];
-                    console.log('📌 Usando lista del cliente:', this.listaPrecioSeleccionada);
+
+                    const resultado = determinarPrecioPorLista(
+                        producto,
+                        this.listasPreciosCliente,
+                        { fallback: false }
+                    );
+
+                    this.listaPrecioSeleccionada = resultado?.tipo || null;
+                    console.log('📌 Lista seleccionada por determinarPrecioPorLista:', this.listaPrecioSeleccionada);
+
                 } else {
                     this.listaPrecioSeleccionada = null;
                 }
@@ -848,11 +878,16 @@ export default {
                 const tieneClienteValido = this.cliente_selecto &&
                     typeof this.cliente_selecto === 'object' &&
                     !Array.isArray(this.cliente_selecto);
-
                 if (this.esListaPreciosActivo && tieneClienteValido && this.listasPreciosCliente.length) {
-                    const prioridad = { distribuidor: 1, mayorista: 2, minorista: 3 };
-                    this.listaPrecioSeleccionada = [...this.listasPreciosCliente]
-                        .sort((a, b) => (prioridad[a] || 999) - (prioridad[b] || 999))[0];
+
+                    const resultado = determinarPrecioPorLista(
+                        valor,
+                        this.listasPreciosCliente,
+                        { fallback: false }
+                    );
+
+                    this.listaPrecioSeleccionada = resultado?.tipo || null;
+
                 } else {
                     this.listaPrecioSeleccionada = null;
                 }
@@ -1019,9 +1054,12 @@ export default {
         },
         onListaPrecioChange(lista) {
             if (!this.producto_selecto) return;
-            const nuevoPrecio = this.getPrecioConLista(this.producto_selecto, lista);
+            let precioBase = this.getPrecioConLista(this.producto_selecto, lista);
+            const factor = this.getFactor(this.producto_selecto);
+            const esCaja = (this.modoVenta === 'entero' && factor > 1);
+            const precioFinal = esCaja ? precioBase * factor : precioBase;
             if (this.$refs.descuentosRef && this.$refs.descuentosRef.actualizarPrecioBase) {
-                this.$refs.descuentosRef.actualizarPrecioBase(nuevoPrecio);
+                this.$refs.descuentosRef.actualizarPrecioBase(precioBase);
             }
         },
         actualizarListaPrecios(nuevaLista) {

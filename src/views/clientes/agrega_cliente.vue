@@ -151,7 +151,7 @@
 
                                 <v-list-item-content>
                                     <v-list-item-title class="font-weight-medium wrap">{{ dir.direccion
-                                    }}</v-list-item-title>
+                                        }}</v-list-item-title>
                                     <v-list-item-subtitle class="wrap">
                                         <span v-if="dir.referencia">{{ dir.referencia }} • </span>
                                         {{ nombreDep(dir) }} / {{ nombreProv(dir) }} / {{ nombreDist(dir) }}
@@ -319,59 +319,116 @@
             </v-card>
         </v-dialog>
         <!-- Diálogo ADICIONAL -->
-        <v-dialog v-model="dial_config" max-width="650">
-            <v-card class="pa-3">
-                <div class="d-flex align-center">
-                    <h3 class="subtitle-1 mb-0">Configuración adicional</h3>
+        <v-dialog v-model="dial_config" max-width="750" transition="dialog-bottom-transition">
+            <v-card color="grey lighten-4">
+                <v-toolbar flat color="white">
+                    <v-icon color="primary" class="mr-3">mdi-tune-variant</v-icon>
+                    <v-toolbar-title class="subtitle-1 font-weight-bold grey--text text--darken-3">
+                        Configuración del Cliente
+                    </v-toolbar-title>
                     <v-spacer></v-spacer>
-                    <v-btn icon @click="dial_config = false"><v-icon color="red">mdi-close</v-icon></v-btn>
-                </div>
+                    <v-btn icon @click="dial_config = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-toolbar>
 
-                <v-divider class="my-2"></v-divider>
+                <v-card-text class="pa-4">
+                    <v-row>
+                        <v-col cols="12" :md="esListaPreciosActivo ? 6 : 12">
+                            <v-card outlined class="rounded-lg elevation-1 fill-height">
+                                <v-card-title class="text-subtitle-1 font-weight-bold">
+                                    <v-icon left color="blue">mdi-credit-card-settings</v-icon>
+                                    Línea de Crédito
+                                </v-card-title>
+                                <v-divider></v-divider>
 
-                <v-row dense>
-                    <v-col cols="12" sm="6">
+                                <v-card-text class="pt-4">
+                                    <v-switch v-model="clienteForm.permite_credito"
+                                        :disabled="permiso_edita || !lineaCreditoHabilitado" label="Habilitar crédito"
+                                        inset color="success" class="mt-0" />
 
-                        <v-switch inset :disabled="permiso_edita || !lineaCreditoHabilitado"
-                            v-model="clienteForm.permite_credito" label="Permite ventas al crédito" />
+                                    <v-expand-transition>
+                                        <div v-if="clienteForm.permite_credito && lineaCreditoHabilitado">
+                                            <v-row dense>
+                                                <v-col cols="12" :md="esListaPreciosActivo ? 12 : 6">
+                                                    <v-text-field v-model.number="clienteForm.linea_credito"
+                                                        label="Monto Autorizado" prefix="S/." outlined dense
+                                                        prepend-inner-icon="mdi-cash" type="number"
+                                                        :rules="[v => v > 0 || 'Monto requerido']" />
+                                                </v-col>
+                                                <v-col cols="12" :md="esListaPreciosActivo ? 12 : 6">
+                                                    <v-text-field v-model.number="clienteForm.dias_credito"
+                                                        label="Plazo de pago (días)" outlined dense class="mt-n3"
+                                                        prepend-inner-icon="mdi-clock-outline"
+                                                        hint="7 días por defecto si se deja en 0" persistent-hint
+                                                        type="number" />
+                                                </v-col>
+                                            </v-row>
+                                        </div>
+                                    </v-expand-transition>
 
-                        <small v-if="!lineaCreditoHabilitado" class="grey--text">
-                            La línea de crédito está deshabilitada en configuración general.
-                        </small>
+                                    <v-alert v-if="!lineaCreditoHabilitado" type="warning" text dense
+                                        class="mt-3 text-caption">
+                                        Opción bloqueada por configuración global.
+                                    </v-alert>
+                                </v-card-text>
+                            </v-card>
+                        </v-col>
 
-                        <v-text-field class="mt-2"
-                            :disabled="permiso_edita || !clienteForm.permite_credito || !lineaCreditoHabilitado"
-                            type="number" min="0" outlined dense v-model.number="clienteForm.linea_credito" prefix="S/."
-                            label="Línea de crédito"
-                            :rules="clienteForm.permite_credito ? [v => v > 0 || 'Debe ser mayor a 0'] : []"
-                            :error="clienteForm.permite_credito && clienteForm.linea_credito <= 0"
-                            :error-messages="clienteForm.permite_credito && clienteForm.linea_credito <= 0 ? 'Requerido mayor a 0' : ''" />
+                        <v-col v-if="esListaPreciosActivo" cols="12" md="6">
+                            <v-card outlined class="rounded-lg elevation-1 fill-height d-flex flex-column">
+                                <v-card-title class="text-subtitle-1 font-weight-bold">
+                                    <v-icon left color="orange darken-3">mdi-tag-multiple-outline</v-icon>
+                                    Listas de Precios
+                                </v-card-title>
 
-                        <v-text-field class="mt-2"
-                            :disabled="permiso_edita || !clienteForm.permite_credito || !lineaCreditoHabilitado"
-                            type="number" min="0" outlined dense v-model.number="clienteForm.dias_credito"
-                            label="Días de crédito (opcional)"
-                            hint="Si se deja vacío o en 0, se usará 7 días por defecto"
-                            persistent-hint />
+                                <v-divider></v-divider>
 
-                    </v-col>
+                                <v-list flat dense class="py-0 flex-grow-1">
+                                    <v-list-item-group v-model="clienteForm.listas_precios" multiple
+                                        active-class="blue--text text--darken-4" @change="mensajeListaPrecio">
+                                        <template v-for="(item, i) in listasPrecioOpc">
+                                            <v-list-item :key="item.value" :value="item.value" :disabled="permiso_edita"
+                                                class="px-4">
+                                                <template v-slot:default="{ active }">
+                                                    <v-list-item-action class="mr-3">
+                                                        <v-checkbox :input-value="active" color="primary"
+                                                            :disabled="permiso_edita" hide-details />
+                                                    </v-list-item-action>
 
-                    <v-col cols="12" sm="6">
-                        <v-select :disabled="permiso_edita" outlined dense multiple chips small-chips
-                            v-model="clienteForm.listas_precios" :items="listasPrecioOpc" item-text="text"
-                            item-value="value" label="Listas de precios disponibles" hint="Selecciona una o varias"
-                            persistent-hint @change="mensajeListaPrecio" />
-                        <v-alert v-if="mensajePrecio" type="info" dense class="mt-2">
-                            {{ mensajePrecio }}
-                        </v-alert>
-                    </v-col>
+                                                    <v-list-item-content>
+                                                        <v-list-item-title class="font-weight-medium">
+                                                            {{ item.text }}
+                                                        </v-list-item-title>
+                                                    </v-list-item-content>
 
-                </v-row>
+                                                    <v-list-item-icon v-if="active">
+                                                        <v-icon color="primary" small>mdi-check-circle</v-icon>
+                                                    </v-list-item-icon>
+                                                </template>
+                                            </v-list-item>
 
-                <v-card-actions>
+                                            <v-divider v-if="i < listasPrecioOpc.length - 1"
+                                                :key="'div-' + item.value" />
+                                        </template>
+                                    </v-list-item-group>
+                                </v-list>
+                            </v-card>
+                        </v-col>
+                    </v-row>
+                </v-card-text>
+
+                <v-divider></v-divider>
+
+                <v-card-actions class="white pa-4">
+                    <v-btn text color="grey darken-1" @click="dial_config = false" class="text-none">
+                        Cancelar
+                    </v-btn>
                     <v-spacer></v-spacer>
-                    <v-btn text @click="dial_config = false">Cerrar</v-btn>
-                    <v-btn color="primary" @click="dial_config = false">OK</v-btn>
+                    <v-btn color="primary" depressed large @click="dial_config = false" class="px-8 text-none">
+                        <v-icon left>mdi-check</v-icon>
+                        Guardar cambios
+                    </v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -506,7 +563,10 @@ export default {
                 { text: 'DISTRIBUIDOR', value: 'distribuidor' },
                 { text: 'MINORISTA', value: 'minorista' }
             ]
-        }
+        },
+        esListaPreciosActivo() {
+            return this.$store.state.configuracion?.lista_precios === true;
+        },
     },
     watch: {
         // Normalización doc + detección DNI/RUC

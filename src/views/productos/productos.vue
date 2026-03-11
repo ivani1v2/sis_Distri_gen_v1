@@ -331,7 +331,7 @@
                         </v-col>
                     </v-row>
 
-                    <v-alert v-if="grupoPrecioSelect" type="info" dense text class="mt-4">
+                    <v-alert v-if="grupoPrecioSelect && !esListaPreciosActivo " type="info" dense text class="mt-4">
                         Tiene grupo de precio global asignado
                         <v-btn x-small text color="primary" class="ml-2" @click="quitarGrupoPrecio">
                             Quitar
