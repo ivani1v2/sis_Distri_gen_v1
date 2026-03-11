@@ -17,7 +17,7 @@
                     <div class="d-flex justify-space-between flex-wrap caption">
                         <span>Línea Crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2) }}</strong></span>
                         <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2)
-                        }}</strong></span>
+                                }}</strong></span>
                         <span>Disponible: <strong class="red--text">
                                 {{ moneda }} {{ saldoDisponible.toFixed(2) }}
                             </strong></span>
@@ -79,7 +79,7 @@
                 <v-row class="" dense>
                     <v-col cols="8">
                         <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="false"
-                            :x_categoria="true">
+                            :x_categoria="true" :cliente_selecto="clienteData">
                         </cat_fijo>
                     </v-col>
                     <v-col cols="4">
@@ -124,6 +124,14 @@
                                                         Precio: {{ moneda }}
                                                         {{ redondear(item.precio) }}
                                                     </span>
+                                                    <!-- <v-chip
+                                                        v-if="esListaPreciosActivo && item.precio_tipo && item.precio_tipo !== 'regular'"
+                                                        x-small class="ml-1"
+                                                        :color="CONFIG_LISTAS[item.precio_tipo]?.color || 'purple'"
+                                                        text-color="white" label>
+                                                        {{ CONFIG_LISTAS[item.precio_tipo]?.nombre ||
+                                                            item.precio_tipo }}
+                                                    </v-chip> -->
                                                     <v-chip v-if="Number(item.preciodescuento) > 0" x-small class="ml-1"
                                                         color="deep-orange" text-color="white" label>
                                                         −{{ moneda }} {{ redondear(item.preciodescuento) }}
@@ -148,7 +156,7 @@
                                                     style="max-width: 70vw;">
                                                     <span class="font-weight-bold red--text">{{
                                                         Number(item.cantidad)
-                                                    }}×</span>
+                                                        }}×</span>
                                                     {{ item.nombre }}
                                                 </div>
                                             </div>
@@ -191,7 +199,7 @@
             </div>
             <v-card class="pa-1">
                 <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event), dial_catalogo = false"
-                    :muestra_tabla="true" :x_categoria="false">
+                    :muestra_tabla="true" :x_categoria="false" :cliente_selecto="clienteData">
                 </cat_fijo>
             </v-card>
         </v-dialog>
@@ -270,7 +278,8 @@
 
         <cronograma v-if="dialogoCronograma" :totalCredito="Number(totalDetalle)" @cierra="dialogoCronograma = false"
             @emite_cronograma="guarda_cronograma($event)" :pagoInicial="0" :moneda="moneda"
-            :planExistente="planExistenteFormateado" />
+            :planExistente="planExistenteFormateado"
+            :diasCredito="clienteData?.dias_credito || cabecera?.dias_credito || 0" />
     </v-dialog>
 </template>
 
@@ -284,6 +293,11 @@ import store from '@/store/index'
 import { colClientes } from '../../../db_firestore'
 import { allcuentaxcobrar } from '../../../db'
 import { aplicaPreciosYBonos, agregarLista, analizaPreciosParcial, analizaGruposParcial } from '@/views/funciones/calculo_bonos'
+import {
+    aplicarPreciosPorLista,
+    CONFIG_LISTAS,
+    cambiarTipoPrecioManual
+} from '@/views/funciones/calculo_lista_precios'
 import dial_stock from '../../ventas/dialogos/dial_stock_insuficiente.vue'
 export default {
     name: 'EditorDetallePedido',
@@ -341,6 +355,7 @@ export default {
             recalculandoBonos: false,
             dialStock: false,
             sinStock: [],
+            CONFIG_LISTAS: CONFIG_LISTAS,
         }
     },
     watch: {
@@ -366,7 +381,9 @@ export default {
         'cabecera.condicion_pago'(nv) {
             if (nv === 'CREDITO') {
                 if (!this.fechaVencimiento) {
-                    this.fechaVencimiento = moment().add(7, 'days').format('YYYY-MM-DD')
+                    // Usar días de crédito del cliente o 7 días por defecto
+                    const diasCredito = this.clienteData?.dias_credito || this.cabecera?.dias_credito || 7;
+                    this.fechaVencimiento = moment().add(diasCredito, 'days').format('YYYY-MM-DD')
                 }
             } else {
                 this.fechaVencimiento = ''
@@ -422,6 +439,12 @@ export default {
                 return [{ text: 'Contado', value: 'CONTADO' }]
             }
             return this.condicionesItems
+        },
+        esListaPreciosActivo() {
+            return this.$store.state.configuracion?.lista_precios === true;
+        },
+        listasPreciosCliente() {
+            return this.clienteData?.listas_precios || [];
         }
     },
     created() {
@@ -516,16 +539,13 @@ export default {
 
             const linea = this.lineas[pos];
 
-            const precioAntes = Number(linea.precio || 0);          // 👈 antes
+            const precioAntes = Number(linea.precio || 0);
             const nuevoPrecio = Number(lineaActualizada.precio || 0);
 
             // aplica cambios
             linea.cantidad = Number(lineaActualizada.cantidad || 0);
             linea.precio = nuevoPrecio;
-
-            // ⚠️ NO recalcules precio_base desde el precio editado
             linea.precio_base = Number(lineaActualizada.precio_base ?? linea.precio_base ?? 0);
-
             linea.preciodescuento = Number(lineaActualizada.preciodescuento || 0);
             linea.desc_1 = Number(lineaActualizada.desc_1 || 0);
             linea.desc_2 = Number(lineaActualizada.desc_2 || 0);
@@ -533,7 +553,18 @@ export default {
             linea.operacion = lineaActualizada.operacion || linea.operacion;
             linea.nombre = lineaActualizada.nombre || linea.nombre;
 
-            // ✅ marcar manual solo si cambió
+            // 👇 NUEVO: Preservar información de listas si viene en la línea actualizada
+            if (lineaActualizada._lista_precios) {
+                linea._lista_precios = lineaActualizada._lista_precios;
+            }
+            if (lineaActualizada.precio_tipo) {
+                linea.precio_tipo = lineaActualizada.precio_tipo;
+            }
+            if (lineaActualizada._precio_lista) {
+                linea._precio_lista = lineaActualizada._precio_lista;
+            }
+
+            // marcar manual solo si cambió
             if (nuevoPrecio !== precioAntes) {
                 this.$set(linea, 'precio_manual', true);
             }
@@ -599,7 +630,8 @@ export default {
                 bono_regla: it.bono_regla || null,
                 precio_manual: it.precio_manual === true,
                 bonos_eliminados: it.bonos_eliminados || null,
-                totalLinea: Number(it.totalLinea != null ? it.totalLinea : (Number(it.cantidad || 0) * Number(it.precio || 0)))
+                totalLinea: Number(it.totalLinea != null ? it.totalLinea : (Number(it.cantidad || 0) * Number(it.precio || 0))),
+                precio_tipo: it.precio_tipo || null,
             }))
 
 
@@ -660,7 +692,11 @@ export default {
             return this.toNum(producto.precio, 0);
         },
         agregar_lista(value) {
-            // 1) Fusiona / suma / respeta UUID con tu helper oficial
+            // 1) Verificar si el producto ya tiene lista seleccionada
+            const itemsConLista = (Array.isArray(value) ? value : [value])
+                .filter(item => item._lista_precios || item.precio_tipo);
+
+            // 2) Fusiona / suma / respeta UUID con tu helper oficial
             let nuevaLista = agregarLista({
                 listaActual: this.lineas,
                 nuevosItems: value,
@@ -668,20 +704,27 @@ export default {
                 redondear: (n) => this.redondear(n),
             });
 
-            // 2) (Opcional) marca timestamp interno por si luego quieres ordenar “últimos arriba”
-            const baseTs = Date.now();
-            let offset = 0;
-            nuevaLista = nuevaLista.map(item => {
-                if (item.__tsAdd) return item;
-                return { ...item, __tsAdd: baseTs + (offset++) };
-            });
+            // 3) Si el producto ya tiene lista, NO recalcular con bonos
+            if (itemsConLista.length > 0) {
+                console.log('🎯 Producto con lista seleccionada:', itemsConLista[0]._lista_precios || itemsConLista[0].precio_tipo);
+                // Solo asignar sin recalcular
+                this.lineas = nuevaLista;
+            } else {
+                // 4) Marcar timestamp interno
+                const baseTs = Date.now();
+                let offset = 0;
+                nuevaLista = nuevaLista.map(item => {
+                    if (item.__tsAdd) return item;
+                    return { ...item, __tsAdd: baseTs + (offset++) };
+                });
 
-            // 3) Asigna lista y recalcula SOLO lo afectado
-            this.lineas = nuevaLista;
+                // 5) Asigna lista y recalcula SOLO lo afectado
+                this.lineas = nuevaLista;
 
-            this.$nextTick(() => {
-                this.recalculoUltimoAgregado(value);
-            });
+                this.$nextTick(() => {
+                    this.recalculoUltimoAgregado(value);
+                });
+            }
         },
 
         recalculoUltimoAgregado(value) {
@@ -694,24 +737,31 @@ export default {
 
             if (!ids.length) return;
 
-            // 🔹 Precios parcial (solo ids)
+            // 🔹 SOLO recalcular si NO tienen lista de precios
+            const itemsSinLista = items.filter(item => !item._lista_precios && !item.precio_tipo);
+            if (itemsSinLista.length === 0) {
+                console.log('⏭️ Productos con lista de precios, omitiendo recálculo');
+                return;
+            }
+
+            const idsSinLista = itemsSinLista.map(x => String(x.id)).filter(Boolean);
+
+            // 🔹 Precios parcial (solo ids sin lista)
             this.lineas = analizaPreciosParcial({
                 lineas: this.lineas,
                 productos: this.$store.state.productos,
                 bonos: this.$store.state.bonos,
-                idsAfectados: ids,
-                // si manejas lista de precios en editor, pásala; si no, quítalo
-                // lista_precios: this.lista_precios_selecta,
+                idsAfectados: idsSinLista,
                 redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
                 inPlace: true,
             });
 
-            // 🔹 Bonos parcial (solo ids)
+            // 🔹 Bonos parcial (solo ids sin lista)
             this.lineas = analizaGruposParcial({
                 lineas: this.lineas,
                 productos: this.$store.state.productos,
                 bonos: this.$store.state.bonos,
-                idsAfectados: ids,
+                idsAfectados: idsSinLista,
                 createUUID: this.create_UUID,
                 redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
                 inPlace: true,
@@ -719,14 +769,23 @@ export default {
         },
 
         recalculoCompleto() {
-            this.lineas = aplicaPreciosYBonos({
-                lineas: this.lineas,
-                productos: this.$store.state.productos,
-                bonos: this.$store.state.bonos,
-                createUUID: this.create_UUID,
-                redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
-                inPlace: true,
-            });
+            // Separar líneas con lista de precios y sin lista
+            const lineasConLista = this.lineas.filter(l => l._lista_precios || l.precio_tipo);
+            const lineasSinLista = this.lineas.filter(l => !l._lista_precios && !l.precio_tipo);
+
+            if (lineasSinLista.length > 0) {
+                const recalculadas = aplicaPreciosYBonos({
+                    lineas: lineasSinLista,
+                    productos: this.$store.state.productos,
+                    bonos: this.$store.state.bonos,
+                    createUUID: this.create_UUID,
+                    redondear: (n) => this.redondear(n),
+                    inPlace: false,
+                });
+
+                // Unir manteniendo las que tienen lista
+                this.lineas = [...lineasConLista, ...recalculadas];
+            }
         },
 
         create_UUID() {

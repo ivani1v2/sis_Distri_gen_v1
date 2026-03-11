@@ -390,10 +390,10 @@
         <dial_imprime_ped_masivo v-if="dial_imprime_masivo" @cerrar="dial_imprime_masivo = false"
             :pedidosFiltrados="pedidosFiltrados" />
         <BuscaClientesPedido v-if="dialogBuscaClientes" @cerrar="dialogBuscaClientes = false"
-            @seleccionar="onClienteSeleccionado" @crear-cliente="crearNuevoCliente" />
+            @seleccionar="onClienteSeleccionado" @venta-directa="onVentaDirecta" @crear-cliente="crearNuevoCliente" />
 
         <dial_deudas_cliente v-model="dialogDeudasCliente" :cliente="clienteParaNuevoPedido"
-            :accion-pendiente="'pre_venta'" @cerrar="cerrarDialogDeudas" @continuar="iniciarNuevoPedido" />
+            :accion-pendiente="accionPendiente" @cerrar="cerrarDialogDeudas" @continuar="iniciarNuevoPedido" />
         <DialogoRepPedidos v-model="dialogRepPedidos" />
     </div>
 </template>
@@ -466,6 +466,7 @@ export default {
             moneda: 'S/',
             dialogBuscaClientes: false,
             dialogDeudasCliente: false,
+            accionPendiente: 'pre_venta',
             headersTabla: [
                 { text: 'Vend.', value: 'id', sortable: true },
                 { text: 'Cliente', value: 'cliente', sortable: false },
@@ -1063,6 +1064,15 @@ export default {
         },
 
         async onClienteSeleccionado(cliente) {
+            this.accionPendiente = 'pre_venta';
+            this.clienteParaNuevoPedido = cliente;
+            this.dialogBuscaClientes = false;
+            await this.$nextTick();
+            this.dialogDeudasCliente = true;
+        },
+
+        async onVentaDirecta(cliente) {
+            this.accionPendiente = 'vender';
             this.clienteParaNuevoPedido = cliente;
             this.dialogBuscaClientes = false;
             await this.$nextTick();
@@ -1083,12 +1093,19 @@ export default {
         },
 
         iniciarNuevoPedido(payload) {
-            const { cliente } = payload;
+            const { cliente, accion } = payload;
             store.commit("cliente_selecto", cliente);
             store.commit("setOrigenPedido", "lista_pedidos");
-            this.$router.push({
-                name: 'nuevo_pedido'
-            });
+            
+            if (accion === 'vender') {
+                this.$router.push({
+                    name: 'caja2'
+                });
+            } else {
+                this.$router.push({
+                    name: 'nuevo_pedido'
+                });
+            }
         },
     },
 };

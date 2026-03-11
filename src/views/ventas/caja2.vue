@@ -3,7 +3,7 @@
         <v-row>
             <v-col cols="12" md="4"
                 v-if="$vuetify.breakpoint.mdAndUp || ($vuetify.breakpoint.smAndDown && $vuetify.breakpoint.width > $vuetify.breakpoint.height)">
-                <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true" :x_categoria="true">
+                <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true" :x_categoria="true" :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null">
                 </cat_fijo>
             </v-col>
 
@@ -13,7 +13,7 @@
                         <v-row class="mt-n4" dense>
                             <v-col cols="6" xs="6">
                                 <cat_fijo v-if="$store.state.esmovil" ref="catFijo"
-                                    @agrega_lista="agregar_lista($event)" :muestra_tabla="false" :x_categoria="true">
+                                    @agrega_lista="agregar_lista($event)" :muestra_tabla="false" :x_categoria="true" :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null">
                                 </cat_fijo>
 
                             </v-col>
@@ -214,7 +214,7 @@
             </div>
             <v-card class="pa-1">
                 <cat_fijo ref="catFijo" v-if="dial_catalogo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true"
-                    :x_categoria="false" :lista_precios="lista_precios_selecta">
+                    :x_categoria="false" :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null"  :lista_precios="lista_precios_selecta">
                 </cat_fijo>
             </v-card>
         </v-dialog>
@@ -380,6 +380,9 @@ export default {
         permiteAgregar() {
             return !!this.$store.state.permisos.agrega_producto;
         },
+        esListaPreciosActivo() {
+        return this.$store.state.configuracion?.lista_precios === true;
+    },
 
     },
     mounted() {

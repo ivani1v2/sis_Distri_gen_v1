@@ -62,7 +62,16 @@
               <span>Activa campo para ingresar operacion de venta afectas a Detraccion</span>
             </v-tooltip>
           </v-col>
-
+          
+          <v-col cols="6" class="d-flex align-center mt-1 mb-3">
+            <v-checkbox dense v-model="lista_precios" label="Lista de precios" class="ma-0 pa-0"></v-checkbox>
+            <v-tooltip bottom>
+              <template v-slot:activator="{ on, attrs }">
+                <v-icon small color="blue" v-bind="attrs" v-on="on" class="ml-3 mb-4">mdi-help-circle</v-icon>
+              </template>
+              <span>Activa para trabajar base a listas de precio por categoría de cliente </span>
+            </v-tooltip>
+          </v-col>
 
           <v-col cols="12" class="mt-n3">
             <v-divider class="my-2" color="grey"></v-divider>
@@ -212,6 +221,7 @@ export default {
       linea_credito_activo: false,
       usar_comprobante_defecto: false,
       moneda_defecto: "PEN",
+      lista_precios: false,
     };
   },
   created() {
@@ -260,6 +270,7 @@ export default {
             linea_credito_activo = this.linea_credito_activo,
             usar_comprobante_defecto = this.usar_comprobante_defecto,
             moneda_defecto = this.moneda_defecto,
+            lista_precios = this.lista_precios,
           } = config;
 
           Object.assign(this, {
@@ -284,6 +295,7 @@ export default {
             alerta_stock_minimo,
             linea_credito_activo,
             usar_comprobante_defecto,
+            lista_precios,
           });
         });
     },
@@ -310,6 +322,7 @@ export default {
       grabaConfigura("linea_credito_activo", this.linea_credito_activo);
       grabaConfigura("usar_comprobante_defecto", this.usar_comprobante_defecto);
       grabaConfigura("moneda_defecto", this.moneda_defecto);
+      grabaConfigura("lista_precios", this.lista_precios);
       store.commit("dialogoConfiguracion");
     },
   },

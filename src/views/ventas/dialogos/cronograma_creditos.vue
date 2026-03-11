@@ -32,12 +32,18 @@
             <v-row dense>
                 <v-col cols="12" sm="6">
                     <v-text-field v-model="nuevaFecha" label="Fecha de vencimiento" type="date" dense outlined
-                        hide-details="auto" />
+                        hide-details="auto" :readonly="fechaAutomatica && cuotas.length === 0"
+                        :hint="fechaAutomatica && cuotas.length === 0 ? `Calculada: hoy + ${diasCredito} días de crédito` : ''"
+                        :persistent-hint="fechaAutomatica && cuotas.length === 0" />
+                    <div v-if="fechaAutomatica && cuotas.length === 0" class="text-caption mt-1 info--text">
+                        <v-icon x-small color="info">mdi-information</v-icon>
+                        Fecha calculada automáticamente según días de crédito del cliente
+                    </div>
                 </v-col>
 
                 <v-col cols="10" sm="4">
                     <v-text-field v-model.number="nuevoMonto" label="Importe" type="number" dense outlined
-                        hide-details="auto" :prefix="moneda + ' '" />
+                        :value="totalCredito" hide-details="auto" :prefix="moneda + ' '" />
                 </v-col>
 
                 <v-col cols="2" sm="2" class="d-flex align-center">
@@ -103,7 +109,7 @@
             </div>
 
         </v-card>
-        
+
         <v-dialog v-model="dialogGenerar" max-width="350">
             <v-card>
                 <v-toolbar color="success" dense dark>
@@ -114,40 +120,27 @@
 
                 <v-card-text class="pt-4">
                     <div class="text-subtitle-1 mb-2">
-                        Saldo a financiar: <span class="warning--text font-weight-bold">{{ moneda }} {{ saldoPendiente.toFixed(2) }}</span>
+                        Saldo a financiar: <span class="warning--text font-weight-bold">{{ moneda }} {{
+                            saldoPendiente.toFixed(2) }}</span>
                     </div>
 
-                    <v-text-field
-                        v-model.number="numCuotas"
-                        label="Número de Cuotas"
-                        type="number"
-                        dense
-                        outlined
-                        hide-details="auto"
-                        :min="1"
-                        class="mb-3"
-                    ></v-text-field>
+                    <v-text-field v-model.number="numCuotas" label="Número de Cuotas" type="number" dense outlined
+                        hide-details="auto" :min="1" class="mb-3"></v-text-field>
 
-                    <v-text-field
-                        v-model.number="frecuenciaDias"
-                        label="Frecuencia (días)"
-                        type="number"
-                        dense
-                        outlined
-                        hide-details="auto"
-                        :min="1"
-                    ></v-text-field>
+                    <v-text-field v-model.number="frecuenciaDias" label="Frecuencia (días)" type="number" dense outlined
+                        hide-details="auto" :min="1" :hint="frecuenciaDiasHint" persistent-hint></v-text-field>
                 </v-card-text>
 
                 <v-card-actions>
-                    <v-btn block color="success" @click="generarCronograma" :disabled="numCuotas <= 0 || frecuenciaDias <= 0">
+                    <v-btn block color="success" @click="generarCronograma"
+                        :disabled="numCuotas <= 0 || frecuenciaDias <= 0">
                         <v-icon left>mdi-calendar-plus</v-icon>
                         Crear {{ numCuotas || 0 }} cuota(s)
                     </v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
-        
+
         <v-dialog v-model="dialogEditarFecha" max-width="300">
             <v-card>
                 <v-toolbar color="info" dense dark>
@@ -156,16 +149,12 @@
                     <v-btn icon @click="dialogEditarFecha = false"><v-icon>mdi-close</v-icon></v-btn>
                 </v-toolbar>
                 <v-card-text class="pa-0">
-                    <v-date-picker
-                        v-model="nuevaFechaVencimiento"
-                        full-width
-                        locale="es-pe"
-                        @input="guardarNuevaFecha"
-                    ></v-date-picker>
+                    <v-date-picker v-model="nuevaFechaVencimiento" full-width locale="es-pe"
+                        @input="guardarNuevaFecha"></v-date-picker>
                 </v-card-text>
             </v-card>
         </v-dialog>
-        
+
     </v-dialog>
 </template>
 
@@ -179,7 +168,8 @@ export default {
         totalCredito: Number,
         pagoInicial: Number,
         moneda: { type: String, default: "S/" },
-        planExistente: Object
+        planExistente: Object,
+        diasCredito: { type: Number, default: 0 }
     },
 
     data() {
@@ -188,35 +178,46 @@ export default {
             cuotas: [],
             nuevaFecha: "",
             nuevoMonto: null,
-            
+
             // Para Generación Automática
             dialogGenerar: false,
             numCuotas: 3,
             frecuenciaDias: 30,
-            
+
             // NUEVOS para Edición de Fecha
             dialogEditarFecha: false,
             cuotaSeleccionada: {}, // Almacena la cuota que se está editando
             cuotaIndex: -1,        // Almacena el índice de la cuota en el array
             nuevaFechaVencimiento: null, // Almacena la fecha seleccionada en el date-picker
+
+            // Control de fecha automática por días de crédito
+            fechaAutomatica: false,
         };
     },
 
     created() {
-        // Inicializa la fecha de la primera cuota
-        const d = moment().add(7, 'days').format('YYYY-MM-DD');
-        this.nuevaFecha = d
+        // Si hay días de crédito del cliente, usar esa fecha automáticamente
+        if (this.diasCredito && this.diasCredito > 0) {
+            this.nuevaFecha = moment().add(this.diasCredito, 'days').format('YYYY-MM-DD');
+            this.fechaAutomatica = true;
+        } else {
+            // Fallback: fecha + 7 días
+            this.nuevaFecha = moment().add(7, 'days').format('YYYY-MM-DD');
+            this.fechaAutomatica = false;
+        }
 
         // Carga plan existente
         if (this.planExistente && Array.isArray(this.planExistente.cuotas)) {
-            this.cuotas = this.planExistente.cuotas
-            const ultima = this.cuotas[this.cuotas.length - 1]
+            this.cuotas = this.planExistente.cuotas;
+            const ultima = this.cuotas[this.cuotas.length - 1];
             if (ultima) {
                 this.nuevaFecha = moment(ultima.vencimiento).add(1, 'day').format('YYYY-MM-DD');
             }
         }
 
-        this.dial = true
+        this.nuevoMonto = this.totalCredito || 0;
+        this.frecuenciaDias = this.diasCredito && this.diasCredito > 0 ? this.diasCredito : 7;
+        this.dial = true;
     },
 
     computed: {
@@ -227,6 +228,12 @@ export default {
         saldoPendiente() {
             const montoNeto = Number(this.totalCredito || 0) - Number(this.pagoInicial || 0);
             return montoNeto - this.totalCuotas
+        },
+        frecuenciaDiasHint() {
+            if (this.diasCredito && this.diasCredito > 0) {
+                return `Basado en los ${this.diasCredito} días de crédito del cliente`;
+            }
+            return 'Valor por defecto: 7 días';
         }
     },
 
@@ -240,10 +247,10 @@ export default {
             this.cuotaSeleccionada = cuota;
             this.cuotaIndex = index;
             // Inicializa el selector de fecha con la fecha de vencimiento actual de la cuota
-            this.nuevaFechaVencimiento = cuota.vencimiento; 
+            this.nuevaFechaVencimiento = cuota.vencimiento;
             this.dialogEditarFecha = true;
         },
-        
+
         /**
          * @description Se dispara al seleccionar una fecha en el v-date-picker y guarda el cambio.
          * @param {string} nuevaFecha - La fecha seleccionada en formato YYYY-MM-DD.
@@ -252,7 +259,7 @@ export default {
             if (this.cuotaIndex !== -1 && nuevaFecha) {
                 // Usamos Vue.set para asegurar la reactividad en el array
                 this.$set(this.cuotas[this.cuotaIndex], 'vencimiento', nuevaFecha);
-                
+
                 // Cierra el diálogo y resetea los estados
                 this.dialogEditarFecha = false;
                 this.cuotaIndex = -1;
@@ -277,7 +284,7 @@ export default {
                 vencimiento: this.nuevaFecha,
                 importe
             })
-            
+
             this.nuevaFecha = moment(this.nuevaFecha).add(this.frecuenciaDias, 'days').format('YYYY-MM-DD');
             this.nuevoMonto = null
             this.renumerarCuotas()
@@ -300,7 +307,7 @@ export default {
         generarCronograma() {
             const num = Number(this.numCuotas)
             const dias = Number(this.frecuenciaDias)
-            
+
             if (num <= 0 || dias <= 0) {
                 alert("Ingrese un número de cuotas y una frecuencia válidos.")
                 return
@@ -312,28 +319,28 @@ export default {
                 this.dialogGenerar = false
                 return
             }
-            
+
             // Cálculo de montos (ver detalles en el script anterior)
             let montoBase = saldo / num
             let montoFijo = Math.floor(montoBase * 100) / 100
-            let ajuste = saldo - (montoFijo * num) 
-            
+            let ajuste = saldo - (montoFijo * num)
+
             const nuevasCuotas = []
             let fechaActual = moment(this.nuevaFecha)
-            
+
             for (let i = 0; i < num; i++) {
                 let importeCuota = montoFijo
-                
+
                 if (i === num - 1) {
                     importeCuota = montoFijo + ajuste
                 }
-                
+
                 nuevasCuotas.push({
                     numero: '',
                     vencimiento: fechaActual.format('YYYY-MM-DD'),
                     importe: parseFloat(importeCuota.toFixed(2))
                 })
-                
+
                 fechaActual = fechaActual.add(dias, 'days')
             }
 
@@ -348,7 +355,7 @@ export default {
             this.cuotas = nuevasCuotas
             this.renumerarCuotas()
             this.dialogGenerar = false
-            
+
             this.nuevaFecha = fechaActual.format('YYYY-MM-DD');
             this.nuevoMonto = null;
 
@@ -400,5 +407,4 @@ export default {
     border-radius: 8px;
     overflow: hidden;
 }
-</style>
 </style>

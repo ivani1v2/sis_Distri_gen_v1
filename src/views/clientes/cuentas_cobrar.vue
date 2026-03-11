@@ -83,6 +83,11 @@
             {{ conviertefecha(item.fecha_vence) }}
           </v-chip>
         </template>
+        <template v-slot:[`item.dias_credito`]="{ item }">
+          <v-chip small :color="item.dias_credito ? 'blue lighten-4' : 'grey lighten-4'" class="font-weight-bold">
+            {{ item.dias_credito || 7 }} días
+          </v-chip>
+        </template>
 
         <template v-slot:[`item.estado`]="{ item }">
           <v-chip small
@@ -112,12 +117,12 @@
               </v-btn>
             </template>
             <v-list dense>
-              <v-list-item v-if="esAdmin && item.estado === 'ELIMINADO'" @click="revertirEstado(item)">
+              <v-list-item v-if="item.estado === 'ELIMINADO'" @click="revertirEstado(item)">
                 <v-list-item-icon><v-icon color="success">mdi-restore</v-icon></v-list-item-icon>
                 <v-list-item-title>Revertir Estado (Activar)</v-list-item-title>
               </v-list-item>
 
-              <v-list-item v-if="esAdmin && item.estado !== 'ELIMINADO'" @click="ejecuta_liquidacion(item)"
+              <v-list-item v-if="item.estado !== 'ELIMINADO'" @click="ejecuta_liquidacion(item)"
                 :disabled="item.estado === 'LIQUIDADO'">
                 <v-list-item-icon><v-icon color="warning">mdi-hand-heart</v-icon></v-list-item-icon>
                 <v-list-item-title>Liquidación / Abono</v-list-item-title>
@@ -240,6 +245,7 @@ export default {
       { text: 'Zona', value: 'cliente_zona', sortable: true },
       { text: 'Emision', value: 'fecha', sortable: true },
       { text: 'Venci.', value: 'fecha_vence', sortable: true },
+      { text: 'Días', value: 'dias_credito', sortable: true, align: 'center' },
       { text: 'Estado', value: 'estado', sortable: true },
       { text: 'Vendedor', value: 'vendedor_nombre', sortable: true },
       { text: 'Total', value: 'monto_total', sortable: true, align: 'end' },

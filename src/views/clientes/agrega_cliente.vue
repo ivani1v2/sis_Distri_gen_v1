@@ -350,10 +350,9 @@
                         <v-text-field class="mt-2"
                             :disabled="permiso_edita || !clienteForm.permite_credito || !lineaCreditoHabilitado"
                             type="number" min="0" outlined dense v-model.number="clienteForm.dias_credito"
-                            label="Días de crédito"
-                            :rules="clienteForm.permite_credito ? [v => v > 0 || 'Debe ser mayor a 0'] : []"
-                            :error="clienteForm.permite_credito && clienteForm.dias_credito <= 0"
-                            :error-messages="clienteForm.permite_credito && clienteForm.dias_credito <= 0 ? 'Requerido mayor a 0' : ''" />
+                            label="Días de crédito (opcional)"
+                            hint="Si se deja vacío o en 0, se usará 7 días por defecto"
+                            persistent-hint />
 
                     </v-col>
 
@@ -449,6 +448,7 @@ export default {
                 frecuencia: '',
                 permite_credito: false,
                 linea_credito: 0,
+                dias_credito: 0,
                 listas_precios: [],
             }
         }
@@ -807,10 +807,10 @@ export default {
                 longitud: c.longitud !== undefined ? c.longitud : this.clienteForm.longitud,
                 direcciones: Array.isArray(c.direcciones) ? JSON.parse(JSON.stringify(c.direcciones)) : [],
                 frecuencia: c.frecuencia || 'SEMANAL',
-                permite_credito: typeof c.permite_credito === 'boolean' ? c.permite_credito : this.clienteForm.permite_credito,
-                linea_credito: Number.isFinite(Number(c.linea_credito)) ? Number(c.linea_credito) : this.clienteForm.linea_credito,
+                permite_credito: typeof c.permite_credito === 'boolean' ? c.permite_credito : this.clienteForm.permite_credito || false,
+                linea_credito: Number.isFinite(Number(c.linea_credito)) ? Number(c.linea_credito) : this.clienteForm.linea_credito || 0,
                 listas_precios: Array.isArray(c.listas_precios) ? [...c.listas_precios] : (this.clienteForm.listas_precios || []),
-                dias_credito: Number.isFinite(Number(c.dias_credito)) ? Number(c.dias_credito) : this.clienteForm.dias_credito,
+                dias_credito: Number.isFinite(Number(c.dias_credito)) ? Number(c.dias_credito) : this.clienteForm.dias_credito || 0,
             };
 
             // 2) Si viene formato antiguo (campos sueltos), migrar a direcciones[]

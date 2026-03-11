@@ -25,11 +25,22 @@
                 <div v-if="selectedCli.nota"><strong>Nota:</strong> {{ selectedCli.nota || '—' }}</div>
             </v-card>
 
-            <v-btn block color="#42A5F5" class="mt-n2 white--text" :disabled="!selectedCli || guardando || cargando"
-                @click="seleccionarCliente">
-                <v-icon left>mdi-cart</v-icon>
-                {{ guardando ? 'Cargando...' : 'Continuar con Pedido' }}
-            </v-btn>
+            <v-row dense>
+                <v-col :cols="$store.state.permisos.venta_directa ? 6 : 12">
+                    <v-btn block color="#42A5F5" class="mt-n2 white--text" :disabled="!selectedCli || guardando || cargando"
+                        @click="seleccionarCliente">
+                        <v-icon left>mdi-cart</v-icon>
+                        {{ guardando ? 'Cargando...' : 'Pre-venta' }}
+                    </v-btn>
+                </v-col>
+                <v-col cols="6" v-if="$store.state.permisos.venta_directa">
+                    <v-btn block color="info" class="mt-n2 white--text" :disabled="!selectedCli || guardando || cargando"
+                        @click="ventaDirecta">
+                        <v-icon left>mdi-cash-register</v-icon>
+                        Vender
+                    </v-btn>
+                </v-col>
+            </v-row>
 
             <v-btn block text color="#26A69A" class="mt-2" @click="abrirCrearCliente">
                 <v-icon left>mdi-account-plus</v-icon>
@@ -176,6 +187,13 @@ export default {
             if (!this.selectedCli) return
             
             this.$emit('seleccionar', this.selectedCli)
+            this.cierra()
+        },
+
+        ventaDirecta() {
+            if (!this.selectedCli) return
+            
+            this.$emit('venta-directa', this.selectedCli)
             this.cierra()
         },
         

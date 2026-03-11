@@ -3,7 +3,8 @@
         <v-row>
             <v-col cols="12" md="4"
                 v-if="$vuetify.breakpoint.mdAndUp || ($vuetify.breakpoint.smAndDown && $vuetify.breakpoint.width > $vuetify.breakpoint.height)">
-                <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true" :x_categoria="true">
+                <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true" :x_categoria="true"
+                    :cliente_selecto="cliente_s">
                 </cat_fijo>
             </v-col>
             <v-col cols="12" md="8">
@@ -12,7 +13,7 @@
                         <v-row class="mt-n1" dense>
                             <v-col cols="6" xs="6">
                                 <cat_fijo v-if="esMovil" ref="catFijo" @agrega_lista="agregar_lista($event)"
-                                    :muestra_tabla="false" :x_categoria="true">
+                                    :muestra_tabla="false" :x_categoria="true" :cliente_selecto="cliente_s">
                                 </cat_fijo>
                             </v-col>
                             <v-col cols="6" xs="12">
@@ -30,6 +31,13 @@
                 </v-card>
                 <h4 class="mb-n5 mt-1 red--text" v-if="cliente_s != ''">
                     <div> Cliente : {{ cliente_s.nombre }}</div>
+                    <div v-if="esListaPreciosActivo && listasPreciosCliente.length" class="mt-1">
+                        <!-- <v-chip v-for="lista in listasPreciosCliente" :key="lista" small outlined
+                            :color="CONFIG_LISTAS[lista]?.color || 'grey'" class="mr-1">
+                            <v-icon left small>mdi-tag</v-icon>
+                            {{ CONFIG_LISTAS[lista]?.nombre || lista }}
+                        </v-chip> -->
+                    </div>
                 </h4>
 
                 <v-alert v-if="excedeLineaCredito" type="error" dense border="left" colored-border class="mt-8 mb-6"
@@ -73,6 +81,14 @@
                                                             Precio: {{ moneda }}
                                                             {{ redondear(item.precio) }}
                                                         </span>
+                                                        <!-- <v-chip
+                                                            v-if="esListaPreciosActivo && item.precio_tipo && item.precio_tipo !== 'regular'"
+                                                            x-small class="ml-1"
+                                                            :color="CONFIG_LISTAS[item.precio_tipo]?.color || 'purple'"
+                                                            text-color="white" label>
+                                                            {{ CONFIG_LISTAS[item.precio_tipo]?.nombre ||
+                                                            item.precio_tipo }}
+                                                        </v-chip> -->
                                                         <v-chip v-if="Number(item.preciodescuento) > 0" x-small
                                                             class="ml-1" color="deep-orange" text-color="white" label>
                                                             −{{ moneda }} {{ redondear(item.preciodescuento) }}
@@ -123,7 +139,6 @@
                             </tbody>
                         </v-simple-table>
                     </div>
-
                 </v-card>
 
                 <v-card class="mt-3 pa-1 totals-sticky">
@@ -313,8 +328,8 @@
 
         <dial_mapas v-model="dialogoMapa" :guardar_auto="true" @cierra="dialogoMapa = false" />
         <cronograma v-if="dialogoCronograma" :totalCredito="Number(sumaTotal())" @cierra="dialogoCronograma = false"
-            @emite_cronograma="guarda_cronograma($event)" :pagoInicial="0" :moneda="moneda"
-            :planExistente="cronograma" />
+            @emite_cronograma="guarda_cronograma($event)" :pagoInicial="0" :moneda="moneda" :planExistente="cronograma"
+            :diasCredito="cliente_s?.dias_credito || 0" />
         <dial_edita_prod v-if="dialogoProducto" @cierra="dialogoProducto = false"
             @editaProducto="editaProductoFinal($event)" :item_selecto="item_selecto" @eliminaedita="eliminaedita()" />
     </div>
@@ -327,6 +342,13 @@ import cat_fijo from '@/components/catalogo_fijo'
 import dial_mapas from '../clientes/dial_mapa.vue'
 import { pdfGenera } from './formatos/orden_pedido.js'
 import { aplicaPreciosYBonos, agregarLista, analizaPreciosParcial, analizaGruposParcial } from "../funciones/calculo_bonos";
+import {
+    aplicarPreciosPorLista,
+    cambiarTipoPrecioManual,
+    CONFIG_LISTAS,
+    TIPOS_LISTA,
+    validarPreciosProducto
+} from "../funciones/calculo_lista_precios";
 import dialog_direcciones_cliente from '@/views/clientes/dialogos/dial_direcciones'
 import cronograma from '../ventas/dialogos/cronograma_creditos.vue'
 import dial_edita_prod from '../ventas/edita_producto.vue'
@@ -383,6 +405,7 @@ export default {
             sinStock: [],
             modoOrdenProductos: "push",
             tablaOscura: false,
+            CONFIG_LISTAS: CONFIG_LISTAS,
         }
     },
     created() {
@@ -412,7 +435,6 @@ export default {
             } else {
                 this.tipocomprobante = data.tipocomprobante || 'T';
             }
-
             // OPCIONAL: si tu componente tiene estas props/campos, completa coords
             if ('latitud' in this) this.latitud = (data.latitud ?? dirPri?.latitud ?? null);
             if ('longitud' in this) this.longitud = (data.longitud ?? dirPri?.longitud ?? null);
@@ -473,7 +495,28 @@ export default {
         opcionesFormaPago() {
 
             return ['CONTADO', 'CREDITO'];
+        },
+        esListaPreciosActivo() {
+            return this.$store.state.configuracion?.lista_precios === true;
+        },
+        listasPreciosCliente() {
+            return this.cliente_s?.listas_precios || [];
+        },
+        tieneMultiplesListas() {
+            return this.esListaPreciosActivo && this.listasPreciosCliente.length > 1;
+        },
+        colorPrecioTipo() {
+            return (tipo) => {
+                const colores = {
+                    'distribuidor': 'purple',
+                    'mayorista': 'blue',
+                    'minorista': 'green',
+                    'regular': 'grey'
+                };
+                return colores[tipo] || 'grey';
+            };
         }
+
     },
     watch: {
         modoOrdenProductos(nv) {
@@ -484,8 +527,9 @@ export default {
         },
         formaPago(nv) {
             if (nv === 'CREDITO') {
-                // Fecha actual + 7 días
-                this.fechaVencimiento = moment().add(7, 'days').format('YYYY-MM-DD');
+                // Usar días de crédito del cliente o 7 días por defecto
+                const diasCredito = this.cliente_s?.dias_credito || 7;
+                this.fechaVencimiento = moment().add(diasCredito, 'days').format('YYYY-MM-DD');
             } else {
                 this.fechaVencimiento = '';
             }
@@ -513,6 +557,24 @@ export default {
         modoOrdenProductos(nuevo) {
             localStorage.setItem('modoOrdenProductos', nuevo);
         },
+        'cliente_s': {
+            handler(nuevoCliente) {
+                if (this.esListaPreciosActivo && this.listaproductos.length > 0) {
+                    this.recalculoCompleto();
+                }
+            },
+            deep: true
+        },
+
+        // Watch para cuando cambian las listas de precios del cliente
+        'cliente_s.listas_precios': {
+            handler(nuevasListas) {
+                if (this.esListaPreciosActivo && this.listaproductos.length > 0) {
+                    this.recalculoCompleto();
+                }
+            },
+            deep: true
+        }
     },
 
     methods: {
@@ -698,7 +760,7 @@ export default {
                     fecha_emision: moment().unix(),
                     condicion_pago: this.formaPago,
                     fecha_vencimiento: this.formaPago === 'CREDITO' ? this.fechaVencimiento : null,
-                    dias_credito: 0,
+                    dias_credito: this.cliente_s?.dias_credito || 0,
                     cronograma: cronogramaCabecera,
                     doc_tipo: this.documento,
                     doc_numero: this.numero,
@@ -851,7 +913,9 @@ export default {
 
             return `${bd}-${hash10}`;
         },
-        agregar_lista(value) {
+        /* agregar_lista(value) {
+
+            
             // 1) Usamos tu helper para fusionar / sumar cantidades / etc.
             console.log(value)
             let nuevaLista = agregarLista({
@@ -889,6 +953,59 @@ export default {
             // 4) Asignamos y recalculamos bonos / precios
             this.listaproductos = nuevaLista;
             this.recalculoUltimoAgregado(value);
+        }, */
+
+        agregar_lista(value) {
+            let nuevaLista = agregarLista({
+                listaActual: this.listaproductos,
+                nuevosItems: value,
+                createUUID: this.create_UUID,
+                redondear: (n) => this.redondear(n),
+            });
+
+            const nuevosIds = (Array.isArray(value) ? value : [value])
+                .map(x => String(x?.id ?? x?.cod_producto ?? ''))
+                .filter(Boolean);
+            const itemsConLista = (Array.isArray(value) ? value : [value])
+                .filter(item => item._lista_precios || item.precio_tipo);
+
+            if (itemsConLista.length > 0) {
+                this.listaproductos = nuevaLista;
+            }
+            else if (this.esListaPreciosActivo && this.listasPreciosCliente.length > 0 && this.cliente_s) {
+
+                nuevaLista = aplicarPreciosPorLista({
+                    lineas: nuevaLista,
+                    productos: this.$store.state.productos,
+                    cliente: this.cliente_s,
+                    idsAfectados: nuevosIds,
+                    opciones: {
+                        respetarManual: true,
+                        forzar: false
+                    }
+                });
+
+                this.listaproductos = nuevaLista;
+            } else {
+                this.listaproductos = nuevaLista;
+
+                if (nuevosIds.length) {
+                    this.recalculoUltimoAgregado(value);
+                }
+            }
+
+            const baseTs = Date.now();
+            let offset = 0;
+            this.listaproductos = this.listaproductos.map(item => {
+                if (!item.__tsAdd) {
+                    item.__tsAdd = baseTs + (offset++);
+                }
+                return item;
+            });
+
+            if (this.modoOrdenProductos === 'top') {
+                this.listaproductos.sort((a, b) => (b.__tsAdd || 0) - (a.__tsAdd || 0));
+            }
         },
 
         recalculoUltimoAgregado(value) {
@@ -928,15 +1045,29 @@ export default {
 
         },
         recalculoCompleto() {
-            this.listaproductos = aplicaPreciosYBonos({
-                lineas: this.listaproductos,
-                productos: this.$store.state.productos,
-                bonos: this.$store.state.bonos,
-                createUUID: this.create_UUID,
-                redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
-                inPlace: true,
-            });
-            console.log(this.listaproductos)
+            if (this.esListaPreciosActivo && this.listasPreciosCliente.length > 0 && this.cliente_s) {
+                // Usar lógica de listas de precios
+                this.listaproductos = aplicarPreciosPorLista({
+                    lineas: this.listaproductos,
+                    productos: this.$store.state.productos,
+                    cliente: this.cliente_s,
+                    idsAfectados: null,
+                    opciones: {
+                        respetarManual: true,
+                        forzar: false
+                    }
+                });
+            } else {
+                // Usar lógica tradicional de bonos
+                this.listaproductos = aplicaPreciosYBonos({
+                    lineas: this.listaproductos,
+                    productos: this.$store.state.productos,
+                    bonos: this.$store.state.bonos,
+                    createUUID: this.create_UUID,
+                    redondear: (n) => this.redondear(n),
+                    inPlace: true,
+                });
+            }
         },
 
         editaProducto(val) {
@@ -961,7 +1092,7 @@ export default {
             // opcional: si quieres conservar "precio_base" como el precio original de catálogo:
             // si no existe base, la seteas una vez
             if (lineaActualizada.precio_base == null) {
-                lineaActualizada.precio_base = Number(lineaActualizada.precio || 0);
+                lineaActualizada.precio_base = Number(lineaActualizada.precio || this.item_selecto.precio || 0);
             }
 
             const idx = this.listaproductos.findIndex(l => l.uuid === lineaActualizada.uuid);
@@ -1006,6 +1137,21 @@ export default {
         abre_catalogo() {
             this.dial_catalogo = true
         },
+        cambiarTipoPrecio(item, nuevoTipo) {
+            if (!this.esListaPreciosActivo || !item || !nuevoTipo) return;
+
+            const producto = this.$store.state.productos.find(p => p.id === item.id);
+            if (!producto) return;
+
+            const itemActualizado = cambiarTipoPrecioManual(item, nuevoTipo, producto);
+
+            if (itemActualizado) {
+                const idx = this.listaproductos.findIndex(l => l.uuid === item.uuid);
+                if (idx !== -1) {
+                    this.$set(this.listaproductos, idx, itemActualizado);
+                }
+            }
+        }
     },
 
 }

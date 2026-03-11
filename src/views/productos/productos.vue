@@ -256,49 +256,83 @@
 
 
                 </v-row>
-                <v-row class="mt-n6" dense>
-                    <v-col cols="6" sm="6" md="6">
-                        <v-text-field outlined readonly dense :value="convierte_stock(stock, factor)"
-                            label="Stock Conjunto"></v-text-field>
-                    </v-col>
-                    <v-col cols="6" sm="6" md="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" type="number" dense
-                            v-model="precio" label="Precio"></v-text-field>
-                    </v-col>
-                </v-row>
+                <template v-if="!esListaPreciosActivo">
+                    <v-row class="mt-n6" dense>
+                        <v-col cols="6" sm="6" md="6">
+                            <v-text-field outlined readonly dense :value="convierte_stock(stock, factor)"
+                                label="Stock Conjunto"></v-text-field>
+                        </v-col>
+                        <v-col cols="6" sm="6" md="6">
+                            <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" type="number"
+                                dense v-model="precio" label="Precio Regular"></v-text-field>
+                        </v-col>
+                    </v-row>
 
-                <v-alert v-if="grupoPrecioSelect" type="info" dense text class="mt-n4 mb-10">
-                    Escalas deshabilitadas: Tiene grupo de precio global asignado
-                    <v-btn x-small text color="primary" class="ml-2" @click="quitarGrupoPrecio">
-                        Quitar grupo de precio Global
-                    </v-btn>
-                </v-alert>
+                    <v-alert v-if="grupoPrecioSelect" type="info" dense text class="mt-n4 mb-10">
+                        Escalas deshabilitadas: Tiene grupo de precio global asignado
+                        <v-btn x-small text color="primary" class="ml-2" @click="quitarGrupoPrecio">
+                            Quitar grupo de precio Global
+                        </v-btn>
+                    </v-alert>
 
-                <v-row class="mt-n6" dense>
-                    <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
-                            type="number" dense v-model="escala_may1" label="Escala may 1"
-                            persistent-hint></v-text-field>
-                    </v-col>
-                    <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
-                            type="number" dense v-model="precio_may1" label="Precio may 1"
-                            persistent-hint></v-text-field>
-                    </v-col>
-                </v-row>
+                    <v-row class="mt-n6" dense>
+                        <v-col cols="6">
+                            <v-text-field outlined
+                                :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect" type="number"
+                                dense v-model="escala_may1" label="Escala may 1" persistent-hint></v-text-field>
+                        </v-col>
+                        <v-col cols="6">
+                            <v-text-field outlined
+                                :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect" type="number"
+                                dense v-model="precio_may1" label="Precio may 1" persistent-hint></v-text-field>
+                        </v-col>
+                    </v-row>
+                    <v-row class="mt-n6" dense>
+                        <v-col cols="6">
+                            <v-text-field outlined
+                                :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect" type="number"
+                                dense v-model="escala_may2" label="Escala may 2" persistent-hint></v-text-field>
+                        </v-col>
+                        <v-col cols="6">
+                            <v-text-field outlined
+                                :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect" type="number"
+                                dense v-model="precio_may2" label="Precio may 2" persistent-hint></v-text-field>
+                        </v-col>
+                    </v-row>
+                </template>
 
-                <v-row class="mt-n6" dense>
-                    <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
-                            type="number" dense v-model="escala_may2" label="Escala may 2"
-                            persistent-hint></v-text-field>
-                    </v-col>
-                    <v-col cols="6">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect"
-                            type="number" dense v-model="precio_may2" label="Precio may 2"
-                            persistent-hint></v-text-field>
-                    </v-col>
-                </v-row>
+                <!-- SECCIÓN DE PRECIOS -->
+                <template v-else>
+                    <v-row class="mt-n6" dense>
+                        <v-col cols="12">
+                            <v-text-field outlined readonly dense :value="convierte_stock(stock, factor)"
+                                label="Stock Conjunto"></v-text-field>
+                        </v-col>
+                    </v-row>
+                    <v-row class="mt-n6" dense>
+                        <v-col cols="12" sm="4">
+                            <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" type="number"
+                                dense v-model="precio" label="Precio Minorista"></v-text-field>
+                        </v-col>
+
+                        <v-col cols="12" sm="4">
+                            <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" type="number"
+                                dense v-model="precio_may2" label="Precio Mayorista"></v-text-field>
+                        </v-col>
+
+                        <v-col cols="12" sm="4">
+                            <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" type="number"
+                                dense v-model="precio_may1" label="Precio Distribuidor"></v-text-field>
+                        </v-col>
+                    </v-row>
+
+                    <v-alert v-if="grupoPrecioSelect" type="info" dense text class="mt-4">
+                        Tiene grupo de precio global asignado
+                        <v-btn x-small text color="primary" class="ml-2" @click="quitarGrupoPrecio">
+                            Quitar
+                        </v-btn>
+                    </v-alert>
+                </template>
 
                 <v-expansion-panels flat style="background: transparent;" v-if="false">
                     <v-expansion-panel style="background: transparent;">
@@ -345,11 +379,12 @@
                                         type="number" dense v-model="precio_may5" label="Precio may 5"></v-text-field>
                                 </v-col>
                             </v-row>
-
                         </v-expansion-panel-content>
                     </v-expansion-panel>
                 </v-expansion-panels>
-
+                <!-- <v-alert v-if="esListaPreciosActivo && !grupoPrecioSelect" type="warning" dense class="mt-n4 mb-10">
+                    El módulo de listas de precios está activo.
+                </v-alert> -->
                 <v-row class="mt-n6" dense>
 
                     <v-col cols="6">
@@ -361,14 +396,14 @@
                             v-model="peso" label="Peso (KG)"></v-text-field>
                     </v-col>
                 </v-row>
-                <v-card flat outlined class="mt-n4 rounded-lg overflow-hidden">
+                <v-card  v-if="!esListaPreciosActivo" flat outlined class="mt-n4 rounded-lg overflow-hidden">
                     <v-tabs v-model="tabBonos" dense grow color="primary" background-color="grey lighten-5">
                         <v-tab class="text-none">
                             <v-icon small left color="orange">mdi-gift-outline</v-icon>
                             Bono
                             <v-badge v-if="grupoBonoAsignado" color="orange" content="1" inline small></v-badge>
                         </v-tab>
-                        <v-tab class="text-none">
+                        <v-tab v-if="!esListaPreciosActivo" class="text-none">
                             <v-icon small left color="blue">mdi-tag-multiple-outline</v-icon>
                             Precio
                             <v-badge v-if="grupoPrecioAsignado" color="blue" content="1" inline small></v-badge>
@@ -454,7 +489,7 @@
                             </v-card>
                         </v-tab-item>
 
-                        <v-tab-item>
+                        <v-tab-item v-if="!esListaPreciosActivo">
                             <v-card flat class="pa-3">
                                 <div class="d-flex flex-wrap justify-space-between align-center mb-2">
                                     <span class="text-overline grey--text">Escalas de Precio</span>
@@ -995,6 +1030,9 @@ export default {
     computed: {
         permisoAlertaStockActivo() {
             return Boolean(this.$store.state.configuracion?.alerta_stock_minimo);
+        },
+        esListaPreciosActivo() {
+            return Boolean(this.$store.state.configuracion?.lista_precios);
         },
         productoParaSincronizar() {
             return {

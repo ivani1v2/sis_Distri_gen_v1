@@ -844,7 +844,7 @@ export default {
         apiBaseUrl() {
             const hostname = window.location.hostname;
             if (hostname === 'localhost' || hostname === '127.0.0.1') {
-                return 'http://localhost:5001/sis-distri/southamerica-east1/api_distribucion';
+                return 'http://127.0.0.1:5001/sis-distribucion/southamerica-east1/api_distribucion';
             }
             return 'https://api-distribucion-6sfc6tum4a-rj.a.run.app';
         }
