@@ -133,7 +133,7 @@
                     <v-col cols="12" sm="4">
                         <h4 class="text-subtitle-1">
                             FECHA TRASLADO: <span class="primary--text">{{ conviertefecha(cabecera_total.fecha_traslado)
-                                }}</span>
+                            }}</span>
                         </h4>
                         <!-- Chip de transporte asignado -->
                         <div v-if="cabecera_total.d_transporte?.usuario_nombre" class="mt-1">
@@ -158,7 +158,7 @@
                             TOTAL VENTA: <span class="green--text text--darken-2">{{ moneda }} {{ t_general }}</span>
                         </h4>
                         <span class="caption">Contado: {{ moneda }} {{ t_contado }} | Crédito: {{ moneda }} {{ t_credito
-                        }}</span>
+                            }}</span>
                     </v-col>
                 </v-row>
             </v-card-text>
@@ -214,7 +214,7 @@
                                 </v-chip>
                             </td>
                             <td class="text-right caption red--text">{{ item.moneda }}{{ redondear(item.pendiente_pago)
-                                }}</td>
+                            }}</td>
                             <td class="text-right caption font-weight-bold">{{ item.moneda }}{{ redondear(item.total) }}
                             </td>
                             <td class="text-center">
@@ -296,7 +296,7 @@
                                     S/.{{ d.precio }}
                                     <strong v-if="d.preciodescuento != 0" class="red--text ml-1">(-S/.{{
                                         d.preciodescuento
-                                        }})</strong>
+                                    }})</strong>
                                 </td>
                                 <td class="text-right caption font-weight-bold">S/.{{
                                     redondear((Number(d.total_antes_impuestos)
@@ -319,7 +319,7 @@
                 <v-card-text class="pt-4">
                     <div class="mb-3 text-subtitle-2 grey--text text--darken-1">
                         Anulando comprobante: <strong class="error--text">{{ comp_anular ? comp_anular.numeracion : ''
-                            }}</strong>
+                        }}</strong>
                     </div>
 
                     <v-select dense outlined clearable :items="motivos_predeterminados"
@@ -487,7 +487,7 @@
                 <v-toolbar class="text-caption"
                     :color="guia_individual_tipo === 'transporte' ? 'purple darken-1' : 'cyan darken-1'" dense dark>
                     <v-toolbar-title>{{ guia_individual_tipo === 'transporte' ? 'Guía Transporte' : 'Guía Remisión'
-                        }}</v-toolbar-title>
+                    }}</v-toolbar-title>
                     <v-spacer></v-spacer>
                     <v-btn icon @click="dialogo_guia_individual = false">
                         <v-icon>mdi-close</v-icon>
@@ -618,6 +618,7 @@ import moment from 'moment'
 import dialogo_edita_c from './dialogos/dialogo_edita_c'
 import genera_guias from './dialogos/genera_guias.vue'
 import impresorahost from '@/components/configEmpresa/impresorahost.vue'
+import { impresionQueue } from '../../impresionQueue';
 import {
     pdfGenera
 } from '../../pdf_comprobantes'
@@ -1573,38 +1574,42 @@ export default {
                             data.referencia = this.getReferenciaPrincipal(datas) || datas.referencia || '';
                         }
 
-                        if (modo === 'descarga') {
-                            for (let c = 1; c <= copias; c++) {
-                                if (c > 1) {
-                                    await new Promise(resolve => setTimeout(resolve, 500));
+                        await impresionQueue.add(async (docId) => {
+                            if (modo === 'descarga') {
+                                for (let c = 1; c <= copias; c++) {
+                                    if (c > 1) {
+                                        await new Promise(resolve => setTimeout(resolve, 500));
+                                    }
+                                    const dataConCopia = {
+                                        ...data,
+                                        numero_copia: c,
+                                        total_copias: copias
+                                    };
+                                    await pdfGenera(arraydatos, dataConCopia, tamano, modo, 1);
                                 }
-
-                                const dataConCopia = {
-                                    ...data,
-                                    numero_copia: c,
-                                    total_copias: copias
-                                };
-
-                                await pdfGenera(arraydatos, dataConCopia, tamano, modo, 1);
+                            } else {
+                                await pdfGenera(arraydatos, data, tamano, modo, copias);
                             }
-                        } else {
-                            await pdfGenera(arraydatos, data, tamano, modo, copias);
-                        }
+                        });
+
+                        this.printDone = i + 1;
+                        setTimeout(() => this.impresion_comp(array, i + 1, tamano, modo, copias), 1000);
+                    } else {
+                        setTimeout(() => this.impresion_comp(array, i + 1, tamano, modo, copias), 1000);
                     }
-
-                    this.printDone = i + 1;
-
-                    setTimeout(() => this.impresion_comp(array, i + 1, tamano, modo, copias), 3500);
                 } else {
                     const mensaje = modo === 'descarga' ? 'Descarga completada.' : 'Impresión finalizada.';
                     this.$store.commit('dialogosnackbar', mensaje);
                     this.printDialog = false;
                 }
-            } catch (e) {
-                console.error(e);
-                this.printError = 'Ocurrió un error durante la impresión.';
-                this.printDone = Math.min(i + 1, this.printTotal);
-                setTimeout(() => this.impresion_comp(array, i + 1, tamano, modo, copias), 3500);
+            } catch (error) {
+                console.error('Error en impresión:', error);
+                this.printError = `Error en comprobante ${i + 1}`;
+                if (confirm(`Error en comprobante ${i + 1}. ¿Continuar?`)) {
+                    setTimeout(() => this.impresion_comp(array, i + 1, tamano, modo, copias), 1000);
+                } else {
+                    this.printDialog = false;
+                }
             }
         },
         getReferenciaPrincipal(cliente) {

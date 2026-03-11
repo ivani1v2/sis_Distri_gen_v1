@@ -8,6 +8,10 @@ let modo_genera = "abre";
 let copias_genera = 1;
 import axios from "axios";
 
+import { impresionQueue } from "./impresionQueue";
+let ventanaImpresionActual = null;
+let resolvers = {};
+
 let moneda = "S/";
 
 function permite_impresion_host() {
@@ -17,95 +21,138 @@ function permite_impresion_host() {
   return tienePermiso && tieneConfig;
 }
 
-async function abre_dialogo_impresion(doc,  copias = 1) {
+async function abre_dialogo_impresion(doc, copias = 1, docId = Date.now()) {
   try {
     if (!permite_impresion_host()) {
-      abre_dialogo_impresion_original(doc);
-      return;
+      return await abre_dialogo_impresion_original(doc, docId);
     }
     
-    const configHost = store?.state?.permisos?.config_impresion_host || {};
-    const IP_PC = configHost.ip_dispositivo || "192.168.1.19";
-    const PORT = configHost.puerto_dispositivo || 8090;
-    const BRIDGE_URL = `http://${IP_PC}:${PORT}/bridge-pdf`;
-    const token = store?.state?.configImpresora?.token_host || configHost.token || "1234";
-    
-    const meta = {
-      bd: store?.state?.baseDatos?.bd || "",
-      usuario: store?.state?.permisos?.nombre || "",
-      tipo: "comprobante",
-      ts: Date.now(),
-    };
-    
-    const buffer = doc.output("arraybuffer");
-
-    const ventana = window.open(
-      BRIDGE_URL, 
-      "_blank", 
-      "width=500,height=400,menubar=no,toolbar=no,location=no,status=no"
-    );
-    
-    if (!ventana) {
-      alert("Permite ventanas emergentes para imprimir.");
-      return;
-    }
-    
-    const mensaje = { 
-      type: "PRINT_PDF", 
-      token, 
-      printer: configHost.nombre_impresora || "POS-80-Series", 
-      copies: copias,
-      meta, 
-      pdf: buffer 
-    };
-    
-    const timer = setInterval(() => {
-      try {
-        ventana.postMessage(mensaje, "*", [buffer]);
-        clearInterval(timer);
-
-      } catch (e) {}
-    }, 250);
-    
+    return new Promise((resolve, reject) => {
+      const configHost = store?.state?.permisos?.config_impresion_host || {};
+      const IP_PC = configHost.ip_dispositivo || "192.168.1.19";
+      const PORT = configHost.puerto_dispositivo || 8090;
+      const BRIDGE_URL = `http://${IP_PC}:${PORT}/bridge-pdf`;
+      const token = store?.state?.configImpresora?.token_host || configHost.token || "1234";
+      
+      const meta = {
+        bd: store?.state?.baseDatos?.bd || "",
+        usuario: store?.state?.permisos?.nombre || "",
+        tipo: "comprobante",
+        ts: Date.now(),
+      };
+      
+      const buffer = doc.output("arraybuffer");
+      
+      if (ventanaImpresionActual && !ventanaImpresionActual.closed) {
+        ventanaImpresionActual.close();
+      }
+      
+      const ventana = window.open(
+        BRIDGE_URL, 
+        "_blank", 
+        "width=500,height=400,menubar=no,toolbar=no,location=no,status=no"
+      );
+      
+      ventanaImpresionActual = ventana;
+      
+      if (!ventana) {
+        alert("Permite ventanas emergentes para imprimir.");
+        reject(new Error('Ventana bloqueada'));
+        return;
+      }
+      
+      const mensaje = { 
+        type: "PRINT_PDF", 
+        token, 
+        printer: configHost.nombre_impresora || "POS-80-Series", 
+        copies: copias,
+        meta, 
+        pdf: buffer 
+      };
+      
+      const timer = setInterval(() => {
+        try {
+          ventana.postMessage(mensaje, "*", [buffer]);
+          clearInterval(timer);
+          
+          resolvers[docId] = { resolve, reject };
+          
+          const checkClosed = setInterval(() => {
+            if (ventana.closed) {
+              clearInterval(checkClosed);
+              if (resolvers[docId]) {
+                resolvers[docId].resolve();
+                delete resolvers[docId];
+              }
+            }
+          }, 500);
+          
+        } catch (e) {
+          clearInterval(timer);
+          reject(e);
+        }
+      }, 250);
+      
+      setTimeout(() => reject(new Error('Timeout')), 60000);
+    });
   } catch (e) {
-    console.error("Error impresión host:", e);
-    abre_dialogo_impresion_original(doc, copias_genera);
+    return await abre_dialogo_impresion_original(doc, docId);
   }
 }
 
-async function abre_dialogo_impresion_original(doc) {
-  if (store.state.configImpresora.impresora_auto && isElectronEnv()) {
-    console.log("⚡ Modo Electron detectado, usando axios_imp");
-    axios_imp(doc.output("arraybuffer"));
-    return;
-  }
-  
-  var blob = doc.output("bloburi");
-  var Ancho = screen.width;
-  var Alto = screen.height;
-  var A = (Ancho * 50) / 100;
-  var H = (Alto * 50) / 100;
-  var difA = Ancho - A;
-  var difH = Alto - H;
-  var tope = difH / 2;
-  var lado = difA / 2;
-  var Opciones =
-    "status=no, menubar=no, directories=no, location=no, toolbar=no, scrollbars=yes, resizable=no, width=" +
-    A +
-    ", height=" +
-    H +
-    ", top=" +
-    tope +
-    ", left=" +
-    lado +
-    "";
-  var w = window.open(blob, "_blank", Opciones);
-  if (w) {
-    w.print();
-  } else {
-    console.error("❌ No se pudo abrir ventana de impresión");
-  }
+async function abre_dialogo_impresion_original(doc, docId = Date.now()) {
+  return new Promise((resolve, reject) => {
+    if (store.state.configImpresora.impresora_auto && isElectronEnv()) {
+      axios_imp(doc.output("arraybuffer"))
+        .then(() => resolve())
+        .catch(err => reject(err));
+      return;
+    }
+    
+    var blob = doc.output("bloburi");
+    var Ancho = screen.width;
+    var Alto = screen.height;
+    var A = (Ancho * 50) / 100;
+    var H = (Alto * 50) / 100;
+    var difA = Ancho - A;
+    var difH = Alto - H;
+    var tope = difH / 2;
+    var lado = difA / 2;
+    var Opciones = "status=no, menubar=no, directories=no, location=no, toolbar=no, scrollbars=yes, resizable=no, width=" + A + ", height=" + H + ", top=" + tope + ", left=" + lado + "";
+    
+    if (ventanaImpresionActual && !ventanaImpresionActual.closed) {
+      ventanaImpresionActual.close();
+    }
+    
+    ventanaImpresionActual = window.open(blob, "_blank", Opciones);
+    
+    if (ventanaImpresionActual) {
+      resolvers[docId] = { resolve, reject };
+      
+      const checkClosed = setInterval(() => {
+        if (ventanaImpresionActual.closed) {
+          clearInterval(checkClosed);
+          if (resolvers[docId]) {
+            resolvers[docId].resolve();
+            delete resolvers[docId];
+          }
+        }
+      }, 500);
+      
+      setTimeout(() => {
+        if (resolvers[docId]) {
+          resolvers[docId].reject(new Error('Timeout en impresión'));
+          delete resolvers[docId];
+        }
+      }, 300000);
+      
+      ventanaImpresionActual.print();
+    } else {
+      reject(new Error('No se pudo abrir ventana de impresión'));
+    }
+  });
 }
+
 export const pdfGenera = (arraydatos, cabecera, medida, modo, copias = 1) => {
   //console.log(arraydatos, cabecera, medida, modo);
   moneda = cabecera.moneda || "S/";
@@ -617,7 +664,7 @@ async function impresion58(arraydatos, qr, cabecera) {
           window.open(url, "_blank");
         }
       } else {
-        abre_dialogo_impresion(doc, copias_genera);
+        await abre_dialogo_impresion(doc, copias_genera);
       }
       break;
     case "host":
@@ -1114,7 +1161,7 @@ async function impresion80(arraydatos, qr, cabecera) {
           window.open(url, "_blank");
         }
       } else {
-        abre_dialogo_impresion(doc, copias_genera);
+        await abre_dialogo_impresion(doc, copias_genera);
       }
       break;
     case "host":
@@ -1131,7 +1178,7 @@ async function impresion80(arraydatos, qr, cabecera) {
       break;
   }
 }
-function impresionA4(array, qr, arraycabecera) {
+async function impresionA4(array, qr, arraycabecera) {
   var arraycabe = arraycabecera;
   var linea = parseInt(store.state.configImpresora.msuperior);
   var nombreEmpresa = store.state.baseDatos.name;
@@ -1610,7 +1657,7 @@ function impresionA4(array, qr, arraycabecera) {
       if (store.state.esmovil) {
         window.open(doc.output("bloburi"));
       } else {
-        abre_dialogo_impresion(doc, copias_genera);
+        await abre_dialogo_impresion(doc, copias_genera);
       }
       break;
     case "host":
@@ -1622,7 +1669,7 @@ function impresionA4(array, qr, arraycabecera) {
       break;
   }
 }
-function impresionA5_horizontal(array, qr, arraycabecera) {
+async function impresionA5_horizontal(array, qr, arraycabecera) {
   const arraycabe = arraycabecera;
   let linea = 10;
 
@@ -2176,7 +2223,7 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
       if (store.state.esmovil) {
         window.open(doc.output("bloburi"));
       } else {
-        abre_dialogo_impresion(doc, copias_genera);
+        await abre_dialogo_impresion(doc, copias_genera);
       }
       break;
     case "host":
