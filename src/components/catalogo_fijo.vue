@@ -17,7 +17,7 @@
                             class="grey--text">
                             ({{ item.id }})
                         </small>
-                        — <strong class="red--text">{{ moneda }} {{ Number(item.precioMostrado).toFixed(2) }}</strong>
+                        — <strong class="red--text">{{ moneda }} {{ (item.precioMostrado ? Number(item.precioMostrado) : Number(item.precio || 0)).toFixed(2) }}</strong>
                     </v-list-item-title>
 
                     <v-list-item-subtitle class="mt-0">
@@ -811,7 +811,7 @@ export default {
                 precioUnidad = this.getPrecioConLista(this.producto_selecto, this.listaPrecioSeleccionada);
                 precioFinal = esCaja ? (precioUnidad * factor) : precioUnidad;
 
-                console.log('🎯 Usando lista seleccionada:', this.listaPrecioSeleccionada, 'precio:', precioUnidad);
+                console.log('lista seleccionada:', this.listaPrecioSeleccionada, 'precio:', precioUnidad);
             }
             // MODO TRADICIONAL - usa el tier seleccionado o auto
             else {
@@ -819,7 +819,7 @@ export default {
                 precioUnidad = this.precioPorTier(this.producto_selecto, tier);
                 precioFinal = esCaja ? (precioUnidad * factor) : precioUnidad;
 
-                console.log('🎯 Usando modo tradicional, tier:', tier, 'precio:', precioUnidad);
+                console.log(' modo tradicional, tier:', tier, 'precio:', precioUnidad);
             }
 
             // Aplicar descuentos si existen
@@ -903,7 +903,7 @@ export default {
                     );
 
                     this.listaPrecioSeleccionada = resultado?.tipo || null;
-                    console.log('📌 Lista seleccionada por determinarPrecioPorLista:', this.listaPrecioSeleccionada);
+                    console.log('Lista seleccionada por determinarPrecioPorLista:', this.listaPrecioSeleccionada);
 
                 } else {
                     this.listaPrecioSeleccionada = null;
