@@ -38,7 +38,7 @@
                     </v-container>
                 </v-card>
             </v-col>
-            <v-col v-if="$store.state.permisos.transferencias" cols="6" class="pa-1 mx-auto " md="4" sm="4" xs="6">
+            <v-col v-if="false" cols="6" class="pa-1 mx-auto " md="4" sm="4" xs="6">
                 <v-card @click.prevent="router('transferencia_productos')">
                     <v-container>
                         <v-img class="mx-auto" height="70" width="70" src="/truck.png"></v-img>
@@ -55,7 +55,7 @@
                     </v-container>
                 </v-card>
             </v-col>
-            <v-col v-if="$store.state.permisos.reporte_avance" cols="6" class="pa-1 mx-auto " md="4" sm="4" xs="6">
+            <v-col v-if="false" cols="6" class="pa-1 mx-auto " md="4" sm="4" xs="6">
                 <v-card @click.prevent="dialogo_avance = !dialogo_avance">
                     <v-container>
                         <v-img class="mx-auto" height="70" width="70" src="/reporte.png"></v-img>
@@ -88,7 +88,7 @@
                     </v-container>
                 </v-card>
             </v-col>
-            <v-col v-if="$store.state.permisos.flujo_caja" cols="6" class="pa-1 mx-auto " md="4" sm="4" xs="6">
+            <v-col v-if="false" cols="6" class="pa-1 mx-auto " md="4" sm="4" xs="6">
                 <v-card @click.prevent="router('flujocaja')">
                     <v-container>
                         <v-img class="mx-auto" height="70" width="70" src="/cash.png"></v-img>
@@ -96,7 +96,7 @@
                     </v-container>
                 </v-card>
             </v-col>
-            <v-col v-if="$store.state.permisos.modulotransporte" cols="6" class="pa-1 mx-auto " md="4" sm="4" xs="6">
+            <v-col v-if="false" cols="6" class="pa-1 mx-auto " md="4" sm="4" xs="6">
                 <v-card @click.prevent="router('reparto_transporte', '0')">
                     <v-container>
                         <v-img class="mx-auto" height="70" width="70" src="/repe.png"></v-img>
@@ -139,7 +139,7 @@
                     </v-container>
                 </v-card>
             </v-col>
-            <v-col v-if="$store.state.permisos.moduloempresa" cols="6" class="pa-1 mx-auto" md="4" sm="4" xs="6">
+            <v-col v-if="false" cols="6" class="pa-1 mx-auto" md="4" sm="4" xs="6">
                 <v-card @click.prevent="router('integraciones')">
                     <v-container>
                         <v-img class="mx-auto" height="70" width="70" src="/shop.png"></v-img>

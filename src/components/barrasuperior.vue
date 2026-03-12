@@ -158,7 +158,7 @@
                         <v-list-item-title>GPS Usuarios</v-list-item-title>
                     </v-list-item>
                 </v-list-group>
-                <v-list-group :value="listaMenu" prepend-icon="mdi-shopping" color="primary">
+                <v-list-group v-if="false" :value="listaMenu" prepend-icon="mdi-shopping" color="primary">
                     <template v-slot:activator>
                         <v-list-item-title class="font-weight-medium">Tienda Virtual</v-list-item-title>
                     </template>
@@ -167,7 +167,7 @@
                         <v-list-item-title>Catalogo</v-list-item-title>
                     </v-list-item>
                 </v-list-group>
-                <v-list-group :value="listaMenu" prepend-icon="mdi-account-convert">
+                <v-list-group v-if="false" :value="listaMenu" prepend-icon="mdi-account-convert">
                     <template v-slot:activator>
                         <v-list-item-title>Empleados</v-list-item-title>
                     </template>
@@ -190,12 +190,12 @@
                         </v-list-item>
                     </v-container>
                 </v-list-group>
-                <v-list-group v-if="$store.state.permisos.moduloFinanzas" :value="listaMenu" prepend-icon="mdi-finance"
+                <v-list-group v-if="false" :value="listaMenu" prepend-icon="mdi-finance"
                     color="primary">
                     <template v-slot:activator>
                         <v-list-item-title class="font-weight-medium">Finanzas</v-list-item-title>
                     </template>
-                    <v-list-item v-if="$store.state.permisos.tesoreria" link @click.prevent="router('tesoreria')">
+                    <v-list-item v-if="false" link @click.prevent="router('tesoreria')">
                         <v-list-item-icon><v-icon small>mdi-bank</v-icon></v-list-item-icon>
                         <v-list-item-title>Tesoreria</v-list-item-title>
                     </v-list-item>
@@ -206,7 +206,7 @@
                     </v-list-item>
                 </v-list-group>
 
-                <v-list-group v-if="$store.state.baseDatos.mod_activos" 
+                <v-list-group v-if="false" 
                     :value="listaMenu" prepend-icon="mdi-snowflake" >
                     <template v-slot:activator>
                         <v-list-item-title class="font-weight-medium">Gest. Activos</v-list-item-title>
@@ -236,7 +236,7 @@
                         <v-list-item-icon><v-icon small>mdi-file-chart-outline</v-icon></v-list-item-icon>
                         <v-list-item-title>Mov x Producto</v-list-item-title>
                     </v-list-item>
-                    <v-list-item v-if="$store.state.permisos.transferencias" link
+                    <v-list-item v-if="false" link
                         @click.prevent="router('transferencia_productos')">
                         <v-list-item-icon><v-icon small>mdi-truck-fast-outline</v-icon></v-list-item-icon>
                         <v-list-item-title>Transferencias</v-list-item-title>
