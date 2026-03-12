@@ -213,9 +213,9 @@
                 <v-row dense class="">
                     <v-col cols="12">
                         <v-radio-group v-model="tipocomprobante" row dense>
-                            <v-radio label="Nota" value="T"></v-radio>
-                            <v-radio label="Boleta" value="B"></v-radio>
-                            <v-radio label="Factura" value="F"></v-radio>
+                            <v-radio label="Nota de venta" value="T"></v-radio>
+                            <!-- <v-radio label="Boleta" value="B"></v-radio>
+                            <v-radio label="Factura" value="F"></v-radio> -->
                         </v-radio-group>
                     </v-col>
                 </v-row>
@@ -354,7 +354,7 @@ import cronograma from '../ventas/dialogos/cronograma_creditos.vue'
 import dial_edita_prod from '../ventas/edita_producto.vue'
 import axios from "axios"
 import CryptoJS from "crypto-js";
-import { allcuentaxcobrar } from '@/db'
+import { allcuentaxcobrar, nuevaCuentaxcobrar } from '@/db'
 import { colClientes } from '@/db_firestore'
 import dial_stock from '../ventas/dialogos/dial_stock_insuficiente.vue' // ajusta ruta real
 
@@ -778,7 +778,7 @@ export default {
                     total_items: this.listaproductos.length,
                     observacion: this.observacion || '',
                     cod_vendedor: this.cod_vendedor || store.state.sedeActual.codigo,
-                    estado: 'pendiente',
+                    estado: 'atendido',
                     ubicacion_cliente: {
                         lat: this.cliente_s.latitud,
                         lng: this.cliente_s.longitud
@@ -797,6 +797,11 @@ export default {
                     // ya se mostró el dial de stock insuficiente
                     return;
                 }
+
+                if (this.formaPago === 'CREDITO' && resp?.data?.id) {
+                    await this.crearCuentaxCobrar(resp.data.id, cabecera, totalGeneral);
+                }
+
                 if (this.imprime_orden) {
                     const id = resp?.data?.id || resp?.id || null;
                     cabecera.id = id;
@@ -1154,6 +1159,53 @@ export default {
                 if (idx !== -1) {
                     this.$set(this.listaproductos, idx, itemActualizado);
                 }
+            }
+        },
+        async crearCuentaxCobrar(pedidoId, cabecera, totalGeneral) {
+            try {
+                let fechaVencimientoCXC = moment().unix();
+                if (this.fechaVencimiento) {
+                    fechaVencimientoCXC = moment(this.fechaVencimiento).endOf('day').unix();
+                }
+                const montoTotal = parseFloat(totalGeneral);
+                let datosCuotas = [];
+
+                if (this.cronograma && Array.isArray(this.cronograma.cuotas) && this.cronograma.cuotas.length > 0) {
+                    datosCuotas = this.cronograma.cuotas.map(cuota => ({
+                        id: cuota.numero,
+                        fecha_vence: Math.floor(new Date(cuota.vencimiento + "T23:59:59").getTime() / 1000),
+                        monto: cuota.importe,
+                        estado: "PENDIENTE"
+                    }));
+                } else if (this.formaPago === 'CREDITO' && this.fechaVencimiento) {
+                    datosCuotas = [{
+                        fecha_vence: Math.floor(new Date(this.fechaVencimiento + "T23:59:59").getTime() / 1000),
+                        monto: montoTotal,
+                        estado: "PENDIENTE"
+                    }];
+                }
+
+                const cuentaPorCobrar = {
+                    monto_total: montoTotal.toFixed(2),
+                    monto_pendiente: montoTotal,
+                    cliente_zona: cabecera.cliente_zona || this.cliente_s?.zona || '',
+                    estado: 'PENDIENTE',
+                    documento: cabecera.doc_numero || this.numero,
+                    moneda: this.moneda,
+                    nombre: cabecera.cliente_nombre || this.nombreCompleto,
+                    vendedor: this.cod_vendedor || store.state.sedeActual.codigo,
+                    doc_ref: pedidoId,
+                    fecha: cabecera.fecha_emision,
+                    fecha_vence: fechaVencimientoCXC,
+                    dias_credito: cabecera.dias_credito || this.cliente_s?.dias_credito || 0,
+                    datos: datosCuotas
+                };
+
+                await nuevaCuentaxcobrar(pedidoId, cuentaPorCobrar);
+
+            } catch (error) {
+                console.error('❌ Error al crear cuenta por cobrar:', error);
+                store.commit("dialogosnackbar", "Pedido guardado pero hubo un error al crear la cuenta por cobrar");
             }
         }
     },

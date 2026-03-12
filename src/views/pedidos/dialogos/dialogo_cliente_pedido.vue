@@ -4,7 +4,7 @@
             <v-system-bar window dark>
                 <v-icon color="red" @click="cierra">mdi-close</v-icon>
                 <v-spacer></v-spacer>
-                <h4 class="mr-10">Seleccionar Cliente para Nuevo Pedido</h4>
+                <h4 class="mr-10">Seleccionar Cliente para Venta</h4>
                 <v-spacer></v-spacer>
             </v-system-bar>
         </div>
@@ -28,20 +28,13 @@
 
             <v-row dense>
                 <v-col v-if="$store.state.permisos.pre_venta"
-                    :cols="($store.state.permisos.pre_venta && $store.state.permisos.venta_directa) ? 6 : 12">
+                    :cols="($store.state.permisos.pre_venta && $store.state.permisos.venta_directa) ? 12 : 12">
                     <v-btn block color="green" class="mt-n2 white--text"
                         :disabled="!selectedCli || guardando || cargando" @click="seleccionarCliente">
                         <v-icon left>mdi-cart</v-icon>
-                        {{ guardando ? 'Cargando...' : 'Pre-venta' }}
+                        {{ guardando ? 'Cargando...' : 'Continuar' }}
                     </v-btn>
                 </v-col>
-                <v-col v-if="$store.state.permisos.venta_directa"
-                    :cols="($store.state.permisos.pre_venta && $store.state.permisos.venta_directa) ? 6 : 12">
-                    <v-btn block color="info" class="mt-n2 white--text"
-                        :disabled="!selectedCli || guardando || cargando" @click="ventaDirecta">
-                        <v-icon left>mdi-cash-register</v-icon>
-                        Vender
-                    </v-btn>
                 </v-col>
             </v-row>
 

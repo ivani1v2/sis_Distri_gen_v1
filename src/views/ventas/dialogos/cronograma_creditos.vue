@@ -21,7 +21,7 @@
 
             <v-divider class="my-3" />
 
-            <div class="mb-1 d-flex align-center">
+            <div class="mb-2 d-flex align-center">
                 <span class="text-caption grey--text">Agregar nueva cuota</span>
                 <v-spacer></v-spacer>
                 <v-btn color="success" x-small @click="dialogGenerar = true" :disabled="saldoPendiente <= 0.01">
@@ -35,10 +35,7 @@
                         hide-details="auto" :readonly="fechaAutomatica && cuotas.length === 0"
                         :hint="fechaAutomatica && cuotas.length === 0 ? `Calculada: hoy + ${diasCredito} días de crédito` : ''"
                         :persistent-hint="fechaAutomatica && cuotas.length === 0" />
-                    <div v-if="fechaAutomatica && cuotas.length === 0" class="text-caption mt-1 info--text">
-                        <v-icon x-small color="info">mdi-information</v-icon>
-                        Fecha calculada automáticamente según días de crédito del cliente
-                    </div>
+
                 </v-col>
 
                 <v-col cols="10" sm="4">
@@ -47,15 +44,20 @@
                 </v-col>
 
                 <v-col cols="2" sm="2" class="d-flex align-center">
-                    <v-btn color="primary" small class="mt-1" @click="agregarCuota">
+                    <v-btn color="primary" small class="mt-n4" @click="agregarCuota">
                         <v-icon small>mdi-plus</v-icon>
                     </v-btn>
                 </v-col>
             </v-row>
 
+            <div v-if="fechaAutomatica && cuotas.length === 0" class="text-caption mb-n1 info--text">
+                <v-icon x-small color="info">mdi-information</v-icon>
+                Fecha calculada según los días de crédito registrando del cliente
+            </div>
+
             <div v-if="saldoPendiente !== 0" class="mt-2 text-caption"
                 :class="saldoPendiente < 0 ? 'error--text' : 'warning--text'">
-                Diferencia pendiente: **{{ moneda }} {{ saldoPendiente.toFixed(2) }}**
+                Diferencia pendiente: {{ moneda }} {{ saldoPendiente.toFixed(2) }}
             </div>
 
             <v-divider class="my-3" />
@@ -273,7 +275,7 @@ export default {
             if (this.cuotas.length > 0) {
                 const cuotasOrdenadas = [...this.cuotas].sort((a, b) =>
                     moment(a.vencimiento).diff(moment(b.vencimiento))
-               );
+                );
                 const ultimaCuota = cuotasOrdenadas[cuotasOrdenadas.length - 1];
                 const hoy = moment().startOf('day');
                 const fechaVenc = moment(ultimaCuota.vencimiento).startOf('day');
