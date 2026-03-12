@@ -45,7 +45,7 @@ async function completa_items(arrays) {
 
   for (const data of arrays) {
     // USAR precioedita (precio final con descuentos)
-    const precioFinal = parseFloat(data.precioedita) || parseFloat(data.precio) || 0;
+    const precioFinal = parseFloat(data.precio) || 0;
 
     // Extraer descuentos correctamente
     const d1 = data.descuentos?.desc_1 ?? data.desc_1 ?? 0;

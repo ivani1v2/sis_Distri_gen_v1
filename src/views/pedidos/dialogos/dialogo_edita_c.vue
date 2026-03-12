@@ -57,7 +57,7 @@
                             <td>
                                 <div class="d-flex flex-column align-start">
                                     <span class="font-weight-medium">
-                                        {{ monedaSimbolo }}{{ redondear(item.precio || 0) }}
+                                        {{ monedaSimbolo }}{{ redondear(precioUnitarioMostrar(item)) }}
                                     </span>
                                 </div>
                             </td>
@@ -76,7 +76,7 @@
                             <td>
                                 <div class="d-flex flex-column">
                                     <span class="font-weight-medium green--text">
-                                        {{ monedaSimbolo }}{{ redondear(item.precioedita || item.precio || 0) }}
+                                        {{ monedaSimbolo }}{{ redondear(item.precio || 0) }}
                                     </span>
                                 </div>
                             </td>
@@ -124,7 +124,7 @@
                             <span v-if="descEdita.precioFinal && descEdita.precioFinal !== Number(precioedita)">
                                 <strong class="green--text">Precio Final: {{ monedaSimbolo }}{{
                                     redondear(descEdita.precioFinal)
-                                    }}</strong>
+                                }}</strong>
                             </span>
                             <span v-else class="caption grey--text">Sin descuentos aplicados</span>
                         </div>
@@ -195,7 +195,7 @@
                     <div v-if="tieneCronograma" class="caption success--text mb-2">
                         <v-icon small color="success">mdi-check</v-icon>
                         {{ totalCuotas }} cuota(s) programada(s) - Total: {{ monedaSimbolo }} {{
-                        totalCuotasImporte.toFixed(2)
+                            totalCuotasImporte.toFixed(2)
                         }}
                     </div>
                 </div>
@@ -328,6 +328,17 @@ export default {
         this.detalleOriginalSnapshot = JSON.parse(JSON.stringify(this.detalle))
         this.dial = true
     },
+    watch: {
+        listaproductos: {
+            handler() {
+                this.info_cabecera.total = parseFloat(this.calcularTotalGeneral());
+                if (this.info_cabecera.forma_pago === 'CREDITO') {
+                    this.info_cabecera.pendiente_pago = this.info_cabecera.total;
+                }
+            },
+            deep: true
+        }
+    },
     computed: {
         monedaSimbolo() {
             return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/';
@@ -367,7 +378,16 @@ export default {
                 return { cuotas };
             }
             return cuotas;
-        }
+        },
+        precioUnitarioMostrar() {
+            return (item) => {
+                if (item.precioedita &&
+                    Number(item.precioedita) !== Number(item.precio_base)) {
+                    return item.precioedita;
+                }
+                return item.precio_base || 0;
+            };
+        },
     },
     methods: {
         cierra() {
@@ -468,6 +488,7 @@ export default {
                 if (!Number(this.info_cabecera.pendiente_pago)) {
                     this.info_cabecera.pendiente_pago = Number(this.info_cabecera.total) || 0
                 }
+
                 const cuotas = this.info_cabecera?.cuotas;
                 if (this.cronogramaData) {
                     this.info_cabecera.cuotas = this.cronogramaData.cuotas || this.cronogramaData;
@@ -482,7 +503,7 @@ export default {
                         vencimiento: c.vencimiento || this.date_vence,
                         estado: c.estado || 'pendiente',
                         fecha_modificacion: c.fecha_modificacion || moment().unix(),
-                        vendedor: c.vendedor || (this.info_cabecera.cod_vendedor || this.info_cabecera.vendedor || store.state.sedeActual.codigo),
+                        vendedor: c.vendedor || (store.state.sedeActual.codigo),
                     }));
                     this.info_cabecera.cronograma = this.info_cabecera.cuotas;
                 }
@@ -524,7 +545,17 @@ export default {
                     return;
                 }
                 const esGratuita = String(val.operacion || '').toUpperCase() === 'GRATUITA';
-                const totalLinea = esGratuita ? 0 : Math.max(0, val.cantidad * val.precio);
+
+                let precioFinal = Number(val.precio || 0);
+                let precioBase = Number(val.precio_base || 0);
+                let descuentos = { desc_1: 0, desc_2: 0, desc_3: 0 };
+
+                if (val.descuentos) {
+                    descuentos = { ...val.descuentos };
+                }
+
+                const totalLinea = esGratuita ? 0 : Math.max(0, val.cantidad * precioFinal);
+
                 this.listaproductos.push({
                     uuid: this.create_UUID().substring(29),
                     factor: val.factor,
@@ -532,16 +563,17 @@ export default {
                     cantidad: Number(val.cantidad || 0),
                     nombre: val.nombre,
                     medida: medidaLinea,
-                    precio: Number(val.precio || 0),
-                    precioedita: Number(val.precio || 0),
+                    precio: Number(precioFinal),
+                    precio_base: precioBase,
+                    precioedita: null,
                     preciodescuento: 0,
                     costo: val.costo,
                     tipoproducto: val.tipoproducto,
                     operacion: val.operacion,
-                    peso: 0,
+                    peso: Number(peso_.toFixed(2) || 0),
                     controstock: val.controstock,
                     totalLinea: totalLinea,
-                    descuentos: { desc_1: 0, desc_2: 0, desc_3: 0 }
+                    descuentos: descuentos
                 });
             });
         },
@@ -578,17 +610,21 @@ export default {
                 const desc1 = producto.descuentos?.desc_1 ?? 0;
                 const desc2 = producto.descuentos?.desc_2 ?? 0;
                 const desc3 = producto.descuentos?.desc_3 ?? 0;
-                const precioFinalActual = producto.precioedita || producto.precio || precioCatalogo;
-                const precioBaseActual = producto.precio || precioCatalogo;
+                const precioFinalActual = producto.precio || precioCatalogo;
+
+                const fueEditado = producto.precioedita != null &&
+                    Number(producto.precioedita) !== Number(producto.precio_base);
+                const precioBaseDialogo = fueEditado ? Number(producto.precioedita) : Number(producto.precio_base);
+
                 this.item_selecto = {
                     ...producto,
-                    precio: precioBaseActual,
+                    precio: precioBaseDialogo,
                     descuentos: { desc_1: desc1, desc_2: desc2, desc_3: desc3 }
                 };
                 this.codigoedita = this.listaproductos.indexOf(producto);
                 this.cantidadEdita = producto.cantidad;
-                this.precioedita = precioBaseActual;
-                this.precioFinalActual = precioFinalActual;
+                this.precioedita = Number(precioBaseDialogo);
+                this.precioFinalActual =  Number(precioFinalActual);
                 this.precioOriginalEdita = precioCatalogo;
                 this.preciodescuento = producto.preciodescuento;
                 this.nombreEdita = producto.nombre;
@@ -597,10 +633,11 @@ export default {
                     desc_1: desc1,
                     desc_2: desc2,
                     desc_3: desc3,
-                    precioFinal: precioFinalActual,
-                    montoDescuento: precioBaseActual - precioFinalActual
+                    precioBase: precioBaseDialogo,
+                    precioFinal: producto.precio,
+                    montoDescuento: precioBaseDialogo - precioFinalActual
                 };
-                this.precioCambiado = producto.precio && producto.precio !== precioCatalogo;
+                this.precioCambiado = fueEditado;
             }
             this.dialogoProducto = true;
         },
@@ -670,8 +707,15 @@ export default {
                 precioFinal = precioOriginal;
             }
             producto.cantidad = Number(this.cantidadEdita);
-            producto.precio = this.redondear(precioFinal);
-            producto.precioedita = this.redondear(precioFinal);
+            producto.precio = Number(this.redondear(precioFinal));
+
+            if (this.precioCambiado) {
+                producto.precioedita = Number(this.redondear(Number(this.precioedita)));
+            } else {
+                producto.precioedita = null;
+            }
+            producto.precio_base = this.precioOriginalEdita;
+            //producto.precioedita = this.redondear(precioFinal);
             producto.operacion = this.operacion_edita.trim();
             producto.nombre = this.nombreEdita.trim();
             producto.descuentos = {
@@ -687,7 +731,7 @@ export default {
         },
         calcularTotalItem(item) {
             const cantidad = Number(item.cantidad) || 0;
-            const precioNeto = Number(item.precioedita || item.precio) || 0;
+            const precioNeto = Number(item.precio) || 0;
             if (item.operacion === 'GRATUITA') {
                 return '0.00';
             }
@@ -700,7 +744,7 @@ export default {
                         return total;
                     }
                     const cantidad = Number(item.cantidad) || 0;
-                    const precioNeto = Number(item.precioedita || item.precio) || 0;
+                    const precioNeto = Number(item.precio) || 0;
                     return total + (cantidad * precioNeto);
                 }, 0)
             );

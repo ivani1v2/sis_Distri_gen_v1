@@ -290,13 +290,13 @@ async function impresion58(arraydatos, qr, cabecera) {
       nuevoArray[i] = new Array(4);
       nuevoArray[i][0] = arraydatos[i].cantidad;
       nuevoArray[i][1] = arraydatos[i].nombre + tg;
-      nuevoArray[i][2] = Number(arraydatos[i].precio).toFixed(2);
+      nuevoArray[i][2] = obtenerPrecioUnitarioParaMostrar(arraydatos[i]);
       nuevoArray[i][3] = totals + obs;
     } else {
       nuevoArray[i] = new Array(6);
       nuevoArray[i][0] = arraydatos[i].cantidad;
       nuevoArray[i][1] = arraydatos[i].nombre + tg;
-      nuevoArray[i][2] = precioBase.toFixed(2);
+      nuevoArray[i][2] = obtenerPrecioUnitarioParaMostrar(arraydatos[i]);
       nuevoArray[i][3] = textoDescuento;
       nuevoArray[i][4] = precioActual.toFixed(2);
       nuevoArray[i][5] = totals + obs;
@@ -307,7 +307,7 @@ async function impresion58(arraydatos, qr, cabecera) {
   }
 
   const headSinDesc = [["Ca", "Descrip.", "P.U", "P.T"]];
-  const headConDesc = [["Ca", "Descrip.", "P.U", "%Desc", "P.N", "P.T"]];
+  const headConDesc = [["Ca", "Descrip.", "P.U", "%Ds.", "P.N", "P.T"]];
   const columnStylesSinDesc = {
     0: { cellWidth: 7, halign: "center", valign: "top" },
     1: { cellWidth: 24, halign: "left" },
@@ -835,13 +835,13 @@ async function impresion80(arraydatos, qr, cabecera) {
       nuevoArray[i] = new Array(4);
       nuevoArray[i][0] = array[i].cantidad;
       nuevoArray[i][1] = array[i].nombre + "\n" + "-" + array[i].medida + tg;
-      nuevoArray[i][2] = Number(array[i].precio).toFixed(2);
+      nuevoArray[i][2] = obtenerPrecioUnitarioParaMostrar(array[i]);
       nuevoArray[i][3] = totals + obs;
     } else {
       nuevoArray[i] = new Array(6);
       nuevoArray[i][0] = array[i].cantidad;
       nuevoArray[i][1] = array[i].nombre + "\n" + "-" + array[i].medida + tg;
-      nuevoArray[i][2] = precioBase.toFixed(2);
+      nuevoArray[i][2] = obtenerPrecioUnitarioParaMostrar(array[i]);
       nuevoArray[i][3] = textoDescuento;
       nuevoArray[i][4] = precioActual.toFixed(2);
       nuevoArray[i][5] = totals + obs;
@@ -1898,35 +1898,35 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
       array[i].precioedita = "0.00";
     }
 
-    const precio = array[i].precioedita ||
-      array[i].precio ||
-      array[i].precioVentaUnitario ||
-      "0.00";
+    const precioActual = Number(array[i].precio || 0);
 
     const totalLinea = (
-      parseFloat(precio) * (array[i].cantidad || 0)
+      precioActual * (array[i].cantidad || 0)
     ).toFixed(2) + obs;
+
 
     if (!existeDescuento) {
       nuevoArray[i] = new Array(5);
       nuevoArray[i][0] = array[i].cantidad || 0;
       nuevoArray[i][1] = (array[i].nombre || "") + tg;
       nuevoArray[i][2] = array[i].medida || "";
-      nuevoArray[i][3] = precio;
-      nuevoArray[i][4] = totalLinea;
+      nuevoArray[i][3] = obtenerPrecioUnitarioParaMostrar(array[i]);
+      nuevoArray[i][4] = precioActual.toFixed(2);
+      nuevoArray[i][5] = totalLinea;
     } else {
       nuevoArray[i] = new Array(6);
       nuevoArray[i][0] = array[i].cantidad || 0;
       nuevoArray[i][1] = (array[i].nombre || "") + tg;
       nuevoArray[i][2] = array[i].medida || "";
-      nuevoArray[i][3] = precio;
+      nuevoArray[i][3] = obtenerPrecioUnitarioParaMostrar(array[i]);
       nuevoArray[i][4] = textoDescuento;
-      nuevoArray[i][5] = totalLinea;
+      nuevoArray[i][5] = precioActual.toFixed(2);
+      nuevoArray[i][6] = totalLinea;
     }
   }
 
-  const headSinDesc = [["Cantidad", "Descripcion", "Medida", "P.Unitario", "P.Total"]];
-  const headConDesc = [["Cantidad", "Descripcion", "Medida", "P.Unitario", "%Desc", "P.Total"]];
+  const headSinDesc = [["Cantidad", "Descripcion", "Medida", "P.Unitario", "Precio Neto", "P.Total"]];
+  const headConDesc = [["Cantidad", "Descripcion", "Medida", "P.Unitario", "%Desc", "Precio Neto", "P.Total"]];
 
   const colW = existeDescuento
     ? { c0: 15, c1: 90, c2: 18, c3: 18, c4: 15, c5: 20 }
@@ -2455,7 +2455,7 @@ function tabla_A4(array, linea) {
         item.cantidad,
         item.id + ' - ' + item.nombre + tg,
         item.medida,
-        precioBase.toFixed(2),
+        obtenerPrecioUnitarioParaMostrar(item),
         totalLinea.toFixed(2) + obs,
       ]);
     } else {
@@ -2463,7 +2463,7 @@ function tabla_A4(array, linea) {
         item.cantidad,
         item.id + ' - ' + item.nombre + tg,
         item.medida,
-        precioBase.toFixed(2),
+        obtenerPrecioUnitarioParaMostrar(item),
         textoDescuento,
         precioNeto.toFixed(2),
         totalLinea.toFixed(2) + obs,
@@ -2536,4 +2536,13 @@ function formatMoney(num) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+function obtenerPrecioUnitarioParaMostrar(item) {
+  if (item.precioedita &&
+    Number(item.precioedita) !== Number(item.precio_base)) {
+    return Number(item.precioedita).toFixed(2);
+  }
+
+  return Number(item.precio_base).toFixed(2);
 }
