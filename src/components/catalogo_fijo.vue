@@ -1,7 +1,7 @@
 <template>
     <div content-class="dialogo-cantidad-centrado">
-        <v-autocomplete v-if="!activaproductos && x_categoria" v-model="producto_sele" :items="productosFiltrados"
-            item-text="displayText" item-value="id" :filter="filtrarProductos"
+        <v-autocomplete v-if="!activaproductos && x_categoria" v-model="producto_sele"
+            :items="productosFiltradosConPrecioLista" item-text="displayText" item-value="id" :filter="filtrarProductos"
             :label="muestra_tabla ? 'Buscar Productos (F1)' : 'Buscar Productos'" clearable :auto-select-first="true"
             menu-props="{ maxHeight: '300px', auto: true }" outlined dense ref="buscarField"
             @keydown.native="detectarEntrada" :autofocus="!$store.state.esmovil && muestra_tabla"
@@ -17,7 +17,7 @@
                             class="grey--text">
                             ({{ item.id }})
                         </small>
-                        — <strong class="red--text"> {{ moneda }} {{ Number(item.precio || 0).toFixed(2) }}</strong>
+                        — <strong class="red--text">{{ moneda }} {{ Number(item.precioMostrado).toFixed(2) }}</strong>
                     </v-list-item-title>
 
                     <v-list-item-subtitle class="mt-0">
@@ -76,7 +76,8 @@
                                 <td class=" text-body-2"><span v-if="$store.state.configuracion.mostrar_codigo">{{
                                     item.id }}-</span>{{ item.nombre }}</td>
                                 <td class="text-body-2">{{ convierte_stock(item.stock, item.factor) }}</td>
-                                <td class="text-body-2">{{ item.precio }}</td>
+                                <td class="text-body-2"> {{ Number(item.precioMostrado || item.precio ||
+                                    0).toFixed(2) }}</td>
                             </tr>
                         </tbody>
                     </template>
@@ -105,7 +106,8 @@
                                 <td style="font-size:75%;"><span v-if="$store.state.configuracion.mostrar_codigo">{{
                                     item.id }}-</span> {{ item.nombre }}</td>
                                 <td style="font-size:75%;">{{ convierte_stock(item.stock, item.factor) }}</td>
-                                <td style="font-size:75%;">{{ item.precio }}</td>
+                                <td style="font-size:75%;">{{ Number(item.precioMostrado || item.precio ||
+                                    0).toFixed(2) }}</td>
                             </tr>
                         </tbody>
                     </template>
@@ -395,14 +397,45 @@ export default {
             return this.modoVenta === 'entero' ? q * f : q;
         },
         listafiltrada() {
-            var invent = store.state.productos
-            return invent.filter((item) =>
-                (item.activo) == true)
+            var invent = store.state.productos;
+            if (!this.esListaPreciosActivo || !this.cliente_selecto || !this.listasPreciosCliente.length) {
+                return invent.filter((item) => (item.activo) == true)
+                    .filter((item) => (item.categoria)
+                        .toLowerCase().includes(this.categoriaselecta.toLowerCase()))
+                    .filter((item) => (item.nombre + item.id)
+                        .toLowerCase().includes(this.buscar.toLowerCase()));
+            }
+            const prioridad = { distribuidor: 1, mayorista: 2, minorista: 3 };
+            const listasOrdenadas = [...this.listasPreciosCliente]
+                .sort((a, b) => (prioridad[a] || 999) - (prioridad[b] || 999));
+
+            return invent.filter((item) => (item.activo) == true)
                 .filter((item) => (item.categoria)
                     .toLowerCase().includes(this.categoriaselecta.toLowerCase()))
                 .filter((item) => (item.nombre + item.id)
                     .toLowerCase().includes(this.buscar.toLowerCase()))
+                .map(item => {
+                    let precioMostrar = Number(item.precio || 0);
 
+                    for (const lista of listasOrdenadas) {
+                        const precios = {
+                            distribuidor: Number(item.precio_may1),
+                            mayorista: Number(item.precio_may2),
+                            minorista: Number(item.precio)
+                        };
+
+                        if (precios[lista] && precios[lista] > 0) {
+                            precioMostrar = precios[lista];
+                            break;
+                        }
+                    }
+                    return {
+                        ...item,
+                        precioMostrado: precioMostrar, 
+                        precioOriginal: item.precio,
+                        precio: this.moneda + ' ' + precioMostrar.toFixed(2)
+                    };
+                });
         },
         productosFiltrados() {
             if (store.state.configuracion.mostrar_codigo) {
@@ -414,13 +447,12 @@ export default {
                     }));
             } else {
                 return store.state.productos
-                    .filter(item => item.activo) // Solo productos activos
+                    .filter(item => item.activo)
                     .map(item => ({
                         ...item,
-                        displayText: `${item.nombre} (${item.codbarra})` // Concatenamos nombre y código de barras
+                        displayText: `${item.nombre} (${item.codbarra})`
                     }));
             }
-
         },
         tierVisual() {
             return (this.precioSeleccionado === null || this.precioSeleccionado === undefined)
@@ -571,8 +603,44 @@ export default {
 
             return opts;
         },
+        productosFiltradosConPrecioLista() {
+            if (!this.esListaPreciosActivo || !this.cliente_selecto || !this.listasPreciosCliente.length) {
+                return this.productosFiltrados;
+            }
 
+            const prioridad = { distribuidor: 1, mayorista: 2, minorista: 3 };
+            const listasOrdenadas = [...this.listasPreciosCliente]
+                .sort((a, b) => (prioridad[a] || 999) - (prioridad[b] || 999));
 
+            return this.$store.state.productos
+                .filter(item => item.activo)
+                .map(item => {
+                    let precioMostrar = Number(item.precio || 0);
+
+                    for (const lista of listasOrdenadas) {
+                        const precios = {
+                            distribuidor: Number(item.precio_may1),
+                            mayorista: Number(item.precio_may2),
+                            minorista: Number(item.precio)
+                        };
+
+                        if (precios[lista] && precios[lista] > 0) {
+                            precioMostrar = precios[lista];
+                            break;
+                        }
+                    }
+
+                    const displayText = store.state.configuracion.mostrar_codigo
+                        ? `${item.id} ${item.nombre} (${item.codbarra})`
+                        : `${item.nombre} (${item.codbarra})`;
+
+                    return {
+                        ...item,
+                        displayText,
+                        precioMostrado: precioMostrar
+                    };
+                });
+        },
     },
     mounted() {
         this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
@@ -871,31 +939,32 @@ export default {
                 return;
             }
             if (!valor) return;
+
             this.$nextTick(() => {
                 this.producto_sele = "";
             });
+
             if (valor) {
+                const productoCompleto = store.state.productos.find(p => p.id === valor.id) || valor;
+                this.precioSeleccionado = null;
                 const tieneClienteValido = this.cliente_selecto &&
                     typeof this.cliente_selecto === 'object' &&
                     !Array.isArray(this.cliente_selecto);
-                if (this.esListaPreciosActivo && tieneClienteValido && this.listasPreciosCliente.length) {
 
+                if (this.esListaPreciosActivo && tieneClienteValido && this.listasPreciosCliente.length) {
                     const resultado = determinarPrecioPorLista(
-                        valor,
+                        productoCompleto,
                         this.listasPreciosCliente,
                         { fallback: false }
                     );
-
                     this.listaPrecioSeleccionada = resultado?.tipo || null;
-
                 } else {
                     this.listaPrecioSeleccionada = null;
                 }
-
                 this.cantidadInput = 1;
-                this.producto_selecto = valor;
-                this.precioSeleccionado = null;
+                this.producto_selecto = productoCompleto;
                 this.es_bono = false;
+
                 if (this.$refs.descuentosRef) {
                     this.$refs.descuentosRef.reset();
                 }
@@ -1065,6 +1134,29 @@ export default {
         actualizarListaPrecios(nuevaLista) {
             console.log('🔄 Catálogo actualizando lista:', nuevaLista);
             this.lista_precios = nuevaLista;
+        },
+        obtenerPrecioPorPrioridad(producto) {
+            if (!this.esListaPreciosActivo || !this.cliente_selecto || !this.listasPreciosCliente.length) {
+                return Number(producto.precio || 0);
+            }
+
+            const prioridad = { distribuidor: 1, mayorista: 2, minorista: 3 };
+            const listasOrdenadas = [...this.listasPreciosCliente]
+                .sort((a, b) => (prioridad[a] || 999) - (prioridad[b] || 999));
+
+            for (const lista of listasOrdenadas) {
+                const precios = {
+                    distribuidor: Number(producto.precio_may1),
+                    mayorista: Number(producto.precio_may2),
+                    minorista: Number(producto.precio)
+                };
+
+                if (precios[lista] && precios[lista] > 0) {
+                    return precios[lista];
+                }
+            }
+
+            return Number(producto.precio || 0);
         },
 
     },

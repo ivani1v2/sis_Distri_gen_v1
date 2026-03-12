@@ -68,7 +68,23 @@
                         <td style="font-size:80%;">{{ item.nombre }}</td>
                         <td style="font-size:80%;">{{ item.medida }}</td>
                         <td style="font-size:80%;">{{ convierte_stock(item.stock, item.factor) }}</td>
-                        <td style="font-size:80%;">{{ Number(item.precio).toFixed(2) }}</td>
+                        <td style="font-size:80%;" class="text-right">
+                            <span :class="{ 'green--text': esListaPreciosActivo }">
+                                {{ monedaSimbolo }} {{ redondear(item.precio) }}
+                            </span>
+                        </td>
+                        <td style="font-size:80%;" class="text-right">
+                            <span v-if="item.precio_may1 > 0" :class="{ 'purple--text': esListaPreciosActivo }">
+                                {{ monedaSimbolo }} {{ redondear(item.precio_may1) }}
+                            </span>
+                            <span v-else class="grey--text">—</span>
+                        </td>
+                        <td style="font-size:80%;" class="text-right">
+                            <span v-if="item.precio_may2 > 0" :class="{ 'blue--text': esListaPreciosActivo }">
+                                {{ monedaSimbolo }} {{ redondear(item.precio_may2) }}
+                            </span>
+                            <span v-else class="grey--text">—</span>
+                        </td>
                         <td style="font-size:80%;">
                             <v-row>
                                 <v-col cols="12">
@@ -91,9 +107,22 @@
                             <div class="item-main">
                                 <div class="item-title">{{ item.nombre }}</div>
                                 <div class="item-sub">#{{ item.id }} · {{ item.categoria }} · {{ item.medida }}</div>
-                                <div class="item-meta">
-                                    Stock: {{ convierte_stock(item.stock, item.factor) }} · S/{{ redondear(item.precio)
+                                <div class="item-meta mb-1">
+                                    Stock: {{ convierte_stock(item.stock, item.factor) }} · {{monedaSimbolo}}{{ redondear(item.precio)
                                     }}
+                                </div>
+                                <div class="item-precios mt-n1">
+                                    <v-chip x-small :color="esListaPreciosActivo ? 'green lighten-4' : ''" class="mr-1">
+                                        Min: {{ monedaSimbolo }} {{ redondear(item.precio) }}
+                                    </v-chip>
+                                    <v-chip v-if="item.precio_may1 > 0" x-small
+                                        :color="esListaPreciosActivo ? 'purple lighten-4' : ''">
+                                        Dis: {{ monedaSimbolo }} {{ redondear(item.precio_may1) }}
+                                    </v-chip>
+                                    <v-chip v-if="item.precio_may2 > 0" x-small
+                                        :color="esListaPreciosActivo ? 'blue lighten-4' : ''" class="mr-1">
+                                        May: {{ monedaSimbolo }} {{ redondear(item.precio_may2) }}
+                                    </v-chip>
                                 </div>
                             </div>
                             <v-btn icon small :disabled="!$store.state.permisos.productos_edita" @click="editar(item)">
@@ -280,7 +309,9 @@
                         <v-col cols="6">
                             <v-text-field outlined
                                 :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect" type="number"
-                                dense v-model="escala_may1"  :label="`A partir de: ${formatearEscala(escala_may1, factor, 'label')}`" persistent-hint></v-text-field>
+                                dense v-model="escala_may1"
+                                :label="`A partir de: ${formatearEscala(escala_may1, factor, 'label')}`"
+                                persistent-hint></v-text-field>
                         </v-col>
                         <v-col cols="6">
                             <v-text-field outlined
@@ -294,7 +325,9 @@
                         <v-col cols="6">
                             <v-text-field outlined
                                 :disabled="!$store.state.permisos.productos_edita || !!grupoPrecioSelect" type="number"
-                                dense v-model="escala_may2"  :label="`A partir de: ${formatearEscala(escala_may2, factor, 'label')}`" persistent-hint></v-text-field>
+                                dense v-model="escala_may2"
+                                :label="`A partir de: ${formatearEscala(escala_may2, factor, 'label')}`"
+                                persistent-hint></v-text-field>
                         </v-col>
                         <v-col cols="6">
                             <v-text-field outlined
@@ -331,7 +364,7 @@
                         </v-col>
                     </v-row>
 
-                    <v-alert v-if="grupoPrecioSelect && !esListaPreciosActivo " type="info" dense text class="mt-4">
+                    <v-alert v-if="grupoPrecioSelect && !esListaPreciosActivo" type="info" dense text class="mt-4">
                         Tiene grupo de precio global asignado
                         <v-btn x-small text color="primary" class="ml-2" @click="quitarGrupoPrecio">
                             Quitar
@@ -898,10 +931,9 @@ export default {
             text: 'Stock',
             value: 'stock',
         },
-        {
-            text: 'Precio',
-            value: 'precio',
-        },
+        { text: 'Minorista', value: 'precio', sortable: true },
+        { text: 'Distribuidor', value: 'precio_may1', sortable: true },
+        { text: 'Mayorista', value: 'precio_may2', sortable: true },
         {
             text: 'Actions',
             value: 'actions',
@@ -1033,6 +1065,9 @@ export default {
     },
 
     computed: {
+        monedaSimbolo() {
+            return this.$store.state.moneda.find(m => m.codigo == this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/ ';
+        },
         permisoAlertaStockActivo() {
             return Boolean(this.$store.state.configuracion?.alerta_stock_minimo);
         },
@@ -1915,12 +1950,12 @@ export default {
             return tipo === 'label' ? ` (${texto})` : texto;
         },
         formatearCostoConMoneda(valor, factor = 1) {
-    const costoNum = Number(valor) || 0;
-    const factorNum = Number(factor) || 1;
-    const total = (costoNum * factorNum).toFixed(2);
-    const moneda = this.$store.state.moneda?.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || "S/";
-    return ` → ${moneda} ${total}`;
-}
+            const costoNum = Number(valor) || 0;
+            const factorNum = Number(factor) || 1;
+            const total = (costoNum * factorNum).toFixed(2);
+            const moneda = this.$store.state.moneda?.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || "S/";
+            return ` → ${moneda} ${total}`;
+        }
     },
 
 }
@@ -1996,5 +2031,11 @@ export default {
 
 .border-bottom-subtle {
     border-bottom: 1px solid #e3f2fd;
+}
+
+.item-precios {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 </style>

@@ -188,7 +188,7 @@
             </div>
             <v-card class="pa-1">
                 <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true"
-                    :x_categoria="false">
+                    :x_categoria="false" :cliente_selecto="cliente_s">
                 </cat_fijo>
             </v-card>
         </v-dialog>

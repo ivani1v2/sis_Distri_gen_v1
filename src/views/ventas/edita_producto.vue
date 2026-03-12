@@ -153,7 +153,7 @@ export default {
         this.cargarBonosGlobales();
     },
     watch: {
-        cantidadEdita(nuevaCantidad) {
+        /* cantidadEdita(nuevaCantidad) {
             if (this.es_bono) return;
             
             const cantidad = Number(nuevaCantidad) || 0;
@@ -221,7 +221,7 @@ export default {
             if (precioFinal !== null) {
                 this.precioedita = this.redondear(precioFinal);
             }
-        },
+        }, */
         es_bono(nuevo) {
             if (nuevo) {
                 this.precioedita = 0;
