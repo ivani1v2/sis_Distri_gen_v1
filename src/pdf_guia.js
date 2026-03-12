@@ -4,6 +4,10 @@ import store from "@/store/index";
 import moment from "moment";
 import "jspdf-autotable";
 import QR from "qrcode-base64";
+import { impresionQueue } from "./impresionQueue";
+let ventanaImpresionActual = null;
+let resolvers = {};
+
 
 function permite_impresion_host() {
   if (store?.state?.esmovil) return false;
@@ -12,104 +16,159 @@ function permite_impresion_host() {
   return tienePermiso && tieneConfig;
 }
 
-async function abre_dialogo_impresion_host(doc, copias = 1) {
-  try {
-    if (!permite_impresion_host()) {
-      abre_dialogo_impresion_original(doc);
-      return;
+async function abre_dialogo_impresion_host(doc, copias = 1, docId = Date.now()) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!permite_impresion_host()) {
+        abre_dialogo_impresion_original(doc, docId).then(resolve).catch(reject);
+        return;
+      }
+
+      const configHost = store?.state?.permisos?.config_impresion_host || {};
+      const IP_PC = configHost.ip_dispositivo;
+      const PORT = configHost.puerto_dispositivo || 8090;
+      const BRIDGE_URL = `http://${IP_PC}:${PORT}/bridge-pdf`;
+      const token = store?.state?.configImpresora?.token_host || configHost.token || "1234";
+
+      const meta = {
+        bd: store?.state?.baseDatos?.bd || "",
+        usuario: store?.state?.permisos?.nombre || "",
+        tipo: "guia_remision",
+        ts: Date.now(),
+      };
+
+      const buffer = doc.output("arraybuffer");
+
+      if (ventanaImpresionActual && !ventanaImpresionActual.closed) {
+        ventanaImpresionActual.close();
+      }
+
+      const ventana = window.open(
+        BRIDGE_URL,
+        "_blank",
+        "width=500,height=400,menubar=no,toolbar=no,location=no,status=no"
+      );
+
+      ventanaImpresionActual = ventana;
+
+      if (!ventana) {
+        alert("Permite ventanas emergentes para imprimir.");
+        reject(new Error('Ventana bloqueada'));
+        return;
+      }
+
+      const mensaje = {
+        type: "PRINT_PDF",
+        token,
+        printer: configHost.nombre_impresora || "POS-80-Series",
+        copies: copias,
+        meta,
+        pdf: buffer
+      };
+
+      const timer = setInterval(() => {
+        try {
+          ventana.postMessage(mensaje, "*", [buffer]);
+          clearInterval(timer);
+
+          resolvers[docId] = { resolve, reject };
+
+          const checkClosed = setInterval(() => {
+            if (ventana.closed) {
+              clearInterval(checkClosed);
+              if (resolvers[docId]) {
+                resolvers[docId].resolve();
+                delete resolvers[docId];
+              }
+            }
+          }, 500);
+
+        } catch (e) {
+          clearInterval(timer);
+          reject(e);
+        }
+      }, 250);
+
+      setTimeout(() => reject(new Error('Timeout')), 60000);
+
+    } catch (e) {
+      console.error("Error impresión host guía:", e);
+      abre_dialogo_impresion_original(doc, docId).then(resolve).catch(reject);
     }
-
-    const configHost = store?.state?.permisos?.config_impresion_host || {};
-    const IP_PC = configHost.ip_dispositivo;
-    const PORT = configHost.puerto_dispositivo || 8090;
-    const BRIDGE_URL = `http://${IP_PC}:${PORT}/bridge-pdf`;
-    const token = store?.state?.configImpresora?.token_host || configHost.token || "1234";
-
-    const meta = {
-      bd: store?.state?.baseDatos?.bd || "",
-      usuario: store?.state?.permisos?.nombre || "",
-      tipo: "guia_remision",
-      ts: Date.now(),
-    };
-
-    const buffer = doc.output("arraybuffer");
-
-    const ventana = window.open(
-      BRIDGE_URL,
-      "_blank",
-      "width=500,height=400,menubar=no,toolbar=no,location=no,status=no"
-    );
-
-    if (!ventana) {
-      alert("Permite ventanas emergentes para imprimir.");
-      return;
-    }
-
-    const mensaje = {
-      type: "PRINT_PDF",
-      token,
-      printer: configHost.nombre_impresora || "POS-80-Series",
-      copies: copias,
-      meta,
-      pdf: buffer
-    };
-
-    const timer = setInterval(() => {
-      try {
-        ventana.postMessage(mensaje, "*", [buffer]);
-        clearInterval(timer);
-      } catch (e) { }
-    }, 250);
-
-  } catch (e) {
-    console.error("Error impresión host guía:", e);
-    abre_dialogo_impresion_original(doc);
-  }
+  });
 }
 
-function abre_dialogo_impresion_original(doc) {
-  var blob = doc.output("bloburi");
-  var Ancho = screen.width;
-  var Alto = screen.height;
-  var A = (Ancho * 50) / 100;
-  var H = (Alto * 50) / 100;
-  var difA = Ancho - A;
-  var difH = Alto - H;
-  var tope = difH / 2;
-  var lado = difA / 2;
-  var Opciones =
-    "status=no, menubar=no, directories=no, location=no, toolbar=no, scrollbars=yes, resizable=no, width=" +
-    A +
-    ", height=" +
-    H +
-    ", top=" +
-    tope +
-    ", left=" +
-    lado +
-    "";
-  var w = window.open(blob, "_blank", Opciones);
-  if (w) {
-    w.print();
-  } else {
-    console.error("No se pudo abrir ventana de impresión");
-  }
+async function abre_dialogo_impresion_original(doc, docId = Date.now()) {
+  return new Promise((resolve, reject) => {
+    var blob = doc.output("bloburi");
+    var Ancho = screen.width;
+    var Alto = screen.height;
+    var A = (Ancho * 50) / 100;
+    var H = (Alto * 50) / 100;
+    var difA = Ancho - A;
+    var difH = Alto - H;
+    var tope = difH / 2;
+    var lado = difA / 2;
+    var Opciones =
+      "status=no, menubar=no, directories=no, location=no, toolbar=no, scrollbars=yes, resizable=no, width=" +
+      A +
+      ", height=" +
+      H +
+      ", top=" +
+      tope +
+      ", left=" +
+      lado +
+      "";
+
+    if (ventanaImpresionActual && !ventanaImpresionActual.closed) {
+      ventanaImpresionActual.close();
+    }
+
+    ventanaImpresionActual = window.open(blob, "_blank", Opciones);
+
+    if (ventanaImpresionActual) {
+      resolvers[docId] = { resolve, reject };
+
+      const checkClosed = setInterval(() => {
+        if (ventanaImpresionActual.closed) {
+          clearInterval(checkClosed);
+          if (resolvers[docId]) {
+            resolvers[docId].resolve();
+            delete resolvers[docId];
+          }
+        }
+      }, 500);
+
+      setTimeout(() => {
+        if (resolvers[docId]) {
+          resolvers[docId].reject(new Error('Timeout en impresión'));
+          delete resolvers[docId];
+        }
+      }, 300000);
+
+      ventanaImpresionActual.print();
+    } else {
+      reject(new Error('No se pudo abrir ventana de impresión'));
+    }
+  });
 }
 
-export const generaGuia = (array, formato, modo = 'abre', copias = 1) => {
+export const generaGuia = async (array, formato, modo = 'abre', copias = 1, docId = Date.now()) => {
   var qrs = generaQR(array);
   switch (formato) {
     case "A4":
-      impresionA4(array, qrs, modo, copias);
+      await impresionA4(array, qrs, modo, copias, docId);
       break;
     case "80":
-      impresion80(array, qrs, modo, copias);
+      await impresion80(array, qrs, modo, copias, docId);
       break;
     case "58":
-      impresion58(array, qrs, modo, copias);
+      await impresion58(array, qrs, modo, copias, docId);
       break;
   }
 };
-export const impresion58 = (arrays, qr, modo = 'abre', copias = 1) => {
+
+export const impresion58 = async (arrays, qr, modo = 'abre', copias = 1, docId = Date.now()) => {
   var linea = parseInt(store.state.configImpresora.msuperior);
   var Direccion =
     store.state.baseDatos.direccion +
@@ -559,11 +618,11 @@ export const impresion58 = (arrays, qr, modo = 'abre', copias = 1) => {
   if (modo === 'descarga') {
     doc.save(arrays.serie + "-" + arrays.correlativo + '.pdf');
   } else {
-    abre_dialogo_impresion_host(doc, copias);
+    await abre_dialogo_impresion_host(doc, copias, docId);
   }
 };
 
-export const impresion80 = (arrays, qr, modo = 'abre', copias = 1) => {
+export const impresion80 = async (arrays, qr, modo = 'abre', copias = 1, docId = Date.now()) => {
   console.log(arrays);
   var linea = parseInt(store.state.configImpresora.msuperior);
   var Direccion =
@@ -999,10 +1058,12 @@ export const impresion80 = (arrays, qr, modo = 'abre', copias = 1) => {
   if (modo === 'descarga') {
     doc.save(arrays.serie + "-" + arrays.correlativo + '.pdf');
   } else {
-    abre_dialogo_impresion_host(doc, copias);
+    await abre_dialogo_impresion_host(doc, copias, docId);
   }
 };
-function impresionA4(arrays, qr, modo = 'abre', copias = 1) {
+
+async function impresionA4(arrays, qr, modo = 'abre', copias = 1, docId = Date.now()) {
+
   console.log(arrays);
   var linea = parseInt(store.state.configImpresora.msuperior);
   var Direccion =
@@ -1567,7 +1628,7 @@ function impresionA4(arrays, qr, modo = 'abre', copias = 1) {
   if (modo === 'descarga') {
     doc.save(arrays.serie + "-" + arrays.correlativo + '.pdf');
   } else {
-    abre_dialogo_impresion_host(doc, copias);
+    await abre_dialogo_impresion_host(doc, copias, docId);
   }
 }
 export const generaQR = (array) => {

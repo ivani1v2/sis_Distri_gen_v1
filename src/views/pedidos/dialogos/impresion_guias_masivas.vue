@@ -97,6 +97,7 @@
 <script>
 import { buscaGuiaremision } from '../../../db'
 import { generaGuia } from '../../../pdf_guia'
+import { impresionQueue } from '../../../impresionQueue'
 import impresorahost from '../../../components/configEmpresa/impresorahost.vue'
 import store from '@/store/index'
 
@@ -218,27 +219,30 @@ export default {
                     if (snapshot.exists()) {
                         const datosGuia = snapshot.val();
                         
-                        if (this.modo_impresion_guia === 'descarga') {
-                            for (let c = 1; c <= this.copias_guia; c++) {
-                                if (c > 1) {
-                                    await new Promise(resolve => setTimeout(resolve, 500));
+                        await impresionQueue.add(async (docId) => {
+                            if (this.modo_impresion_guia === 'descarga') {
+                                for (let c = 1; c <= this.copias_guia; c++) {
+                                    if (c > 1) {
+                                        await new Promise(resolve => setTimeout(resolve, 500));
+                                    }
+                                    
+                                    const datosGuiaConCopia = {
+                                        ...datosGuia,
+                                        numero_copia: c,
+                                        total_copias: this.copias_guia
+                                    };
+                                    
+                                    await generaGuia(datosGuiaConCopia, formato, this.modo_impresion_guia, 1, docId);
                                 }
-                                
-                                const datosGuiaConCopia = {
-                                    ...datosGuia,
-                                    numero_copia: c,
-                                    total_copias: this.copias_guia
-                                };
-                                
-                                generaGuia(datosGuiaConCopia, formato, this.modo_impresion_guia, 1);
+                            } else {
+                                await generaGuia(datosGuia, formato, this.modo_impresion_guia, this.copias_guia, docId);
                             }
-                        } else {
-                            generaGuia(datosGuia, formato, this.modo_impresion_guia, this.copias_guia);
-                        }
+                        });
                         
-                        await new Promise(resolve => setTimeout(resolve, 2500));
+                        await new Promise(resolve => setTimeout(resolve, 500));
                     }
 
+                    this.printGuiaDone = index + 1;
                     await this.imprimir_guia_recursivo(array, index + 1, formato);
                 } else {
                     this.printGuiaDone = array.length;
@@ -258,6 +262,7 @@ export default {
             } catch (e) {
                 console.error('Error imprimiendo guía:', e);
                 this.printGuiaError = `Error en guía ${index + 1}: ${e.message}`;
+                this.printGuiaDone = index + 1;
                 await this.imprimir_guia_recursivo(array, index + 1, formato);
             }
         },

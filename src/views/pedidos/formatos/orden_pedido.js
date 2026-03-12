@@ -4,6 +4,10 @@ import store from "@/store/index";
 import moment from "moment";
 import { NumerosALetras } from "numero-a-letras";
 import axios from "axios";
+import { impresionQueue } from "@/impresionQueue";
+
+let ventanaImpresionActual = null;
+let resolvers = {};
 
 let moneda = "S/";
 let modo_genera = "abre";
@@ -16,92 +20,142 @@ function permite_impresion_host() {
   return tienePermiso && tieneConfig;
 }
 
-async function abre_dialogo_impresion_host(doc) {
-  try {
-    const configHost = store?.state?.permisos?.config_impresion_host || {};
-    const IP_PC = configHost.ip_dispositivo || "192.168.1.19";
-    const PORT = configHost.puerto_dispositivo || 8090;
-    const BRIDGE_URL = `http://${IP_PC}:${PORT}/bridge-pdf`;
-    const token =
-      store?.state?.configImpresora?.token_host || configHost.token || "1234";
+async function abre_dialogo_impresion_host(doc, copias = 1, docId = Date.now()) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const configHost = store?.state?.permisos?.config_impresion_host || {};
+      const IP_PC = configHost.ip_dispositivo || "192.168.1.19";
+      const PORT = configHost.puerto_dispositivo || 8090;
+      const BRIDGE_URL = `http://${IP_PC}:${PORT}/bridge-pdf`;
+      const token =
+        store?.state?.configImpresora?.token_host || configHost.token || "1234";
 
-    const buffer = doc.output("arraybuffer");
-    const ventana = window.open(
-      BRIDGE_URL,
-      "_blank",
-      "width=500,height=400,menubar=no,toolbar=no,location=no,status=no",
-    );
+      const buffer = doc.output("arraybuffer");
 
-    if (!ventana) {
-      alert("Permite ventanas emergentes para imprimir.");
-      abre_dialogo_impresion_original(doc);
-      return;
+      if (ventanaImpresionActual && !ventanaImpresionActual.closed) {
+        ventanaImpresionActual.close();
+      }
+
+      const ventana = window.open(
+        BRIDGE_URL,
+        "_blank",
+        "width=500,height=400,menubar=no,toolbar=no,location=no,status=no",
+      );
+
+      ventanaImpresionActual = ventana;
+
+      if (!ventana) {
+        alert("Permite ventanas emergentes para imprimir.");
+        reject(new Error('Ventana bloqueada'));
+        return;
+      }
+
+      const meta = {
+        bd: store?.state?.baseDatos?.bd || "",
+        usuario: store?.state?.permisos?.nombre || "",
+        tipo: "pedido",
+        ts: Date.now(),
+      };
+
+      const mensaje = {
+        type: "PRINT_PDF",
+        token,
+        printer: configHost.nombre_impresora || "POS-80-Series",
+        meta,
+        pdf: buffer,
+      };
+
+      const timer = setInterval(() => {
+        try {
+          ventana.postMessage(mensaje, "*", [buffer]);
+          clearInterval(timer);
+
+          resolvers[docId] = { resolve, reject };
+
+          const checkClosed = setInterval(() => {
+            if (ventana.closed) {
+              clearInterval(checkClosed);
+              if (resolvers[docId]) {
+                resolvers[docId].resolve();
+                delete resolvers[docId];
+              }
+            }
+          }, 500);
+
+        } catch (e) {
+          clearInterval(timer);
+          reject(e);
+        }
+      }, 250);
+
+      setTimeout(() => reject(new Error('Timeout')), 60000);
+    } catch (e) {
+      console.error("Error impresión host:", e);
+      abre_dialogo_impresion_original(doc, docId).then(resolve).catch(reject);
+    }
+  });
+}
+
+async function abre_dialogo_impresion_original(doc, docId = Date.now()) {
+  return new Promise((resolve, reject) => {
+    var blob = doc.output("bloburi");
+    var Ancho = screen.width;
+    var Alto = screen.height;
+    var A = (Ancho * 50) / 100;
+    var H = (Alto * 50) / 100;
+    var difA = Ancho - A;
+    var difH = Alto - H;
+    var tope = difH / 2;
+    var lado = difA / 2;
+    var Opciones =
+      "status=no, menubar=no, directories=no, location=no, toolbar=no, scrollbars=yes, resizable=no, width=" +
+      A +
+      ", height=" +
+      H +
+      ", top=" +
+      tope +
+      ", left=" +
+      lado +
+      "";
+
+    if (ventanaImpresionActual && !ventanaImpresionActual.closed) {
+      ventanaImpresionActual.close();
     }
 
-    const meta = {
-      bd: store?.state?.baseDatos?.bd || "",
-      usuario: store?.state?.permisos?.nombre || "",
-      tipo: "pedido",
-      ts: Date.now(),
-    };
+    ventanaImpresionActual = window.open(blob, "_blank", Opciones);
 
-    const mensaje = {
-      type: "PRINT_PDF",
-      token,
-      printer: configHost.nombre_impresora || "POS-80-Series",
-      meta,
-      pdf: buffer,
-    };
+    if (ventanaImpresionActual) {
+      resolvers[docId] = { resolve, reject };
 
-    const timer = setInterval(() => {
-      try {
-        ventana.postMessage(mensaje, "*", [buffer]);
-        clearInterval(timer);
-        setTimeout(() => {
-          try {
-            ventana.close();
-          } catch (_) {}
-        }, 2000);
-      } catch (e) {}
-    }, 250);
-  } catch (e) {
-    console.error("Error impresión host:", e);
-    abre_dialogo_impresion_original(doc);
-  }
+      const checkClosed = setInterval(() => {
+        if (ventanaImpresionActual.closed) {
+          clearInterval(checkClosed);
+          if (resolvers[docId]) {
+            resolvers[docId].resolve();
+            delete resolvers[docId];
+          }
+        }
+      }, 500);
+
+      setTimeout(() => {
+        if (resolvers[docId]) {
+          resolvers[docId].reject(new Error('Timeout en impresión'));
+          delete resolvers[docId];
+        }
+      }, 300000);
+
+      ventanaImpresionActual.print();
+    } else {
+      reject(new Error('No se pudo abrir ventana de impresión'));
+    }
+  });
 }
 
-async function abre_dialogo_impresion_original(doc) {
-  var blob = doc.output("bloburi");
-  var Ancho = screen.width;
-  var Alto = screen.height;
-  var A = (Ancho * 50) / 100;
-  var H = (Alto * 50) / 100;
-  var difA = Ancho - A;
-  var difH = Alto - H;
-  var tope = difH / 2;
-  var lado = difA / 2;
-  var Opciones =
-    "status=no, menubar=no, directories=no, location=no, toolbar=no, scrollbars=yes, resizable=no, width=" +
-    A +
-    ", height=" +
-    H +
-    ", top=" +
-    tope +
-    ", left=" +
-    lado +
-    "";
-
-  var w = window.open(blob, "_blank", Opciones);
-  if (w) {
-    w.print();
-  }
-}
-
-async function abre_dialogo_impresion(doc) {
+async function abre_dialogo_impresion(doc, copias = 1, docId = Date.now()) {
   if (permite_impresion_host()) {
-    await abre_dialogo_impresion_host(doc);
+    return await abre_dialogo_impresion_host(doc, copias, docId);
   } else {
-    await abre_dialogo_impresion_original(doc);
+    return await abre_dialogo_impresion_original(doc, docId);
   }
 }
 
@@ -124,7 +178,8 @@ export const pdfGenera = (
       return impresion80_ordenPedido(cabecera, arraydatos);
   }
 };
-async function impresionA4_ordenPedido(cabecera, items = []) {
+
+async function impresionA4_ordenPedido(cabecera, items = [], modo = 'abre', docId = Date.now()) {
   const emp = store.state.baseDatos || {};
   const cfg = store.state.configImpresora || {};
   const imagen = store.state.logoempresa || "";
@@ -464,10 +519,10 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
   // ---------- Salida (mismo flujo que tu 80mm) ----------
   if (modo_genera === "descarga") {
     const clienteNombre = (cabecera?.cliente_nombre || "cliente")
-      .split(/\s+/) // separa por espacios
-      .slice(0, 2) // toma solo las 2 primeras palabras
-      .join("_") // une con guion bajo
-      .replace(/[^a-zA-Z0-9_]/g, ""); // limpia caracteres especiales
+      .split(/\s+/)
+      .slice(0, 2)
+      .join("_")
+      .replace(/[^a-zA-Z0-9_]/g, "");
     const nombre = `${
       numeroOP || moment().format("YYYYMMDD-HHmm")
     }_${clienteNombre}.pdf`;
@@ -495,24 +550,14 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
         window.open(url, "_blank");
       }
     } else {
-      try {
-        // @ts-ignore
-        if (typeof abre_dialogo_impresion === "function") {
-          // @ts-ignore
-          abre_dialogo_impresion(doc);
-        } else {
-          abre_dialogo_impresion(doc);
-        }
-      } catch {
-        abre_dialogo_impresion(doc);
-      }
+      await abre_dialogo_impresion(doc, 1, docId);
     }
   }
 
   return true;
 }
 
-async function impresion80_ordenPedido(cabecera, items = []) {
+async function impresion80_ordenPedido(cabecera, items = [], modo = 'abre', docId = Date.now()) {
   const emp = store.state.baseDatos || {};
   const cfg = store.state.configImpresora || {};
   const imagen = store.state.logoempresa || "";
@@ -870,16 +915,15 @@ async function impresion80_ordenPedido(cabecera, items = []) {
 
   if (modo_genera === "descarga") {
     const clienteNombre = (cabecera?.cliente_nombre || "cliente")
-      .split(/\s+/) // separa por espacios
-      .slice(0, 2) // toma solo las 2 primeras palabras
-      .join("_") // une con guion bajo
-      .replace(/[^a-zA-Z0-9_]/g, ""); // limpia caracteres especiales
+      .split(/\s+/)
+      .slice(0, 2)
+      .join("_")
+      .replace(/[^a-zA-Z0-9_]/g, "");
     const nombre = `${
       numeroOP || moment().format("YYYYMMDD-HHmm")
     }_${clienteNombre}.pdf`;
     doc.save(nombre);
   } else {
-    // abrir compartido en móvil o diálogo impresión en escritorio
     if (store.state.esmovil) {
       const arrayBuffer = doc.output("arraybuffer");
       const blob = new Blob([arrayBuffer], { type: "application/pdf" });
@@ -895,32 +939,21 @@ async function impresion80_ordenPedido(cabecera, items = []) {
             files: [file],
           });
         } catch (e) {
-          /* silencio */
+          /* noop */
         }
       } else {
         const url = URL.createObjectURL(blob);
         window.open(url, "_blank");
       }
     } else {
-      // si tienes un helper global, úsalo; si no, abre en nueva pestaña
-      try {
-        // @ts-ignore
-        if (typeof abre_dialogo_impresion === "function") {
-          // @ts-ignore
-          abre_dialogo_impresion(doc);
-        } else {
-          abre_dialogo_impresion(doc);
-        }
-      } catch {
-        window.open(doc.output("bloburi"));
-      }
+      await abre_dialogo_impresion(doc, 1, docId);
     }
   }
 
   return true;
 }
 // === NUEVO: 58mm ===
-async function impresion58_ordenPedido(cabecera, items = []) {
+async function impresion58_ordenPedido(cabecera, items = [], modo = 'abre', docId = Date.now()) {
   const emp = store.state.baseDatos || {};
   const cfg = store.state.configImpresora || {};
   const imagen = store.state.logoempresa || "";
@@ -1293,10 +1326,10 @@ async function impresion58_ordenPedido(cabecera, items = []) {
   // Salida (igual que 80mm)
   if (modo_genera === "descarga") {
     const clienteNombre = (cabecera?.cliente_nombre || "cliente")
-      .split(/\s+/) // separa por espacios
-      .slice(0, 2) // toma solo las 2 primeras palabras
-      .join("_") // une con guion bajo
-      .replace(/[^a-zA-Z0-9_]/g, ""); // limpia caracteres especiales
+      .split(/\s+/)
+      .slice(0, 2)
+      .join("_")
+      .replace(/[^a-zA-Z0-9_]/g, "");
     const nombre = `${
       numeroOP || moment().format("YYYYMMDD-HHmm")
     }_${clienteNombre}.pdf`;
@@ -1324,17 +1357,7 @@ async function impresion58_ordenPedido(cabecera, items = []) {
         window.open(url, "_blank");
       }
     } else {
-      try {
-        // @ts-ignore
-        if (typeof abre_dialogo_impresion === "function") {
-          // @ts-ignore
-          abre_dialogo_impresion(doc);
-        } else {
-          window.open(doc.output("bloburi"));
-        }
-      } catch {
-        abre_dialogo_impresion(doc);
-      }
+      await abre_dialogo_impresion(doc, 1, docId);
     }
   }
 
