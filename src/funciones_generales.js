@@ -55,9 +55,7 @@ async function completa_items(arrays) {
     const descuentositem = parseFloat(data.preciodescuento) || 0;
 
     // Calcular precio item considerando descuentos globales
-    const precio_item = parseFloat(
-      redondear(precioFinal - descuentositem / data.cantidad)
-    );
+    const precio_item = precioFinal;
 
     let valor_unitario = precio_item;
     let igv = 0;
@@ -119,7 +117,7 @@ async function completa_items(arrays) {
       medida: data.medida,
       cod_medida: obtencodigomedida(data.medida, data.tipoproducto || "BIEN"),
       precio: data.precio || precioFinal,
-      precioedita: precioFinal,
+      precioedita: data.precioedita || null,
       precio_base: data.precio_base || precioFinal,
       preciodescuento: data.preciodescuento,
       tipoproducto: data.tipoproducto || "BIEN",

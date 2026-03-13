@@ -264,7 +264,7 @@ import {
     graba_cabecera_p
 } from '../../../db'
 import {
-    procesar_items
+    procesar_items, modifica_stock_array
 } from '../../../funciones_generales'
 import moment from 'moment'
 import store from '@/store/index'
@@ -545,16 +545,28 @@ export default {
                     return;
                 }
                 const esGratuita = String(val.operacion || '').toUpperCase() === 'GRATUITA';
+                let precioBase = Number(val.precio_base || val.precio || 0);
+                let descuentos = {
+                    desc_1: Number(val.desc_1 || 0),
+                    desc_2: Number(val.desc_2 || 0),
+                    desc_3: Number(val.desc_3 || 0)
+                };
 
-                let precioFinal = Number(val.precio || 0);
-                let precioBase = Number(val.precio_base || 0);
-                let descuentos = { desc_1: 0, desc_2: 0, desc_3: 0 };
-
-                if (val.descuentos) {
-                    descuentos = { ...val.descuentos };
+                let precioFinal = precioBase;
+                if (descuentos.desc_1 > 0 || descuentos.desc_2 > 0 || descuentos.desc_3 > 0) {
+                    const factor1 = 1 - (descuentos.desc_1 / 100);
+                    const factor2 = 1 - (descuentos.desc_2 / 100);
+                    const factor3 = 1 - (descuentos.desc_3 / 100);
+                    precioFinal = precioBase * factor1 * factor2 * factor3;
+                    precioFinal = Number(precioFinal.toFixed(2));
                 }
 
                 const totalLinea = esGratuita ? 0 : Math.max(0, val.cantidad * precioFinal);
+
+                var peso_ = val.peso * val.cantidad;
+                if (medidaLinea != "UNIDAD") {
+                    peso_ = val.peso * val.cantidad * val.factor;
+                }
 
                 this.listaproductos.push({
                     uuid: this.create_UUID().substring(29),
@@ -566,7 +578,7 @@ export default {
                     precio: Number(precioFinal),
                     precio_base: precioBase,
                     precioedita: null,
-                    preciodescuento: 0,
+                    preciodescuento: precioBase - precioFinal,
                     costo: val.costo,
                     tipoproducto: val.tipoproducto,
                     operacion: val.operacion,
@@ -624,7 +636,7 @@ export default {
                 this.codigoedita = this.listaproductos.indexOf(producto);
                 this.cantidadEdita = producto.cantidad;
                 this.precioedita = Number(precioBaseDialogo);
-                this.precioFinalActual =  Number(precioFinalActual);
+                this.precioFinalActual = Number(precioFinalActual);
                 this.precioOriginalEdita = precioCatalogo;
                 this.preciodescuento = producto.preciodescuento;
                 this.nombreEdita = producto.nombre;
@@ -788,6 +800,7 @@ export default {
                 const resp = await procesar_items(productosLimpios);
                 const cab = resp[0];
                 const detalleNuevo = resp[1];
+
                 const nextCabecera = { ...this.info_cabecera };
                 nextCabecera.total_op_gravadas = cab.total_op_gravadas;
                 nextCabecera.total_op_inafectas = cab.total_op_inafectas;
@@ -819,6 +832,7 @@ export default {
                 await Promise.all([
                     grabaCabecera_p(this.info_cabecera.id_grupo, this.info_cabecera.numeracion, this.info_cabecera),
                     detalleCabecera_p(this.info_cabecera.id_grupo, this.info_cabecera.numeracion, detalleNuevo),
+                    //modifica_stock_array("RESTA", detalleNuevo), 
                 ]);
                 store.commit("dialogoprogress");
                 store.commit("dialogosnackbar", "Documento actualizado correctamente");
