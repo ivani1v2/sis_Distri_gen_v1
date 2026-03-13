@@ -34,6 +34,7 @@ export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, to
       nuevoArray.push([
         item.id,
         item.nombre,
+        item.medida,
         cajas,
         und,
         peso.toFixed(2),
@@ -55,6 +56,7 @@ export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, to
 
       nuevoArray.push([
         cajasUndStr,
+        item.medida,
         descripcionConCodigo,
         peso.toFixed(2),
       ])
@@ -82,19 +84,21 @@ export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, to
     columnStyles: esF1
       ? {
         0: { columnWidth: 15, halign: 'center', fontStyle: 'bold' },
-        1: { columnWidth: 135, halign: 'left' },
-        2: { columnWidth: 12, halign: 'center' },
+        1: { columnWidth: 115, halign: 'left' },
+        2: { columnWidth: 20, halign: 'center' },
         3: { columnWidth: 12, halign: 'center' },
-        4: { columnWidth: 20, halign: 'center' },
+        4: { columnWidth: 12, halign: 'center' },
+        5: { columnWidth: 20, halign: 'center' },
       }
       : {
         0: { columnWidth: 20, halign: 'center' },
-        1: { columnWidth: 155, halign: 'left' },
-        2: { columnWidth: 25, halign: 'center' },
+        1: { columnWidth: 20, halign: 'center' },
+        2: { columnWidth: 115, halign: 'left' },
+        3: { columnWidth: 25, halign: 'center' },
       },
     head: esF1
-      ? [['Codigo', 'Descripcion', 'Cajas', 'Und', 'Peso(KG)']]
-      : [['Caj/Und', 'Descripcion', 'Peso(KG)']],
+      ? [['Codigo', 'Descripcion', 'Medida', 'Cajas', 'Und', 'Peso(KG)']]
+      : [['Caj/Und', 'Medida', 'Descripcion', 'Peso(KG)']],
     body: nuevoArray,
   })
 
