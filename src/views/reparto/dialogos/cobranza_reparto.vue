@@ -107,14 +107,14 @@
                     </v-btn>
                 </v-col>
             </v-row>
-           <!-- Resumen de gastos -->
+            <!-- Resumen de gastos -->
             <v-row v-if="gastos.length > 0" dense class="mt-1">
                 <v-col cols="12">
                     <v-alert type="warning" dense text class="mb-0 py-1">
                         <div class="d-flex flex-column">
                             <div class="d-flex justify-space-between align-center caption">
                                 <span>Efectivo: <strong>{{ monedaSimbolo }}{{ totalEfectivo.toFixed(2)
-                                        }}</strong></span>
+                                }}</strong></span>
                                 <span>Gastos: <strong>-{{ monedaSimbolo }}{{ totalGastos.toFixed(2) }}</strong></span>
                                 <span :class="efectivoDisponible >= 0 ? 'green--text' : 'red--text'">
                                     <strong>{{ monedaSimbolo }}{{ efectivoDisponible.toFixed(2) }}</strong>
@@ -155,6 +155,11 @@
                             <div>
                                 <span class="font-weight-medium">{{ item.id_producto }}</span> -
                                 <span class="ml-1">{{ item.nombre }}</span>
+                                <v-chip v-if="item.operacion === 'GRATUITA'" x-small color="pink" text-color="white"
+                                    class="ml-2">
+                                    <v-icon x-small left>mdi-tag-off</v-icon>
+                                    Gratuita
+                                </v-chip>
                             </div>
                         </template>
 
@@ -181,8 +186,12 @@
                         </template>
 
                         <template v-slot:[`item.total_linea`]="{ item }">
-                            <span class="font-weight-bold red--text">
-                                {{ item.total_linea.toFixed(2) }}
+                            <span :class="{
+                                'font-weight-bold': true,
+                                'pink--text': item.operacion === 'GRATUITA',
+                                'red--text': item.operacion !== 'GRATUITA'
+                            }">
+                                {{ item.total_linea?.toFixed(2) }}
                             </span>
                         </template>
                     </v-data-table>
@@ -418,7 +427,7 @@ export default {
                         this.rechazos.push({
                             ...r,
                             id_pedido: idPedido,
-                            total_linea: (r.cantidad * r.precio_unit) || 0,
+                            //total_linea: (r.cantidad * r.precio_unit) || 0,
                             medida_mostrar: r.es_rechazo_parcial ? 'UNIDAD' : r.medida,
                             tipo_rechazo: r.es_rechazo_parcial ? 'Parcial' : 'Completo'
                         });
@@ -520,16 +529,24 @@ export default {
             doc.text(`Fecha: ${fecha}`, 14, 26);
             doc.text(`Total Ítems: ${this.totalItemsRechazados} | Total: ${this.monedaSimbolo}${this.totalRechazado.toFixed(2)}`, 14, 32);
 
-            const body = this.rechazos.map(r => [
-                r.id_pedido || '',
-                r.id_producto || '',
-                r.nombre || '',
-                r.medida_mostrar || r.medida || '',
-                r.cantidad || 0,
-                r.tipo_rechazo || '',
-                `${this.monedaSimbolo}${Number(r.precio_unit || 0).toFixed(2)}`,
-                `${this.monedaSimbolo}${Number(r.total_linea || 0).toFixed(2)}`
-            ]);
+            const body = this.rechazos.map(r => {
+                const esGratuito = r.operacion === 'GRATUITA';
+                let nombreProducto = r.nombre || '';
+                if (esGratuito) {
+                    nombreProducto = `${nombreProducto} [GRATUITA]`;
+                }
+
+                return [
+                    r.id_pedido || '',
+                    r.id_producto || '',
+                    nombreProducto,
+                    r.medida_mostrar || r.medida || '',
+                    r.cantidad || 0,
+                    r.tipo_rechazo || '',
+                    `${this.monedaSimbolo}${Number(r.precio_unit || 0).toFixed(2)}`,
+                    esGratuito ? `${this.monedaSimbolo}0.00` : `${this.monedaSimbolo}${Number(r.total_linea || 0).toFixed(2)}`
+                ];
+            });
 
             doc.autoTable({
                 startY: 38,
@@ -537,7 +554,7 @@ export default {
                 body: body,
                 theme: 'grid',
                 styles: { fontSize: 8 },
-                headStyles: { fillColor: [192, 57, 43] }
+                headStyles: { fillColor: [192, 57, 43] },
             });
 
             doc.save(`rechazos_reparto_${this.grupo}_${Date.now()}.pdf`);
@@ -546,16 +563,20 @@ export default {
         // Exportar rechazos a Excel
         exportarRechazosExcel() {
             const fecha = new Date().toLocaleString();
-            const data = this.rechazos.map(r => ({
-                'Documento': r.id_pedido || '',
-                'Código': r.id_producto || '',
-                'Producto': r.nombre || '',
-                'Medida': r.medida_mostrar || r.medida || '',
-                'Cantidad': r.cantidad || 0,
-                'Tipo': r.tipo_rechazo || '',
-                'Precio Unit': Number(r.precio_unit || 0).toFixed(2),
-                'Total': Number(r.total_linea || 0).toFixed(2)
-            }));
+            const data = this.rechazos.map(r => {
+                const esGratuito = r.operacion === 'GRATUITA';
+
+                return {
+                    'Documento': r.id_pedido || '',
+                    'Código': r.id_producto || '',
+                    'Producto': esGratuito ? `${r.nombre || ''} (GRATUITA)` : (r.nombre || ''),
+                    'Medida': r.medida_mostrar || r.medida || '',
+                    'Cantidad': r.cantidad || 0,
+                    'Tipo': r.tipo_rechazo || '',
+                    'Precio Unit': Number(r.precio_unit || 0),
+                    'Total': esGratuito ? 0 : Number(r.total_linea || 0)
+                };
+            });
 
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
