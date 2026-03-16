@@ -539,6 +539,17 @@ export default {
       reporte_cronograma(item)
     },
     actualizarItem(nuevo) {
+      if (!nuevo?.datos) return
+
+      const totalPagado = nuevo.datos.reduce((acc, cuota) => {
+        return acc + ((cuota.estado === 'PAGADO' || cuota.estado === 'ABONO') ? (parseFloat(cuota.monto) || 0) : 0)
+      }, 0)
+
+      const montoTotal = parseFloat(nuevo.monto_total) || 0
+      nuevo.monto_pendiente = Math.max(0, montoTotal - totalPagado)
+      nuevo.pagado = totalPagado
+      nuevo.estado = nuevo.monto_pendiente <= 0 ? 'LIQUIDADO' : 'PENDIENTE'
+
       this.dialog_amortiza = false
       this.item_selecto = nuevo
       this.item_selecto_cuota_index = null
@@ -572,18 +583,45 @@ export default {
     },
 
 
-    eliminarCuota(item, index) {
-      console.log("Eliminar", item, index)
+    async eliminarCuota(item, index) {
       if (!this.item_selecto || !Array.isArray(this.item_selecto.datos)) return
-      const confirmado = confirm(`¿Eliminar esta cuota de ${this.monedaSimbolo}${this.redondear(item.monto)}?`)
-      if (!confirmado) return
-      const datos = [...this.item_selecto.datos]
-      datos.splice(index, 1)
-      // Actualizamos en Firebase
-      editaCuentaxCobrar(this.item_selecto.doc_ref, 'datos', datos)
-      this.item_selecto = {
-        ...this.item_selecto,
-        datos
+
+      const cuotaEliminada = this.item_selecto.datos[index]
+      const montoEliminado = parseFloat(cuotaEliminada.monto) || 0
+
+      if (!confirm(`¿Eliminar esta cuota de ${this.monedaSimbolo}${this.redondear(montoEliminado)}?`)) return
+
+      try {
+        const datos = [...this.item_selecto.datos]
+        datos.splice(index, 1)
+
+        let nuevoPagado = parseFloat(this.item_selecto.pagado || 0)
+        if (cuotaEliminada.estado === 'PAGADO' || cuotaEliminada.estado === 'ABONO') {
+          nuevoPagado = Math.max(0, nuevoPagado - montoEliminado)
+        }
+
+        const montoTotal = parseFloat(this.item_selecto.monto_total) || 0
+        const nuevoMontoPendiente = Math.max(0, montoTotal - nuevoPagado)
+        const nuevoEstado = nuevoMontoPendiente <= 0 ? 'LIQUIDADO' : 'PENDIENTE'
+
+        await editaCuentaxCobrar(this.item_selecto.doc_ref, 'datos', datos)
+        await editaCuentaxCobrar(this.item_selecto.doc_ref, 'pagado', nuevoPagado)
+        await editaCuentaxCobrar(this.item_selecto.doc_ref, 'monto_pendiente', nuevoMontoPendiente)
+        await editaCuentaxCobrar(this.item_selecto.doc_ref, 'estado', nuevoEstado)
+
+        this.item_selecto = {
+          ...this.item_selecto,
+          datos,
+          pagado: nuevoPagado,
+          monto_pendiente: nuevoMontoPendiente,
+          estado: nuevoEstado
+        }
+
+        this.filtra()
+
+      } catch (error) {
+        console.error('Error al eliminar cuota:', error)
+        alert('Error al eliminar la cuota')
       }
     },
 
