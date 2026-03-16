@@ -1,6 +1,6 @@
 <template>
     <div content-class="dialogo-cantidad-centrado">
-        <v-autocomplete v-if="!activaproductos && x_categoria" v-model="producto_sele" :items="productosFiltrados"
+         <v-autocomplete v-if="!activaproductos && x_categoria" v-model="producto_sele" :items="productosFiltrados"
             item-text="displayText" item-value="id" :filter="filtrarProductos"
             :label="muestra_tabla ? 'Buscar Productos (F1)' : 'Buscar Productos'" clearable :auto-select-first="true"
             menu-props="{ maxHeight: '300px', auto: true }" outlined dense ref="buscarField"
@@ -112,7 +112,7 @@
                 </v-simple-table>
             </div>
         </v-card>
-        <v-dialog v-model="dialo_cantidad" max-width="325px">
+        <v-dialog v-model="dialo_cantidad" max-width="300px">
             <v-card>
                 <v-system-bar window dark>
                     <v-icon @click="dialo_cantidad = false">mdi-close</v-icon>
@@ -128,7 +128,7 @@
                     <div class="text-caption grey--text text--darken-1" v-if="getFactor(producto_selecto) > 1">
                         Stock:
                         <strong>{{ Math.floor(Number(producto_selecto.stock || 0) / getFactor(producto_selecto))
-                            }}</strong>
+                        }}</strong>
                         cajas
                         + <strong>{{ Number(producto_selecto.stock || 0) % getFactor(producto_selecto) }}</strong> und
                         (total <strong>{{ producto_selecto.stock }}</strong> und)
@@ -149,37 +149,7 @@
                             </v-btn>
                         </v-col>
                     </v-row>
-                    <div v-if="esListaPreciosActivo && opcionesPrecioListas.length" class="mb-3 mt-1">
-                        <v-select v-model="listaPrecioSeleccionada" :items="opcionesPrecioListas" item-text="text"
-                            item-value="value" outlined dense hide-details label="Lista de precios"
-                            :disabled="esPrecioEstricto" @change="onListaPrecioChange">
-                            <template v-slot:selection="{ item }">
-                                <div class="d-flex align-center">
-                                    <v-chip x-small :color="item.color" text-color="white" class="mr-2">
-                                        {{ item.value === 'distribuidor' ? 'D' : (item.value === 'mayorista' ? 'M' :
-                                            'm') }}
-                                    </v-chip>
-                                    <span>{{ item.text }}</span>
-                                </div>
-                            </template>
-
-                            <template v-slot:item="{ item }">
-                                <div class="d-flex flex-column">
-                                    <div class="font-weight-medium d-flex align-center">
-                                        <v-chip x-small :color="item.color" text-color="white" class="mr-2">
-                                            {{ item.value === 'distribuidor' ? 'D' : (item.value === 'mayorista' ? 'M' :
-                                                'm') }}
-                                        </v-chip>
-                                        {{ item.text }}
-                                    </div>
-                                    <div class="text-caption grey--text d-flex align-center">
-                                        {{ item.sub }}
-                                    </div>
-                                </div>
-                            </template>
-                        </v-select>
-                    </div>
-                    <div class="mb-3 mt-1" v-if="producto_selecto && !esListaPreciosActivo && buscar_activo_precio(1)">
+                    <div class="mb-3 mt-1" v-if="producto_selecto && buscar_activo_precio(1)">
                         <v-select v-model="precioSeleccionadoSelect" :items="opcionesPrecioSelect" item-text="text"
                             item-value="value" outlined dense hide-details label="Precio" :disabled="esPrecioEstricto">
                             <template v-slot:selection="{ item }">
@@ -332,7 +302,6 @@
 import store from '@/store/index'
 import DescuentosPorcentaje from '@/components/descuentos_porcentaje.vue'
 import IndicadorBono from '@/views/productos/components/IndicadorBono.vue'
-import { determinarPrecioPorLista } from '@/views/funciones/calculo_lista_precios';
 export default {
     name: 'catalogo_fijo',
     components: {
@@ -347,11 +316,7 @@ export default {
         lista_precios: {
             type: Array,
             default: () => ['1', '2', '3']
-        },
-        cliente_selecto: {
-            type: [Object, Array, null],
-            default: null
-        },
+        }
     },
     data() {
         return {
@@ -376,7 +341,6 @@ export default {
             snackMsg: 'Producto agregado',
             es_bono: false,
             moneda: 'S/ ',
-            listaPrecioSeleccionada: null,
             descuentoAplicado: { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 }
         }
     },
@@ -497,76 +461,6 @@ export default {
                     sub: this.descripcionTier(p, 3),
                     sugerido: this._tierSugerido === 3
                 });
-            }
-
-            return opts;
-        },
-        esListaPreciosActivo() {
-            return this.$store.state.configuracion?.lista_precios === true;
-        },
-
-        listasPreciosCliente() {
-            if (!this.cliente_selecto ||
-                typeof this.cliente_selecto !== 'object' ||
-                Array.isArray(this.cliente_selecto)) {
-                return [];
-            }
-            return this.cliente_selecto.listas_precios || [];
-        },
-
-        // Opciones de precio para el select cuando lista_precios está activo
-        opcionesPrecioListas() {
-            if (!this.esListaPreciosActivo || !this.producto_selecto) return [];
-
-            const p = this.producto_selecto;
-            const factor = this.getFactor(p);
-            const esCaja = (this.modoVenta === 'entero' && factor > 1);
-
-            const opts = [];
-            const listasCliente = this.listasPreciosCliente;
-
-            const mapa = {
-                'distribuidor': {
-                    precio: Number(p.precio_may1) || 0,
-                    nombre: 'Distribuidor',
-                    color: 'purple',
-                    prioridad: 1
-                },
-                'mayorista': {
-                    precio: Number(p.precio_may2) || 0,
-                    nombre: 'Mayorista',
-                    color: 'blue',
-                    prioridad: 2
-                },
-                'minorista': {
-                    precio: Number(p.precio) || 0,
-                    nombre: 'Minorista',
-                    color: 'green',
-                    prioridad: 3
-                }
-            };
-
-            // Ordenar por prioridad
-            const listasOrdenadas = [...listasCliente].sort((a, b) =>
-                (mapa[a]?.prioridad || 999) - (mapa[b]?.prioridad || 999)
-            );
-
-            // Crear opciones en orden de prioridad
-            for (const lista of listasOrdenadas) {
-                const config = mapa[lista];
-                if (!config) continue;
-                if (config.precio && config.precio > 0) {
-                    const precioMostrado = esCaja ? config.precio * factor : config.precio;
-
-                    opts.push({
-                        value: lista,
-                        text: `${config.nombre} — ${this.moneda} ${this.fmt(precioMostrado)}`,
-                        sub: this.descripcionLista(lista) + (esCaja ? ` (x${factor})` : ''),
-                        precio: config.precio,
-                        precio_con_factor: precioMostrado,
-                        color: config.color
-                    });
-                }
             }
 
             return opts;
@@ -718,7 +612,7 @@ export default {
         agrega_con_cantidad() {
             const factor = this.getFactor(this.producto_selecto);
             const q = this.toNum(this.cantidadInput, 0);
-            const unidadesTotal = this.modoVenta === 'entero' ? q * factor : q;
+            const unidadesTotal = this.modoVenta === 'entero' ? q * factor : q; // SIEMPRE en unidades para validar
 
             if (!unidadesTotal || unidadesTotal <= 0) {
                 store.commit("dialogosnackbar", "Ingrese una cantidad mayor a 0");
@@ -735,48 +629,33 @@ export default {
 
             this.dialo_cantidad = false;
 
-            let precioUnidad, precioFinal, tier = 1;
+            const tier = (this.precioSeleccionado ?? this.sugerirTier(this.producto_selecto, unidadesTotal));
+            const precioUnidad = this.precioPorTier(this.producto_selecto, tier);
             const esCaja = (this.modoVenta === 'entero');
+            let precioEmitido = esCaja ? (precioUnidad * factor) : precioUnidad;
 
-            // MODO LISTAS DE PRECIOS - usa LA LISTA SELECCIONADA
-            if (this.esListaPreciosActivo && this.listaPrecioSeleccionada) {
-                precioUnidad = this.getPrecioConLista(this.producto_selecto, this.listaPrecioSeleccionada);
-                precioFinal = esCaja ? (precioUnidad * factor) : precioUnidad;
-
-                console.log('🎯 Usando lista seleccionada:', this.listaPrecioSeleccionada, 'precio:', precioUnidad);
-            }
-            // MODO TRADICIONAL - usa el tier seleccionado o auto
-            else {
-                tier = (this.precioSeleccionado ?? this.sugerirTier(this.producto_selecto, unidadesTotal));
-                precioUnidad = this.precioPorTier(this.producto_selecto, tier);
-                precioFinal = esCaja ? (precioUnidad * factor) : precioUnidad;
-
-                console.log('🎯 Usando modo tradicional, tier:', tier, 'precio:', precioUnidad);
-            }
-
-            // Aplicar descuentos si existen
             const tieneDescuentos = this.descuentoAplicado.desc_1 > 0 ||
                 this.descuentoAplicado.desc_2 > 0 ||
                 this.descuentoAplicado.desc_3 > 0;
 
             if (tieneDescuentos && !this.es_bono) {
-                precioFinal = this.descuentoAplicado.precioFinal;
+                precioEmitido = this.descuentoAplicado.precioFinal;
             }
 
             const cantidadEmitida = q;
             const medidaEmitida = (factor === 1)
                 ? (this.producto_selecto.medida || 'UNIDAD')
                 : (esCaja ? (this.producto_selecto.medida || 'CAJA') : 'UNIDAD');
-
             const ope = this.es_bono
                 ? 'GRATUITA'
                 : (this.producto_selecto.operacion || 'GRAVADA');
+
 
             const linea = {
                 ...this.producto_selecto,
                 operacion: ope,
                 cantidad: cantidadEmitida,
-                precio: Number(precioFinal.toFixed(4)),
+                precio: Number(precioEmitido.toFixed(4)),
                 precio_base: Number((esCaja ? (precioUnidad * factor) : precioUnidad).toFixed(4)),
                 medida: medidaEmitida,
                 factor: factor,
@@ -786,16 +665,6 @@ export default {
                 desc_2: this.descuentoAplicado.desc_2 || 0,
                 desc_3: this.descuentoAplicado.desc_3 || 0,
             };
-
-            if (this.esListaPreciosActivo && this.listaPrecioSeleccionada) {
-                linea.precio_tipo = this.listaPrecioSeleccionada;
-            }
-
-            if (this.es_bono) {
-                linea.precio = 0;
-                linea.totalLinea = '0.00';
-                linea.preciodescuento = 0;
-            }
 
             this.$emit('agrega_lista', linea);
             this.avisarAgregado();
@@ -808,39 +677,18 @@ export default {
         },
 
 
+
         prod_selecto(valor) {
             if (!valor) return;
             this.$nextTick(() => {
                 this.producto_sele = "";
             });
-
             const producto = store.state.productos.find(p => p.id === valor);
             if (producto.controstock && producto.stock <= 0) {
                 store.commit("dialogosnackbar", 'sin stock');
                 return;
             }
-
             if (producto) {
-                this.precioSeleccionado = null;
-
-                const tieneClienteValido = this.cliente_selecto &&
-                    typeof this.cliente_selecto === 'object' &&
-                    !Array.isArray(this.cliente_selecto);
-                if (this.esListaPreciosActivo && tieneClienteValido && this.listasPreciosCliente.length) {
-
-                    const resultado = determinarPrecioPorLista(
-                        producto,
-                        this.listasPreciosCliente,
-                        { fallback: false }
-                    );
-
-                    this.listaPrecioSeleccionada = resultado?.tipo || null;
-                    console.log('📌 Lista seleccionada por determinarPrecioPorLista:', this.listaPrecioSeleccionada);
-
-                } else {
-                    this.listaPrecioSeleccionada = null;
-                }
-
                 if (this.esCodigoDeBarras) {
                     producto.cantidad = 1
                     this.buscar = ''
@@ -852,7 +700,6 @@ export default {
                     });
                     return
                 }
-
                 this.cantidadInput = 1;
                 this.producto_selecto = producto;
                 this.es_bono = false;
@@ -862,7 +709,9 @@ export default {
                 this.dialo_cantidad = true;
                 this.cantCajas = 0;
                 this.cantUnd = 1;
+                this.precioSeleccionado = null;
                 this._tierSugerido = this.sugerirTier(this.producto_selecto, this.totalUnidades);
+
             }
         },
         prod_selecto2(valor) {
@@ -875,23 +724,6 @@ export default {
                 this.producto_sele = "";
             });
             if (valor) {
-                const tieneClienteValido = this.cliente_selecto &&
-                    typeof this.cliente_selecto === 'object' &&
-                    !Array.isArray(this.cliente_selecto);
-                if (this.esListaPreciosActivo && tieneClienteValido && this.listasPreciosCliente.length) {
-
-                    const resultado = determinarPrecioPorLista(
-                        valor,
-                        this.listasPreciosCliente,
-                        { fallback: false }
-                    );
-
-                    this.listaPrecioSeleccionada = resultado?.tipo || null;
-
-                } else {
-                    this.listaPrecioSeleccionada = null;
-                }
-
                 this.cantidadInput = 1;
                 this.producto_selecto = valor;
                 this.precioSeleccionado = null;
@@ -903,6 +735,7 @@ export default {
                 this.cantCajas = 0;
                 this.cantUnd = 1;
                 this._tierSugerido = this.sugerirTier(this.producto_selecto, this.totalUnidades);
+
             }
         },
         iraproductos(item) {
@@ -1032,89 +865,18 @@ export default {
             console.log(data)
             this.descuentoAplicado = data;
         },
-        descripcionLista(lista) {
-            const desc = {
-                'distribuidor': 'Precio especial para distribuidores',
-                'mayorista': 'Precio por volumen (mayorista)',
-                'minorista': 'Precio regular al público'
-            };
-            return desc[lista] || '';
-        },
-
-        // Modificar el método que calcula el precio final
-        getPrecioConLista(producto, listaSeleccionada) {
-            if (!listaSeleccionada) return Number(producto.precio || 0);
-
-            switch (listaSeleccionada) {
-                case 'distribuidor': return Number(producto.precio_may1 || producto.precio);
-                case 'mayorista': return Number(producto.precio_may2 || producto.precio);
-                case 'minorista': return Number(producto.precio || 0);
-                default: return Number(producto.precio || 0);
-            }
-        },
-        onListaPrecioChange(lista) {
-            if (!this.producto_selecto) return;
-            let precioBase = this.getPrecioConLista(this.producto_selecto, lista);
-            const factor = this.getFactor(this.producto_selecto);
-            const esCaja = (this.modoVenta === 'entero' && factor > 1);
-            const precioFinal = esCaja ? precioBase * factor : precioBase;
-            if (this.$refs.descuentosRef && this.$refs.descuentosRef.actualizarPrecioBase) {
-                this.$refs.descuentosRef.actualizarPrecioBase(precioBase);
-            }
-        },
-        actualizarListaPrecios(nuevaLista) {
-            console.log('🔄 Catálogo actualizando lista:', nuevaLista);
-            this.lista_precios = nuevaLista;
-        },
 
     },
 
 }
 </script>
 <style scoped>
-.dialogo-cantidad-centrado {
-    display: flex !important;
-    align-items: center !important;
-    /* centra vertical */
-    justify-content: center !important;
-    /* centra horizontal */
-}
-
-/* Reducir el espacio entre cada producto de la lista */
-.v-list-item {
-    min-height: 32px !important;
-    /* Altura mínima mucho más baja */
-    padding: 2px 8px !important;
-    /* Padding vertical mínimo */
-}
-
-/* Forzar que el título no trunque y use un interlineado apretado */
-.v-list-item__title {
-    white-space: normal !important;
-    overflow: visible !important;
-    line-height: 1.1 !important;
-    /* Texto más pegado entre líneas */
-    font-size: 0.9rem !important;
-}
-
-/* Quitar espacios extra del contenedor de contenido */
-.v-list-item__content {
-    padding: 4px 0 !important;
-}
-
-/* Ajuste fino para el subtítulo (stock) */
-.v-list-item__subtitle {
-    line-height: 1 !important;
-}
-
 .border-bottom {
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
-
 .v-list-item--active {
     background-color: var(--v-primary-lighten5) !important;
 }
-
 .dialogo-cantidad-centrado {
     display: flex !important;
     align-items: center !important;
