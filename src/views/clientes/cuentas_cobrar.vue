@@ -61,7 +61,7 @@
       <v-divider></v-divider>
 
       <v-data-table :headers="headersCxc" :items="listafiltrada" :items-per-page="-1" class="elevation-0"
-        :sort-by.sync="sortBy" :sort-desc.sync="sortDesc" dense fixed-header height="65vh" mobile-breakpoint="1"
+        :sort-by.sync="sortBy" :sort-desc.sync="sortDesc" dense fixed-header height="65vh" mobile-breakpoint="1" item-key="doc_ref" 
         no-data-text="No hay cuentas por cobrar disponibles">
         <template v-slot:[`item.cliente`]="{ item }">
           <div class="font-weight-medium">
