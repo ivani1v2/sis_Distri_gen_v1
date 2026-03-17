@@ -1068,7 +1068,7 @@ export default {
             this.clienteParaNuevoPedido = cliente;
             this.dialogBuscaClientes = false;
             await this.$nextTick();
-            if (this.$store.state.permisos.es_admin) {
+            if (this.$store.state.permisos.modulocuentasxcobrar) {
                 this.dialogDeudasCliente = true;
             } else {
                 var s = {
