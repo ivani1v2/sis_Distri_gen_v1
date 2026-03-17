@@ -173,7 +173,7 @@ export default {
     },
 
     construirMensajePedido() {
-      const hostPublico = 'https://sis-distribucion.web.app'
+      const hostPublico = 'https://chikillo-distribucion.web.app'
       return 'Puede ver su pedido en el siguiente link \n' +
         hostPublico + '/pedidos_clientes/' +
         store.state.baseDatos.bd + '/' +
