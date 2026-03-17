@@ -17,7 +17,7 @@
                     <div class="d-flex justify-space-between flex-wrap caption">
                         <span>Línea Crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2) }}</strong></span>
                         <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2)
-                        }}</strong></span>
+                                }}</strong></span>
                         <span>Disponible: <strong class="red--text">
                                 {{ moneda }} {{ saldoDisponible.toFixed(2) }}
                             </strong></span>
@@ -190,7 +190,7 @@
                                                     style="max-width: 70vw;">
                                                     <span class="font-weight-bold red--text">{{
                                                         Number(item.cantidad)
-                                                    }}×</span>
+                                                        }}×</span>
                                                     {{ item.nombre }}
                                                 </div>
                                             </div>
@@ -325,7 +325,7 @@ import moment from 'moment'
 import axios from "axios"
 import store from '@/store/index'
 import { colClientes } from '../../../db_firestore'
-import { allcuentaxcobrar, nuevaCuentaxcobrar, editaCuentaxCobrar } from '../../../db'
+import { allcuentaxcobrar, nuevaCuentaxcobrar, editaCuentaxCobrar, db } from '../../../db'
 import { aplicaPreciosYBonos, agregarLista, analizaPreciosParcial, analizaGruposParcial } from '@/views/funciones/calculo_bonos'
 import {
     aplicarPreciosPorLista,
@@ -412,22 +412,16 @@ export default {
             },
             deep: true
         },
-        async 'cabecera.condicion_pago'(nv, oldVal) {
+        'cabecera.condicion_pago'(nv) {
             if (nv === 'CREDITO') {
                 if (!this.fechaVencimiento) {
                     const diasCredito = this.clienteData?.dias_credito || this.cabecera?.dias_credito || 7;
                     this.fechaVencimiento = moment().add(diasCredito, 'days').format('YYYY-MM-DD')
                 }
-                if (oldVal === 'CONTADO' && this.cabecera?.id) {
-                    await this.crearCuentaxCobrarDesdeEdicion();
-                }
             } else {
                 this.fechaVencimiento = ''
                 this.cronogramaData = null
                 this.cabecera.cronograma = null
-                if (oldVal === 'CREDITO' && this.cabecera?.id) {
-                    await this.eliminarCuentaxCobrar();
-                }
             }
         },
         fechaVencimiento: {
@@ -1341,10 +1335,13 @@ export default {
                 store.commit("dialogosnackbar", "Pedido guardado pero hubo un error al actualizar la cuenta por cobrar");
             }
         },
-        async crearCuentaxCobrarDesdeEdicion() {
+        async crearCuentaxCobrarDesdeEdicion(pedidoId, cabecera, totalGeneral) {
             try {
-                const pedidoId = this.cabecera.id;
-                const totalGeneral = this.totalDetalle;
+                const bd = this.cabecera.id.split('-')[0];
+                if (!bd) {
+                    console.error('No se pudo determinar la BD');
+                    return;
+                }
 
                 let fechaVencimientoCXC = moment().unix();
                 if (this.fechaVencimiento) {
@@ -1376,18 +1373,26 @@ export default {
                     datos: datosCuotas
                 };
 
-                await nuevaCuentaxcobrar(pedidoId, cuentaPorCobrar);
-                console.log('CxC creada automáticamente al cambiar a CRÉDITO');
+                await db.database().ref(bd).child('x_cobrar').child(pedidoId).set(cuentaPorCobrar);
+                console.log('CxC creada:', pedidoId);
 
             } catch (error) {
-                console.error('❌ Error al crear CxC:', error);
+                console.error('Error al crear CxC:', error);
                 store.commit("dialogosnackbar", "Error al crear la cuenta por cobrar");
             }
         },
 
         async eliminarCuentaxCobrar(pedidoId) {
             try {
-                const snapshot = await allcuentaxcobrar()
+                const bd = this.cabecera.id.split('-')[0];
+                if (!bd) {
+                    console.error('No se pudo determinar la BD');
+                    return;
+                }
+
+                const snapshot = await db.database()
+                    .ref(bd)
+                    .child('x_cobrar')
                     .orderByChild('doc_ref')
                     .equalTo(pedidoId)
                     .once('value');
@@ -1395,9 +1400,11 @@ export default {
                 if (snapshot.exists()) {
                     snapshot.forEach(async (childSnapshot) => {
                         const key = childSnapshot.key;
-                        await allcuentaxcobrar().child(key).remove();
-                        console.log('CxC eliminada completamente');
+                        await db.database().ref(bd).child('x_cobrar').child(key).remove();
+                        console.log('CxC eliminada:', key);
                     });
+                } else {
+                    console.log('No se encontró CxC para eliminar');
                 }
             } catch (error) {
                 console.error('Error al eliminar CxC:', error);
