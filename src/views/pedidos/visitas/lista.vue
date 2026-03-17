@@ -416,13 +416,13 @@ export default {
                     return coincide
                 })
             }
-    // Orden alfabético por nombre
-    lista = [...lista].sort((a, b) =>
-        String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es', {
-            sensitivity: 'base',
-            numeric: true
-        })
-    )
+            // Orden alfabético por nombre
+            lista = [...lista].sort((a, b) =>
+                String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es', {
+                    sensitivity: 'base',
+                    numeric: true
+                })
+            )
             return lista;
         },
 
@@ -752,10 +752,16 @@ export default {
             })
         },
         async pre_venta(data) {
-            this.cliente_deuda = data
-            this.accion_pendiente = 'pre_venta'
-            store.commit("setOrigenPedido", "visitas");
-            this.dialog_deudas = true
+            if (this.$store.state.permisos.modulocuentasxcobrar) {
+                this.cliente_deuda = data
+                this.accion_pendiente = 'pre_venta'
+                store.commit("setOrigenPedido", "visitas");
+                this.dialog_deudas = true
+            } else {
+
+                this.ejecutarPreVenta(data)
+            }
+
         },
         ejecutarPreVenta(data) {
             var fecha = moment(this.date).format('DDMMYYYY')
