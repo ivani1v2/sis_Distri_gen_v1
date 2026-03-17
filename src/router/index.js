@@ -1076,6 +1076,11 @@ const routes = [
     component: () => import("../views/vistasLibres/comprobantes_clientes.vue"),
   },
   {
+    path: "/pedidos_clientes/:bd/:id",
+    name: "pedidos_clientes",
+    component: () => import("../views/vistasLibres/pedidos_clientes.vue"),
+  },
+  {
     path: "/gestionUsuarios",
     name: "gestionUsuarios",
     // route level code-splitting

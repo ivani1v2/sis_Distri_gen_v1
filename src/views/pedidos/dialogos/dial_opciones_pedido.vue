@@ -7,7 +7,7 @@
           Pedido guardado con éxito
         </v-toolbar-title>
         <v-spacer></v-spacer>
-        <v-btn icon small @click="cierra()" dark>
+        <v-btn icon small @click="cerrarYSalir" dark>
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-toolbar>
@@ -31,15 +31,12 @@
         <v-divider class="mb-3"></v-divider>
 
         <div class="text-center mb-2 grey--text text-caption">¿Qué deseas hacer con el pedido?</div>
-        
+
         <v-row dense>
           <v-col cols="4" v-for="opt in opciones" :key="opt.value">
             <v-hover v-slot="{ hover }">
-              <v-card 
-                :elevation="hover ? 4 : 1"
-                :class="['option-card', { 'on-hover': hover }]"
-                @click="opt.action(opt.value)"
-              >
+              <v-card :elevation="hover ? 4 : 1" :class="['option-card', { 'on-hover': hover }]"
+                @click="opt.action(opt.value)">
                 <v-card-text class="pa-2 text-center">
                   <v-icon :color="opt.color" size="30">{{ opt.icon }}</v-icon>
                   <div class="text-caption font-weight-medium mt-1">{{ opt.label }}</div>
@@ -85,17 +82,10 @@
           <v-btn icon dark @click="envia_what = false"><v-icon>mdi-close</v-icon></v-btn>
         </v-toolbar>
         <v-card-text class="pa-4">
-          <v-text-field 
-            v-model="numero" 
-            label="Número de WhatsApp" 
-            prefix="+51"
-            type="number"
-            outlined dense
-            hide-details
-            class="mb-3"
-          ></v-text-field>
+          <v-text-field v-model="numero" label="Número de WhatsApp" prefix="+51" type="number" outlined dense
+            hide-details class="mb-3"></v-text-field>
           <v-btn block color="success" @click="enviaLinkWhatsapp">
-            <v-icon left>mdi-whatsapp</v-icon> Enviar
+            <v-icon left>mdi-whatsapp</v-icon> Enviar PDF
           </v-btn>
         </v-card-text>
       </v-card>
@@ -166,6 +156,30 @@ export default {
     }
   },
   methods: {
+    async obtenerDetallePedido() {
+      if (this.detalle) return this.detalle
+      if (!this.pedido.id) return null
+
+      const snapshot = await consultaDetalle(this.pedido.id).once("value")
+      return snapshot.val()
+    },
+
+    construirCabeceraPdf() {
+      return {
+        ...this.pedido,
+        id: this.pedido.id,
+        telefono: this.numero || ''
+      }
+    },
+
+    construirMensajePedido() {
+      const hostPublico = 'https://sis-distribucion.web.app'
+      return 'Puede ver su pedido en el siguiente link \n' +
+        hostPublico + '/pedidos_clientes/' +
+        store.state.baseDatos.bd + '/' +
+        this.pedido.id
+    },
+
     async cargarDatosCliente() {
       try {
         const doc = await colClientes().doc(String(this.pedido.cliente_documento)).get()
@@ -180,6 +194,7 @@ export default {
     },
 
     abrirWhatsApp() {
+      this.mostrarOpcionesPapel = true
       this.envia_what = true
     },
 
@@ -188,26 +203,35 @@ export default {
     },
 
     async enviaLinkWhatsapp() {
-      if (this.numero && String(this.numero).length === 9) {
-        if (this.clienteData && this.clienteData.id) {
-          await this.setCampoCliente(this.clienteData.id, 'telefono', this.numero)
-        }
+  if (!this.numero || String(this.numero).length !== 9) {
+    store.commit('dialogosnackbar', 'Número no válido (debe ser 9 dígitos)')
+    return
+  }
 
-        const message = 'Puede ver su pedido en el siguiente link \n' +
-          'https://sis-distribucion.web.app/pedidos_clientes/' + 
-          store.state.baseDatos.bd + '/' + 
-          this.pedido.id
+  this.progress = true
+  try {
+    if (this.clienteData && this.clienteData.id) {
+      await this.setCampoCliente(this.clienteData.id, 'telefono', this.numero)
+    }
 
-        const url = store.state.esmovil
-          ? "whatsapp://send?text=" + encodeURIComponent(message) + "&phone=" + encodeURIComponent('+51' + this.numero)
-          : "https://web.whatsapp.com/send?text=" + encodeURIComponent(message) + "&phone=" + encodeURIComponent('+51' + this.numero)
-
-        window.open(url)
-        this.envia_what = false
-      } else {
-        store.commit('dialogosnackbar', 'Número no válido (debe ser 9 dígitos)')
-      }
-    },
+    const mensaje = this.construirMensajePedido()
+    
+    // Abrir WhatsApp con el mensaje
+    const url = store.state.esmovil
+      ? `whatsapp://send?text=${encodeURIComponent(mensaje)}&phone=+51${this.numero}`
+      : `https://web.whatsapp.com/send?phone=+51${this.numero}&text=${encodeURIComponent(mensaje)}`
+    
+    window.open(url, '_blank')
+    
+    this.envia_what = false
+    this.cerrarYSalir()
+  } catch (error) {
+    console.error('Error enviando WhatsApp:', error)
+    store.commit('dialogosnackbar', 'Error al preparar el envío por WhatsApp')
+  } finally {
+    this.progress = false
+  }
+},
 
     async enviaLinkCorreo() {
       if (!this.correo || !/.+@.+\..+/.test(this.correo)) {
@@ -228,7 +252,7 @@ export default {
             "to": this.correo,
             "subject": "Pedido " + this.pedido.id,
             "message": "Hola, tienes un pedido registrado",
-            "url_comprobante": 'https://sis-distribucion.web.app/pedidos_clientes/' + 
+            "url_comprobante": 'https://sis-distribucion.web.app/pedidos_clientes/' +
               store.state.baseDatos.bd + '/' + this.pedido.id,
             "ruc_emisor": store.state.baseDatos.ruc,
             "razon_social": store.state.baseDatos.name,
@@ -250,25 +274,18 @@ export default {
       this.mostrarOpcionesPapel = true
       this.progress = true
       try {
-        let arraydatos = this.detalle
-        if (!arraydatos && this.pedido.id) {
-          const snapshot = await consultaDetalle(this.pedido.id).once("value")
-          arraydatos = snapshot.val()
-        }
-
-        const cabecera = {
-          ...this.pedido,
-          id: this.pedido.id,
-          telefono: this.numero || ''
-        }
+        const arraydatos = await this.obtenerDetallePedido()
+        const cabecera = this.construirCabeceraPdf()
 
         const modoFinal = modo === 'imprime' ? 'abre' : (modo === 'descarga' ? 'descarga' : 'abre')
-        
-        pdfGenera(cabecera, arraydatos, this.medida_comprobante, modoFinal)
+
+        await pdfGenera(cabecera, arraydatos, this.medida_comprobante, modoFinal)
 
         if (modo === 'imprime') {
           store.commit('dialogosnackbar', 'Enviando a impresión...')
         }
+
+        this.cerrarYSalir()
       } catch (error) {
         console.error('Error generando PDF:', error)
         store.commit('dialogosnackbar', 'Error al generar el PDF')

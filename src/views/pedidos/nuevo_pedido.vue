@@ -44,11 +44,11 @@
                     icon="mdi-alert-octagon">
                     <div class="d-flex flex-wrap justify-space-between align-center text-caption">
                         <span>Línea de crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2)
-                                }}</strong></span>
+                        }}</strong></span>
                         <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2)
-                                }}</strong></span>
+                        }}</strong></span>
                         <span>Disponible: <strong class="red--text">{{ moneda }} {{ saldoDisponible.toFixed(2)
-                                }}</strong></span>
+                        }}</strong></span>
                     </div>
                     <div class="mt-1 red--text text-caption font-weight-medium">
                         El monto del pedido ({{ moneda }} {{ totalDetalle.toFixed(2) }}) supera el saldo disponible
@@ -111,7 +111,7 @@
                                                         style="max-width: 70vw;">
                                                         <span class="font-weight-bold red--text">{{
                                                             Number(item.cantidad)
-                                                            }}×</span>
+                                                        }}×</span>
                                                         {{ item.nombre }}
                                                     </div>
                                                 </div>
@@ -331,7 +331,7 @@
         <dial_edita_prod v-if="dialogoProducto" @cierra="dialogoProducto = false"
             @editaProducto="editaProductoFinal($event)" :item_selecto="item_selecto" @eliminaedita="eliminaedita()" />
         <dial_opciones_pedido v-if="dialogoOpciones" :pedido="pedidoGuardado" :detalle="listaproductos"
-            :clienteData="cliente_s" @cierra="dialogoOpciones = false" @salir="redirigirALista" />
+            :clienteData="cliente_s" @cierra="dialogoOpciones = false" @salir="cerrarOpcionesYSalir" />
     </div>
 </template>
 
@@ -417,12 +417,10 @@ export default {
         const data = store?.state?.cliente_selecto;
 
         if (data) {
-            // Busca la dirección principal
             const dirPri = Array.isArray(data.direcciones) && data.direcciones.length
                 ? (data.direcciones.find(d => d && d.principal) || data.direcciones[0])
                 : null;
 
-            // Usa data.direccion si existe; si no, la principal del array
             const direccion = (data.direccion && String(data.direccion).trim())
                 ? data.direccion
                 : (dirPri?.direccion || '');
@@ -433,28 +431,44 @@ export default {
             this.documento = data.tipodoc || '';
             this.nombreCompleto = data.nombre || '';
             this.telfcliente = data.telefono || '';
+
             const usarDefecto = store.state.configuracion.usar_comprobante_defecto === true
             if (usarDefecto) {
                 this.tipocomprobante = store.state.configuracion.defecto || 'T';
             } else {
                 this.tipocomprobante = data.tipocomprobante || 'T';
             }
-            // OPCIONAL: si tu componente tiene estas props/campos, completa coords
+
             if ('latitud' in this) this.latitud = (data.latitud ?? dirPri?.latitud ?? null);
             if ('longitud' in this) this.longitud = (data.longitud ?? dirPri?.longitud ?? null);
+
+            const tieneCredito = this.lineaCreditoActivo && data.permite_credito === true && data.linea_credito > 0;
+
+            if (tieneCredito) {
+                this.formaPago = 'CREDITO';
+                if (data.dias_credito > 0) {
+                    this.fechaVencimiento = moment().add(data.dias_credito, 'days').format('YYYY-MM-DD');
+                } else {
+                    this.fechaVencimiento = this.calcularViernesProximo();
+                }
+            } else {
+                this.formaPago = 'CONTADO';
+            }
 
             if (this.lineaCreditoActivo && data.documento) {
                 this.cargarDatosCredito(data.documento);
             }
         } else {
             this.tipocomprobante = store.state.configuracion.defecto || 'T';
+            this.formaPago = 'CONTADO';
         }
+
         if ((!this.listaproductos || this.listaproductos.length === 0) &&
             Array.isArray(store.state.lista_productos) &&
             store.state.lista_productos.length > 0) {
-            // clon simple para no mutar directamente el state
             this.listaproductos = JSON.parse(JSON.stringify(store.state.lista_productos));
         }
+
         const savedModo = localStorage.getItem("modoOrdenProductos");
         if (savedModo === "push" || savedModo === "top") {
             this.modoOrdenProductos = savedModo;
@@ -869,6 +883,10 @@ export default {
             } else {
                 this.$router.push({ name: 'lista_pedidos' });
             }
+        },
+        cerrarOpcionesYSalir() {
+            this.dialogoOpciones = false;
+            this.redirigirALista();
         },
         resetFormulario() {
             this.numero = "";

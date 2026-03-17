@@ -1637,6 +1637,22 @@ export const detalle_pedido = (id) => {
     .child("detalle_pedidos")
     .child(id)
 };
+export const buscaPedidoCabeceraBd = (bd, id) => {
+  return db
+    .database()
+    .ref(bd)
+    .child("pedidos")
+    .child("cabecera_pedidos")
+    .child(id);
+};
+export const buscaPedidoDetalleBd = (bd, id) => {
+  return db
+    .database()
+    .ref(bd)
+    .child("pedidos")
+    .child("detalle_pedidos")
+    .child(id);
+};
 export const all_cabecera_reparto = () => {
   return db
     .database()
