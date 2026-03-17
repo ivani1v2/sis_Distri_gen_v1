@@ -23,7 +23,7 @@
 
         <div class="mb-3 text-center">
           <v-chip small outlined>
-            Abonar: {{ moneda }} {{ redondear(montoCuota) }}
+            Abonar: {{ moneda }} {{ redondear(sumaPagos) }}
           </v-chip>
         </div>
 
@@ -50,6 +50,11 @@
         <div class="mt-2 mb-1 caption grey--text" v-if="diferenciaPagos !== 0">
           Falta/Exceso: {{ moneda }} {{ redondear(diferenciaPagos) }}
         </div>
+
+        <v-alert v-if="sumaPagos > 0 && sumaPagos < montoCuota" type="info" dense class="mt-2">
+          Abono parcial: se creará una nueva cuota por {{ moneda }}{{ redondear(montoCuota - sumaPagos) }}
+          con la misma fecha de vencimiento ({{ cuotaFecha  }}).
+        </v-alert>
       </v-card-text>
 
       <v-card-actions class="pa-4 pt-0">
@@ -86,6 +91,13 @@ export default {
   },
 
   computed: {
+    cuotaFecha() {
+        const idx = this.item_selecto_cuota_index
+        if (idx !== null && this.item_selecto?.datos?.[idx]) {
+            return moment.unix(this.item_selecto.datos[idx].fecha_vence).format('DD/MM/YYYY')
+        }
+        return ''
+    },
     sumaPagos() {
       return this.pagos.reduce((acc, p) => acc + (Number(p.monto) || 0), 0)
     },
@@ -153,22 +165,48 @@ export default {
             monto: Number(p.monto),
             fecha: ahora
           }))
+        const esAbonoParcial = montoAbonado < this.montoCuota - EPS
 
-        cuota.monto_original = Number(cuota.monto_original ?? cuota.monto ?? 0)
-        cuota.monto_pagado_acum = Number((Number(cuota.monto_pagado_acum || 0) + montoAbonado).toFixed(2))
-        cuota.estado = 'PAGADO'
-        cuota.fecha_pagado = ahora
-        cuota.fecha_modificacion = ahora
-        cuota.monto = cuota.monto_pagado_acum
-        cuota.pagos = [...(cuota.pagos || []), ...pagosFiltrados]
+        if (esAbonoParcial) {
+          const montoRestante = Number((this.montoCuota - montoAbonado).toFixed(2))
 
+          cuota.monto_original = Number(cuota.monto_original ?? cuota.monto ?? 0)
+          cuota.monto_pagado_acum = Number((Number(cuota.monto_pagado_acum || 0) + montoAbonado).toFixed(2))
+          cuota.estado = 'PAGADO'
+          cuota.fecha_pagado = ahora
+          cuota.fecha_modificacion = ahora
+          cuota.monto = montoAbonado
+          cuota.pagos = [...(cuota.pagos || []), ...pagosFiltrados]
+
+          const nuevaCuota = {
+            id: String(datos.length + 1).padStart(3, '0'),
+            monto: montoRestante,
+            monto_original: montoRestante,
+            monto_pagado_acum: 0,
+            estado: 'PENDIENTE',
+            fecha_vence: cuota.fecha_vence,
+            pagos: []
+          }
+          datos.splice(index + 1, 0, nuevaCuota)
+          datos.forEach((c, i) => {
+            c.id = String(i + 1).padStart(3, '0')
+          })
+
+        } else {
+          cuota.monto_original = Number(cuota.monto_original ?? cuota.monto ?? 0)
+          cuota.monto_pagado_acum = Number((Number(cuota.monto_pagado_acum || 0) + montoAbonado).toFixed(2))
+          cuota.estado = 'PAGADO'
+          cuota.fecha_pagado = ahora
+          cuota.fecha_modificacion = ahora
+          cuota.monto = cuota.monto_pagado_acum
+          cuota.pagos = [...(cuota.pagos || []), ...pagosFiltrados]
+        }
         const totalPagadoGlobal = Number(
           datos.reduce((acc, c) => acc + (Number(c.monto_pagado_acum || 0)), 0).toFixed(2)
         )
 
         let montoPendienteReal = Number((Number(deuda.monto_total || 0) - totalPagadoGlobal).toFixed(2))
         if (montoPendienteReal < 0) montoPendienteReal = 0
-
         await editaCuentaxCobrar(deuda.doc_ref, 'datos', datos)
         await editaCuentaxCobrar(deuda.doc_ref, 'monto_pendiente', montoPendienteReal)
         await editaCuentaxCobrar(deuda.doc_ref, 'pagado', totalPagadoGlobal)
@@ -202,6 +240,25 @@ export default {
         this.cargando = false
         store.commit('dialogoprogress')
       }
+    },
+    crearNuevaCuotaPorSaldo(datos, index, montoRestante) {
+      const cuotaOriginal = datos[index]
+      const nuevaCuota = {
+        id: String(datos.length + 1).padStart(3, '0'),
+        monto: montoRestante,
+        monto_original: montoRestante,
+        monto_pagado_acum: 0,
+        estado: 'PENDIENTE',
+        fecha_vence: cuotaOriginal.fecha_vence,
+        pagos: []
+      }
+
+      datos.splice(index + 1, 0, nuevaCuota)
+      datos.forEach((c, i) => {
+        c.id = String(i + 1).padStart(3, '0')
+      })
+
+      return datos
     },
 
     validarDatos(deuda, index) {

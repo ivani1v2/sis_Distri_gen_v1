@@ -24,7 +24,7 @@
             <div class="mb-2 d-flex align-center">
                 <span class="text-caption grey--text">Agregar nueva cuota</span>
                 <v-spacer></v-spacer>
-                <v-btn color="success" x-small @click="dialogGenerar = true" :disabled="saldoPendiente <= 0.01">
+                <v-btn color="success" x-small @click="abrirGenerarAutomatico" :disabled="saldoPendiente <= 0.01">
                     <v-icon left small>mdi-flash</v-icon> Generar Automático
                 </v-btn>
             </div>
@@ -32,15 +32,14 @@
             <v-row dense>
                 <v-col cols="12" sm="6">
                     <v-text-field v-model="nuevaFecha" label="Fecha de vencimiento" type="date" dense outlined
-                        hide-details="auto" :readonly="fechaAutomatica && cuotas.length === 0"
-                        :hint="fechaAutomatica && cuotas.length === 0 ? `Calculada: hoy + ${diasCredito} días de crédito` : ''"
-                        :persistent-hint="fechaAutomatica && cuotas.length === 0" />
-
+                        hide-details="auto" :readonly="false" :max="!editable ? fechaLimite : undefined" :min="hoyISO"
+                        :hint="obtenerHintFecha()" :persistent-hint="true" :error="!esFechaValida(nuevaFecha)"
+                        :error-messages="!esFechaValida(nuevaFecha) ? `La fecha no puede ser mayor a ${formatFecha(fechaLimite)}` : ''" />
                 </v-col>
 
                 <v-col cols="10" sm="4">
                     <v-text-field v-model.number="nuevoMonto" label="Importe" type="number" dense outlined
-                        :value="totalCredito" hide-details="auto" :prefix="moneda + ' '" />
+                        :value="totalCredito" hide-details="auto" :prefix="moneda + ' '" :readonly="false" />
                 </v-col>
 
                 <v-col cols="2" sm="2" class="d-flex align-center">
@@ -92,7 +91,7 @@
                             <td class="text-caption">
                                 <div class="d-flex align-center">
                                     <span>{{ formatFecha(c.vencimiento) }}</span>
-                                    <v-btn icon x-small class="ml-1" @click="abrirSelectorFecha(c, i)">
+                                    <v-btn v-if="editable" icon x-small class="ml-1" @click="abrirSelectorFecha(c, i)">
                                         <v-icon small color="info">mdi-pencil</v-icon>
                                     </v-btn>
                                 </div>
@@ -101,8 +100,8 @@
                                 {{ moneda }} {{ Number(c.importe).toFixed(2) }}
                             </td>
                             <td class="text-center">
-                                <v-btn icon x-small color="error" @click="eliminarCuota(i)">
-                                    <v-icon small>mdi-delete</v-icon>
+                                <v-btn icon x-small @click="eliminarCuota(i)">
+                                    <v-icon small color="error">mdi-delete</v-icon>
                                 </v-btn>
                             </td>
                         </tr>
@@ -127,10 +126,11 @@
                     </div>
 
                     <v-text-field v-model.number="numCuotas" label="Número de Cuotas" type="number" dense outlined
-                        hide-details="auto" :min="1" class="mb-3"></v-text-field>
+                        hide-details="auto" :min="1" class="mb-3" :readonly="false" />
 
                     <v-text-field v-model.number="frecuenciaDias" label="Frecuencia (días)" type="number" dense outlined
-                        hide-details="auto" :min="1" :hint="frecuenciaDiasHint" persistent-hint></v-text-field>
+                        hide-details="auto" :min="1" :hint="frecuenciaDiasHint" persistent-hint :readonly="!editable"
+                        :value="!editable ? frecuenciaPorDefecto : frecuenciaDias" />
                 </v-card-text>
 
                 <v-card-actions>
@@ -171,7 +171,9 @@ export default {
         pagoInicial: Number,
         moneda: { type: String, default: "S/" },
         planExistente: Object,
-        diasCredito: { type: Number, default: 0 }
+        diasCredito: { type: Number, default: 0 },
+        diasCalculados: { type: Number, default: 0 },
+        editable: { type: Boolean, default: false }
     },
 
     data() {
@@ -195,36 +197,59 @@ export default {
             // Control de fecha automática por días de crédito
             fechaAutomatica: false,
             diasCreditoCalculados: 0,
+            nuevaFechaOriginal: '',
         };
     },
 
     created() {
-        // Si hay días de crédito del cliente, usar esa fecha automáticamente
-        if (this.diasCredito && this.diasCredito > 0) {
-            this.nuevaFecha = moment().add(this.diasCredito, 'days').format('YYYY-MM-DD');
-            this.fechaAutomatica = true;
-        } else {
-            // Fallback: fecha + 7 días
-            this.nuevaFecha = moment().add(7, 'days').format('YYYY-MM-DD');
-            this.fechaAutomatica = false;
-        }
-
-        // Carga plan existente
-        if (this.planExistente && Array.isArray(this.planExistente.cuotas)) {
-            this.cuotas = this.planExistente.cuotas;
-            const ultima = this.cuotas[this.cuotas.length - 1];
-            if (ultima) {
-                this.nuevaFecha = moment(ultima.vencimiento).add(1, 'day').format('YYYY-MM-DD');
-                this.diasCreditoCalculados = moment(ultima.vencimiento).diff(moment(), 'days');
+        if (this.planExistente && this.planExistente.cuotas && Array.isArray(this.planExistente.cuotas)) {
+            this.cuotas = JSON.parse(JSON.stringify(this.planExistente.cuotas))
+            if (this.cuotas.length > 0) {
+                const ultimaCuota = this.cuotas[this.cuotas.length - 1]
+                this.nuevaFecha = moment(ultimaCuota.vencimiento).add(1, 'day').format('YYYY-MM-DD')
+                this.diasCreditoCalculados = this.planExistente.dias_credito_calculados || 0
+                this.nuevaFechaOriginal = this.nuevaFecha
             }
+            const totalCuotas = this.cuotas.reduce((sum, c) => sum + Number(c.importe || 0), 0)
+            if (Math.abs(totalCuotas - this.totalCredito) > 0.01) {
+                this.nuevoMonto = this.totalCredito - totalCuotas
+            } else {
+                this.nuevoMonto = null
+            }
+
+            this.dial = true
+            return
+        }
+        if (this.diasCredito && this.diasCredito > 0) {
+            this.nuevaFecha = moment().add(this.diasCredito, 'days').format('YYYY-MM-DD')
+            this.fechaAutomatica = true
+            this.frecuenciaDias = this.diasCredito
+        } else {
+            this.nuevaFecha = this.calcularViernesProximo()
+            this.fechaAutomatica = true
+            this.frecuenciaDias = this.diasCalculados || 7
         }
 
-        this.nuevoMonto = this.totalCredito || 0;
-        this.frecuenciaDias = this.diasCredito && this.diasCredito > 0 ? this.diasCredito : 7;
-        this.dial = true;
+        this.nuevaFechaOriginal = this.nuevaFecha
+        this.nuevoMonto = this.totalCredito || 0
+        this.dial = true
+    },
+
+    watch: {
+        diasCredito: {
+            handler(nuevoValor) {
+                if (nuevoValor > 0 && !this.planExistente) {
+                    this.frecuenciaDias = nuevoValor
+                }
+            },
+            immediate: true
+        }
     },
 
     computed: {
+        hoyISO() {
+            return moment().format('YYYY-MM-DD');
+        },
         totalCuotas() {
             return this.cuotas.reduce((sum, c) => sum + Number(c.importe || 0), 0)
         },
@@ -234,14 +259,52 @@ export default {
             return montoNeto - this.totalCuotas
         },
         frecuenciaDiasHint() {
+            if (!this.editable) {
+                if (this.diasCredito && this.diasCredito > 0) {
+                    return `Fijo: ${this.diasCredito} días (según crédito del cliente)`;
+                } else {
+                    return `Fijo: ${this.frecuenciaPorDefecto} días (hasta viernes próximo)`;
+                }
+            }
             if (this.diasCredito && this.diasCredito > 0) {
                 return `Basado en los ${this.diasCredito} días de crédito del cliente`;
             }
             return 'Valor por defecto: 7 días';
+        },
+        frecuenciaPorDefecto() {
+            if (this.diasCredito && this.diasCredito > 0) {
+                return this.diasCredito;
+            } else {
+                const hoy = moment().startOf('day');
+                const viernesProximo = moment(this.calcularViernesProximo()).startOf('day');
+                const dias = viernesProximo.diff(hoy, 'days');
+                return dias;
+            }
+        },
+        fechaLimite() {
+            if (this.diasCredito && this.diasCredito > 0) {
+                return moment().add(this.diasCredito, 'days').format('YYYY-MM-DD');
+            } else {
+                return this.calcularViernesProximo();
+            }
+        },
+
+        fechaLimiteMoment() {
+            return moment(this.fechaLimite);
         }
     },
 
     methods: {
+        abrirGenerarAutomatico() {
+            if (!this.editable) {
+                if (this.diasCredito && this.diasCredito > 0) {
+                    this.frecuenciaDias = this.diasCredito;
+                } else {
+                    this.frecuenciaDias = this.frecuenciaPorDefecto;
+                }
+            }
+            this.dialogGenerar = true;
+        },
         /**
          * @description Abre el diálogo para editar la fecha de una cuota específica.
          * @param {object} cuota - El objeto de la cuota.
@@ -250,7 +313,6 @@ export default {
         abrirSelectorFecha(cuota, index) {
             this.cuotaSeleccionada = cuota;
             this.cuotaIndex = index;
-            // Inicializa el selector de fecha con la fecha de vencimiento actual de la cuota
             this.nuevaFechaVencimiento = cuota.vencimiento;
             this.dialogEditarFecha = true;
         },
@@ -261,11 +323,8 @@ export default {
          */
         guardarNuevaFecha(nuevaFecha) {
             if (this.cuotaIndex !== -1 && nuevaFecha) {
-                // Usamos Vue.set para asegurar la reactividad en el array
                 this.$set(this.cuotas[this.cuotaIndex], 'vencimiento', nuevaFecha);
                 this.calcularDiasCredito();
-
-                // Cierra el diálogo y resetea los estados
                 this.dialogEditarFecha = false;
                 this.cuotaIndex = -1;
                 this.cuotaSeleccionada = {};
@@ -281,39 +340,58 @@ export default {
                 const fechaVenc = moment(ultimaCuota.vencimiento).startOf('day');
                 this.diasCreditoCalculados = fechaVenc.diff(hoy, 'days');
                 if (this.diasCreditoCalculados < 0) this.diasCreditoCalculados = 0;
-                console.log(`Días de crédito calculados: ${this.diasCreditoCalculados} (desde ${hoy.format('DD/MM/YYYY')} hasta ${fechaVenc.format('DD/MM/YYYY')})`);
             }
         },
 
         // --- Métodos de Cuota Manual ---
-
         agregarCuota() {
             if (!this.nuevaFecha) return alert("Seleccione una fecha de vencimiento")
+            if (!this.editable && !this.esFechaValida(this.nuevaFecha)) {
+                return alert(`La fecha no puede ser mayor al ${this.formatFecha(this.fechaLimite)}`);
+            }
             if (!this.nuevoMonto || Number(this.nuevoMonto) <= 0)
                 return alert("Ingrese un importe válido")
-
             const importe = Number(this.nuevoMonto)
-
             if (this.saldoPendiente - importe < -0.01)
                 return alert(`El importe excede el saldo restante por financiar (${this.moneda} ${this.saldoPendiente.toFixed(2)})`)
-
             this.cuotas.push({
-                numero: '',
+                numero: String(this.cuotas.length + 1).padStart(3, '0'),
                 vencimiento: this.nuevaFecha,
                 importe
             })
-
-            this.nuevaFecha = moment(this.nuevaFecha).add(this.frecuenciaDias, 'days').format('YYYY-MM-DD');
-            this.nuevaFecha = moment(this.nuevaFecha).add(this.frecuenciaDias, 'days').format('YYYY-MM-DD');
+            const siguienteFecha = moment(this.nuevaFecha).add(1, 'day');
+            if (siguienteFecha.isSameOrBefore(this.fechaLimiteMoment)) {
+                this.nuevaFecha = siguienteFecha.format('YYYY-MM-DD');
+            } else {
+                this.nuevaFecha = '';
+            }
             this.nuevoMonto = null
-            this.renumerarCuotas()
             this.calcularDiasCredito()
         },
 
         eliminarCuota(index) {
-            this.cuotas.splice(index, 1)
-            this.renumerarCuotas()
-            this.calcularDiasCredito()
+            if (confirm('¿Está seguro de eliminar esta cuota?')) {
+                const cuotaEliminada = this.cuotas[index];
+                this.cuotas.splice(index, 1)
+                this.renumerarCuotas()
+                if (cuotaEliminada) {
+                    const montoActual = this.nuevoMonto || 0;
+                    this.nuevoMonto = montoActual + cuotaEliminada.importe;
+                }
+
+                if (this.cuotas.length === 0) {
+                    this.nuevaFecha = this.fechaLimite;
+                    this.fechaAutomatica = true;
+                    this.$emit('fecha-actualizada', this.nuevaFecha);
+                } else {
+                    const ultimaCuota = this.cuotas[this.cuotas.length - 1];
+                    const siguienteFecha = moment(ultimaCuota.vencimiento).add(1, 'day');
+                    if (siguienteFecha.isSameOrBefore(this.fechaLimiteMoment)) {
+                        this.nuevaFecha = siguienteFecha.format('YYYY-MM-DD');
+                    }
+                }
+                this.calcularDiasCredito()
+            }
         },
 
         renumerarCuotas() {
@@ -327,10 +405,10 @@ export default {
 
         generarCronograma() {
             const num = Number(this.numCuotas)
-            const dias = Number(this.frecuenciaDias)
+            const fechaLimite = this.fechaLimiteMoment;
 
-            if (num <= 0 || dias <= 0) {
-                alert("Ingrese un número de cuotas y una frecuencia válidos.")
+            if (num <= 0) {
+                alert("Ingrese un número de cuotas válido.")
                 return
             }
 
@@ -341,28 +419,40 @@ export default {
                 return
             }
 
-            // Cálculo de montos (ver detalles en el script anterior)
-            let montoBase = saldo / num
-            let montoFijo = Math.floor(montoBase * 100) / 100
-            let ajuste = saldo - (montoFijo * num)
+            if (!this.nuevaFecha) {
+                alert("No hay fecha de vencimiento definida");
+                return;
+            }
 
+            const hoy = moment().startOf('day');
+            const diasTotales = fechaLimite.diff(hoy, 'days');
+            const intervaloDias = Math.floor(diasTotales / num);
+
+            if (intervaloDias === 0 && num > 1) {
+                alert(`Solo puede generar 1 cuota hasta el ${this.formatFecha(this.fechaLimite)}`);
+                return;
+            }
             const nuevasCuotas = []
-            let fechaActual = moment(this.nuevaFecha || moment())
+            let fechaActual = moment(hoy);
 
             for (let i = 0; i < num; i++) {
-                let importeCuota = montoFijo
-
                 if (i === num - 1) {
-                    importeCuota = montoFijo + ajuste
+                    fechaActual = moment(fechaLimite);
+                } else {
+                    fechaActual = moment(hoy).add(intervaloDias * (i + 1), 'days');
                 }
-
+                let importeCuota;
+                if (i === num - 1) {
+                    const sumaAnterior = nuevasCuotas.reduce((sum, c) => sum + c.importe, 0);
+                    importeCuota = saldo - sumaAnterior;
+                } else {
+                    importeCuota = (saldo / num);
+                }
                 nuevasCuotas.push({
-                    numero: '',
+                    numero: String(i + 1).padStart(3, '0'),
                     vencimiento: fechaActual.format('YYYY-MM-DD'),
                     importe: parseFloat(importeCuota.toFixed(2))
                 })
-
-                fechaActual = fechaActual.add(dias, 'days')
             }
 
             if (this.cuotas.length > 0) {
@@ -374,16 +464,16 @@ export default {
             }
 
             this.cuotas = nuevasCuotas
-            this.renumerarCuotas()
             this.calcularDiasCredito()
             this.dialogGenerar = false
+            const ultimaCuota = this.cuotas[this.cuotas.length - 1];
+            const siguienteFecha = moment(ultimaCuota.vencimiento).add(1, 'day');
+            this.nuevaFecha = siguienteFecha.isSameOrBefore(fechaLimite) ?
+                siguienteFecha.format('YYYY-MM-DD') : '';
 
-            this.nuevaFecha = fechaActual.format('YYYY-MM-DD');
             this.nuevoMonto = null;
-
-            alert(`Cronograma de ${num} cuotas generado con éxito.`)
+            alert(`Cronograma de ${num} cuotas generado con éxito hasta el ${this.formatFecha(this.fechaLimite)}.`)
         },
-
         // --- Métodos de Guardar y Utilidad ---
 
         guardarPlanLetras() {
@@ -396,8 +486,7 @@ export default {
                 )
                 if (!ok) return
             }
-
-            this.calcularDiasCredito()
+            this.calcularDiasCredito();
 
             const fechaUltima =
                 this.cuotas.length ? this.cuotas[this.cuotas.length - 1].vencimiento : null
@@ -421,7 +510,42 @@ export default {
         cierra() {
             this.dial = false
             this.$emit("cierra", false)
-        }
+        },
+        calcularViernesProximo() {
+            const hoy = moment();
+            const diaSemana = hoy.day();
+            if (diaSemana === 5) return hoy.format('YYYY-MM-DD');
+            const diasMap = {
+                0: 5,
+                1: 4,
+                2: 3,
+                3: 2,
+                4: 1,
+                6: 6
+            };
+
+            return hoy.add(diasMap[diaSemana], 'days').format('YYYY-MM-DD');
+        },
+        esFechaValida(fecha) {
+            if (!fecha || this.editable) return true;
+            const fechaMoment = moment(fecha);
+            return fechaMoment.isSameOrBefore(this.fechaLimiteMoment);
+        },
+        obtenerHintFecha() {
+            let hint = '';
+
+            if (this.fechaAutomatica && this.cuotas.length === 0) {
+                if (this.diasCredito && this.diasCredito > 0) {
+                    hint += `Calculada: hoy + ${this.diasCredito} días`;
+                } else {
+                    hint += `Calculada: viernes próximo`;
+                }
+            }
+            if (hint) hint += ' · ';
+            hint += `Límite: ${this.formatFecha(this.fechaLimite)}`;
+
+            return hint;
+        },
     }
 }
 </script>

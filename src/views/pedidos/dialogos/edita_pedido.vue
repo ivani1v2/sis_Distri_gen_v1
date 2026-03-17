@@ -17,7 +17,7 @@
                     <div class="d-flex justify-space-between flex-wrap caption">
                         <span>Línea Crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2) }}</strong></span>
                         <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2)
-                                }}</strong></span>
+                        }}</strong></span>
                         <span>Disponible: <strong class="red--text">
                                 {{ moneda }} {{ saldoDisponible.toFixed(2) }}
                             </strong></span>
@@ -40,7 +40,8 @@
                     <v-col cols="6" sm="6" md="6">
                         <v-select dense outlined hide-details label="Condición de pago"
                             v-model="cabecera.condicion_pago" :items="condicionesItemsFiltradas" item-text="text"
-                            item-value="value" :menu-props="{ closeOnContentClick: true, maxHeight: 300 }" />
+                            :disabled="!lineaCreditoActiva" item-value="value"
+                            :menu-props="{ closeOnContentClick: true, maxHeight: 300 }" />
                     </v-col>
 
                     <!-- Tipo de comprobante como v-select -->
@@ -54,21 +55,54 @@
                 <v-row dense v-if="cabecera.condicion_pago === 'CREDITO'">
                     <v-col cols="6">
                         <v-menu v-model="menuFecha" :close-on-content-click="false" transition="scale-transition"
-                            offset-y min-width="auto">
+                            :disabled="!esAdmin" offset-y min-width="auto">
                             <template v-slot:activator="{ on, attrs }">
                                 <v-text-field outlined dense v-model="fechaVencimiento" label="Vence el"
-                                    prepend-inner-icon="mdi-calendar" hide-details readonly v-bind="attrs" v-on="on" />
+                                    prepend-inner-icon="mdi-calendar" hide-details readonly v-bind="attrs" v-on="on"
+                                    :class="{ 'grey--text': !esAdmin }" />
                             </template>
-
-                            <v-date-picker v-model="fechaVencimiento" @input="menuFecha = false" />
+                            <v-date-picker v-model="fechaVencimiento" @input="menuFecha = false" :readonly="!esAdmin" />
                         </v-menu>
                     </v-col>
-
                     <v-col cols="6">
-                        <v-btn small elevation="3" rounded color="indigo" dark @click="abrirCronograma">
-                            Cronograma
-                            <v-icon color="white" class="ml-2" small>mdi-calendar-clock</v-icon>
+                        <v-btn v-if="cronogramaEditable" small elevation="3" rounded color="indigo" dark
+                            @click="abrirCronograma">
+                            <v-icon left small>mdi-calendar-clock</v-icon>
+                            Editar Cronograma
                         </v-btn>
+                        <div v-else-if="cronogramaParaMostrar" class="d-flex align-center mt-1">
+                            <v-chip small outlined color="grey" class="mr-1">
+                                {{ cronogramaParaMostrar?.cuotas?.length || 0 }} cuota(s)
+                            </v-chip>
+                            <v-chip small outlined color="grey">
+                                {{ diasCreditoCalculado }} días
+                            </v-chip>
+                            <v-tooltip bottom>
+                                <template v-slot:activator="{ on, attrs }">
+                                    <v-icon small color="grey" class="ml-1" v-bind="attrs" v-on="on">
+                                        mdi-information
+                                    </v-icon>
+                                </template>
+                                <span>Vence: {{ formatFecha(fechaVencimiento) }}</span>
+                            </v-tooltip>
+                        </div>
+                        <div v-else-if="cabecera.condicion_pago === 'CREDITO' && fechaVencimiento"
+                            class="d-flex align-center mt-1">
+                            <v-chip small outlined color="grey" class="mr-1">
+                                1 cuota
+                            </v-chip>
+                            <v-chip small outlined color="grey">
+                                {{ diasCreditoCalculado }} días
+                            </v-chip>
+                            <v-tooltip bottom>
+                                <template v-slot:activator="{ on, attrs }">
+                                    <v-icon small color="grey" class="ml-1" v-bind="attrs" v-on="on">
+                                        mdi-information
+                                    </v-icon>
+                                </template>
+                                <span>Vence: {{ formatFecha(fechaVencimiento) }}</span>
+                            </v-tooltip>
+                        </div>
                     </v-col>
                 </v-row>
 
@@ -156,7 +190,7 @@
                                                     style="max-width: 70vw;">
                                                     <span class="font-weight-bold red--text">{{
                                                         Number(item.cantidad)
-                                                        }}×</span>
+                                                    }}×</span>
                                                     {{ item.nombre }}
                                                 </div>
                                             </div>
@@ -277,7 +311,7 @@
         <dial_stock v-model="dialStock" :items="sinStock" @close="dialStock = false" />
 
         <cronograma v-if="dialogoCronograma" :totalCredito="Number(totalDetalle)" @cierra="dialogoCronograma = false"
-            @emite_cronograma="guarda_cronograma($event)" :pagoInicial="0" :moneda="moneda"
+            @emite_cronograma="guarda_cronograma($event)" :pagoInicial="0" :moneda="moneda" :editable="esAdmin"
             :planExistente="planExistenteFormateado"
             :diasCredito="clienteData?.dias_credito || cabecera?.dias_credito || 0" />
     </v-dialog>
@@ -291,7 +325,7 @@ import moment from 'moment'
 import axios from "axios"
 import store from '@/store/index'
 import { colClientes } from '../../../db_firestore'
-import { allcuentaxcobrar } from '../../../db'
+import { allcuentaxcobrar, nuevaCuentaxcobrar, editaCuentaxCobrar } from '../../../db'
 import { aplicaPreciosYBonos, agregarLista, analizaPreciosParcial, analizaGruposParcial } from '@/views/funciones/calculo_bonos'
 import {
     aplicarPreciosPorLista,
@@ -378,19 +412,58 @@ export default {
             },
             deep: true
         },
-        'cabecera.condicion_pago'(nv) {
+        async 'cabecera.condicion_pago'(nv, oldVal) {
             if (nv === 'CREDITO') {
                 if (!this.fechaVencimiento) {
-                    // Usar días de crédito del cliente o 7 días por defecto
                     const diasCredito = this.clienteData?.dias_credito || this.cabecera?.dias_credito || 7;
                     this.fechaVencimiento = moment().add(diasCredito, 'days').format('YYYY-MM-DD')
+                }
+                if (oldVal === 'CONTADO' && this.cabecera?.id) {
+                    await this.crearCuentaxCobrarDesdeEdicion();
                 }
             } else {
                 this.fechaVencimiento = ''
                 this.cronogramaData = null
                 this.cabecera.cronograma = null
+                if (oldVal === 'CREDITO' && this.cabecera?.id) {
+                    await this.eliminarCuentaxCobrar();
+                }
             }
-        }
+        },
+        fechaVencimiento: {
+            handler(nuevaFecha, oldFecha) {
+                if (nuevaFecha && this.cabecera.condicion_pago === 'CREDITO' && nuevaFecha !== oldFecha) {
+                    const hoy = moment().startOf('day');
+                    const vence = moment(nuevaFecha).startOf('day');
+                    const diasCalculados = vence.diff(hoy, 'days');
+
+                    this.cabecera.dias_credito = diasCalculados > 0 ? diasCalculados : 0;
+                    if (this.cronogramaData && this.cronogramaData.cuotas?.length > 0) {
+                        const ultimoIndice = this.cronogramaData.cuotas.length - 1;
+                        this.cronogramaData.cuotas[ultimoIndice].vencimiento = nuevaFecha;
+                        this.cronogramaData.fecha_ultima_cuota = nuevaFecha;
+                        this.cronogramaData.dias_credito_calculados = diasCalculados;
+
+                        console.log(`Actualizada última cuota (${ultimoIndice + 1}) a ${nuevaFecha}`);
+                    }
+                    else if (!this.cronogramaData || this.cronogramaData.cuotas?.length === 0) {
+                        this.cronogramaData = {
+                            cuotas: [{
+                                numero: '001',
+                                vencimiento: nuevaFecha,
+                                importe: this.totalDetalle,
+                            }],
+                            dias_credito_calculados: diasCalculados,
+                            fecha_ultima_cuota: nuevaFecha
+                        };
+                    }
+                    this.cabecera.cronograma = this.cronogramaData.cuotas;
+
+                    console.log(`Fecha vencimiento cambiada a ${nuevaFecha}, días: ${diasCalculados}`);
+                }
+            },
+            immediate: true
+        },
     },
     computed: {
         totalDetalle() {
@@ -404,15 +477,35 @@ export default {
             }));
         },
         planExistenteFormateado() {
-            const cronograma = this.cabecera.cronograma
-            if (!cronograma) return null
-            if (cronograma && typeof cronograma === 'object' && !Array.isArray(cronograma)) {
-                return cronograma
-            }
+            const cronograma = this.cabecera.cronograma;
+            if (!cronograma) return null;
             if (Array.isArray(cronograma)) {
-                return { cuotas: cronograma }
+                const cuotasFormateadas = cronograma.map(c => ({
+                    ...c,
+                    numero: String(c.numero).padStart(3, '0')
+                }));
+                return {
+                    cuotas: cuotasFormateadas,
+                    dias_credito_calculados: this.cabecera.dias_credito,
+                    fecha_ultima_cuota: this.fechaVencimiento,
+                    total_credito: this.totalDetalle
+                };
             }
-            return null
+
+            if (cronograma.cuotas && Array.isArray(cronograma.cuotas)) {
+                const cuotasFormateadas = cronograma.cuotas.map(c => ({
+                    ...c,
+                    numero: String(c.numero).padStart(3, '0')
+                }));
+                return {
+                    cuotas: cuotasFormateadas,
+                    dias_credito_calculados: cronograma.dias_credito_calculados || this.cabecera.dias_credito,
+                    fecha_ultima_cuota: this.fechaVencimiento,
+                    total_credito: this.totalDetalle
+                };
+            }
+            console.log('Formato no reconocido:', cronograma);
+            return null;
         },
         lineaCreditoActiva() {
             return this.$store.state.configuracion?.linea_credito_activo === true
@@ -433,33 +526,94 @@ export default {
         },
         condicionesItemsFiltradas() {
             if (!this.lineaCreditoActiva) {
-                return this.condicionesItems
+                return [{ text: 'Contado', value: 'CONTADO' }];
             }
-            if (this.lineaCreditoCliente <= 0) {
-                return [{ text: 'Contado', value: 'CONTADO' }]
+
+            if (!this.clienteData?.permite_credito) {
+                return [{ text: 'Contado', value: 'CONTADO' }];
             }
-            return this.condicionesItems
+
+            if (this.clienteData?.linea_credito <= 0) {
+                return [{ text: 'Contado', value: 'CONTADO' }];
+            }
+            return this.condicionesItems;
         },
         esListaPreciosActivo() {
             return this.$store.state.configuracion?.lista_precios === true;
         },
         listasPreciosCliente() {
             return this.clienteData?.listas_precios || [];
+        },
+        esAdmin() {
+            return this.$store.state.permisos?.es_admin === true;
+        },
+        cronogramaEditable() {
+            return this.esAdmin && this.cabecera.condicion_pago === 'CREDITO';
+        },
+        cronogramaParaMostrar() {
+            if (this.planExistenteFormateado) {
+                return this.planExistenteFormateado;
+            }
+            if (this.fechaVencimiento && this.cabecera.condicion_pago === 'CREDITO') {
+                const diasCredito = this.clienteData?.dias_credito || this.cabecera?.dias_credito || 7;
+                return {
+                    cuotas: [{
+                        numero: '001',
+                        vencimiento: this.fechaVencimiento,
+                        importe: this.totalDetalle,
+                    }],
+                    dias_credito_calculados: diasCredito
+                };
+            }
+            return null;
+        },
+        diasCreditoCalculado() {
+            if (!this.fechaVencimiento) return 0;
+            const hoy = moment().startOf('day');
+            const vence = moment(this.fechaVencimiento).startOf('day');
+            return vence.diff(hoy, 'days');
         }
     },
     created() {
-        console.log(this.detalle)
         if (this.cabecera && this.cabecera.moneda) {
             this.moneda = this.cabecera.moneda
         } else {
             this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         }
-        if (this.internalOpen) this._cargarDesdeProps()
         if (this.cabecera.fecha_vencimiento) {
             this.fechaVencimiento = this.cabecera.fecha_vencimiento
-        } else {
-            this.fechaVencimiento = moment().add(7, 'days').format('YYYY-MM-DD')
+        } else if (this.cabecera.condicion_pago === 'CREDITO') {
+            const diasCredito = this.cabecera.dias_credito || 7;
+            this.fechaVencimiento = moment().add(diasCredito, 'days').format('YYYY-MM-DD');
         }
+
+        if (this.internalOpen) this._cargarDesdeProps()
+        if (this.cabecera.cronograma) {
+            if (Array.isArray(this.cabecera.cronograma)) {
+                this.cronogramaData = {
+                    cuotas: this.cabecera.cronograma,
+                    dias_credito_calculados: this.cabecera.dias_credito,
+                    fecha_ultima_cuota: this.fechaVencimiento
+                };
+            }
+            else if (this.cabecera.cronograma.cuotas) {
+                this.cronogramaData = this.cabecera.cronograma
+            }
+            else {
+                this.cronogramaData = {
+                    cuotas: [this.cabecera.cronograma],
+                    dias_credito_calculados: this.cabecera.dias_credito,
+                    fecha_ultima_cuota: this.fechaVencimiento
+                }
+            }
+        } else {
+            this.cronogramaData = {
+                cuotas: [],
+                dias_credito_calculados: this.cabecera.dias_credito,
+                fecha_ultima_cuota: this.fechaVencimiento
+            }
+        }
+
         this.cargarDatosCredito()
     },
     methods: {
@@ -474,9 +628,13 @@ export default {
                 const docSnap = await colClientes().doc(doc).get()
                 if (docSnap.exists) {
                     this.clienteData = docSnap.data()
+                    if (this.clienteData?.dias_credito > 0 && !this.cabecera.dias_credito) {
+                        this.cabecera.dias_credito = this.clienteData.dias_credito;
+                    }
                 } else {
                     this.clienteData = null
                 }
+
                 const deudaSnap = await allcuentaxcobrar()
                     .orderByChild('documento')
                     .equalTo(doc)
@@ -498,17 +656,36 @@ export default {
         },
         abrirCronograma() {
             if (this.cabecera.condicion_pago !== 'CREDITO') return
+            if (this.cronogramaData && !this.cronogramaData.cuotas && Array.isArray(this.cronogramaData)) {
+                this.cronogramaData = {
+                    cuotas: this.cronogramaData,
+                    dias_credito_calculados: this.cabecera.dias_credito,
+                    fecha_ultima_cuota: this.fechaVencimiento
+                }
+            }
+
             this.dialogoCronograma = true
         },
 
         guarda_cronograma(cronograma) {
-            this.cronogramaData = cronograma
-            this.cabecera.cronograma = cronograma.cuotas || cronograma
+            this.cronogramaData = cronograma;
+            this.cabecera.cronograma = cronograma.cuotas || cronograma;
             if (cronograma.fecha_ultima_cuota) {
-                this.fechaVencimiento = cronograma.fecha_ultima_cuota
-                this.cabecera.fecha_vencimiento = cronograma.fecha_ultima_cuota
+                this.fechaVencimiento = cronograma.fecha_ultima_cuota;
+                this.cabecera.fecha_vencimiento = cronograma.fecha_ultima_cuota;
+            } else if (cronograma.cuotas && cronograma.cuotas.length > 0) {
+                const ultimaCuota = cronograma.cuotas[cronograma.cuotas.length - 1];
+                this.fechaVencimiento = ultimaCuota.vencimiento;
+                this.cabecera.fecha_vencimiento = ultimaCuota.vencimiento;
             }
-            this.dialogoCronograma = false
+            if (cronograma.dias_credito_calculados !== undefined) {
+                this.cabecera.dias_credito = cronograma.dias_credito_calculados;
+            } else {
+                const hoy = moment().startOf('day');
+                const vence = moment(this.fechaVencimiento).startOf('day');
+                this.cabecera.dias_credito = vence.diff(hoy, 'days');
+            }
+            this.dialogoCronograma = false;
         },
 
         editaProducto(val) {
@@ -862,17 +1039,18 @@ export default {
         async emitirGuardar() {
             try {
                 store.commit("dialogoprogress")
-                // 1) Normaliza/recalcula detalle
                 const detalleNorm = this._recalculaDetalle(this.lineas);
-
-                // 2) Totales
                 const subtotal = detalleNorm.reduce((a, it) => a + Number(it.totalLinea || 0), 0);
-                const total = subtotal; // ajusta si aplicas IGV/desc. globales
+                const total = subtotal;
                 const total_items = detalleNorm.length;
+
                 let cronogramaCabecera = this.cabecera.cronograma || null;
+                let diasCreditoFinal = this.cabecera.dias_credito || 0;
+
                 if (this.cabecera.condicion_pago === 'CREDITO') {
                     if (this.cronogramaData && Array.isArray(this.cronogramaData.cuotas) && this.cronogramaData.cuotas.length > 0) {
                         cronogramaCabecera = this.cronogramaData.cuotas;
+                        diasCreditoFinal = this.cronogramaData.dias_credito_calculados || diasCreditoFinal;
                     } else if (Array.isArray(this.cabecera.cronograma) && this.cabecera.cronograma.length > 0) {
                         cronogramaCabecera = this.cabecera.cronograma;
                     } else {
@@ -882,38 +1060,63 @@ export default {
                             importe: this.fix2(total),
                             estado: 'pendiente'
                         }];
+                        if (this.fechaVencimiento) {
+                            const hoy = moment().startOf('day');
+                            const vence = moment(this.fechaVencimiento).startOf('day');
+                            diasCreditoFinal = vence.diff(hoy, 'days');
+                        }
                     }
                 }
+
                 const cabeceraFull = {
                     ...this.cabecera,
                     subtotal: this.fix2(subtotal),
                     total: this.fix2(total),
-                    estado: 'pendiente',
+                    estado: 'atendido',
                     total_items,
                     editado: true,
                     updated_at: Date.now(),
                     cronograma: cronogramaCabecera,
                     fecha_vencimiento: this.cabecera.condicion_pago === 'CREDITO' ? this.fechaVencimiento : null,
+                    dias_credito: diasCreditoFinal,
                 };
+
                 const payload = {
                     cabecera: cabeceraFull,
                     detalle: detalleNorm,
                     detalle_original: this.detalle,
                     control_stock: true
                 };
+
                 const r = await this.api_rest(payload, "guardar_pedido");
                 if (!r) {
-                    // ya se abrió el diálogo de stock insuficiente
                     store.commit("dialogoprogress");
                     return;
                 }
 
+                const pedidoId = r?.data?.id || r?.id || this.cabecera.id;
+
+                if (this.cabecera.condicion_pago === 'CREDITO') {
+                    const snapshot = await allcuentaxcobrar()
+                        .orderByChild('doc_ref')
+                        .equalTo(pedidoId)
+                        .once('value');
+
+                    if (snapshot.exists()) {
+                        await this.actualizarCuentaxCobrar(pedidoId, cabeceraFull, total);
+                    } else {
+                        await this.crearCuentaxCobrarDesdeEdicion(pedidoId, cabeceraFull, total);
+                    }
+                } else {
+                    await this.eliminarCuentaxCobrar(pedidoId);
+                }
+
                 store.commit("dialogoprogress")
                 store.commit("dialogosnackbar", "Documento guardado con éxito");
-
                 this.cerrar();
             } catch (e) {
                 console.error(e);
+                store.commit("dialogoprogress")
                 store.commit("dialogosnackbar", "Error guardando el documento");
             }
         },
@@ -1051,6 +1254,155 @@ export default {
 
             this.dialCab = false;
             this.$toast?.success?.('Cabecera actualizada') || console.log('Cabecera actualizada');
+        },
+        formatFecha(fecha) {
+            return fecha ? moment(fecha).format('DD/MM/YYYY') : '';
+        },
+        async actualizarCuentaxCobrar(pedidoId, cabecera, totalGeneral) {
+            try {
+                const snapshot = await allcuentaxcobrar()
+                    .orderByChild('doc_ref')
+                    .equalTo(pedidoId)
+                    .once('value');
+
+                if (snapshot.exists()) {
+                    snapshot.forEach(async (childSnapshot) => {
+                        const key = childSnapshot.key;
+                        const cuentaData = childSnapshot.val();
+                        let fechaVencimientoCXC = moment().unix();
+                        if (this.fechaVencimiento) {
+                            fechaVencimientoCXC = moment(this.fechaVencimiento).endOf('day').unix();
+                        }
+                        let datosCuotas = [];
+                        if (this.cronogramaData && Array.isArray(this.cronogramaData.cuotas) && this.cronogramaData.cuotas.length > 0) {
+                            datosCuotas = this.cronogramaData.cuotas.map(cuota => ({
+                                id: cuota.numero,
+                                fecha_vence: Math.floor(new Date(cuota.vencimiento + "T23:59:59").getTime() / 1000),
+                                monto: cuota.importe,
+                                estado: "PENDIENTE"
+                            }));
+                        } else if (this.fechaVencimiento) {
+                            datosCuotas = [{
+                                fecha_vence: fechaVencimientoCXC,
+                                monto: totalGeneral,
+                                estado: "PENDIENTE"
+                            }];
+                        }
+
+                        await editaCuentaxCobrar(key, 'monto_total', totalGeneral.toFixed(2));
+                        await editaCuentaxCobrar(key, 'monto_pendiente', totalGeneral);
+                        await editaCuentaxCobrar(key, 'fecha_vence', fechaVencimientoCXC);
+                        await editaCuentaxCobrar(key, 'dias_credito', cabecera.dias_credito || 0);
+                        await editaCuentaxCobrar(key, 'datos', datosCuotas);
+                    });
+                } else {
+                    let fechaVencimientoCXC = moment().unix();
+                    if (this.fechaVencimiento) {
+                        fechaVencimientoCXC = moment(this.fechaVencimiento).endOf('day').unix();
+                    }
+                    let datosCuotas = [];
+                    if (this.cronogramaData && Array.isArray(this.cronogramaData.cuotas) && this.cronogramaData.cuotas.length > 0) {
+                        datosCuotas = this.cronogramaData.cuotas.map(cuota => ({
+                            id: Number(cuota.numero),
+                            fecha_vence: Math.floor(new Date(cuota.vencimiento + "T23:59:59").getTime() / 1000),
+                            monto: cuota.importe,
+                            estado: "PENDIENTE"
+                        }));
+                    } else if (this.fechaVencimiento) {
+                        datosCuotas = [{
+                            id: 1,
+                            fecha_vence: fechaVencimientoCXC,
+                            monto: totalGeneral,
+                            estado: "PENDIENTE"
+                        }];
+                    }
+                    const cuentaPorCobrar = {
+                        monto_total: totalGeneral.toFixed(2),
+                        monto_pendiente: totalGeneral,
+                        cliente_zona: cabecera.cliente_zona || this.clienteData?.zona || '',
+                        estado: 'PENDIENTE',
+                        documento: cabecera.doc_numero || this.numero,
+                        moneda: this.moneda,
+                        nombre: cabecera.cliente_nombre || this.nombreCompleto,
+                        vendedor: cabecera.cod_vendedor || store.state.sedeActual.codigo,
+                        doc_ref: pedidoId,
+                        fecha: cabecera.fecha_emision,
+                        fecha_vence: fechaVencimientoCXC,
+                        dias_credito: cabecera.dias_credito || 0,
+                        datos: datosCuotas
+                    };
+
+                    await nuevaCuentaxcobrar(pedidoId, cuentaPorCobrar);
+                    console.log('Nueva cuenta por cobrar creada:', pedidoId);
+                }
+
+            } catch (error) {
+                console.error('❌ Error al actualizar cuenta por cobrar:', error);
+                store.commit("dialogosnackbar", "Pedido guardado pero hubo un error al actualizar la cuenta por cobrar");
+            }
+        },
+        async crearCuentaxCobrarDesdeEdicion() {
+            try {
+                const pedidoId = this.cabecera.id;
+                const totalGeneral = this.totalDetalle;
+
+                let fechaVencimientoCXC = moment().unix();
+                if (this.fechaVencimiento) {
+                    fechaVencimientoCXC = moment(this.fechaVencimiento).endOf('day').unix();
+                }
+
+                const datosCuotas = [{
+                    id: 1,
+                    fecha_vence: fechaVencimientoCXC,
+                    monto: totalGeneral,
+                    estado: "PENDIENTE"
+                }];
+
+                const diasCreditoFinal = this.cabecera.dias_credito || this.clienteData?.dias_credito || 0;
+
+                const cuentaPorCobrar = {
+                    monto_total: totalGeneral.toFixed(2),
+                    monto_pendiente: totalGeneral,
+                    cliente_zona: this.cabecera.cliente_zona || this.clienteData?.zona || '',
+                    estado: 'PENDIENTE',
+                    documento: this.cabecera.doc_numero,
+                    moneda: this.moneda,
+                    nombre: this.cabecera.cliente_nombre,
+                    vendedor: this.cabecera.cod_vendedor || store.state.sedeActual.codigo,
+                    doc_ref: pedidoId,
+                    fecha: this.cabecera.fecha_emision || moment().unix(),
+                    fecha_vence: fechaVencimientoCXC,
+                    dias_credito: diasCreditoFinal,
+                    datos: datosCuotas
+                };
+
+                await nuevaCuentaxcobrar(pedidoId, cuentaPorCobrar);
+                console.log('CxC creada automáticamente al cambiar a CRÉDITO');
+
+            } catch (error) {
+                console.error('❌ Error al crear CxC:', error);
+                store.commit("dialogosnackbar", "Error al crear la cuenta por cobrar");
+            }
+        },
+
+        async eliminarCuentaxCobrar(pedidoId) {
+            try {
+                const snapshot = await allcuentaxcobrar()
+                    .orderByChild('doc_ref')
+                    .equalTo(pedidoId)
+                    .once('value');
+
+                if (snapshot.exists()) {
+                    snapshot.forEach(async (childSnapshot) => {
+                        const key = childSnapshot.key;
+                        await allcuentaxcobrar().child(key).remove();
+                        console.log('CxC eliminada completamente');
+                    });
+                }
+            } catch (error) {
+                console.error('Error al eliminar CxC:', error);
+                store.commit("dialogosnackbar", "Error al eliminar la cuenta por cobrar");
+            }
         },
     }
 }

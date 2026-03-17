@@ -303,15 +303,6 @@
                     </v-col>
                 </v-row>
 
-                <v-row dense class="mt-n2">
-                    <v-col cols="6">
-                        <v-text-field outlined dense v-model="direccionForm.latitud" label="Latitud" />
-                    </v-col>
-                    <v-col cols="6">
-                        <v-text-field outlined dense v-model="direccionForm.longitud" label="Longitud" />
-                    </v-col>
-                </v-row>
-
                 <div class="text-right mt-2">
                     <v-btn text @click="cerrarDialogDireccion">Cancelar</v-btn>
                     <v-btn color="primary" @click="guardarDireccion">Guardar</v-btn>

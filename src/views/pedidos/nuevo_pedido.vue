@@ -187,8 +187,8 @@
                 </v-system-bar>
             </div>
             <v-card class="pa-1">
-                <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true"
-                    :x_categoria="false" :cliente_selecto="cliente_s">
+                <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true" :x_categoria="false"
+                    :cliente_selecto="cliente_s">
                 </cat_fijo>
             </v-card>
         </v-dialog>
@@ -260,17 +260,19 @@
 
                     <v-col cols="12" sm="6" class="mt-n5">
                         <v-select outlined dense v-model="formaPago" :items="opcionesFormaPago" label="Forma de pago"
-                            prepend-inner-icon="mdi-cash-multiple" />
+                            :disabled="!lineaCreditoActivo" prepend-inner-icon="mdi-cash-multiple" />
                     </v-col>
 
                     <v-col cols="6" class="mt-n5" v-if="formaPago === 'CREDITO'">
                         <v-text-field outlined dense type="date" v-model="fechaVencimiento" :min="hoyISO"
-                            label="Vence el" prepend-inner-icon="mdi-calendar" />
+                            label="Vence el" prepend-inner-icon="mdi-calendar" :readonly="!esAdmin"
+                            :class="{ 'grey-lighten-2': !esAdmin }" />
                     </v-col>
                     <v-col cols="6" class="mt-n5" v-if="formaPago === 'CREDITO'">
-                        <v-btn class="mt-2" x-small block color="indigo" dark @click="abrirCronograma">
-                            Cronograma
-                            <v-icon right small>mdi-calendar-clock</v-icon>
+                        <v-btn class="mt-2" x-small block :color="esAdmin ? 'indigo' : 'indigo'" dark
+                            @click="abrirCronograma">
+                            <v-icon left small>mdi-calendar-clock</v-icon>
+                            {{ esAdmin ? 'Editar Cronograma' : 'Ver Cronograma' }}
                         </v-btn>
                     </v-col>
                 </v-row>
@@ -282,10 +284,6 @@
                     </v-col>
                 </v-row>
                 <v-row class="mt-n6" dense>
-                    <v-col cols="6">
-                        <v-switch v-model="imprime_orden" dense inset color="indigo" :label="`Imprime Orden Pedido`"
-                            prepend-icon="mdi-printer" class="mt-0" hide-details />
-                    </v-col>
                     <v-col cols="6">
                         <v-select v-if="$store.state.permisos.moduloempresa" outlined dense v-model="cod_vendedor"
                             class="" :items="$store.state.array_sedes" item-text="nombre" item-value="codigo"
@@ -329,9 +327,11 @@
         <dial_mapas v-model="dialogoMapa" :guardar_auto="true" @cierra="dialogoMapa = false" />
         <cronograma v-if="dialogoCronograma" :totalCredito="Number(sumaTotal())" @cierra="dialogoCronograma = false"
             @emite_cronograma="guarda_cronograma($event)" :pagoInicial="0" :moneda="moneda" :planExistente="cronograma"
-            :diasCredito="cliente_s?.dias_credito || 0" />
+            :diasCalculados="diasHastaViernes" :diasCredito="diasCreditoCliente" :editable="esAdmin" />
         <dial_edita_prod v-if="dialogoProducto" @cierra="dialogoProducto = false"
             @editaProducto="editaProductoFinal($event)" :item_selecto="item_selecto" @eliminaedita="eliminaedita()" />
+        <dial_opciones_pedido v-if="dialogoOpciones" :pedido="pedidoGuardado" :detalle="listaproductos"
+            :clienteData="cliente_s" @cierra="dialogoOpciones = false" @salir="redirigirALista" />
     </div>
 </template>
 
@@ -357,6 +357,7 @@ import CryptoJS from "crypto-js";
 import { allcuentaxcobrar, nuevaCuentaxcobrar } from '@/db'
 import { colClientes } from '@/db_firestore'
 import dial_stock from '../ventas/dialogos/dial_stock_insuficiente.vue' // ajusta ruta real
+import dial_opciones_pedido from './dialogos/dial_opciones_pedido.vue'
 
 export default {
     name: 'caja',
@@ -367,7 +368,8 @@ export default {
         cronograma,
         dial_edita_prod,
         dialog_direcciones_cliente,
-        dial_stock
+        dial_stock,
+        dial_opciones_pedido
     },
 
     data() {
@@ -406,6 +408,8 @@ export default {
             modoOrdenProductos: "push",
             tablaOscura: false,
             CONFIG_LISTAS: CONFIG_LISTAS,
+            dialogoOpciones: false,
+            pedidoGuardado: null,
         }
     },
     created() {
@@ -472,6 +476,7 @@ export default {
         hoyISO() {
             return moment().format('YYYY-MM-DD');
         },
+
         lineaCreditoActivo() {
             return this.$store.state.configuracion?.linea_credito_activo === true;
         },
@@ -493,7 +498,15 @@ export default {
             return this.totalDetalle > this.saldoDisponible;
         },
         opcionesFormaPago() {
-
+            if (!this.lineaCreditoActivo) {
+                return ['CONTADO'];
+            }
+            if (!this.cliente_s?.permite_credito) {
+                return ['CONTADO'];
+            }
+            if (this.cliente_s?.linea_credito <= 0) {
+                return ['CONTADO'];
+            }
             return ['CONTADO', 'CREDITO'];
         },
         esListaPreciosActivo() {
@@ -515,8 +528,22 @@ export default {
                 };
                 return colores[tipo] || 'grey';
             };
+        },
+        esAdmin() {
+            return this.$store.state.permisos?.es_admin === true;
+        },
+        diasCreditoCliente() {
+            return this.cliente_s?.dias_credito || 0;
+        },
+        diasHastaViernes() {
+            if (this.cliente_s?.dias_credito && this.cliente_s.dias_credito > 0) {
+                return this.cliente_s.dias_credito;
+            } else {
+                const hoy = moment().startOf('day');
+                const viernes = moment(this.calcularViernesProximo()).startOf('day');
+                return viernes.diff(hoy, 'days');
+            }
         }
-
     },
     watch: {
         modoOrdenProductos(nv) {
@@ -527,9 +554,11 @@ export default {
         },
         formaPago(nv) {
             if (nv === 'CREDITO') {
-                // Usar días de crédito del cliente o 7 días por defecto
-                const diasCredito = this.cliente_s?.dias_credito || 7;
-                this.fechaVencimiento = moment().add(diasCredito, 'days').format('YYYY-MM-DD');
+                if (this.cliente_s?.dias_credito && this.cliente_s.dias_credito > 0) {
+                    this.fechaVencimiento = moment().add(this.cliente_s.dias_credito, 'days').format('YYYY-MM-DD');
+                } else {
+                    this.fechaVencimiento = this.calcularViernesProximo();
+                }
             } else {
                 this.fechaVencimiento = '';
             }
@@ -621,13 +650,21 @@ export default {
             this.dialogoCronograma = true;
         },
         guarda_cronograma(cronograma) {
-            this.fechaVencimiento = cronograma.fecha_ultima_cuota
+            this.fechaVencimiento = cronograma.fecha_ultima_cuota;
             this.cronograma = cronograma;
-            if ((!this.cliente_s?.dias_credito || this.cliente_s.dias_credito === 0) &&
-                cronograma.dias_credito_calculados > 0) {
-                this.cliente_s.dias_credito = cronograma.dias_credito_calculados;
+            if (this.cliente_s) {
+                if (cronograma.dias_credito_calculados > 0) {
+                    this.cliente_s.dias_credito = cronograma.dias_credito_calculados;
+                }
+                else if (!this.cliente_s.dias_credito || this.cliente_s.dias_credito === 0) {
+                    const hoy = moment().startOf('day');
+                    const fechaVence = moment(this.fechaVencimiento).startOf('day');
+                    const diasCalculados = fechaVence.diff(hoy, 'days');
+                    this.cliente_s.dias_credito = diasCalculados > 0 ? diasCalculados : 0;
+                }
             }
-            this.dialogoCronograma = false; // Cierra el diálogo después de guardar
+
+            this.dialogoCronograma = false;
         },
         onDireccionSeleccionada(dir) {
             if (!dir) return;
@@ -709,7 +746,6 @@ export default {
             }
             const docStr = String(this.numero || '').trim();
 
-            // Si es FACTURA, obligar RUC y 11 dígitos
             if (this.tipocomprobante === 'F') {
                 if (this.documento !== 'RUC') {
                     store.commit("dialogosnackbar", "Para FACTURA el tipo de documento debe ser RUC");
@@ -733,31 +769,26 @@ export default {
                 return;
             }
 
-            this.loadingGuardar = true; // 🔹 abre dialogo progreso
+            this.loadingGuardar = true;
 
             try {
-                // Subtotal y totales
                 const subTotal = parseFloat(this.sumaTotal() || 0);
                 const descuentos = parseFloat(this.sumaDescuentos() || 0);
                 const totalGeneral = parseFloat((subTotal - descuentos).toFixed(2));
+
                 let cronogramaCabecera = null;
                 if (this.formaPago === 'CREDITO') {
                     if (this.cronograma && Array.isArray(this.cronograma.cuotas) && this.cronograma.cuotas.length > 0) {
-                        // Usa el cronograma emitido por el diálogo
                         cronogramaCabecera = this.cronograma.cuotas;
                     } else {
-                        // Fallback: una sola cuota con el total y la fecha de vencimiento
-                        cronogramaCabecera = [
-                            {
-                                numero: '001',
-                                vencimiento: this.fechaVencimiento,
-                                importe: totalGeneral,
-                            }
-                        ]
-
+                        cronogramaCabecera = [{
+                            numero: '001',
+                            vencimiento: this.fechaVencimiento,
+                            importe: totalGeneral,
+                        }];
                     }
                 }
-                // Cabecera (ya lo tienes armado)
+
                 const cabecera = {
                     tipo_comprobante: this.tipocomprobante,
                     moneda: this.moneda,
@@ -780,21 +811,19 @@ export default {
                     cod_vendedor: this.cod_vendedor || store.state.sedeActual.codigo,
                     estado: 'atendido',
                     ubicacion_cliente: {
-                        lat: this.cliente_s.latitud,
-                        lng: this.cliente_s.longitud
+                        lat: this.cliente_s?.latitud,
+                        lng: this.cliente_s?.longitud
                     },
                     ubicacion_pedido: store.state.ubicacion_actual,
                     peso_total: this.listaproductos.reduce((acc, item) => acc + (Number(item.peso) || 0), 0),
                 };
-                console.log('⏺️ Cabecera lista para enviar:', cabecera);
-                const detalle = this.listaproductos;
 
+                const detalle = this.listaproductos;
                 const payload = { cabecera, detalle, control_stock: true, ruc_asociado: this.$store.state.baseDatos.ruc_asociado };
-                console.log('⏺️ Payload listo para enviar:', payload);
 
                 var resp = await this.api_rest(payload, "guardar_pedido");
                 if (!resp) {
-                    // ya se mostró el dial de stock insuficiente
+                    this.loadingGuardar = false;
                     return;
                 }
 
@@ -802,28 +831,20 @@ export default {
                     await this.crearCuentaxCobrar(resp.data.id, cabecera, totalGeneral);
                 }
 
-                if (this.imprime_orden) {
-                    const id = resp?.data?.id || resp?.id || null;
-                    cabecera.id = id;
-                    pdfGenera(cabecera, detalle, store.state.configImpresora.tamano);
-                }
-                store.commit("dialogosnackbar", "Documento guardado con éxito ✅");
+                this.pedidoGuardado = {
+                    id: resp?.data?.id || resp?.id || cabecera.id,
+                    ...cabecera,
+                    cliente_documento: this.numero
+                };
                 this.dial_guardar = false;
+                this.dialogoOpciones = true;
 
+                const clienteTemp = this.cliente_s;
                 this.resetFormulario();
+                this.cliente_s = clienteTemp;
 
-                const origen = store.state.origen_pedido_nuevo;
-                store.commit("clearOrigenPedido");
+                store.commit("dialogosnackbar", "Documento guardado con éxito");
 
-                if (origen === 'visitas') {
-                    this.$router.push({
-                        name: 'lista'
-                    });
-                } else {
-                    this.$router.push({
-                        name: 'lista_pedidos'
-                    });
-                }
             } catch (err) {
                 const status = err?.response?.status;
                 const body = err?.response?.data || {};
@@ -837,6 +858,16 @@ export default {
                 store.commit("dialogosnackbar", "Error al guardar el pedido");
             } finally {
                 this.loadingGuardar = false;
+            }
+        },
+        redirigirALista() {
+            const origen = store.state.origen_pedido_nuevo;
+            store.commit("clearOrigenPedido");
+
+            if (origen === 'visitas') {
+                this.$router.push({ name: 'lista' });
+            } else {
+                this.$router.push({ name: 'lista_pedidos' });
             }
         },
         resetFormulario() {
@@ -1179,11 +1210,14 @@ export default {
                     }));
                 } else if (this.formaPago === 'CREDITO' && this.fechaVencimiento) {
                     datosCuotas = [{
+                        id: 1,
                         fecha_vence: Math.floor(new Date(this.fechaVencimiento + "T23:59:59").getTime() / 1000),
                         monto: montoTotal,
                         estado: "PENDIENTE"
                     }];
                 }
+                const diasCreditoFinal = this.cronograma?.dias_credito_calculados ||
+                    this.cliente_s?.dias_credito || 0;
 
                 const cuentaPorCobrar = {
                     monto_total: montoTotal.toFixed(2),
@@ -1197,7 +1231,7 @@ export default {
                     doc_ref: pedidoId,
                     fecha: cabecera.fecha_emision,
                     fecha_vence: fechaVencimientoCXC,
-                    dias_credito: cabecera.dias_credito || this.cliente_s?.dias_credito || 0,
+                    dias_credito: diasCreditoFinal,
                     datos: datosCuotas
                 };
 
@@ -1207,7 +1241,17 @@ export default {
                 console.error('❌ Error al crear cuenta por cobrar:', error);
                 store.commit("dialogosnackbar", "Pedido guardado pero hubo un error al crear la cuenta por cobrar");
             }
-        }
+        },
+        calcularViernesProximo() {
+            const hoy = moment();
+            const diaSemana = hoy.day();
+            if (diaSemana === 5) return hoy.format('YYYY-MM-DD');
+            const diasMap = {
+                0: 5, 1: 4, 2: 3, 3: 2, 4: 1, 6: 6
+            };
+
+            return hoy.add(diasMap[diaSemana], 'days').format('YYYY-MM-DD');
+        },
     },
 
 }

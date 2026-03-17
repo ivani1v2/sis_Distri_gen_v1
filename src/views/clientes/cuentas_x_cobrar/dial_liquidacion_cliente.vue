@@ -199,14 +199,41 @@ export default {
     },
     async eliminarCuota(index) {
       if (!this.cuentaLocal?.datos) return
-      const monto = this.redondear(this.cuentaLocal.datos[index].monto)
-      if (!confirm(`¿Eliminar esta cuota de ${this.monedaSimbolo}${monto}?`)) return
 
-      const datos = [...this.cuentaLocal.datos]
-      datos.splice(index, 1)
-      await editaCuentaxCobrar(this.cuentaLocal.doc_ref, 'datos', datos)
-      this.cuentaLocal.datos = datos
-      this.$emit('actualizar', this.cuentaLocal)
+      const cuotaEliminada = this.cuentaLocal.datos[index]
+      const montoEliminado = parseFloat(cuotaEliminada.monto) || 0
+
+      if (!confirm(`¿Eliminar esta cuota de ${this.monedaSimbolo}${this.redondear(montoEliminado)}?`)) return
+
+      try {
+        const datos = [...this.cuentaLocal.datos]
+        datos.splice(index, 1)
+
+        let nuevoPagado = parseFloat(this.cuentaLocal.pagado || 0)
+        if (cuotaEliminada.estado === 'PAGADO' || cuotaEliminada.estado === 'ABONO') {
+          nuevoPagado = Math.max(0, nuevoPagado - montoEliminado)
+        }
+
+        const montoTotal = parseFloat(this.cuentaLocal.monto_total) || 0
+        const nuevoMontoPendiente = Math.max(0, montoTotal - nuevoPagado)
+        const nuevoEstado = nuevoMontoPendiente <= 0 ? 'LIQUIDADO' : 'PENDIENTE'
+
+        await editaCuentaxCobrar(this.cuentaLocal.doc_ref, 'datos', datos)
+        await editaCuentaxCobrar(this.cuentaLocal.doc_ref, 'pagado', nuevoPagado)
+        await editaCuentaxCobrar(this.cuentaLocal.doc_ref, 'monto_pendiente', nuevoMontoPendiente)
+        await editaCuentaxCobrar(this.cuentaLocal.doc_ref, 'estado', nuevoEstado)
+
+        this.cuentaLocal.datos = datos
+        this.cuentaLocal.pagado = nuevoPagado
+        this.cuentaLocal.monto_pendiente = nuevoMontoPendiente
+        this.cuentaLocal.estado = nuevoEstado
+
+        this.$emit('actualizar', this.cuentaLocal)
+
+      } catch (error) {
+        console.error('Error al eliminar cuota:', error)
+        alert('Error al eliminar la cuota')
+      }
     },
     imprime_constancia(cuota) {
       if (!this.cuentaLocal) return alert('No hay un crédito seleccionado.')
@@ -236,6 +263,17 @@ export default {
     },
 
     actualizarItem(nuevo) {
+      if (!nuevo?.datos) return
+
+      const totalPagado = nuevo.datos.reduce((acc, cuota) => {
+        return acc + ((cuota.estado === 'PAGADO' || cuota.estado === 'ABONO') ? (parseFloat(cuota.monto) || 0) : 0)
+      }, 0)
+
+      const montoTotal = parseFloat(nuevo.monto_total) || 0
+      nuevo.monto_pendiente = Math.max(0, montoTotal - totalPagado)
+      nuevo.pagado = totalPagado
+      nuevo.estado = nuevo.monto_pendiente <= 0 ? 'LIQUIDADO' : 'PENDIENTE'
+
       this.dialog_amortiza = false
       this.dialog_editar_cuota = false
       this.dialog_nueva_cuota = false
@@ -250,7 +288,17 @@ export default {
     },
 
     actualizarDespuesDeAbono(nuevo) {
-      console.log('actualizarDespuesDeAbono - actualizando cuenta')
+      if (!nuevo?.datos) return
+
+      const totalPagado = nuevo.datos.reduce((acc, cuota) => {
+        return acc + ((cuota.estado === 'PAGADO' || cuota.estado === 'ABONO') ? (parseFloat(cuota.monto) || 0) : 0)
+      }, 0)
+
+      const montoTotal = parseFloat(nuevo.monto_total) || 0
+      nuevo.monto_pendiente = Math.max(0, montoTotal - totalPagado)
+      nuevo.pagado = totalPagado
+      nuevo.estado = nuevo.monto_pendiente <= 0 ? 'LIQUIDADO' : 'PENDIENTE'
+
       this.cuentaLocal = nuevo
       this.$emit('actualizar', nuevo)
     },
