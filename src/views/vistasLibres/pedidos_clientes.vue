@@ -1,5 +1,12 @@
 <template>
   <div class="pedido-publico pa-3">
+    <v-dialog v-model="loading" persistent max-width="300">
+      <v-card class="pa-6 text-center">
+        <v-progress-circular indeterminate size="60" color="primary"></v-progress-circular>
+        <div class="mt-3">Cargando pedido...</div>
+      </v-card>
+    </v-dialog>
+
     <v-card class="mx-auto mt-8" max-width="640" shaped elevation="8">
       <v-card-title class="justify-space-between">
         <div>
@@ -14,7 +21,15 @@
       <v-divider></v-divider>
 
       <v-card-text>
-        <v-alert v-if="error" type="error" dense outlined>
+        <div v-if="loading" class="skeleton-loader">
+          <v-skeleton-loader
+            class="mx-auto"
+            max-width="600"
+            type="list-item-avatar, divider, list-item-three-line, list-item-three-line"
+          ></v-skeleton-loader>
+        </div>
+
+        <v-alert v-else-if="error" type="error" dense outlined>
           {{ error }}
         </v-alert>
 
@@ -162,5 +177,9 @@ export default {
 .pedido-publico {
   min-height: 100vh;
   background: linear-gradient(145deg, #f4f6f8 0%, #eaf0f5 100%);
+}
+
+.skeleton-loader {
+  padding: 16px;
 }
 </style>
