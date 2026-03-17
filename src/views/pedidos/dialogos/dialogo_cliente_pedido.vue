@@ -38,7 +38,7 @@
                 </v-col>
             </v-row>
 
-            <v-btn block text color="#26A69A" class="mt-2" @click="abrirCrearCliente">
+            <v-btn v-if="$store.state.permisos.es_admin" block text color="#26A69A" class="mt-2" @click="abrirCrearCliente">
                 <v-icon left>mdi-account-plus</v-icon>
                 Crear Nuevo Cliente
             </v-btn>

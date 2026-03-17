@@ -1068,7 +1068,17 @@ export default {
             this.clienteParaNuevoPedido = cliente;
             this.dialogBuscaClientes = false;
             await this.$nextTick();
-            this.dialogDeudasCliente = true;
+            if (this.$store.state.permisos.es_admin) {
+                this.dialogDeudasCliente = true;
+            } else {
+                var s = {
+                    accion: 'pre_venta',
+                    cliente: cliente,
+                    tieneDeuda: false
+                }
+                this.iniciarNuevoPedido(s)
+            }
+
         },
 
         async onVentaDirecta(cliente) {
@@ -1096,7 +1106,7 @@ export default {
             const { cliente, accion } = payload;
             store.commit("cliente_selecto", cliente);
             store.commit("setOrigenPedido", "lista_pedidos");
-            
+
             if (accion === 'vender') {
                 this.$router.push({
                     name: 'caja2'
