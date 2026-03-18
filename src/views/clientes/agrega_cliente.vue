@@ -452,7 +452,7 @@ export default {
             error: null,
             dialtabla: false,
             arraydocumento: ['SIN DOCUMENTO', 'DNI', 'RUC', 'PASSAPORTE', 'CARNET DE EXTRANJERIA'],
-            array_frec: ['SEMANAL', 'QUINCENAL', 'MENSUAL'],
+            array_frec: ['DIARIA','SEMANAL', 'QUINCENAL', 'MENSUAL'],
             arrayTipoComprobante: [
                 { text: 'NOTA', value: 'T' },
                 { text: 'BOLETA', value: 'B' },
@@ -492,7 +492,7 @@ export default {
                 longitud: null,
                 direcciones: [], // [{direccion, referencia, departamento:{}, provincia:{}, distrito:{}, ubigeo, latitud, longitud, principal:boolean}]
                 tipocomprobante: 'T',
-                frecuencia: '',
+                frecuencia: 'DIARIA',
                 permite_credito: false,
                 linea_credito: 0,
                 dias_credito: 0,
