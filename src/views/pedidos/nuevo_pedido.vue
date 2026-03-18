@@ -44,11 +44,11 @@
                     icon="mdi-alert-octagon">
                     <div class="d-flex flex-wrap justify-space-between align-center text-caption">
                         <span>Línea de crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2)
-                        }}</strong></span>
+                                }}</strong></span>
                         <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2)
-                        }}</strong></span>
+                                }}</strong></span>
                         <span>Disponible: <strong class="red--text">{{ moneda }} {{ saldoDisponible.toFixed(2)
-                        }}</strong></span>
+                                }}</strong></span>
                     </div>
                     <div class="mt-1 red--text text-caption font-weight-medium">
                         El monto del pedido ({{ moneda }} {{ totalDetalle.toFixed(2) }}) supera el saldo disponible
@@ -111,7 +111,7 @@
                                                         style="max-width: 70vw;">
                                                         <span class="font-weight-bold red--text">{{
                                                             Number(item.cantidad)
-                                                        }}×</span>
+                                                            }}×</span>
                                                         {{ item.nombre }}
                                                     </div>
                                                 </div>
@@ -446,7 +446,7 @@ export default {
 
             if (tieneCredito) {
                 this.formaPago = 'CREDITO';
-                if (data.dias_credito > 0) {
+                if (data.dias_credito !== undefined && data.dias_credito !== null && data.dias_credito > 0) {
                     this.fechaVencimiento = moment().add(data.dias_credito, 'days').format('YYYY-MM-DD');
                 } else {
                     this.fechaVencimiento = this.calcularViernesProximo();
@@ -664,20 +664,24 @@ export default {
             this.dialogoCronograma = true;
         },
         guarda_cronograma(cronograma) {
+            if (!cronograma?.fecha_ultima_cuota) return;
             this.fechaVencimiento = cronograma.fecha_ultima_cuota;
             this.cronograma = cronograma;
-            if (this.cliente_s) {
-                if (cronograma.dias_credito_calculados > 0) {
-                    this.cliente_s.dias_credito = cronograma.dias_credito_calculados;
-                }
-                else if (!this.cliente_s.dias_credito || this.cliente_s.dias_credito === 0) {
-                    const hoy = moment().startOf('day');
-                    const fechaVence = moment(this.fechaVencimiento).startOf('day');
-                    const diasCalculados = fechaVence.diff(hoy, 'days');
-                    this.cliente_s.dias_credito = diasCalculados > 0 ? diasCalculados : 0;
+            if (!this.cliente_s) {
+                this.dialogoCronograma = false;
+                return;
+            }
+            if (cronograma.dias_credito_calculados > 0) {
+                this.cliente_s.dias_credito = cronograma.dias_credito_calculados;
+            } else {
+                const hoy = moment().startOf('day');
+                const fechaVence = moment(this.fechaVencimiento).startOf('day');
+                const diasCalculados = fechaVence.diff(hoy, 'days');
+
+                if (diasCalculados > 0) {
+                    this.cliente_s.dias_credito = diasCalculados;
                 }
             }
-
             this.dialogoCronograma = false;
         },
         onDireccionSeleccionada(dir) {
@@ -789,6 +793,7 @@ export default {
                 const subTotal = parseFloat(this.sumaTotal() || 0);
                 const descuentos = parseFloat(this.sumaDescuentos() || 0);
                 const totalGeneral = parseFloat((subTotal - descuentos).toFixed(2));
+                const diasCreditoFinal = this.obtenerDiasCreditoFinal();
 
                 let cronogramaCabecera = null;
                 if (this.formaPago === 'CREDITO') {
@@ -809,7 +814,7 @@ export default {
                     fecha_emision: moment().unix(),
                     condicion_pago: this.formaPago,
                     fecha_vencimiento: this.formaPago === 'CREDITO' ? this.fechaVencimiento : null,
-                    dias_credito: this.cronograma?.dias_credito_calculados || this.cliente_s?.dias_credito || 0,
+                    dias_credito: diasCreditoFinal,
                     cronograma: cronogramaCabecera,
                     doc_tipo: this.documento,
                     doc_numero: this.numero,
@@ -1210,6 +1215,27 @@ export default {
                 }
             }
         },
+        calcularDiasCreditoDesdeFecha(fechaISO) {
+            if (!fechaISO) return 0;
+
+            const hoy = moment().startOf('day');
+            const fechaVence = moment(fechaISO, 'YYYY-MM-DD', true).startOf('day');
+
+            if (!fechaVence.isValid()) return 0;
+
+            return Math.max(0, fechaVence.diff(hoy, 'days'));
+        },
+        obtenerDiasCreditoFinal() {
+            if (this.formaPago !== 'CREDITO') return 0;
+
+            const diasCronograma = Number(this.cronograma?.dias_credito_calculados || 0);
+            if (diasCronograma > 0) return diasCronograma;
+
+            const diasCliente = Number(this.cliente_s?.dias_credito || 0);
+            if (diasCliente > 0) return diasCliente;
+
+            return this.calcularDiasCreditoDesdeFecha(this.fechaVencimiento);
+        },
         async crearCuentaxCobrar(pedidoId, cabecera, totalGeneral) {
             try {
                 let fechaVencimientoCXC = moment().unix();
@@ -1234,8 +1260,7 @@ export default {
                         estado: "PENDIENTE"
                     }];
                 }
-                const diasCreditoFinal = this.cronograma?.dias_credito_calculados ||
-                    this.cliente_s?.dias_credito || 0;
+                    const diasCreditoFinal = this.obtenerDiasCreditoFinal();
 
                 const cuentaPorCobrar = {
                     monto_total: montoTotal.toFixed(2),
