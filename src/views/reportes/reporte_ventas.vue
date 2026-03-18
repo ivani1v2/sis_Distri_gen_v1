@@ -452,7 +452,7 @@ export default {
 
                 let where = `
             WHERE id_empresa = @empresa
-            AND estado != 'ANULADO'
+           AND UPPER(TRIM(IFNULL(estado, ''))) LIKE '%APROBADO%'
             AND operacion != 'GRATUITA'
             AND EXTRACT(YEAR  FROM fecha_ts) = @year
             AND EXTRACT(MONTH FROM fecha_ts) = @mes

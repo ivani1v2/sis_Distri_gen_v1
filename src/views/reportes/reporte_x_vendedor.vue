@@ -164,7 +164,7 @@ export default {
                 .map(x => ({ ...x, docs: x.docsSet.size })) // convertir Set a número
                 .sort((a, b) => b.total - a.total)
         },
-        monedaSimbolo(){
+        monedaSimbolo() {
             return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         }
     },
@@ -202,9 +202,12 @@ export default {
                 const cabeceras = []
                 snap.forEach((child) => {
                     const c = child.val()
-                    if (String(c.estado || '').toLowerCase() === 'anulado') return
-                    console.log(c, this.sede_actual)
+                    const estado = String(c.estado || '').trim().toLowerCase()
+
+                    if (['anulado', 'error', 'rechazado','baja'].includes(estado)) return
+
                     if (this.sede_actual && c.vendedor && String(c.vendedor) !== String(this.sede_actual)) return
+
                     cabeceras.push(c)
                 })
 
