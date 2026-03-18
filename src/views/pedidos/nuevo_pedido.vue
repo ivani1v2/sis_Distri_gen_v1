@@ -960,12 +960,27 @@ export default {
         }, */
 
         agregar_lista(value) {
-            let nuevaLista = agregarLista({
-                listaActual: this.listaproductos,
-                nuevosItems: value,
-                createUUID: this.create_UUID,
-                redondear: (n) => this.redondear(n),
-            });
+            const productoNuevo = Array.isArray(value) ? value[0] : value;
+            const indiceExistente = this.listaproductos.findIndex(
+                item => String(item.id) === String(productoNuevo.id)
+            );
+
+            let nuevaLista;
+
+            if (indiceExistente !== -1) {
+                nuevaLista = [...this.listaproductos];
+                const productoExistente = nuevaLista.splice(indiceExistente, 1)[0];
+                productoExistente.cantidad = (productoExistente.cantidad || 0) + (productoNuevo.cantidad || 1);
+                productoExistente.__tsAdd = Date.now();
+                nuevaLista.unshift(productoExistente);
+            } else {
+                nuevaLista = agregarLista({
+                    listaActual: this.listaproductos,
+                    nuevosItems: value,
+                    createUUID: this.create_UUID,
+                    redondear: (n) => this.redondear(n),
+                });
+            }
 
             const nuevosIds = (Array.isArray(value) ? value : [value])
                 .map(x => String(x?.id ?? x?.cod_producto ?? ''))
@@ -977,7 +992,6 @@ export default {
                 this.listaproductos = nuevaLista;
             }
             else if (this.esListaPreciosActivo && this.listasPreciosCliente.length > 0 && this.cliente_s) {
-
                 nuevaLista = aplicarPreciosPorLista({
                     lineas: nuevaLista,
                     productos: this.$store.state.productos,
@@ -988,11 +1002,9 @@ export default {
                         forzar: false
                     }
                 });
-
                 this.listaproductos = nuevaLista;
             } else {
                 this.listaproductos = nuevaLista;
-
                 if (nuevosIds.length) {
                     this.recalculoUltimoAgregado(value);
                 }

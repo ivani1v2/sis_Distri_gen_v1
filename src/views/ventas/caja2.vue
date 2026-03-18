@@ -3,7 +3,8 @@
         <v-row>
             <v-col cols="12" md="4"
                 v-if="$vuetify.breakpoint.mdAndUp || ($vuetify.breakpoint.smAndDown && $vuetify.breakpoint.width > $vuetify.breakpoint.height)">
-                <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true" :x_categoria="true" :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null">
+                <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true" :x_categoria="true"
+                    :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null">
                 </cat_fijo>
             </v-col>
 
@@ -13,7 +14,8 @@
                         <v-row class="mt-n4" dense>
                             <v-col cols="6" xs="6">
                                 <cat_fijo v-if="$store.state.esmovil" ref="catFijo"
-                                    @agrega_lista="agregar_lista($event)" :muestra_tabla="false" :x_categoria="true" :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null">
+                                    @agrega_lista="agregar_lista($event)" :muestra_tabla="false" :x_categoria="true"
+                                    :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null">
                                 </cat_fijo>
 
                             </v-col>
@@ -214,7 +216,8 @@
             </div>
             <v-card class="pa-1">
                 <cat_fijo ref="catFijo" v-if="dial_catalogo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true"
-                    :x_categoria="false" :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null"  :lista_precios="lista_precios_selecta">
+                    :x_categoria="false" :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null"
+                    :lista_precios="lista_precios_selecta">
                 </cat_fijo>
             </v-card>
         </v-dialog>
@@ -381,8 +384,8 @@ export default {
             return !!this.$store.state.permisos.agrega_producto;
         },
         esListaPreciosActivo() {
-        return this.$store.state.configuracion?.lista_precios === true;
-    },
+            return this.$store.state.configuracion?.lista_precios === true;
+        },
 
     },
     mounted() {
@@ -531,41 +534,41 @@ export default {
         },
 
         agregar_lista(value) {
-            console.log(value)
-            // 1) Usamos tu helper para fusionar / sumar cantidades / etc.
-            let nuevaLista = agregarLista({
-                listaActual: this.listaproductos,
-                nuevosItems: value,
-                createUUID: this.create_UUID,
-                redondear: (n) => this.redondear(n),
-            });
+            const productoNuevo = Array.isArray(value) ? value[0] : value;
+            const indiceExistente = this.listaproductos.findIndex(
+                item => String(item.id) === String(productoNuevo.id)
+            );
 
-            // 2) Marcar timestamp interno para controlar el orden visual
-            const baseTs = Date.now();
-            let offset = 0;
+            let nuevaLista;
 
-            nuevaLista = nuevaLista.map(item => {
-                // si ya tenía marca, la respetamos
-                if (item.__tsAdd) return item;
+            if (indiceExistente !== -1) {
+                nuevaLista = [...this.listaproductos];
+                const productoExistente = nuevaLista.splice(indiceExistente, 1)[0];
+                productoExistente.cantidad = (productoExistente.cantidad || 0) + (productoNuevo.cantidad || 1);
+                productoExistente.__tsAdd = Date.now();
+                nuevaLista.unshift(productoExistente);
+            } else {
+                nuevaLista = agregarLista({
+                    listaActual: this.listaproductos,
+                    nuevosItems: value,
+                    createUUID: this.create_UUID,
+                    redondear: (n) => this.redondear(n),
+                });
 
-                // si no, se la ponemos (sirve para items recién agregados)
-                const nuevo = { ...item };
-                nuevo.__tsAdd = baseTs + (offset++); // pequeño offset para evitar empates
-                return nuevo;
-            });
-
-            // 3) Ordenar según modo
-            if (this.modoOrdenProductos === 'top') {
-                // Últimos agregados arriba → mayor __tsAdd primero
-                nuevaLista.sort((a, b) => {
-                    const ta = a.__tsAdd || 0;
-                    const tb = b.__tsAdd || 0;
-                    return tb - ta;
+                const baseTs = Date.now();
+                let offset = 0;
+                nuevaLista = nuevaLista.map(item => {
+                    if (!item.__tsAdd) {
+                        item.__tsAdd = baseTs + (offset++);
+                    }
+                    return item;
                 });
             }
-            // si es 'push', dejamos el orden que devuelve agregarLista
 
-            // 4) Asignamos y recalculamos bonos / precios
+            if (this.modoOrdenProductos === 'top') {
+                nuevaLista.sort((a, b) => (b.__tsAdd || 0) - (a.__tsAdd || 0));
+            }
+
             this.listaproductos = nuevaLista;
             this.recalculoUltimoAgregado(value);
         },
