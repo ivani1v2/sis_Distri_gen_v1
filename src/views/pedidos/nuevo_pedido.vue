@@ -268,7 +268,7 @@
                             label="Vence el" prepend-inner-icon="mdi-calendar" :readonly="!esAdmin"
                             :class="{ 'grey-lighten-2': !esAdmin }" />
                     </v-col>
-                    <v-col cols="6" class="mt-n5" v-if="formaPago === 'CREDITO'">
+                    <v-col cols="6" class="mt-n5" v-if="formaPago === 'CREDITO' && esAdmin">
                         <v-btn class="mt-2" x-small block :color="esAdmin ? 'indigo' : 'indigo'" dark
                             @click="abrirCronograma">
                             <v-icon left small>mdi-calendar-clock</v-icon>
