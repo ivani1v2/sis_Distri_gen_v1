@@ -3,7 +3,7 @@ class ImpresionQueue {
     this.queue = [];
     this.processing = false;
     this.currentDocId = null;
-    this.timeoutMs = 300000;
+    this.timeoutMs = 120000;
   }
 
   async add(job) {

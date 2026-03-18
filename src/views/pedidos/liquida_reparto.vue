@@ -133,7 +133,7 @@
                     <v-col cols="12" sm="4">
                         <h4 class="text-subtitle-1">
                             FECHA TRASLADO: <span class="primary--text">{{ conviertefecha(cabecera_total.fecha_traslado)
-                            }}</span>
+                                }}</span>
                         </h4>
                         <!-- Chip de transporte asignado -->
                         <div v-if="cabecera_total.d_transporte?.usuario_nombre" class="mt-1">
@@ -158,7 +158,7 @@
                             TOTAL VENTA: <span class="green--text text--darken-2">{{ moneda }} {{ t_general }}</span>
                         </h4>
                         <span class="caption">Contado: {{ moneda }} {{ t_contado }} | Crédito: {{ moneda }} {{ t_credito
-                            }}</span>
+                        }}</span>
                     </v-col>
                 </v-row>
             </v-card-text>
@@ -214,7 +214,7 @@
                                 </v-chip>
                             </td>
                             <td class="text-right caption red--text">{{ item.moneda }}{{ redondear(item.pendiente_pago)
-                            }}</td>
+                                }}</td>
                             <td class="text-right caption font-weight-bold">{{ item.moneda }}{{ redondear(item.total) }}
                             </td>
                             <td class="text-center">
@@ -296,7 +296,7 @@
                                     S/.{{ d.precio }}
                                     <strong v-if="d.preciodescuento != 0" class="red--text ml-1">(-S/.{{
                                         d.preciodescuento
-                                    }})</strong>
+                                        }})</strong>
                                 </td>
                                 <td class="text-right caption font-weight-bold">S/.{{
                                     redondear((Number(d.total_antes_impuestos)
@@ -319,7 +319,7 @@
                 <v-card-text class="pt-4">
                     <div class="mb-3 text-subtitle-2 grey--text text--darken-1">
                         Anulando comprobante: <strong class="error--text">{{ comp_anular ? comp_anular.numeracion : ''
-                        }}</strong>
+                            }}</strong>
                     </div>
 
                     <v-select dense outlined clearable :items="motivos_predeterminados"
@@ -487,7 +487,7 @@
                 <v-toolbar class="text-caption"
                     :color="guia_individual_tipo === 'transporte' ? 'purple darken-1' : 'cyan darken-1'" dense dark>
                     <v-toolbar-title>{{ guia_individual_tipo === 'transporte' ? 'Guía Transporte' : 'Guía Remisión'
-                    }}</v-toolbar-title>
+                        }}</v-toolbar-title>
                     <v-spacer></v-spacer>
                     <v-btn icon @click="dialogo_guia_individual = false">
                         <v-icon>mdi-close</v-icon>
@@ -1556,62 +1556,76 @@ export default {
             this.printDone = 0;
             this.printError = '';
             this.printDialog = true;
+            for (let i = 0; i < array.length; i++) {
+                let trabajoCompletado = false;
+                let timeoutId = null;
 
-            this.impresion_comp(array, 0, tamano, this.modo_impresion_comp, this.copias_comprobante);
-        },
-
-        async impresion_comp(array, i, tamano, modo = 'abre', copias = 1) {
-            try {
-                if (i < array.length) {
+                try {
                     const data = array[i];
+                    this.printDone = i;
+
                     const snapshot = await all_detalle_p(this.router_grupo, data.numeracion).once("value");
                     const arraydatos = snapshot.val();
 
-                    if (snapshot.exists()) {
-                        const doc = await colClientes().doc(String(data.dni)).get();
-                        if (doc.exists) {
-                            const datas = doc.data() || {}
-                            data.referencia = this.getReferenciaPrincipal(datas) || datas.referencia || '';
-                        }
+                    if (!snapshot.exists()) {
+                        throw new Error('Comprobante sin detalle');
+                    }
 
-                        await impresionQueue.add(async (docId) => {
-                            if (modo === 'descarga') {
-                                for (let c = 1; c <= copias; c++) {
-                                    if (c > 1) {
-                                        await new Promise(resolve => setTimeout(resolve, 500));
-                                    }
+                    const doc = await colClientes().doc(String(data.dni)).get();
+                    if (doc.exists) {
+                        const datas = doc.data() || {};
+                        data.referencia = this.getReferenciaPrincipal(datas) || datas.referencia || '';
+                    }
+
+                    await Promise.race([
+                        impresionQueue.add(async (docId) => {
+                            if (this.modo_impresion_comp === 'descarga') {
+                                for (let c = 1; c <= this.copias_comprobante; c++) {
+                                    if (c > 1) await new Promise(resolve => setTimeout(resolve, 500));
                                     const dataConCopia = {
                                         ...data,
                                         numero_copia: c,
-                                        total_copias: copias
+                                        total_copias: this.copias_comprobante
                                     };
-                                    await pdfGenera(arraydatos, dataConCopia, tamano, modo, 1);
+                                    await pdfGenera(arraydatos, dataConCopia, tamano, this.modo_impresion_comp, 1);
                                 }
                             } else {
-                                await pdfGenera(arraydatos, data, tamano, modo, copias);
+                                await pdfGenera(arraydatos, data, tamano, this.modo_impresion_comp, this.copias_comprobante);
                             }
-                        });
+                            trabajoCompletado = true;
+                        }),
+                        new Promise((_, reject) => {
+                            timeoutId = setTimeout(() => {
+                                reject(new Error(`Timeout en comprobante ${i + 1}`));
+                            }, 120000);
+                        })
+                    ]);
 
+                    clearTimeout(timeoutId);
+
+                    if (trabajoCompletado) {
                         this.printDone = i + 1;
-                        setTimeout(() => this.impresion_comp(array, i + 1, tamano, modo, copias), 1000);
-                    } else {
-                        setTimeout(() => this.impresion_comp(array, i + 1, tamano, modo, copias), 1000);
                     }
-                } else {
-                    const mensaje = modo === 'descarga' ? 'Descarga completada.' : 'Impresión finalizada.';
-                    this.$store.commit('dialogosnackbar', mensaje);
-                    this.printDialog = false;
+
+                } catch (error) {
+                    console.error('Error en comprobante:', error);
+                    this.printError = `Error en comprobante ${i + 1}: ${error.message}`;
+
+                    if (timeoutId) clearTimeout(timeoutId);
+                    const continuar = confirm(`Error en comprobante ${i + 1}. ¿Continuar con los siguientes?`);
+                    if (!continuar) {
+                        break;
+                    }
                 }
-            } catch (error) {
-                console.error('Error en impresión:', error);
-                this.printError = `Error en comprobante ${i + 1}`;
-                if (confirm(`Error en comprobante ${i + 1}. ¿Continuar?`)) {
-                    setTimeout(() => this.impresion_comp(array, i + 1, tamano, modo, copias), 1000);
-                } else {
-                    this.printDialog = false;
-                }
+                await new Promise(resolve => setTimeout(resolve, 500));
             }
+
+            this.$store.commit('dialogosnackbar',
+                this.modo_impresion_comp === 'descarga' ? 'Descarga completada' : 'Impresión finalizada'
+            );
+            this.printDialog = false;
         },
+
         getReferenciaPrincipal(cliente) {
             if (!cliente || !Array.isArray(cliente.direcciones) || cliente.direcciones.length === 0) return '';
             const dir = cliente.direcciones.find(d => d && d.principal) || cliente.direcciones[0];
