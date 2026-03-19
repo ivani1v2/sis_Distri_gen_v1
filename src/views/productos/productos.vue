@@ -177,7 +177,7 @@
                                     <v-list-item-title>Campos Adicionales</v-list-item-title>
                                 </v-list-item>
                             </v-list>
-                            <v-list dense>
+                            <v-list dense v-if="!sumacon">
                                 <v-list-item @click="abrirDialogoSincronizacion">
                                     <v-list-item-icon><v-icon color="teal">mdi-sync</v-icon></v-list-item-icon>
                                     <v-list-item-title>Sincronizar en otras sedes</v-list-item-title>
@@ -1643,7 +1643,15 @@ export default {
                 }
                 this.sumacontador()
             } else {
-                this.dialogo = false;
+                const todasLasSedes = store.state.array_sedes || [];
+                const bdActual = this.$store.state.baseDatos.bd;
+                const otrasSedes = todasLasSedes.filter(s => s.tipo === 'sede' && s.base !== bdActual);
+
+                if (otrasSedes.length > 0) {
+                    this.dialogoSincronizar = true;
+                } else {
+                    this.dialogo = false;
+                }
             }
 
             store.commit("dialogoprogress")
@@ -1900,6 +1908,10 @@ export default {
         },
 
         abrirDialogoSincronizacion() {
+            if (this.sumacon) {
+                store.commit("dialogosnackbar", "La sincronizacion se habilita al editar el producto");
+                return;
+            }
             if (!this.id) {
                 store.commit("dialogosnackbar", "Primero debes guardar el producto");
                 return;
@@ -1913,6 +1925,8 @@ export default {
         },
 
         onProductoSincronizado(resultado) {
+            this.dialogo = false;
+            this.dialogoSincronizar = false;
         },
         formatearPrecioConMoneda(valor, factor = 1) {
             const precio = Number(valor) || 0;

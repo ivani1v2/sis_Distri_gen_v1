@@ -77,15 +77,15 @@
                     </v-col>
                 </v-row>
 
-                <v-row class="mt-n4">
-                    <v-col cols="4">
+                <v-row class="mt-n2" dense>
+                    <v-col cols="12" sm="6">
                         <v-btn block color="primary" @click="cobrarContado()" small>
                             EFECTIVO<span v-if="!$store.state.esmovil">(F3)</span>
                         </v-btn>
                     </v-col>
-                    <v-col cols="4">
+                    <v-col cols="12" sm="6" v-if="$store.state.configuracion.creditofactura">
                         <v-btn :disabled="numero == '' || !permiteCreditoCliente" block color="error"
-                            @click="activarCredito()" small v-if="$store.state.configuracion.creditofactura">
+                            @click="activarCredito()" small>
                             Credito
                         </v-btn>
                     </v-col>
@@ -101,23 +101,25 @@
                     Este cliente no tiene permiso de crédito.
                 </v-alert>
 
-                <v-row dense class="mt-1" v-if="formaPago === 'CREDITO'">
-                    <v-col cols="12" sm="6">
-                        <v-text-field outlined dense type="date" v-model="fechaVencimiento" :min="hoyISO"
-                            label="Vence el" prepend-inner-icon="mdi-calendar" />
-                    </v-col>
-                    <v-col cols="12" sm="6" v-if="esAdmin">
-                        <v-btn class="mt-1" small block color="indigo" dark @click="abrirCronograma">
-                            <v-icon left small>mdi-calendar-clock</v-icon>
-                            {{ cronograma ? 'Editar Cronograma' : 'Crear Cronograma' }}
-                        </v-btn>
-                    </v-col>
-                    <v-col cols="12">
-                        <v-btn block color="error" @click="cobrarCredito()" small>
-                            Confirmar Credito
-                        </v-btn>
-                    </v-col>
-                </v-row>
+                <v-card flat outlined class="mt-2 pa-2" v-if="formaPago === 'CREDITO'">
+                    <v-row dense>
+                        <v-col cols="12" sm="6">
+                            <v-text-field outlined dense type="date" v-model="fechaVencimiento" :min="hoyISO"
+                                label="Vence el" prepend-inner-icon="mdi-calendar" />
+                        </v-col>
+                        <v-col cols="12" sm="6" v-if="esAdmin">
+                            <v-btn class="mt-1" small block color="indigo" dark @click="abrirCronograma">
+                                <v-icon left small>mdi-calendar-clock</v-icon>
+                                {{ cronograma ? 'Editar Cronograma' : 'Crear Cronograma' }}
+                            </v-btn>
+                        </v-col>
+                        <v-col cols="12">
+                            <v-btn block color="error" @click="cobrarCredito()" small>
+                                Confirmar Credito
+                            </v-btn>
+                        </v-col>
+                    </v-row>
+                </v-card>
             </template>
 
         </v-card>

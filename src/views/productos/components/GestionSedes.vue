@@ -160,10 +160,11 @@
                 <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn color="teal" dark @click="ejecutarSincronizacion" :loading="sincronizando"
-                        :disabled="sincronizando || !sedesSincronizacion.some(s => s.seleccionada)" elevation="2">
+                        :disabled="sincronizando" elevation="2">
                         <v-icon left>mdi-sync</v-icon>
-                        Sincronizar {{ sedesSincronizacion.filter(s => s.seleccionada).length }}
-                        {{ sedesSincronizacion.filter(s => s.seleccionada).length === 1 ? 'sede' : 'sedes' }}
+                        {{ sedesSincronizacion.some(s => s.seleccionada)
+                            ? `Sincronizar ${sedesSincronizacion.filter(s => s.seleccionada).length} ${sedesSincronizacion.filter(s => s.seleccionada).length === 1 ? 'sede' : 'sedes'}`
+                            : 'Continuar sin sincronizar' }}
                     </v-btn>
                 </v-card-actions>
             </v-card>
@@ -360,6 +361,13 @@ export default {
             this.$emit('cerrar-sincronizar');
         },
         async ejecutarSincronizacion() {
+            const sedesSeleccionadas = this.sedesSincronizacion.filter(s => s.seleccionada);
+            if (sedesSeleccionadas.length === 0) {
+                this.dialogoSincronizarLocal = false;
+                this.$emit('sincronizado', { exitos: 0, errores: 0, omitido: true });
+                return;
+            }
+
             store.commit("dialogoprogress");
             this.sincronizando = true;
 
@@ -400,7 +408,6 @@ export default {
                 }
             });
 
-            const sedesSeleccionadas = this.sedesSincronizacion.filter(s => s.seleccionada);
             let exitos = 0;
             let errores = 0;
 
