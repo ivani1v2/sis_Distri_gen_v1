@@ -72,7 +72,7 @@ async function completa_items(arrays) {
       valor_unitario = precio_item / (1 + porcentaje_igv);
       antesimpuesto = valor_unitario * data.cantidad;
       totalImpuesto = antesimpuesto * porcentaje_igv;
-      valorTotal = antesimpuesto + totalImpuesto;
+      valorTotal = antesimpuesto;
       totaloperaGravada += antesimpuesto;
       totalIGV += totalImpuesto;
       igv = totalImpuesto;
