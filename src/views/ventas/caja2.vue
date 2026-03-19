@@ -3,7 +3,8 @@
         <v-row>
             <v-col cols="12" md="4"
                 v-if="$vuetify.breakpoint.mdAndUp || ($vuetify.breakpoint.smAndDown && $vuetify.breakpoint.width > $vuetify.breakpoint.height)">
-                <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true" :x_categoria="true" :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null">
+                <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true" :x_categoria="true"
+                    :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null">
                 </cat_fijo>
             </v-col>
 
@@ -13,7 +14,8 @@
                         <v-row class="mt-n4" dense>
                             <v-col cols="6" xs="6">
                                 <cat_fijo v-if="$store.state.esmovil" ref="catFijo"
-                                    @agrega_lista="agregar_lista($event)" :muestra_tabla="false" :x_categoria="true" :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null">
+                                    @agrega_lista="agregar_lista($event)" :muestra_tabla="false" :x_categoria="true"
+                                    :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null">
                                 </cat_fijo>
 
                             </v-col>
@@ -64,6 +66,21 @@
                         </v-icon>
                     </div>
                 </h4>
+
+                <v-alert v-if="excedeLineaCredito" type="error" dense border="left" colored-border class="mt-8 mb-2"
+                    icon="mdi-alert-octagon">
+                    <div class="d-flex flex-wrap justify-space-between align-center text-caption">
+                        <span>Línea de crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2)
+                        }}</strong></span>
+                        <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2)
+                        }}</strong></span>
+                        <span>Disponible: <strong class="red--text">{{ moneda }} {{ saldoDisponible.toFixed(2)
+                        }}</strong></span>
+                    </div>
+                    <div class="mt-1 red--text text-caption font-weight-medium">
+                        El monto de la venta ({{ moneda }} {{ totalDetalle.toFixed(2) }}) supera el saldo disponible
+                    </div>
+                </v-alert>
 
 
                 <v-card class="mt-5">
@@ -194,7 +211,7 @@
                         </v-col>
                         <v-col cols="3">
                             <v-btn block elevation="15" rounded v-if="listaproductos != ''" color="error"
-                                @click="cobrar()">
+                                @click="cobrar()" :disabled="excedeLineaCredito">
                                 Cobrar <span v-if="!$store.state.esmovil">(F2)</span>
                             </v-btn>
                         </v-col>
@@ -214,7 +231,8 @@
             </div>
             <v-card class="pa-1">
                 <cat_fijo ref="catFijo" v-if="dial_catalogo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true"
-                    :x_categoria="false" :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null"  :lista_precios="lista_precios_selecta">
+                    :x_categoria="false" :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null"
+                    :lista_precios="lista_precios_selecta" :productos_en_venta="listaproductos">
                 </cat_fijo>
             </v-card>
         </v-dialog>
@@ -265,7 +283,8 @@
             @agrega_lista="agregar_lista($event), dialogAgrega = false" />
         <imprime v-if="genera_pdf" :data="cabecera_cobro" @cierra="cierra_imprime()" />
         <dial_edita_prod v-if="dialogoProducto" @cierra="dialogoProducto = false"
-            @editaProducto="editaProductoFinal($event)" :item_selecto="item_selecto" @eliminaedita="eliminaedita()" />
+            @editaProducto="editaProductoFinal($event)" :item_selecto="item_selecto" @eliminaedita="eliminaedita()"
+            :productos_en_venta="listaproductos" />
     </div>
 </template>
 
@@ -274,6 +293,8 @@ import moment from 'moment'
 import {
     procesar_items
 } from '../../funciones_generales'
+import { allcuentaxcobrar } from '@/db'
+import { colClientes } from '@/db_firestore'
 import store from '@/store/index'
 import dial_proforma from './dialogos/dialogo_proforma.vue'
 import cobrar from '@/views/ventas/cobro_final'
@@ -281,6 +302,7 @@ import agrega_producto from '@/views/ventas/agrega_producto'
 import imprime from '@/components/dialogos/dialog_imprime'
 import cat_fijo from '@/components/catalogo_fijo'
 import { aplicaPreciosYBonos, agregarLista, analizaPreciosParcial, analizaGruposParcial } from "../funciones/calculo_bonos";
+import { aplicarPreciosPorLista } from "../funciones/calculo_lista_precios";
 import dial_edita_prod from './edita_producto.vue'
 export default {
     name: 'caja',
@@ -320,6 +342,9 @@ export default {
             dial_config: false,
             modoOrdenProductos: 'push',
             tablaOscura: false,
+            lineaCreditoCliente: 0,
+            deudaCliente: 0,
+            cargandoCredito: false,
         }
     },
     created() {
@@ -337,6 +362,7 @@ export default {
             const longitud = (data.longitud ?? dirPri?.longitud ?? null);
 
             this.cliente_s = data;
+            this.lineaCreditoCliente = Number(data.linea_credito || 0)
             this.arra_cliente = {
                 dir,
                 dni: data.documento || '',
@@ -344,6 +370,10 @@ export default {
                 latitud,
                 longitud,
             };
+
+            if (this.lineaCreditoActivo && data.documento) {
+                this.cargarDatosCredito(data.documento)
+            }
 
         }
         if (store.state.emision != '') {
@@ -381,8 +411,36 @@ export default {
             return !!this.$store.state.permisos.agrega_producto;
         },
         esListaPreciosActivo() {
-        return this.$store.state.configuracion?.lista_precios === true;
-    },
+            return this.$store.state.configuracion?.lista_precios === true;
+        },
+        listasPreciosCliente() {
+            if (!this.cliente_s || typeof this.cliente_s !== 'object' || Array.isArray(this.cliente_s)) {
+                return [];
+            }
+            return Array.isArray(this.cliente_s.listas_precios) ? this.cliente_s.listas_precios : [];
+        },
+        lineaCreditoActivo() {
+            return this.$store.state.configuracion?.linea_credito_activo === true;
+        },
+        totalDetalle() {
+            let suma = 0;
+            for (let i = 0; i < this.listaproductos.length; i++) {
+                if (this.listaproductos[i].operacion !== 'GRATUITA') {
+                    suma += (Number(this.listaproductos[i].cantidad || 0) * Number(this.listaproductos[i].precio || 0))
+                        - parseFloat(this.listaproductos[i].preciodescuento || 0);
+                }
+            }
+            return suma;
+        },
+        saldoDisponible() {
+            return this.lineaCreditoCliente - this.deudaCliente;
+        },
+        excedeLineaCredito() {
+            if (!this.lineaCreditoActivo) return false;
+            if (this.lineaCreditoCliente <= 0) return false;
+            if (!this.cliente_s?.permite_credito) return false;
+            return this.totalDetalle > this.saldoDisponible;
+        },
 
     },
     mounted() {
@@ -401,35 +459,108 @@ export default {
         modoOrdenProductos(nuevo) {
             localStorage.setItem('modoOrdenProductos', nuevo);
         },
+        'cliente_s.documento'(nv) {
+            if (this.lineaCreditoActivo && nv) {
+                this.cargarDatosCredito(nv)
+            }
+        },
     },
 
     methods: {
-        editaProductoFinal(lineaActualizada) {
-            // ✅ si el usuario cambió el precio, marcamos como manual
-            // (asumo que en tu diálogo editas lineaActualizada.precio)
-            lineaActualizada.precio_manual = true;
+        async cargarDatosCredito(documento) {
+            if (!documento || !this.lineaCreditoActivo) return;
 
-            // opcional: si quieres conservar "precio_base" como el precio original de catálogo:
-            // si no existe base, la seteas una vez
-            if (lineaActualizada.precio_base == null) {
-                lineaActualizada.precio_base = Number(lineaActualizada.precio || 0);
+            this.cargandoCredito = true;
+            try {
+                const docSnap = await colClientes().doc(String(documento)).get();
+                if (docSnap.exists) {
+                    const clienteData = docSnap.data() || {};
+                    this.lineaCreditoCliente = parseFloat(clienteData.linea_credito || this.lineaCreditoCliente || 0);
+                }
+
+                const snapshot = await allcuentaxcobrar()
+                    .orderByChild('documento')
+                    .equalTo(String(documento))
+                    .once('value');
+
+                let deudaTotal = 0;
+                if (snapshot.exists()) {
+                    snapshot.forEach(item => {
+                        const cuenta = item.val();
+                        if (cuenta.estado === 'PENDIENTE') {
+                            deudaTotal += parseFloat(cuenta.monto_pendiente || 0);
+                        }
+                    });
+                }
+                this.deudaCliente = deudaTotal;
+            } catch (error) {
+                console.error('Error cargando datos de crédito:', error);
+                this.deudaCliente = 0;
+            } finally {
+                this.cargandoCredito = false;
+            }
+        },
+        editaProductoFinal(lineaActualizada) {
+            const idx = this.listaproductos.findIndex(l => l.uuid === lineaActualizada.uuid);
+            if (idx !== -1) {
+                this.$set(this.listaproductos, idx, lineaActualizada);
             }
 
-            const idx = this.listaproductos.findIndex(l => l.uuid === lineaActualizada.uuid);
-            if (idx !== -1) this.$set(this.listaproductos, idx, lineaActualizada);
+            if (this.esListaPreciosActivo) {
+                const categoriaEditada = lineaActualizada.categoria;
 
-            if (store.state.permisos.permite_editar_bono) this.recalculoCompleto();
+                const idsCategoria = this.listaproductos
+                    .filter(l => l.categoria === categoriaEditada)
+                    .map(l => String(l.id));
+
+                if (idsCategoria.length > 0) {
+                    this.listaproductos = aplicarPreciosPorLista({
+                        lineas: this.listaproductos,
+                        productos: this.$store.state.productos,
+                        cliente: { listas_precios: this.listasPreciosCliente },
+                        idsAfectados: idsCategoria,
+                        opciones: {
+                            respetarManual: true,
+                            forzar: false,
+                            productosEnVenta: this.listaproductos
+                        }
+                    });
+                }
+            }
+
+            if (store.state.permisos.permite_editar_bono) {
+                this.recalculoCompleto();
+            }
+
             this.dialogoProducto = false;
         },
 
         eliminaedita() {
-            var pos = this.listaproductos.map(e => e.uuid).indexOf(this.item_selecto.uuid)
-            this.listaproductos.splice(pos, 1)
-            this.dialogoProducto = false
-            if (store.state.permisos.permite_editar_bono) {
-                this.recalculoCompleto()
+            const productoEliminado = this.item_selecto;
+            const pos = this.listaproductos.map(e => e.uuid).indexOf(this.item_selecto.uuid);
+            this.listaproductos.splice(pos, 1);
+
+            if (productoEliminado?.categoria && this.esListaPreciosActivo) {
+                const idsCategoria = this.listaproductos
+                    .filter(l => l.categoria === productoEliminado.categoria)
+                    .map(l => String(l.id));
+
+                if (idsCategoria.length > 0) {
+                    this.listaproductos = aplicarPreciosPorLista({
+                        lineas: this.listaproductos,
+                        productos: this.$store.state.productos,
+                        cliente: { listas_precios: this.listasPreciosCliente },
+                        idsAfectados: idsCategoria,
+                        opciones: {
+                            respetarManual: true,
+                            forzar: false,
+                            productosEnVenta: this.listaproductos
+                        }
+                    });
+                }
             }
 
+            this.dialogoProducto = false;
         },
         getDirPrincipal(cliente) {
             const arr = Array.isArray(cliente?.direcciones) ? cliente.direcciones : [];
@@ -468,6 +599,10 @@ export default {
             return fecha
         },
         async cobrar() {
+            if (this.excedeLineaCredito) {
+                store.commit("dialogosnackbar", "El monto supera el saldo disponible de la línea de crédito");
+                return;
+            }
             if (store.state.permisos.permite_editar_bono) {
                 this.recalculoCompleto()
             }
@@ -573,38 +708,44 @@ export default {
         recalculoUltimoAgregado(value) {
             const items = Array.isArray(value) ? value : [value];
 
-            // ids agregados (último/últimos)
-            const ids = items
-                .map(x => String(x?.id ?? x?.cod_producto ?? ''))
-                .filter(Boolean);
-
-            if (!ids.length) return;
-
-            // ✅ 1) Precios SOLO para esos IDs (si permites editar precios)
-
-            this.listaproductos = analizaPreciosParcial({
-                lineas: this.listaproductos,
-                productos: this.$store.state.productos,
-                bonos: this.$store.state.bonos,
-                idsAfectados: ids,
-                lista_precios: this.lista_precios_selecta,
-                redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
-                inPlace: true,
+            const categoriasAfectadas = new Set();
+            items.forEach(item => {
+                const producto = this.$store.state.productos.find(p => String(p.id) === String(item?.id));
+                if (producto?.categoria) {
+                    categoriasAfectadas.add(producto.categoria);
+                }
             });
 
+            if (categoriasAfectadas.size === 0) return;
 
-            // ✅ 2) Bonos: SOLO si está permitido editar bono (si no, NO tocamos nada)
+            const idsCategoria = this.listaproductos
+                .filter(l => categoriasAfectadas.has(l.categoria))
+                .map(l => String(l.id));
 
+            if (this.esListaPreciosActivo) {
+                this.listaproductos = aplicarPreciosPorLista({
+                    lineas: this.listaproductos,
+                    productos: this.$store.state.productos,
+                    cliente: { listas_precios: this.listasPreciosCliente },
+                    idsAfectados: idsCategoria,
+                    opciones: {
+                        respetarManual: true,
+                        forzar: false,
+                        productosEnVenta: this.listaproductos
+                    }
+                });
+            }
+
+            // 2) Bonos
             this.listaproductos = analizaGruposParcial({
                 lineas: this.listaproductos,
                 productos: this.$store.state.productos,
                 bonos: this.$store.state.bonos,
-                idsAfectados: ids, // esto limita a grupos del último producto
+                idsAfectados: idsCategoria,
                 createUUID: this.create_UUID,
                 redondear: (n) => Number(n).toFixed(this.$store.state.configuracion.decimal),
                 inPlace: true,
             });
-
         },
 
         editaProducto(val) {

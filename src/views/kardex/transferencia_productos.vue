@@ -289,26 +289,6 @@
                                 detalleActual.total_unidades ||
                                 calcularUnidades(detalleActual) }}</div>
                         </v-col>
-
-                        <v-divider vertical></v-divider>
-
-                        <v-col class="px-1">
-                            <div class="text-overline grey--text lh-1">PESO</div>
-                            <div class="text-subtitle-2 font-weight-bold orange--text">{{
-                                Number(detalleActual.peso_total ||
-                                    0).toFixed(2) }}<span class="caption">kg</span></div>
-                        </v-col>
-
-                        <v-divider vertical></v-divider>
-
-                        <v-col class="px-1">
-                            <div class="text-overline grey--text lh-1">TOTAL</div>
-                            <div class="text-subtitle-2 font-weight-bold success--text">{{ moneda }}{{
-                                Number(detalleActual.total ||
-                                    0).toFixed(2) }}
-                            </div>
-                        </v-col>
-
                     </v-row>
                 </v-card>
 
@@ -321,9 +301,6 @@
                         <tr class="grey lighten-3">
                             <th>Producto</th>
                             <th class="text-center">Cantidad</th>
-                            <th class="text-right">P. Unit.</th>
-                            <th class="text-right">Peso</th>
-                            <th class="text-right">Subtotal</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -331,11 +308,6 @@
                             <td><Strong>{{ p.id }}</Strong> - {{ p.nombre }}</td>
 
                             <td class="text-center">{{ p.cantidad }}</td>
-                            <td class="text-right">{{ moneda }}{{ Number(p.precio || 0).toFixed(2) }}</td>
-                            <td class="text-right">{{ Number(p.peso || 0).toFixed(2) }}kg</td>
-                            <td class="text-right font-weight-medium">{{ moneda }}{{ Number(p.monto_soles ||
-                                0).toFixed(2)
-                                }}</td>
                         </tr>
                     </tbody>
                 </v-simple-table>

@@ -38,7 +38,7 @@
                     </v-container>
                 </v-card>
             </v-col>
-            <v-col v-if="false" cols="6" class="pa-1 mx-auto " md="4" sm="4" xs="6">
+            <v-col v-if="$store.state.permisos.transferencias" cols="6" class="pa-1 mx-auto " md="4" sm="4" xs="6">
                 <v-card @click.prevent="router('transferencia_productos')">
                     <v-container>
                         <v-img class="mx-auto" height="70" width="70" src="/truck.png"></v-img>
@@ -80,7 +80,8 @@
                     </v-container>
                 </v-card>
             </v-col>
-            <v-col v-if="$store.state.permisos.modulocuentasxcobrar" cols="6" class="pa-1 mx-auto " md="4" sm="4" xs="6">
+            <v-col v-if="$store.state.permisos.modulocuentasxcobrar" cols="6" class="pa-1 mx-auto " md="4" sm="4"
+                xs="6">
                 <v-card @click.prevent="router('cuentas_cobrar')">
                     <v-container>
                         <v-img class="mx-auto" height="70" width="70" src="/tarjeta.png"></v-img>
@@ -200,6 +201,11 @@
             </v-card>
         </v-dialog>
         <dial_avance v-if="dialogo_avance" @cierra="dialogo_avance = false"></dial_avance>
+        <busca-clientes-pedido v-if="dialogoSeleccionCliente" @seleccionar="onClienteSeleccionado"
+            :mostrarSinCliente="true" @sinCliente="iniciarVentaSinCliente" @cerrar="dialogoSeleccionCliente = false"
+            :sede="$store.state.sedeActual.codigo" />
+        <deudas-cliente v-model="dialogoDeudasCliente" :cliente="clienteSeleccionado"
+            :accion-pendiente="accionPendiente" @continuar="iniciarVentaDirecta" @cerrar="cerrarDialogoDeudas" />
     </div>
 </template>
 
@@ -207,12 +213,17 @@
 // @ is an alias to /src
 import store from '@/store/index'
 import dial_avance from '../views/reportes/avance_pre_venta.vue'
-import { migra_clientes, genera_clientes_ligeros_por_ruc,limpiar_clientes_por_ruc,genera_clientes_ligeros } from '../migra_cliente.js'
+import { migra_clientes, genera_clientes_ligeros_por_ruc, limpiar_clientes_por_ruc, genera_clientes_ligeros } from '../migra_cliente.js'
 import { copiarDocumento } from '../migrar_bd.js'
+import buscaClientesPedido from './pedidos/dialogos/dialogo_cliente_pedido.vue'
+import deudasCliente from './clientes/dialogos/dial_deudas_cliente.vue'
+
 export default {
     name: 'panel',
     components: {
-        dial_avance
+        dial_avance,
+        buscaClientesPedido,
+        deudasCliente
     },
     data() {
         return {
@@ -220,6 +231,10 @@ export default {
             alert: true,
             dialog: false,
             dialogo_avance: false,
+            dialogoSeleccionCliente: false,
+            dialogoDeudasCliente: false,
+            accionPendiente: 'pre_venta',
+            clienteSeleccionado: null
 
         }
     },
@@ -242,35 +257,57 @@ export default {
             window.open(url);
         },
         opcionCaja() {
-            //if (store.state.esmovil) {
-            if (store.state.baseDatos.caja2) {
-                this.$router.push({
-                    name: 'caja2'
-                })
-            } else {
-                this.$router.push({
-                    name: 'caja'
-                })
-            }
-            /*}else{
-                if (store.state.baseDatos.caja2) {
-                    this.$router.push({
-                        name: 'caja_pc'
-                    })
-                } else {
-                    this.$router.push({
-                        name: 'caja'
-                    })
-                }
-            }*/
+            this.dialogoSeleccionCliente = true;
+        },
 
+        async onClienteSeleccionado(cliente) {
+            this.accionPendiente = 'pre_venta';
+            this.dialogoSeleccionCliente = false;
+            this.clienteSeleccionado = cliente;
+
+            await this.$nextTick();
+            if (this.$store.state.permisos.modulocuentasxcobrar) {
+                this.dialogoDeudasCliente = true;
+            } else {
+                this.iniciarVentaDirecta({
+                    accion: 'pre_venta',
+                    cliente,
+                    tieneDeuda: false
+                });
+            }
+        },
+
+        iniciarVentaDirecta(payload) {
+            const cliente = payload?.cliente || payload;
+            store.commit('cliente_selecto', cliente);
+            this.dialogoDeudasCliente = false;
+            this.clienteSeleccionado = null;
+
+            if (store.state.baseDatos.caja2) {
+                this.$router.push({ name: 'caja2' });
+            } else {
+                this.$router.push({ name: 'caja' });
+            }
+        },
+        iniciarVentaSinCliente() {
+            this.dialogoSeleccionCliente = false;
+            store.commit('cliente_selecto', '');
+            if (store.state.baseDatos.caja2) {
+                this.$router.push({ name: 'caja2' });
+            } else {
+                this.$router.push({ name: 'caja' });
+            }
+        },
+        cerrarDialogoDeudas() {
+            this.dialogoDeudasCliente = false;
+            this.clienteSeleccionado = null;
         },
         migra_clientess() {
             console.log('Iniciando migración de clientes...')
             // migra_clientes()
             //copiarDocumento()
             //limpiar_clientes_por_ruc('20100055237')
-           // genera_clientes_ligeros()
+            // genera_clientes_ligeros()
             //genera_clientes_ligeros_por_ruc('20100055237') // Ejemplo de RUC adicional
         }
 

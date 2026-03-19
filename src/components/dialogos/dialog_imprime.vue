@@ -239,7 +239,7 @@ export default {
                             await this.setCampoCliente(this.datos_cliente.id, 'telefono', this.numero)
                         }
                         var message = 'Puede ver su comprobante en el siguiente link \n' +
-                            'https://sis-distribucion.web.app/comprobantes_clientes/' + store.state.baseDatos.bd + '/' + store.state.baseDatos.ruc + '/' + item.cod_comprobante + '/' + item.serie + '/' + item.correlativoDocEmitido + '/' + item.dni
+                            'https://chikillo-distribucion.web.app/comprobantes_clientes/' + store.state.baseDatos.bd + '/' + store.state.baseDatos.ruc + '/' + item.cod_comprobante + '/' + item.serie + '/' + item.correlativoDocEmitido + '/' + item.dni
                         if (store.state.esmovil) {
                             var url = "whatsapp://send?text=" + encodeURIComponent(message) + "&phone=" + encodeURIComponent('+51' + this.numero)
                         } else {

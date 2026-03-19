@@ -4,8 +4,14 @@
             <v-system-bar class="" dense window dark height="40">
                 <v-icon large color="red" @click="cierra()">mdi-close</v-icon>
                 <v-spacer></v-spacer>
-                <h3>{{ modoEdicion ? 'Editar Transferencia' : 'Nueva Transferencia de Productos' }}</h3>
+                <h3>{{ modoEdicion ? 'Editar Transferencia' : (esOrigenVendedor ? 'Devolución de Productos' : 'Nueva
+                    Transferencia de Productos') }}</h3>
                 <v-spacer></v-spacer>
+                <v-btn v-if="esOrigenVendedor && !modoEdicion" color="warning" dark small
+                    @click="cargarProductosVendedor" :loading="cargandoProductosVendedor">
+                    <v-icon left>mdi-arrow-left-bold</v-icon>
+                    Devolver
+                </v-btn>
             </v-system-bar>
         </div>
 
@@ -53,7 +59,7 @@
                                     <v-list-item-subtitle>
                                         <v-chip x-small color="grey" class="mr-1">ID: {{ item.id }}</v-chip>
                                         <v-chip x-small color="blue" class="mr-1" v-if="item.codbarra">{{ item.codbarra
-                                            }}</v-chip>
+                                        }}</v-chip>
                                         <v-chip x-small :color="item.stock > 0 ? 'success' : 'error'">
                                             Stock: {{ item.stock || 0 }}
                                         </v-chip>
@@ -93,50 +99,34 @@
                         <div class="text-subtitle-2 font-weight-bold primary--text">{{ totalUnidades }}</div>
                     </v-col>
 
-                    <v-divider vertical></v-divider>
-
-                    <v-col class="px-1">
-                        <div class="text-overline grey--text lh-1">PESO</div>
-                        <div class="text-subtitle-2 font-weight-bold orange--text">{{ totalPeso.toFixed(1) }}<span
-                                class="caption">kg</span></div>
-                    </v-col>
-
-                    <v-divider vertical></v-divider>
-
-                    <v-col class="px-1">
-                        <div class="text-overline grey--text lh-1">TOTAL</div>
-                        <div class="text-subtitle-2 font-weight-bold success--text">S/{{ totalMontoSoles.toFixed(2) }}
-                        </div>
-                    </v-col>
-
                 </v-row>
             </v-card>
             <v-card outlined>
                 <v-data-table :headers="headersTransferencia" :items="lista_transferencia" dense class="elevation-0"
                     :items-per-page="10" no-data-text="Agregue productos a transferir"
                     :class="{ 'd-none': $vuetify.breakpoint.smAndDown && lista_transferencia.length > 0 }">
-                    <template v-slot:item.nombre="{ item }">
+                    <template v-slot:[`item.nombre`]="{ item }">
                         <div>
                             <strong>{{ item.nombre }}</strong>
                             <div class="text-caption grey--text">{{ item.id }}</div>
                         </div>
                     </template>
 
-                    <template v-slot:item.cantidad="{ item }">
+                    <template v-slot:[`item.cantidad`]="{ item }">
 
                         <strong class="red--text"> {{ item.cantidad }}</strong>
                     </template>
 
-                    <template v-slot:item.precio="{ item }">
+                    <template v-slot:[`item.precio`]="{ item }">
                         S/ {{ Number(item.precio || 0).toFixed(2) }}
                     </template>
-                    <template v-slot:item.monto_soles="{ item }">
+                    <template v-slot:[`item.monto_soles`]="{ item }">
                         <strong>S/ {{ Number(item.monto_soles || 0).toFixed(2) }}</strong>
                     </template>
-                    <template v-slot:item.peso_total="{ item }">
+                    <template v-slot:[`item.peso_total`]="{ item }">
                         {{ ((item.peso || 0) * item.cantidad).toFixed(2) }} kg
                     </template>
-                    <template v-slot:item.acciones="{ item }">
+                    <template v-slot:[`item.acciones`]="{ item }">
                         <v-btn icon small color="orange" @click="editarCantidadProducto(item)">
                             <v-icon small>mdi-pencil</v-icon>
                         </v-btn>
@@ -202,42 +192,18 @@
                         </v-alert>
 
                         <v-row dense>
-                            <v-col cols="6">
+                            <v-col cols="12">
                                 <div class="text-caption grey--text">Stock Disponible</div>
                                 <v-chip :color="stockMaximoEdicion > 0 ? 'success' : 'error'" class="mt-1">
                                     {{ stockMaximoEdicion || 0 }} unid.
                                 </v-chip>
                             </v-col>
-                            <v-col cols="6">
-                                <div class="text-caption grey--text">Precio Unitario</div>
-                                <div class="text-h6">S/ {{ Number(productoActual.precio || 0).toFixed(2) }}</div>
-                            </v-col>
                         </v-row>
-
-
                         <v-divider class="my-3"></v-divider>
-
-
                         <v-text-field v-model.number="cantidadAgregar" type="number" label="Cantidad a transferir"
                             outlined dense :min="1" :max="stockMaximoEdicion" :rules="reglaCantidad" ref="inputCantidad"
                             @keyup.enter="agregarALista">
                         </v-text-field>
-
-
-                        <v-row dense>
-                            <v-col cols="6">
-                                <div class="text-caption grey--text">Subtotal</div>
-                                <div class="text-h6 success--text">
-                                    S/ {{ (cantidadAgregar * (productoActual.precio || 0)).toFixed(2) }}
-                                </div>
-                            </v-col>
-                            <v-col cols="6">
-                                <div class="text-caption grey--text">Peso</div>
-                                <div class="text-h6 orange--text">
-                                    {{ (cantidadAgregar * (productoActual.peso || 0)).toFixed(2) }} kg
-                                </div>
-                            </v-col>
-                        </v-row>
                     </div>
                 </v-card-text>
                 <v-card-actions>
@@ -265,7 +231,7 @@
                         <div class="text-body-2">
                             <span v-if="modoEdicion">
                                 ¿Está seguro de actualizar esta transferencia con <strong>{{ lista_transferencia.length
-                                    }}
+                                }}
                                     productos</strong>?
                             </span>
                             <span v-else>
@@ -286,17 +252,6 @@
                         </v-col>
 
                         <v-divider cols="12" class="my-1"></v-divider>
-
-                        <v-col cols="6" class="pt-2">
-                            <div class="text-caption grey--text text-uppercase">Peso Total</div>
-                            <div class="text-body-1 font-weight-bold">{{ totalPeso.toFixed(2) }} kg</div>
-                        </v-col>
-                        <v-col cols="6" class="pt-2 text-right">
-                            <div class="text-caption grey--text text-uppercase">Monto Total</div>
-                            <div class="text-h6 success--text font-weight-black lh-1">
-                                S/ {{ totalMontoSoles.toFixed(2) }}
-                            </div>
-                        </v-col>
 
                         <v-col cols="12" v-if="observacion" class="mt-2 pt-2 border-top">
                             <div class="text-caption grey--text text-uppercase">Observación</div>
@@ -375,11 +330,10 @@ export default {
             headersTransferencia: [
                 { text: 'Producto', value: 'nombre', width: '30%' },
                 { text: 'Cantidad', value: 'cantidad', width: '12%', align: 'center' },
-                { text: 'P. Unit.', value: 'precio', width: '12%', align: 'right' },
-                { text: 'Subtotal', value: 'monto_soles', width: '14%', align: 'right' },
-                { text: 'Peso', value: 'peso_total', width: '10%', align: 'right' },
                 { text: 'Acciones', value: 'acciones', sortable: false, width: '12%', align: 'center' }
-            ]
+            ],
+            cargandoProductosVendedor: false,
+            productos_vendedor_originales: [],
         };
     },
     created() {
@@ -388,6 +342,10 @@ export default {
         this.cargarPeriodos();
     },
     computed: {
+        esOrigenVendedor() {
+            const sede = this.sedes.find(s => s.base === this.sede_origen);
+            return sede && sede.principal === false;
+        },
         esAdmin() {
             return store.state.permisos?.es_admin === true || store.state.permisos?.master === true;
         },
@@ -697,10 +655,11 @@ export default {
                 const projectId = "sis-distribucion";
                 const region = "southamerica-east1";
                 const ruc_asociado = store.state.baseDatos.ruc_asociado
-                const baseUrl =
-                    location.hostname === "localhost"
-                        ? `http://localhost:5000/${projectId}/${region}`
-                        : `https://${region}-${projectId}.cloudfunctions.net`;
+                const baseUrl = `https://${region}-${projectId}.cloudfunctions.net`
+
+                /* location.hostname === "localhost"
+                        ? `http://127.0.0.1:5001/${projectId}/${region}`
+                        : `https://${region}-${projectId}.cloudfunctions.net`; */
 
                 const url = this.modoEdicion
                     ? `${baseUrl}/transferencias_update`
@@ -788,7 +747,58 @@ export default {
         cierra() {
             this.$emit('cerrar');
             this.dial = false;
-        }
+        },
+        async cargarProductosVendedor() {
+            if (!this.sede_origen) {
+                this.muestraMsg('Seleccione una sede origen', 'error');
+                return;
+            }
+
+            if (!confirm(`¿Desea cargar todos los productos del vendedor para devolución? Se reemplazará la lista actual.`)) {
+                return;
+            }
+
+            this.cargandoProductosVendedor = true;
+            store.commit("dialogoprogress", true);
+
+            try {
+                this.productos_vendedor_originales = [...this.productos_origen];
+                this.lista_transferencia = [];
+                const productosConStock = this.productos_origen.filter(p => p.stock > 0);
+                for (const prod of productosConStock) {
+                    this.lista_transferencia.push({
+                        id: prod.id,
+                        nombre: prod.nombre,
+                        codbarra: prod.codbarra || '',
+                        cantidad: prod.stock,
+                        stock_origen: prod.stock,
+                        precio: prod.precio || 0,
+                        peso: prod.peso || 0,
+                        monto_soles: Number(prod.stock) * Number(prod.precio || 0),
+                    });
+                }
+
+                const sedePrincipal = this.sedes.find(s => s.principal === true);
+                if (sedePrincipal) {
+                    this.sede_destino = sedePrincipal.base;
+                    this.muestraMsg(`Destino asignado automáticamente a: ${sedePrincipal.nombre}`, 'success');
+                } else {
+                    this.muestraMsg('No se encontró una sede principal', 'warning');
+                }
+
+                if (this.lista_transferencia.length === 0) {
+                    this.muestraMsg('No hay productos con stock para devolver', 'info');
+                } else {
+                    this.muestraMsg(`Se cargaron ${this.lista_transferencia.length} productos para devolución`, 'success');
+                }
+            } catch (error) {
+                console.error('Error al cargar productos del vendedor:', error);
+                this.muestraMsg('Error al cargar productos: ' + error.message, 'error');
+            } finally {
+                this.cargandoProductosVendedor = false;
+                store.commit("dialogoprogress", false);
+            }
+        },
     },
 }
 </script>

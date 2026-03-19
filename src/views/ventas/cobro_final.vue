@@ -15,8 +15,8 @@
         <v-card class="pa-3">
             <v-radio-group class="mt-n1 mx-auto " v-model="tipocomprobante" row>
                 <v-radio label="Nota" value="T"></v-radio>
-                <v-radio label="Boleta" value="B"></v-radio>
-                <v-radio label="Factura" value="F"></v-radio>
+                <v-radio v-if="esAdmin" label="Boleta" value="B"></v-radio>
+                <v-radio v-if="esAdmin" label="Factura" value="F"></v-radio>
             </v-radio-group>
             <template>
                 <v-row class="mt-n3" dense>
@@ -56,7 +56,8 @@
                     </v-col>
                 </v-row>
 
-                <v-row class="mt-n3 mx-auto" dense v-if="$store.state.configuracion.detracciones">
+                <v-row class="mt-n3 mx-auto" dense
+                    v-if="$store.state.configuracion.detracciones && (tipocomprobante === 'B' || tipocomprobante === 'F')">
                     <v-autocomplete dense v-model="detraccion" :items="$store.state.detracciones"
                         :item-text="formatItemText" item-value="cod" label="Selecciona Detraccion"
                         outlined></v-autocomplete>
@@ -78,19 +79,42 @@
 
                 <v-row class="mt-n4">
                     <v-col cols="4">
-                        <v-btn block color="primary" @click="cobrar()" small>
+                        <v-btn block color="primary" @click="cobrarContado()" small>
                             EFECTIVO<span v-if="!$store.state.esmovil">(F3)</span>
                         </v-btn>
                     </v-col>
                     <v-col cols="4">
-                        <v-btn :disabled="numero == ''" block color="error" @click="cobroCredito()" small
-                            v-if="$store.state.configuracion.creditofactura">
+                        <v-btn :disabled="numero == '' || !permiteCreditoCliente" block color="error"
+                            @click="activarCredito()" small v-if="$store.state.configuracion.creditofactura">
                             Credito
                         </v-btn>
                     </v-col>
-                    <v-col cols="4">
+                    <!-- <v-col cols="4">
                         <v-btn block color="warning" @click="otros()" small>
                             OTROS
+                        </v-btn>
+                    </v-col> -->
+                </v-row>
+
+                <v-alert v-if="$store.state.configuracion.creditofactura && numero != '' && !permiteCreditoCliente"
+                    type="warning" dense border="left" colored-border class="mt-2 mb-1" icon="mdi-alert-circle-outline">
+                    Este cliente no tiene permiso de crédito.
+                </v-alert>
+
+                <v-row dense class="mt-1" v-if="formaPago === 'CREDITO'">
+                    <v-col cols="12" sm="6">
+                        <v-text-field outlined dense type="date" v-model="fechaVencimiento" :min="hoyISO"
+                            label="Vence el" prepend-inner-icon="mdi-calendar" />
+                    </v-col>
+                    <v-col cols="12" sm="6" v-if="esAdmin">
+                        <v-btn class="mt-1" small block color="indigo" dark @click="abrirCronograma">
+                            <v-icon left small>mdi-calendar-clock</v-icon>
+                            {{ cronograma ? 'Editar Cronograma' : 'Crear Cronograma' }}
+                        </v-btn>
+                    </v-col>
+                    <v-col cols="12">
+                        <v-btn block color="error" @click="cobrarCredito()" small>
+                            Confirmar Credito
                         </v-btn>
                     </v-col>
                 </v-row>
@@ -128,7 +152,7 @@
             </v-card>
         </v-dialog>
 
-        <v-dialog v-model="dialogocredito" max-width="500px">
+        <v-dialog v-model="dialogocredito" max-width="500px" v-if="false">
             <div>
                 <v-system-bar window dark>
                     <v-icon @click="dialogocredito = !dialogocredito">mdi-close</v-icon>
@@ -204,6 +228,9 @@
 
         <busca_clis v-if="dial_cliente" @cerrar="dial_cliente = false" @agregar="agregacliente($event)"></busca_clis>
         <dial_stock v-model="dialStock" :items="sinStock" @close="onCloseStockDialog" />
+        <cronograma v-if="dialogoCronograma" :totalCredito="Number(total || 0)" @cierra="dialogoCronograma = false"
+            @emite_cronograma="guarda_cronograma($event)" :pagoInicial="0" :moneda="moneda" :planExistente="cronograma"
+            :diasCalculados="diasHastaViernes" :diasCredito="diasCreditoCliente" :editable="esAdmin" />        
     </v-dialog>
 
 </template>
@@ -229,6 +256,8 @@ import axios from "axios"
 import moment from 'moment'
 import dialog_direcciones_cliente from '@/views/clientes/dialogos/dial_direcciones'
 import busca_clis from '@/views/clientes/dialogos/busca_cliente'
+import cronograma from './dialogos/cronograma_creditos.vue'
+
 import {
     cobrar_js
 } from '@/funciones_generales'
@@ -239,8 +268,8 @@ export default {
         dial_mapa,
         busca_clis,
         dialog_direcciones_cliente,
-        dial_stock
-
+        dial_stock,
+        cronograma
     },
     props: {
         cabecera: [],
@@ -291,6 +320,11 @@ export default {
             cod_vendedor: store.state.sedeActual.codigo,
             dialStock: false,
             sinStock: [],
+            formaPago: 'CONTADO',
+            fechaVencimiento: '',
+            dialogoCronograma: false,
+            cronograma: null,
+            
         }
     },
 
@@ -298,7 +332,7 @@ export default {
         console.log(store.state.configuracion.defecto)
         this.cliente_selecto = this.cliente
         if (this.cliente != '') {
-            this.numero = this.cliente.dni
+            this.numero = this.cliente.dni || ''
             if (this.numero.length == 11) {
                 this.documento = "RUC"
             } else {
@@ -333,6 +367,7 @@ export default {
             nombre: m.nombre,
             monto: ''
         }))
+        this.fechaVencimiento = this.calcularViernesProximo()
         this.dial = true
 
     },
@@ -352,6 +387,38 @@ export default {
             // si cuotas cubren todo, queda 0
             const falta = t - pagadoEnCuotas
             return falta < 0 ? 0 : falta
+        },
+        hoyISO() {
+            return moment().format('YYYY-MM-DD')
+        },
+        clienteCredito() {
+            const fromStore = this.$store.state.cliente_selecto || {}
+            const fromProp = this.cliente || {}
+            const fromLocal = this.cliente_selecto || {}
+
+            const merged = {
+                ...fromStore,
+                ...fromProp,
+                ...fromLocal,
+            }
+
+            if (!merged.documento) {
+                merged.documento = merged.dni || merged.id || this.numero || ''
+            }
+
+            return merged
+        },
+        permiteCreditoCliente() {
+            return this.clienteCredito?.permite_credito === true
+        },
+        diasCreditoCliente() {
+            return Number(this.clienteCredito?.dias_credito || 0)
+        },
+        diasHastaViernes() {
+            if (this.diasCreditoCliente > 0) return this.diasCreditoCliente
+            const hoy = moment().startOf('day')
+            const viernes = moment(this.calcularViernesProximo()).startOf('day')
+            return viernes.diff(hoy, 'days')
         },
         formatItemText() {
             return (item) => `${item.nom} - ${item.porcentaje}%`;
@@ -378,6 +445,9 @@ export default {
                 this.modopagos[0].monto = resta
             }
             return
+        },
+        esAdmin() {
+            return this.$store.state.permisos?.es_admin === true;
         },
     },
     mounted() {
@@ -462,28 +532,94 @@ export default {
         detectarTecla(event) {
             if (event.key === "F3" && !store.state.esmovil) {
                 event.preventDefault(); // Evita que el navegador abra la ayuda
-                this.cobrar();
+                this.cobrarContado();
             }
             if (event.key === "Escape") {
                 event.preventDefault();
                 this.cierre();
             }
         },
+        cobrarContado() {
+            this.formaPago = 'CONTADO'
+            this.cronograma = null
+            this.cobrar()
+        },
+        activarCredito() {
+            if (!this.permiteCreditoCliente) {
+                store.commit('dialogosnackbar', 'El cliente no tiene crédito habilitado')
+                return
+            }
+
+            this.formaPago = 'CREDITO'
+            if (this.diasCreditoCliente > 0) {
+                this.fechaVencimiento = moment().add(this.diasCreditoCliente, 'days').format('YYYY-MM-DD')
+            } else if (!this.fechaVencimiento) {
+                this.fechaVencimiento = this.calcularViernesProximo()
+            }
+        },
+        cobrarCredito() {
+            if (!this.permiteCreditoCliente) {
+                store.commit('dialogosnackbar', 'El cliente no tiene crédito habilitado')
+                return
+            }
+            this.formaPago = 'CREDITO'
+            this.cobrar()
+        },
         cobroCredito() {
-            this.cuotasCredito = []
-            var totalcuenta = this.total
-            var totaldescuentos = this.cabecera.descuentos
-            // var fec_venc = moment(this.fecha_cuota()) / 1000
-            this.cuotasCredito.push({
+            this.cobrarCredito()
+        },
+        abrirCronograma() {
+            if (this.formaPago !== 'CREDITO') return
+            this.dialogoCronograma = true
+        },
+        guarda_cronograma(cronograma) {
+            if (!cronograma?.fecha_ultima_cuota) return
+            this.cronograma = cronograma
+            this.fechaVencimiento = cronograma.fecha_ultima_cuota
+            this.dialogoCronograma = false
+        },
+        calcularViernesProximo() {
+            const hoy = moment()
+            const diaSemana = hoy.day()
+            if (diaSemana === 5) return hoy.format('YYYY-MM-DD')
+            const diasMap = { 0: 5, 1: 4, 2: 3, 3: 2, 4: 1, 5: 0, 6: 6 }
+            return hoy.add(diasMap[diaSemana], 'days').format('YYYY-MM-DD')
+        },
+        prepararCuotasCredito() {
+            const total = parseFloat(this.total) || 0
+
+            if (this.formaPago !== 'CREDITO') {
+                this.cuotasCredito = []
+                return true
+            }
+
+            if (!this.fechaVencimiento) {
+                store.commit('dialogosnackbar', 'Seleccione la fecha de vencimiento')
+                return false
+            }
+
+            if (this.cronograma && Array.isArray(this.cronograma.cuotas) && this.cronograma.cuotas.length > 0) {
+                this.cuotasCredito = this.cronograma.cuotas.map((c, i) => ({
+                    numero: String(c.numero || (i + 1)).padStart(3, '0'),
+                    importe: Number(c.importe || 0).toFixed(2),
+                    vencimiento: c.vencimiento,
+                    estado: 'pendiente',
+                    fecha_modificacion: moment().unix(),
+                    vendedor: this.cod_vendedor || store.state.sedeActual.codigo
+                }))
+                return true
+            }
+
+            this.cuotasCredito = [{
                 numero: '001',
-                importe: (totalcuenta - totaldescuentos).toFixed(2),
-                vencimiento: this.conviertefecha(this.fecha_cuota()),
+                importe: total.toFixed(2),
+                vencimiento: this.fechaVencimiento,
                 estado: 'pendiente',
                 fecha_modificacion: moment().unix(),
                 vendedor: this.cod_vendedor || store.state.sedeActual.codigo
-            })
-            this.dialogocredito = true
-        },
+            }]
+            return true
+        },        
         nuevacuota() {
             var numerocuota = (parseInt(this.cuotasCredito.length + 1)).toString().padStart(3, 0)
 
@@ -510,7 +646,7 @@ export default {
         async cobrar() {
 
             store.commit("dialogoprogress")
-            if (this.valida_pagos() != parseFloat(this.total)) {
+            if (this.formaPago !== 'CREDITO' && this.valida_pagos() != parseFloat(this.total)) {
                 alert('Debe ingresar monto correcto')
                 store.commit("dialogoprogress")
                 return
@@ -564,8 +700,15 @@ export default {
             }
             this.cabecera.forma_pago = "Contado"
             this.cabecera.cuotas = ''
-            if (this.cuotasCredito != '') {
-                var vencimientodoc = moment(String(this.cuotasCredito[this.cuotasCredito.length - 1].vencimiento)) / 1000
+            if (this.formaPago === 'CREDITO') {
+                const okCuotas = this.prepararCuotasCredito()
+                if (!okCuotas) {
+                    store.commit("dialogoprogress")
+                    return
+                }
+            }
+            if (Array.isArray(this.cuotasCredito) && this.cuotasCredito.length > 0) {
+                var vencimientodoc = moment(String(this.cuotasCredito[this.cuotasCredito.length - 1].vencimiento), 'YYYY-MM-DD').unix()
                 this.cabecera.vencimientoDoc = vencimientodoc
                 this.cabecera.cuotas = this.cuotasCredito
                 this.cabecera.forma_pago = "Credito"
@@ -644,11 +787,11 @@ export default {
             try {
                 const resp = await axios({
                     method: 'POST',
-                     url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
-                    //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
-                    headers: {
-                        'X-Idempotency-Key': data.arrayCabecera.numeracion,
-                    },
+                    url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
+                    //url: 'http://127.0.0.1:5001/sis-distribucion/southamerica-east1/api_distribucion',
+                    /*  headers: {
+                          'X-Idempotency-Key': data.arrayCabecera.numeracion,
+                      },*/
                     data: {
                         bd: store.state.baseDatos.bd,
                         data,
@@ -833,13 +976,13 @@ export default {
             }
             const usarDefecto = store.state.configuracion.usar_comprobante_defecto === true
 
-          /*  if (usarDefecto) {
-                this.tipocomprobante = store.state.configuracion.defecto || 'T'
-            } else {
-                this.tipocomprobante = (data.tipocomprobante || data.tipo_comprobante)
-                    ? (data.tipocomprobante || data.tipo_comprobante)
-                    : 'T'
-            }*/
+            /*  if (usarDefecto) {
+                  this.tipocomprobante = store.state.configuracion.defecto || 'T'
+              } else {
+                  this.tipocomprobante = (data.tipocomprobante || data.tipo_comprobante)
+                      ? (data.tipocomprobante || data.tipo_comprobante)
+                      : 'T'
+              }*/
 
             this.dial_cliente = false;
         },

@@ -17,7 +17,8 @@
                             class="grey--text">
                             ({{ item.id }})
                         </small>
-                        — <strong class="red--text">{{ moneda }} {{ (item.precioMostrado ? Number(item.precioMostrado) : Number(item.precio || 0)).toFixed(2) }}</strong>
+                        — <strong class="red--text">{{ moneda }} {{ (item.precioMostrado ? Number(item.precioMostrado) :
+                            Number(item.precio || 0)).toFixed(2) }}</strong>
                     </v-list-item-title>
 
                     <v-list-item-subtitle class="mt-0">
@@ -354,6 +355,10 @@ export default {
             type: [Object, Array, null],
             default: null
         },
+        productos_en_venta: {
+            type: Array,
+            default: () => []
+        },
     },
     data() {
         return {
@@ -379,15 +384,35 @@ export default {
             es_bono: false,
             moneda: 'S/ ',
             listaPrecioSeleccionada: null,
-            descuentoAplicado: { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 }
+            descuentoAplicado: { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 },
+            aplicandoReglasCategoria: false,
+            infoReglasCategoria: null
         }
     },
     computed: {
         precioBaseParaDescuento() {
             if (!this.producto_selecto) return 0;
+            const factor = this.getFactor(this.producto_selecto);
+
+            if (this.esListaPreciosActivo) {
+                if (this.listaPrecioSeleccionada) {
+                    const precioSel = Number(this.getPrecioConLista(this.producto_selecto, this.listaPrecioSeleccionada) || 0);
+                    return this.modoVenta === 'entero' ? precioSel * factor : precioSel;
+                }
+
+                const resultado = determinarPrecioPorLista({
+                    producto: this.producto_selecto,
+                    listasCliente: this.listasPreciosCliente,
+                    productosEnVenta: this.productos_en_venta || [],
+                    cantidadNueva: this.totalUnidades
+                });
+
+                const precioUnidadLista = Number(resultado?.precio || this.producto_selecto.precio || 0);
+                return this.modoVenta === 'entero' ? precioUnidadLista * factor : precioUnidadLista;
+            }
+
             const tier = this.precioSeleccionado ?? this.sugerirTier(this.producto_selecto, this.totalUnidades);
             const precioUnidad = this.precioPorTier(this.producto_selecto, tier);
-            const factor = this.getFactor(this.producto_selecto);
             return this.modoVenta === 'entero' ? precioUnidad * factor : precioUnidad;
         },
         totalUnidades() {
@@ -431,7 +456,7 @@ export default {
                     }
                     return {
                         ...item,
-                        precioMostrado: precioMostrar, 
+                        precioMostrado: precioMostrar,
                         precioOriginal: item.precio,
                         precio: this.moneda + ' ' + precioMostrar.toFixed(2)
                     };
@@ -806,23 +831,31 @@ export default {
             let precioUnidad, precioFinal, tier = 1;
             const esCaja = (this.modoVenta === 'entero');
 
-            // MODO LISTAS DE PRECIOS - usa LA LISTA SELECCIONADA
-            if (this.esListaPreciosActivo && this.listaPrecioSeleccionada) {
+            const opciones = {
+                fallback: true,
+                productosEnVenta: this.productos_en_venta || [],
+                cantidadNueva: unidadesTotal
+            };
+
+            const resultadoPrecio = determinarPrecioPorLista({
+                producto: this.producto_selecto,
+                listasCliente: this.listasPreciosCliente,
+                productosEnVenta: opciones.productosEnVenta,
+                cantidadNueva: opciones.cantidadNueva
+            });
+
+            if (resultadoPrecio) {
+                precioUnidad = resultadoPrecio.precio;
+                precioFinal = esCaja ? (precioUnidad * factor) : precioUnidad;
+            } else if (this.esListaPreciosActivo && this.listaPrecioSeleccionada) {
                 precioUnidad = this.getPrecioConLista(this.producto_selecto, this.listaPrecioSeleccionada);
                 precioFinal = esCaja ? (precioUnidad * factor) : precioUnidad;
-
                 console.log('lista seleccionada:', this.listaPrecioSeleccionada, 'precio:', precioUnidad);
-            }
-            // MODO TRADICIONAL - usa el tier seleccionado o auto
-            else {
-                tier = (this.precioSeleccionado ?? this.sugerirTier(this.producto_selecto, unidadesTotal));
-                precioUnidad = this.precioPorTier(this.producto_selecto, tier);
+            } else {
+                precioUnidad = Number(this.producto_selecto.precio || 0);
                 precioFinal = esCaja ? (precioUnidad * factor) : precioUnidad;
-
-                console.log(' modo tradicional, tier:', tier, 'precio:', precioUnidad);
             }
 
-            // Aplicar descuentos si existen
             const tieneDescuentos = this.descuentoAplicado.desc_1 > 0 ||
                 this.descuentoAplicado.desc_2 > 0 ||
                 this.descuentoAplicado.desc_3 > 0;
@@ -848,20 +881,14 @@ export default {
                 precio_base: Number((esCaja ? (precioUnidad * factor) : precioUnidad).toFixed(4)),
                 medida: medidaEmitida,
                 factor: factor,
-                _precio_tier: tier,
                 _unidades: unidadesTotal,
                 desc_1: this.descuentoAplicado.desc_1 || 0,
                 desc_2: this.descuentoAplicado.desc_2 || 0,
                 desc_3: this.descuentoAplicado.desc_3 || 0,
             };
 
-            if (this.esListaPreciosActivo && this.listaPrecioSeleccionada) {
-                linea.precio_tipo = this.listaPrecioSeleccionada;
-            }
-
             if (this.es_bono) {
                 linea.precio = 0;
-                linea.totalLinea = '0.00';
                 linea.preciodescuento = 0;
             }
 
@@ -874,7 +901,21 @@ export default {
                 this.$refs.buscarField && this.$refs.buscarField.focus();
             });
         },
+        calcularTotalCajasCategoria() {
+            if (!this.producto_selecto || !this.productos_en_venta) return 0;
 
+            const categoria = this.producto_selecto.categoria;
+            let totalCajas = 0;
+
+            this.productos_en_venta.forEach(p => {
+                if (p.categoria === categoria) {
+                    const pFactor = Number(p.factor) || 1;
+                    totalCajas += (p.cantidad * (p.modoVenta === 'entero' ? pFactor : 1)) / pFactor;
+                }
+            });
+
+            return totalCajas;
+        },
 
         prod_selecto(valor) {
             if (!valor) return;
@@ -894,17 +935,19 @@ export default {
                 const tieneClienteValido = this.cliente_selecto &&
                     typeof this.cliente_selecto === 'object' &&
                     !Array.isArray(this.cliente_selecto);
+
                 if (this.esListaPreciosActivo && tieneClienteValido && this.listasPreciosCliente.length) {
-
-                    const resultado = determinarPrecioPorLista(
-                        producto,
-                        this.listasPreciosCliente,
-                        { fallback: false }
-                    );
-
+                    const resultado = determinarPrecioPorLista({
+                        producto: producto,
+                        listasCliente: this.listasPreciosCliente,
+                        productosEnVenta: this.productos_en_venta || [],
+                        cantidadNueva: 0
+                    });
                     this.listaPrecioSeleccionada = resultado?.tipo || null;
-                    console.log('Lista seleccionada por determinarPrecioPorLista:', this.listaPrecioSeleccionada);
 
+                    if (resultado?.fuente === 'regla_cantidad') {
+                        this.aplicandoReglasCategoria = true;
+                    }
                 } else {
                     this.listaPrecioSeleccionada = null;
                 }
@@ -933,6 +976,7 @@ export default {
                 this._tierSugerido = this.sugerirTier(this.producto_selecto, this.totalUnidades);
             }
         },
+
         prod_selecto2(valor) {
             if (valor.controstock && valor.stock <= 0) {
                 store.commit("dialogosnackbar", 'sin stock');
@@ -952,15 +996,21 @@ export default {
                     !Array.isArray(this.cliente_selecto);
 
                 if (this.esListaPreciosActivo && tieneClienteValido && this.listasPreciosCliente.length) {
-                    const resultado = determinarPrecioPorLista(
-                        productoCompleto,
-                        this.listasPreciosCliente,
-                        { fallback: false }
-                    );
+                    const resultado = determinarPrecioPorLista({
+                        producto: productoCompleto,
+                        listasCliente: this.listasPreciosCliente,
+                        productosEnVenta: this.productos_en_venta || [],
+                        cantidadNueva: 0
+                    });
                     this.listaPrecioSeleccionada = resultado?.tipo || null;
+
+                    if (resultado?.fuente === 'regla_cantidad') {
+                        this.aplicandoReglasCategoria = true;
+                    }
                 } else {
                     this.listaPrecioSeleccionada = null;
                 }
+
                 this.cantidadInput = 1;
                 this.producto_selecto = productoCompleto;
                 this.es_bono = false;

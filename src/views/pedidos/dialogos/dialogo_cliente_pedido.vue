@@ -27,18 +27,22 @@
             </v-card>
 
             <v-row dense>
-                <v-col v-if="$store.state.permisos.pre_venta"
-                    :cols="($store.state.permisos.pre_venta && $store.state.permisos.venta_directa) ? 12 : 12">
-                    <v-btn block color="green" class="mt-n2 white--text"
-                        :disabled="!selectedCli || guardando || cargando" @click="seleccionarCliente">
+                <v-col cols="12">
+                    <v-btn v-if="selectedCli" block color="green" class="white--text" :disabled="guardando || cargando"
+                        @click="seleccionarCliente">
                         <v-icon left>mdi-cart</v-icon>
-                        {{ guardando ? 'Cargando...' : 'Continuar' }}
+                        {{ guardando ? 'Cargando...' : 'Continuar con cliente' }}
                     </v-btn>
-                </v-col>
+
+                    <v-btn v-else block color="blue" dark @click="continuarSinCliente">
+                        <v-icon left>mdi-account-off</v-icon>
+                        Continuar sin cliente
+                    </v-btn>
                 </v-col>
             </v-row>
 
-            <v-btn v-if="$store.state.permisos.es_admin" block text color="#26A69A" class="mt-2" @click="abrirCrearCliente">
+            <v-btn v-if="$store.state.permisos.es_admin" block text color="#26A69A" class="mt-2"
+                @click="abrirCrearCliente">
                 <v-icon left>mdi-account-plus</v-icon>
                 Crear Nuevo Cliente
             </v-btn>
@@ -228,6 +232,11 @@ export default {
                     this.cargando = false
                 }
             }
+        },
+
+        continuarSinCliente() {
+            this.$emit('sinCliente');
+            this.cierra();
         },
 
         cierra() {

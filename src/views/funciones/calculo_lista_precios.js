@@ -1,17 +1,11 @@
-// funciones/calculo_lista_precios.js
-
-/**
- * Constantes para tipos de lista
- */
 export const TIPOS_LISTA = {
   DISTRIBUIDOR: 'distribuidor',
   MAYORISTA: 'mayorista',
   MINORISTA: 'minorista'
 };
 
-/**
- * Configuración de prioridades y mapeo de campos
- */
+const LISTAS_RECONOCIDAS = new Set(Object.values(TIPOS_LISTA));
+
 export const CONFIG_LISTAS = {
   [TIPOS_LISTA.DISTRIBUIDOR]: {
     prioridad: 1,
@@ -33,214 +27,391 @@ export const CONFIG_LISTAS = {
   }
 };
 
+
+function _toNumber(valor, fallback = 0) {
+  const n = Number(valor);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function _normalizarListas(listasPreciosCliente = []) {
+  if (!Array.isArray(listasPreciosCliente)) return [];
+  return listasPreciosCliente
+    .map(x => String(x || '').trim().toLowerCase())
+    .filter(x => LISTAS_RECONOCIDAS.has(x));
+}
+
+function _getFactor(item) {
+  return Math.max(1, _toNumber(item?.factor, 1));
+}
+
+function _unidadesALinea(linea) {
+  const cantidad = _toNumber(linea?.cantidad, 0);
+  const factor = _getFactor(linea);
+  const modoVenta = String(linea?.modoVenta || '').trim().toLowerCase();
+  const medida = String(linea?.medida || '').trim().toUpperCase();
+
+  if (modoVenta === 'entero') return cantidad * factor;
+  if (modoVenta === 'fraccion') return cantidad;
+
+  if (factor > 1 && medida && medida !== 'UNIDAD') {
+    return cantidad * factor;
+  }
+  return cantidad;
+}
+
+function _lineaACajas(linea) {
+  const cantidad = _toNumber(linea?.cantidad, 0);
+  const factor = _getFactor(linea);
+  const modoVenta = String(linea?.modoVenta || '').trim().toLowerCase();
+  const medida = String(linea?.medida || '').trim().toUpperCase();
+
+  if (modoVenta === 'entero') return cantidad;
+  if (modoVenta === 'fraccion') return cantidad / factor;
+
+  if (factor > 1 && medida && medida !== 'UNIDAD') {
+    return cantidad;
+  }
+  return cantidad / factor;
+}
+
+function _precioSeguro(producto, campoPrincipal, campoFallback = 'precio') {
+  return _toNumber(producto?.[campoPrincipal], _toNumber(producto?.[campoFallback], 0));
+}
+
+function _excluirLineaActual(productosEnVenta = [], lineaActual = null) {
+  if (!Array.isArray(productosEnVenta) || !lineaActual) return productosEnVenta || [];
+
+  const uuidActual = lineaActual?.uuid;
+  if (uuidActual) {
+    return productosEnVenta.filter(p => p?.uuid !== uuidActual);
+  }
+  return productosEnVenta.filter(p => p !== lineaActual);
+}
+
+// ==========================================================
+// LÓGICA PRINCIPAL POR CATEGORÍA
+// ==========================================================
+
 /**
- * Determina qué precio usar según las listas de precios del cliente
- * @param {Object} producto - Producto con sus precios
- * @param {Array} listasPreciosCliente - Array de listas (['mayorista', 'minorista', 'distribuidor'])
- * @param {Object} opciones - Opciones adicionales
- * @returns {Object} - Resultado con precio y metadatos
+ * Calcula el total de cajas en una categoría
+ * @private
  */
-export function determinarPrecioPorLista(producto, listasPreciosCliente, opciones = {}) {
-  const { prioridadPersonalizada = null, fallback = true } = opciones;
-  
-  // Si no hay listas o el producto no existe, retornar precio regular
-  if (!listasPreciosCliente?.length || !producto) {
+function _calcularTotalCajasCategoria(productosEnVenta, productoNuevo, cantidadNueva = 0) {
+  const categoria = productoNuevo?.categoria;
+  const factor = _getFactor(productoNuevo);
+
+  let total = 0;
+
+  (productosEnVenta || []).forEach(p => {
+    if (p.categoria === categoria) {
+      total += _lineaACajas(p);
+    }
+  });
+
+  total += _toNumber(cantidadNueva, 0) / factor;
+  return total;
+}
+
+/**
+ * Aplica reglas por categoría (5+ cajas = mayorista)
+ * @returns {Object} { aplicaMayorista, totalCajas }
+ */
+export function aplicarReglasPorCategoria({
+  productosEnVenta = [],
+  productoNuevo,
+  cantidadNueva = 0,
+  cliente = null
+} = {}) {
+  if (!productoNuevo) return { aplicaMayorista: false, totalCajas: 0 };
+
+  const totalCajas = _calcularTotalCajasCategoria(productosEnVenta, productoNuevo, cantidadNueva);
+  const aplicaMayorista = totalCajas >= 5;
+
+  return {
+    totalCajas,
+    aplicaMayorista,
+    categoria: productoNuevo.categoria,
+    tieneListaEspecial: cliente?.listas_precios?.length > 0
+  };
+}
+
+/**
+ * Determina qué precio usar según reglas y listas del cliente
+ */
+export function determinarPrecioPorReglas({
+  producto,
+  totalCajas,
+  aplicaMayorista,
+  listasCliente = []
+} = {}) {
+  const listas = _normalizarListas(listasCliente);
+
+  if (listas.includes(TIPOS_LISTA.DISTRIBUIDOR)) {
     return {
-      precio: producto?.precio || 0,
+      precio: _precioSeguro(producto, 'precio_may1'),
+      tipo: TIPOS_LISTA.DISTRIBUIDOR,
+      fuente: 'lista_cliente',
+      campo: 'precio_may1'
+    };
+  }
+
+  if (listas.includes(TIPOS_LISTA.MAYORISTA)) {
+    return {
+      precio: _precioSeguro(producto, 'precio_may2'),
+      tipo: TIPOS_LISTA.MAYORISTA,
+      fuente: 'lista_cliente',
+      campo: 'precio_may2'
+    };
+  }
+
+  if (aplicaMayorista) {
+    return {
+      precio: _precioSeguro(producto, 'precio_may2'),
+      tipo: TIPOS_LISTA.MAYORISTA,
+      fuente: 'regla_cantidad',
+      campo: 'precio_may2'
+    };
+  }
+
+  if (listas.includes(TIPOS_LISTA.MINORISTA)) {
+    return {
+      precio: _toNumber(producto?.precio, 0),
+      tipo: TIPOS_LISTA.MINORISTA,
+      fuente: 'lista_cliente',
+      campo: 'precio'
+    };
+  }
+
+  return {
+    precio: _toNumber(producto?.precio, 0),
+    tipo: TIPOS_LISTA.MINORISTA,
+    fuente: 'default',
+    campo: 'precio'
+  };
+}
+
+/**
+ * Precio de un producto considerando:
+ * - Listas de precios del cliente
+ * - Reglas por categoría (5+ cajas)
+ * - Productos ya en venta
+ */
+export function determinarPrecioPorLista({
+  producto,
+  listasCliente = [],
+  productosEnVenta = [],
+  cantidadNueva = 0
+} = {}) {
+  if (!producto) {
+    return {
+      precio: 0,
       tipo: 'regular',
       campo: 'precio',
       fuente: 'fallback'
     };
   }
 
-  // Usar prioridad personalizada o la predeterminada
-  const prioridad = prioridadPersonalizada || CONFIG_LISTAS;
+  const listas = _normalizarListas(listasCliente);
+  const { totalCajas, aplicaMayorista } = aplicarReglasPorCategoria({
+    productosEnVenta,
+    productoNuevo: producto,
+    cantidadNueva,
+    cliente: { listas_precios: listas }
+  });
 
-  // Ordenar listas por prioridad
-  const listasOrdenadas = [...listasPreciosCliente]
-    .filter(lista => prioridad[lista]) // Solo listas válidas
-    .sort((a, b) => (prioridad[a]?.prioridad || 999) - (prioridad[b]?.prioridad || 999));
-
-  // Buscar el primer precio disponible
-  for (const lista of listasOrdenadas) {
-    const config = prioridad[lista];
-    if (!config) continue;
-    
-    const precio = Number(producto[config.campo]);
-    if (precio && precio > 0) {
-      return {
-        precio,
-        tipo: lista,
-        campo: config.campo,
-        nombre: config.nombre,
-        color: config.color,
-        fuente: 'lista_precios'
-      };
-    }
-  }
-
-  // Fallback al precio regular si se permite
-  if (fallback) {
-    return {
-      precio: Number(producto.precio) || 0,
-      tipo: 'regular',
-      campo: 'precio',
-      fuente: 'fallback'
-    };
-  }
-
-  return null;
-}
-
-/**
- * Obtiene todos los precios disponibles de un producto según las listas del cliente
- * @param {Object} producto - Producto
- * @param {Array} listasPreciosCliente - Listas del cliente
- * @returns {Object} - Objeto con precios disponibles
- */
-export function obtenerPreciosDisponibles(producto, listasPreciosCliente = []) {
-  if (!producto) return {};
-  
-  const disponibles = {};
-  
-  // Siempre incluir todos los precios que existen
-  if (producto.precio) disponibles.minorista = Number(producto.precio);
-  if (producto.precio_may2) disponibles.mayorista = Number(producto.precio_may2);
-  if (producto.precio_may1) disponibles.distribuidor = Number(producto.precio_may1);
-  
-  // Marcar cuáles están permitidas para este cliente
-  const permitidas = new Set(listasPreciosCliente || []);
-  
-  return {
-    todos: disponibles,
-    permitidas: Object.fromEntries(
-      Object.entries(disponibles).filter(([lista]) => permitidas.has(lista))
-    )
-  };
-}
-
-/**
- * Valida si un producto tiene precios configurados para las listas del cliente
- * @param {Object} producto - Producto
- * @param {Array} listasPreciosCliente - Listas del cliente
- * @returns {Object} - Resultado de validación
- */
-export function validarPreciosProducto(producto, listasPreciosCliente = []) {
-  if (!producto) return { valido: false, razon: 'Producto no existe' };
-  
-  const faltantes = [];
-  const existentes = [];
-  
-  for (const lista of listasPreciosCliente) {
-    const config = CONFIG_LISTAS[lista];
-    if (!config) continue;
-    
-    const precio = Number(producto[config.campo]);
-    if (precio && precio > 0) {
-      existentes.push(lista);
-    } else {
-      faltantes.push(lista);
-    }
-  }
-  
-  return {
-    valido: faltantes.length === 0,
-    faltantes,
-    existentes,
-    mensaje: faltantes.length 
-      ? `Faltan precios para: ${faltantes.join(', ')}` 
-      : 'Todos los precios están configurados'
-  };
-}
-
-/**
- * Aplica precios basados en listas a una línea de pedido
- * @param {Object} linea - Línea de pedido
- * @param {Object} producto - Producto original
- * @param {Array} listasPreciosCliente - Listas del cliente
- * @param {Object} opciones - Opciones adicionales
- * @returns {Object} - Línea actualizada
- */
-export function aplicarPrecioListaALinea(linea, producto, listasPreciosCliente, opciones = {}) {
-  const { forzar = false, respetarManual = true } = opciones;
-  
-  // Si tiene precio manual y no se fuerza, respetar
-  if (linea.precio_manual && !forzar && respetarManual) {
-    return linea;
-  }
-  
-  const resultado = determinarPrecioPorLista(producto, listasPreciosCliente);
-  
-  if (resultado) {
-    return {
-      ...linea,
-      precio: resultado.precio,
-      precio_base: Number(producto.precio), // Precio regular como referencia
-      precio_tipo: resultado.tipo,
-      precio_campo: resultado.campo,
-      precio_fuente: resultado.fuente,
-      precios_disponibles: obtenerPreciosDisponibles(producto, listasPreciosCliente).todos
-    };
-  }
-  
-  return linea;
-}
-
-/**
- * Aplica precios por lista a un array de líneas
- * @param {Object} params - Parámetros
- * @returns {Array} - Líneas actualizadas
- */
-export function aplicarPreciosPorLista({
-  lineas,
-  productos,
-  cliente,
-  idsAfectados = null,
-  opciones = {}
-}) {
-  if (!lineas?.length || !productos?.length || !cliente?.listas_precios?.length) {
-    return lineas;
-  }
-
-  const listasCliente = cliente.listas_precios;
-  const mapaProductos = productos.reduce((acc, p) => {
-    if (p?.id) acc[p.id] = p;
-    return acc;
-  }, {});
-
-  return lineas.map(linea => {
-    // Si hay filtro por IDs y no está incluido, saltar
-    if (idsAfectados && !idsAfectados.includes(String(linea.id))) {
-      return linea;
-    }
-
-    const producto = mapaProductos[linea.id];
-    if (!producto) return linea;
-
-    return aplicarPrecioListaALinea(linea, producto, listasCliente, opciones);
+  return determinarPrecioPorReglas({
+    producto,
+    totalCajas,
+    aplicaMayorista,
+    listasCliente: listas
   });
 }
 
 /**
- * Cambia el tipo de precio de una línea manualmente
- * @param {Object} linea - Línea a modificar
- * @param {string} nuevoTipo - Nuevo tipo (distribuidor/mayorista/minorista)
- * @param {Object} producto - Producto original
- * @returns {Object} - Línea actualizada
+ * Aplica precio calculado a una línea específica
  */
-export function cambiarTipoPrecioManual(linea, nuevoTipo, producto) {
-  const config = CONFIG_LISTAS[nuevoTipo];
-  if (!config || !producto) return linea;
-  
-  const nuevoPrecio = Number(producto[config.campo]);
-  if (!nuevoPrecio || nuevoPrecio <= 0) return linea;
-  
+export function aplicarPrecioALinea({
+  linea,
+  producto,
+  listasCliente = [],
+  productosEnVenta = [],
+  forzar = false
+} = {}) {
+  if (linea?.precio_manual && !forzar) {
+    return {
+      ...linea,
+      precio_fuente: 'manual'
+    };
+  }
+
+  const otrasLineas = _excluirLineaActual(productosEnVenta, linea);
+  const cantidadNueva = _unidadesALinea(linea);
+
+  const resultado = determinarPrecioPorLista({
+    producto,
+    listasCliente,
+    productosEnVenta: otrasLineas,
+    cantidadNueva
+  });
+
+  if (!resultado) return linea;
+
+  const precioAplicado = _toNumber(resultado.precio, 0);
+
   return {
     ...linea,
-    precio: nuevoPrecio,
-    precio_tipo: nuevoTipo,
-    precio_campo: config.campo,
-    precio_manual: true,
-    precio_fuente: 'manual'
+    precio: precioAplicado,
+    precioedita: precioAplicado,
+    precio_base: precioAplicado,
+    preciodescuento: 0,
+    desc_1: 0,
+    desc_2: 0,
+    desc_3: 0,
+    precio_manual: false,
+    precio_tipo: resultado.tipo,
+    precio_fuente: resultado.fuente,
+    precio_campo: resultado.campo
+  };
+}
+
+export function aplicarPrecioListaALinea({
+  linea,
+  producto,
+  listasCliente = [],
+  listasPreciosCliente = [],
+  productosEnVenta = [],
+  forzar = false,
+  respetarManual = true
+} = {}) {
+  return aplicarPrecioALinea({
+    linea,
+    producto,
+    listasCliente: Array.isArray(listasCliente) && listasCliente.length ? listasCliente : listasPreciosCliente,
+    productosEnVenta,
+    forzar: forzar || !respetarManual
+  });
+}
+
+/**
+ *  PRINCIPAL: Aplica precios por categoría a todas las líneas
+ */
+export function aplicarPreciosPorCategoria({
+  lineas = [],
+  productos = [],
+  cliente = null,
+  idsAfectados = null,
+  forzar = false,
+  inPlace = true
+} = {}) {
+  if (!lineas?.length || !productos?.length) return lineas;
+
+  const res = inPlace ? lineas : JSON.parse(JSON.stringify(lineas));
+  const listasCliente = _normalizarListas(cliente?.listas_precios || []);
+  const prodById = new Map(productos.map(p => [String(p.id), p]));
+
+  let categoriasAfectadas = new Set();
+  if (idsAfectados) {
+    const idsSet = new Set(idsAfectados.map(id => String(id)));
+
+    res.forEach(linea => {
+      const idLinea = String(linea?.id || '');
+      if (idsSet.has(idLinea)) {
+        const prod = prodById.get(idLinea) || linea;
+        if (prod?.categoria) {
+          categoriasAfectadas.add(prod.categoria);
+        }
+      }
+    });
+  }
+
+  if (categoriasAfectadas.size === 0) return res;
+  for (let i = 0; i < res.length; i++) {
+    const linea = res[i];
+
+    if (String(linea?.operacion || '').toUpperCase() === 'GRATUITA') continue;
+
+    const producto = prodById.get(String(linea.id));
+    if (!producto) continue;
+
+    // Solo procesar si la línea pertenece a una categoría afectada
+    if (!categoriasAfectadas.has(producto.categoria)) continue;
+
+    const nuevaLinea = aplicarPrecioALinea({
+      linea,
+      producto,
+      listasCliente,
+      productosEnVenta: res,
+      forzar
+    });
+
+    if (nuevaLinea !== linea) {
+      res[i] = nuevaLinea;
+    }
+  }
+
+  return res;
+}
+
+export function aplicarPreciosPorLista({
+  lineas = [],
+  productos = [],
+  cliente = null,
+  idsAfectados = null,
+  opciones = {}
+} = {}) {
+  const listasCliente = Array.isArray(cliente?.listas_precios) ? cliente.listas_precios : [];
+  const forzar = opciones?.forzar === true || opciones?.respetarManual === false;
+
+  return aplicarPreciosPorCategoria({
+    lineas: lineas,
+    productos,
+    cliente: { listas_precios: listasCliente },
+    idsAfectados,
+    forzar,
+    inPlace: true
+  });
+}
+
+/**
+ * Obtiene todos los precios disponibles de un producto
+ */
+export function obtenerPreciosDisponibles(producto) {
+  if (!producto) return {};
+
+  return {
+    minorista: _toNumber(producto.precio, 0),
+    mayorista: _toNumber(producto.precio_may2, 0),
+    distribuidor: _toNumber(producto.precio_may1, 0)
+  };
+}
+
+/**
+ * Valida configuración de precios de un producto para las listas del cliente
+ */
+export function validarPreciosProducto({
+  producto,
+  listasCliente = []
+} = {}) {
+  if (!producto) return { valido: false, razon: 'Producto no existe' };
+
+  const listas = _normalizarListas(listasCliente);
+  const faltantes = [];
+
+  for (const lista of listas) {
+    const config = CONFIG_LISTAS[lista];
+    if (!config) continue;
+
+    const precio = _toNumber(producto[config.campo], 0);
+    if (precio <= 0) {
+      faltantes.push(lista);
+    }
+  }
+
+  return {
+    valido: faltantes.length === 0,
+    faltantes,
+    mensaje: faltantes.length
+      ? `Faltan precios para: ${faltantes.join(', ')}`
+      : 'Todos los precios están configurados'
   };
 }

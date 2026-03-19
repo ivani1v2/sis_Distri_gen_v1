@@ -88,9 +88,8 @@
           </v-chip>
         </template>
         <template v-slot:[`item.dias_credito`]="{ item }">
-          <v-chip small :color="item.dias_credito ? 'blue lighten-4' : 'grey lighten-4'" class="font-weight-bold">
-            {{ item.dias_credito || 7 }} días
-          </v-chip>
+            {{ calcularDiasCredito(item.fecha, item.fecha_vence) }} 
+            {{ calcularDiasCredito(item.fecha, item.fecha_vence) === 1 ? 'día' : 'días' }}
         </template>
 
         <template v-slot:[`item.estado`]="{ item }">
@@ -678,6 +677,12 @@ export default {
       }
       return result;
     },
+    calcularDiasCredito(fechaEmision, fechaVencimiento) {
+      if (!fechaEmision || !fechaVencimiento) return 0;
+      const emision = moment.unix(fechaEmision);
+      const vencimiento = moment.unix(fechaVencimiento);
+      return vencimiento.diff(emision, 'days');
+    },
 
     exportarExcel() {
       const filas = this.listafiltrada.map(item => ({
@@ -754,7 +759,7 @@ export default {
         margin: { left: 10, right: 5 },
         head: [['Comprobante', 'Doc - Cliente', 'Zona', 'Vend', 'Emisión', 'Vence', 'Días', 'Estado', 'Total', 'Pendiente']],
         body: rows,
-        styles: { fontSize: 6.5, cellPadding: 1,textColor: [0, 0, 0], fillColor: [255, 255, 255]},
+        styles: { fontSize: 6.5, cellPadding: 1, textColor: [0, 0, 0], fillColor: [255, 255, 255] },
         headStyles: { fillColor: [66, 66, 66], textColor: 255, halign: 'center' },
         columnStyles: {
           0: { cellWidth: 20 },

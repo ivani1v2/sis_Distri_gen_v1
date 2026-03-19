@@ -115,13 +115,13 @@
                                     <v-chip x-small :color="esListaPreciosActivo ? 'green lighten-4' : ''" class="mr-1">
                                         Min: {{ monedaSimbolo }} {{ redondear(item.precio) }}
                                     </v-chip>
-                                    <v-chip v-if="item.precio_may1 > 0" x-small
-                                        :color="esListaPreciosActivo ? 'purple lighten-4' : ''">
-                                        Dis: {{ monedaSimbolo }} {{ redondear(item.precio_may1) }}
-                                    </v-chip>
                                     <v-chip v-if="item.precio_may2 > 0" x-small
                                         :color="esListaPreciosActivo ? 'blue lighten-4' : ''" class="mr-1">
                                         May: {{ monedaSimbolo }} {{ redondear(item.precio_may2) }}
+                                    </v-chip>
+                                    <v-chip v-if="item.precio_may1 > 0" x-small
+                                        :color="esListaPreciosActivo ? 'purple lighten-4' : ''">
+                                        Dis: {{ monedaSimbolo }} {{ redondear(item.precio_may1) }}
                                     </v-chip>
                                 </div>
                             </div>

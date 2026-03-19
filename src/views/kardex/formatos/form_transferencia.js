@@ -18,7 +18,6 @@ export function imprimirTransferenciaPDF80mm(
   const destino = nombreSedeFn(transferencia.sede_destino);
   const usuario = transferencia.usuario || "-";
   const fecha = moment.unix(transferencia.fecha_unix).format("DD/MM/YYYY hh:mm a");
-  const pesoTotal = Number(transferencia.peso_total || 0).toFixed(2);
   const totalUnidades = transferencia.total_unidades || 
     (transferencia.productos || []).reduce((s, p) => s + Number(p.cantidad || 0), 0);
 
@@ -32,8 +31,6 @@ export function imprimirTransferenciaPDF80mm(
   doc.text(`Origen: ${origen}`, 10, y); y += 16;
   doc.text(`Destino: ${destino}`, 10, y); y += 16;
   doc.text(`Total Unidades: ${totalUnidades}`, 10, y); y += 16;
-  doc.text(`Peso Total: ${pesoTotal} kg`, 10, y); y += 16;
-  doc.text(`Monto Total: S/ ${Number(transferencia.total || 0).toFixed(2)}`, 10, y); y += 16;
 
   if (transferencia.observacion) {
     doc.setFontSize(9);
@@ -41,12 +38,10 @@ export function imprimirTransferenciaPDF80mm(
     y += 20;
   }
 
-  const headers = [["Producto", "Cant.", "P.Unit", "Monto"]];
+  const headers = [["Producto", "Cant."]];
   const data = (transferencia.productos || []).map((p) => [
     (p.nombre || "").toString().substring(0, 18),
     p.cantidad?.toString() || "",
-    `S/${Number(p.precio || 0).toFixed(2)}`,
-    `S/${Number(p.monto_soles || 0).toFixed(2)}`,
   ]);
 
   doc.autoTable({
@@ -67,8 +62,6 @@ export function imprimirTransferenciaPDF80mm(
     },
     columnStyles: {
       1: { halign: "center", cellWidth: 35 },
-      2: { halign: "right", cellWidth: 45 },
-      3: { halign: "right", cellWidth: 50 },
     },
     margin: { left: 10, right: 10 },
   });
@@ -97,7 +90,6 @@ export function imprimirTransferenciaPDFA4(
   const destino = nombreSedeFn(transferencia.sede_destino);
   const usuario = transferencia.usuario || "-";
   const fecha = moment.unix(transferencia.fecha_unix).format("DD/MM/YYYY hh:mm a");
-  const pesoTotal = Number(transferencia.peso_total || 0).toFixed(2);
   const totalUnidades = transferencia.total_unidades || 
     (transferencia.productos || []).reduce((s, p) => s + Number(p.cantidad || 0), 0);
 
@@ -123,7 +115,7 @@ export function imprimirTransferenciaPDFA4(
 
   doc.setDrawColor(200, 200, 200);
   doc.setFillColor(248, 249, 250);
-  const infoBoxHeight = transferencia.observacion ? 140 : 120;
+  const infoBoxHeight = transferencia.observacion ? 120 : 100;
   doc.roundedRect(40, y, pageWidth - 80, infoBoxHeight, 5, 5, "FD");
 
   doc.setFontSize(11);
@@ -156,20 +148,6 @@ export function imprimirTransferenciaPDFA4(
   doc.text("Total Unidades:", 55, y);
   doc.setFont("helvetica", "normal");
   doc.text(String(totalUnidades), 145, y);
-  
-  y += 20;
-  doc.setFont("helvetica", "bold");
-  doc.text("Peso Total:", 55, y);
-  doc.setFont("helvetica", "normal");
-  doc.text(`${pesoTotal} kg`, 130, y);
-
-  y += 20;
-  doc.setFont("helvetica", "bold");
-  doc.text("Monto Total:", 55, y);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(0, 128, 0);
-  doc.text(`S/ ${Number(transferencia.total || 0).toFixed(2)}`, 135, y);
-  doc.setTextColor(0, 0, 0);
 
   if (transferencia.observacion) {
     y += 20;
@@ -181,15 +159,12 @@ export function imprimirTransferenciaPDFA4(
 
   y = 100 + infoBoxHeight + 20;
 
-  const headers = [["#", "Código", "Producto", "Cantidad", "P. Unit.", "Peso", "Subtotal"]];
+  const headers = [["#", "Código", "Producto", "Cantidad"]];
   const data = (transferencia.productos || []).map((p, i) => [
     i + 1,
     p.codbarra || p.id || "-",
     (p.nombre || "").substring(0, 35),
     p.cantidad,
-    `S/ ${Number(p.precio || 0).toFixed(2)}`,
-    `${Number(p.peso || 0).toFixed(2)} kg`,
-    `S/ ${Number(p.monto_soles || 0).toFixed(2)}`,
   ]);
 
   doc.autoTable({
@@ -209,12 +184,9 @@ export function imprimirTransferenciaPDFA4(
     },
     columnStyles: {
       0: { halign: "center", cellWidth: 30 },
-      1: { halign: "center", cellWidth: 70 },
-      2: { halign: "left", cellWidth: 180 },
+      1: { halign: "center", cellWidth: 120 },
+      2: { halign: "left", cellWidth: 280 },
       3: { halign: "center", cellWidth: 55 },
-      4: { halign: "right", cellWidth: 60 },
-      5: { halign: "right", cellWidth: 55 },
-      6: { halign: "right", cellWidth: 65 },
     },
     margin: { left: 40, right: 40 },
     didDrawPage: (data) => {
@@ -236,9 +208,6 @@ export function imprimirTransferenciaPDFA4(
   doc.setFont("helvetica", "bold");
   doc.text(`Total Productos: ${transferencia.productos?.length || 0}`, 40, finalY);
   doc.text(`Total Unidades: ${totalUnidades}`, 170, finalY);
-  doc.text(`Peso Total: ${pesoTotal} kg`, 290, finalY);
-  doc.setTextColor(0, 128, 0);
-  doc.text(`MONTO TOTAL: S/ ${Number(transferencia.total || 0).toFixed(2)}`, pageWidth - 40, finalY, { align: "right" });
 
   const firmaY = finalY + 80;
   doc.setTextColor(0, 0, 0);
@@ -260,7 +229,6 @@ export function exportarTransferenciaExcel(
   const origen = nombreSedeFn(transferencia.sede_origen);
   const destino = nombreSedeFn(transferencia.sede_destino);
   const fecha = moment.unix(transferencia.fecha_unix).format("DD/MM/YYYY HH:mm");
-  const pesoTotal = Number(transferencia.peso_total || 0).toFixed(2);
   const totalUnidades = transferencia.total_unidades || 
     (transferencia.productos || []).reduce((s, p) => s + Number(p.cantidad || 0), 0);
 
@@ -272,13 +240,12 @@ export function exportarTransferenciaExcel(
     ["INFORMACIÓN GENERAL"],
     ["Sede Origen:", origen, "", "Sede Destino:", destino, "", ""],
     ["Fecha:", fecha, "", "Usuario:", (transferencia.usuario || "-").split("@")[0], "", ""],
-    ["Total Unidades:", totalUnidades, "", "Peso Total:", `${pesoTotal} kg`, "", ""],
-    ["Monto Total:", `S/ ${Number(transferencia.total || 0).toFixed(2)}`, "", "", "", "", ""],
+    ["Total Unidades:", totalUnidades, "", "", "", "", ""],
     [],
     ["Observación:", transferencia.observacion || "Sin observaciones"],
     [],
     ["DETALLE DE PRODUCTOS"],
-    ["#", "CÓDIGO", "PRODUCTO", "CANTIDAD", "P. UNITARIO", "PESO (kg)", "SUBTOTAL"],
+    ["#", "CÓDIGO", "PRODUCTO", "CANTIDAD"],
   ];
 
   const productData = (transferencia.productos || []).map((p, i) => [
@@ -286,14 +253,11 @@ export function exportarTransferenciaExcel(
     p.codbarra || p.id || "-",
     p.nombre || "",
     p.cantidad,
-    `S/ ${Number(p.precio || 0).toFixed(2)}`,
-    Number(p.peso || 0).toFixed(2),
-    `S/ ${Number(p.monto_soles || 0).toFixed(2)}`,
   ]);
 
   const totalesRows = [
     [],
-    ["", "", "TOTALES:", totalUnidades, "", pesoTotal, `S/ ${Number(transferencia.total || 0).toFixed(2)}`],
+    ["", "", "TOTALES:", totalUnidades],
   ];
 
   const wsData = [...headerData, ...productData, ...totalesRows];
@@ -337,7 +301,7 @@ export function exportarListaTransferenciasExcel(
     ["REPORTE DE TRANSFERENCIAS"],
     [`Generado: ${moment().format("DD/MM/YYYY HH:mm")}`],
     [],
-    ["Fecha", "Origen", "Destino", "Productos", "Unidades", "Peso (kg)", "Monto Total", "Usuario", "Estado", "Observación"],
+    ["Fecha", "Origen", "Destino", "Productos", "Unidades", "Usuario", "Estado", "Observación"],
   ];
 
   const data = transferencias.map((t) => [
@@ -346,8 +310,6 @@ export function exportarListaTransferenciasExcel(
     nombreSedeFn(t.sede_destino),
     t.productos?.length || 0,
     t.total_unidades || t.productos?.reduce((s, p) => s + Number(p.cantidad || 0), 0) || 0,
-    Number(t.peso_total || 0).toFixed(2),
-    Number(t.total || 0).toFixed(2),
     (t.usuario || "-").split("@")[0],
     t.estado || "activo",
     t.observacion || "-",
