@@ -74,14 +74,14 @@
                             </span>
                         </td>
                         <td style="font-size:80%;" class="text-right">
-                            <span v-if="item.precio_may1 > 0" :class="{ 'purple--text': esListaPreciosActivo }">
-                                {{ monedaSimbolo }} {{ redondear(item.precio_may1) }}
+                            <span v-if="item.precio_may2 > 0" :class="{ 'blue--text': esListaPreciosActivo }">
+                                {{ monedaSimbolo }} {{ redondear(item.precio_may2) }}
                             </span>
                             <span v-else class="grey--text">—</span>
                         </td>
                         <td style="font-size:80%;" class="text-right">
-                            <span v-if="item.precio_may2 > 0" :class="{ 'blue--text': esListaPreciosActivo }">
-                                {{ monedaSimbolo }} {{ redondear(item.precio_may2) }}
+                            <span v-if="item.precio_may1 > 0" :class="{ 'purple--text': esListaPreciosActivo }">
+                                {{ monedaSimbolo }} {{ redondear(item.precio_may1) }}
                             </span>
                             <span v-else class="grey--text">—</span>
                         </td>
@@ -932,8 +932,8 @@ export default {
             value: 'stock',
         },
         { text: 'Minorista', value: 'precio', sortable: true },
-        { text: 'Distribuidor', value: 'precio_may1', sortable: true },
         { text: 'Mayorista', value: 'precio_may2', sortable: true },
+        { text: 'Distribuidor', value: 'precio_may1', sortable: true },
         {
             text: 'Actions',
             value: 'actions',

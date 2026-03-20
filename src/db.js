@@ -1989,3 +1989,116 @@ export const allUsuariosTransporte = () => {
   const rucAsociado = Number(store.state.baseDatos.ruc_asociado);
   return db.database().ref("usuarios").orderByChild("ruc").equalTo(rucAsociado);
 };
+
+export const allCabeceraMultiSedes = (sedes, fechaInicio, fechaFin) => {
+  const promises = sedes.map(sede => {
+    return db
+      .database()
+      .ref(sede.base)
+      .child("comprobantecabecera")
+      .orderByChild('fecha')
+      .startAt(moment(fechaInicio).unix())
+      .endAt(moment(fechaFin).endOf('day').unix())
+      .once("value")
+      .then(snapshot => {
+        const resultados = [];
+        snapshot.forEach(item => {
+          const data = item.val();
+          data.sede = sede.nombre;
+          data.sede_codigo = sede.codigo;
+          resultados.push(data);
+        });
+        return resultados;
+      });
+  });
+  
+  return Promise.all(promises).then(results => {
+    return results.flat();
+  });
+};
+
+export const consultaCabeceraMultiSedes = (sedes, numeracion) => {
+  const promises = sedes.map(sede => {
+    return db
+      .database()
+      .ref(sede.base)
+      .child("comprobantecabecera")
+      .child(numeracion)
+      .once("value")
+      .then(snapshot => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          data.sede = sede.nombre;
+          data.sede_codigo = sede.codigo;
+          return data;
+        }
+        return null;
+      });
+  });
+  
+  return Promise.all(promises).then(results => {
+    return results.find(r => r !== null);
+  });
+};
+
+export const consultaDetalleMultiSedes = (sedes, numeracion) => {
+  const promises = sedes.map(sede => {
+    return db
+      .database()
+      .ref(sede.base)
+      .child("comprobantedetalle")
+      .child(numeracion)
+      .once("value")
+      .then(snapshot => {
+        if (snapshot.exists()) {
+          return {
+            sede: sede.nombre,
+            sede_codigo: sede.codigo,
+            detalle: snapshot.val()
+          };
+        }
+        return null;
+      });
+  });
+  
+  return Promise.all(promises).then(results => {
+    return results.find(r => r !== null);
+  });
+};
+
+export const allFlujoMultiSedes = (sedes) => {
+  if (!sedes || sedes.length === 0) {
+    return Promise.resolve([]);
+  }
+  
+  const promises = sedes.map(sede => {
+    return db
+      .database()
+      .ref(sede.base)
+      .child("flujocaja")
+      .limitToLast(1500)
+      .once("value")
+      .then(snapshot => {
+        const resultados = [];
+        snapshot.forEach(item => {
+          const data = item.val();
+          if (Boolean(data.estado)) {
+            data.key = item.key;
+            data.id = item.key;
+            data.sede = sede.nombre;
+            data.sede_base = sede.base;
+            resultados.push(data);
+          }
+        });
+        return resultados;
+      })
+      .catch(err => {
+        console.error(`Error consultando flujo de ${sede.nombre}:`, err);
+        return [];
+      });
+  });
+  
+  return Promise.all(promises).then(results => {
+    return results.flat();
+  });
+};

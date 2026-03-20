@@ -28,7 +28,6 @@
                             <v-icon left>mdi-cash-register</v-icon> Punto Venta
                         </v-btn>
                     </v-col>
-
                     <v-col cols="12" md="5" sm="8" class="text-right">
                         <v-menu v-model="menuOpc" bottom offset-y :close-on-content-click="false" nudge-bottom="10"
                             max-width="300">
@@ -42,6 +41,11 @@
                                 <v-list-item @click.stop>
                                     <v-select outlined dense v-model="filtroMov" :items="arrayFiltroMov"
                                         item-text="text" item-value="value" label="Filtrar movimientos" hide-details />
+                                </v-list-item>
+                                <v-list-item @click.stop>
+                                    <v-select class="mt-2" outlined dense v-model="sedeSeleccionada"
+                                        :items="opcionesSedes" item-text="nombre" item-value="base" label="Vendedor"
+                                        hide-details @change="onSedeChange" :disabled="!esAdmin" />
                                 </v-list-item>
                                 <v-divider class="my-1"></v-divider>
 
@@ -114,7 +118,7 @@
                         <th class="text-right">Total</th>
                         <th class="text-left">Observación</th>
                         <th class="text-center">Estado</th>
-                        <th class="text-center">Accion</th>
+                        <!-- <th class="text-center">Accion</th> -->
                     </tr>
                 </thead>
                 <tbody>
@@ -139,7 +143,7 @@
                                 {{ item.estado }}
                             </v-chip>
                         </td>
-                        <td class="text-center" width="100">
+                        <!--  <td class="text-center" width="100">
                             <v-btn icon x-small color="red" @click="abre_editar(item)" title="Ver / Anular">
                                 <v-icon>mdi-pencil</v-icon>
                             </v-btn>
@@ -147,7 +151,7 @@
                                 title="Ver Detalle Venta">
                                 <v-icon>mdi-eye</v-icon>
                             </v-btn>
-                        </td>
+                        </td> -->
                     </tr>
                 </tbody>
             </template>
@@ -353,7 +357,8 @@ import {
     all_histo_stock,
     nuevoflujo_teso,
     allcuentaxcobrar,
-    editaCuentaxCobrar
+    editaCuentaxCobrar,
+    allFlujoMultiSedes
 } from '../../db'
 import XLSX from 'xlsx'
 import moment from 'moment'
@@ -414,13 +419,18 @@ export default {
             fecha_inicio: moment(String(new Date)).format('MM-DD'),
             cambia_metodo: false,
             pre_anular: false,
+            sedeSeleccionada: 'TODAS',
+            sedesDisponibles: [],
+            menuOpc: false,
         }
     },
     mounted() {
-        allflujo().limitToLast(1500).on("value", this.onDataChange);
-    },
-    beforeDestroy() {
-        allflujo().off("value", this.onDataChange);
+        this.cargarSedes();
+        if (!this.esAdmin) {
+            const bdActual = this.$store.state.baseDatos.bd;
+            this.sedeSeleccionada = bdActual;
+        }
+        this.cargarFlujoMultiSede();
     },
     computed: {
         listafiltrada() {
@@ -441,14 +451,81 @@ export default {
                 f.operacion === this.filtroMov
             );
         },
+        opcionesSedes() {
+            const opciones = [
+                { nombre: 'TODAS', base: 'TODAS' }
+            ];
+            this.sedesDisponibles.forEach(s => {
+                opciones.push({
+                    nombre: s.nombre,
+                    base: s.base
+                });
+            });
+            return opciones;
+        },
+        esAdmin() {
+            return this.$store.state.permisos?.es_admin === true;
+        }
     },
     methods: {
         abrir_caja() {
             this.$router.push('/caja2'); // Redirige a la ruta flujocaja
         },
 
+        cargarSedes() {
+            if (this.$store.state.array_sedes && this.$store.state.array_sedes.length > 0) {
+                this.sedesDisponibles = this.$store.state.array_sedes.map(s => ({
+                    nombre: s.nombre,
+                    base: s.base,
+                    codigo: s.codigo
+                }));
+                if (!this.esAdmin) {
+                    const bdActual = this.$store.state.baseDatos.bd;
+                    const sedeActual = this.sedesDisponibles.find(s => s.base === bdActual);
+                    if (sedeActual) {
+                        this.sedesDisponibles = [sedeActual];
+                        this.sedeSeleccionada = bdActual;
+                    }
+                } else {
+                    this.sedeSeleccionada = 'TODAS';
+                }
+            } else {
+                console.log('No se encontraron sedes disponibles en el store. Verifica la carga de sedes.');
+            }
+        },
 
+        async cargarFlujoMultiSede() {
+            this.dialogoprogress = true;
 
+            let sedesABuscar = this.sedesDisponibles;
+            if (this.sedeSeleccionada !== 'TODAS') {
+                const sede = this.sedesDisponibles.find(s => s.base === this.sedeSeleccionada);
+                sedesABuscar = sede ? [sede] : [];
+            }
+
+            const resultados = await allFlujoMultiSedes(sedesABuscar);
+
+            resultados.forEach(item => {
+                if (!item.sede_base && item.sede) {
+                    const sedeEncontrada = this.sedesDisponibles.find(s => s.nombre === item.sede);
+                    if (sedeEncontrada) {
+                        item.sede_base = sedeEncontrada.base;
+                    }
+                }
+            });
+
+            resultados.sort((a, b) => {
+                if (a.fecha > b.fecha) return 1;
+                if (a.fecha < b.fecha) return -1;
+                return 0;
+            });
+
+            this.desserts = resultados.reverse();
+            this.dialogoprogress = false;
+        },
+        onSedeChange() {
+            this.cargarFlujoMultiSede();
+        },
 
         abre_editar(item) {
 
@@ -514,7 +591,8 @@ export default {
             return suma.toFixed(2)
         },
         extrae_texto(data, cantidad) {
-            return data.substr(0, cantidad)
+            const texto = String(data || '');
+            return texto.substr(0, cantidad);
         },
         evento(item) {
             if (item == 2) {
@@ -535,33 +613,7 @@ export default {
                 this.dial_reportes = true
             }
         },
-        async onDataChange(items) {
 
-            let array = [];
-            items.forEach((item) => {
-                let data = item.val();
-                if (Boolean(data.estado)) {
-                    let key = item.key
-                    data.key = key
-                    data.id = key
-                    array.push(data);
-                }
-
-            });
-
-            array.sort(function (a, b) {
-                if (a.fecha > b.fecha) {
-                    return 1;
-                }
-                if (a.fecha < b.fecha) {
-                    return -1;
-                }
-                // a must be equal to b
-                return 0;
-            });
-            this.desserts = array.reverse()
-            //store.commit("dialogoprogress", 1)
-        },
 
         irCaja() {
             this.$router.push({
@@ -1080,7 +1132,12 @@ export default {
         },
 
         async anularFlujo() {
-            await estadoFlujo(this.itemelecto.id, 'anulado');
+            const sedeBase = this.itemelecto.sede_base || this.itemelecto.sede;
+            if (sedeBase && sedeBase !== store.state.baseDatos.bd) {
+                return db.database().ref(sedeBase).child("flujocaja").child(this.itemelecto.id).child("estado").set('anulado');
+            } else {
+                return await estadoFlujo(this.itemelecto.id, 'anulado');
+            }
         },
 
         cerrarDialogos() {

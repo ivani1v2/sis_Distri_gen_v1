@@ -235,12 +235,13 @@ export function aplicarPrecioALinea({
   producto,
   listasCliente = [],
   productosEnVenta = [],
-  forzar = false
+  forzar = false,
+  redondear = (n) => Number(n).toFixed(2)
 } = {}) {
   if (linea?.precio_manual && !forzar) {
     return {
       ...linea,
-      precio_fuente: 'manual'
+      totalLinea: redondear(linea.cantidad * linea.precio)
     };
   }
 
@@ -267,6 +268,7 @@ export function aplicarPrecioALinea({
     desc_1: 0,
     desc_2: 0,
     desc_3: 0,
+    totalLinea: redondear(linea.cantidad * precioAplicado),
     precio_manual: false,
     precio_tipo: resultado.tipo,
     precio_fuente: resultado.fuente,

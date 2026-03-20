@@ -69,7 +69,7 @@
                     </v-col>
                     <v-col cols="6">
                         <v-select v-if="$store.state.permisos.moduloempresa" outlined dense v-model="cod_vendedor"
-                            class="mt-2" :items="$store.state.array_sedes" item-text="nombre" item-value="codigo"
+                            class="mt-2" :items="$store.state.array_sedes" item-text="nombre" item-value="codigo" :disabled="!esAdmin"
                             label="Vendedor">
                             <template v-slot:item="{ item }"><span>{{ item.nombre }}</span></template>
                             <template v-slot:selection="{ item }"><span>{{ item && item.nombre }}</span></template>
@@ -114,7 +114,8 @@
                             </v-btn>
                         </v-col>
                         <v-col cols="12">
-                            <v-btn block color="error" @click="cobrarCredito()" small>
+                            <v-btn block color="error" @click="cobrarCredito()" small class="mt-n5">
+                                <v-icon left small>mdi-cash-register</v-icon>
                                 Confirmar Credito
                             </v-btn>
                         </v-col>
@@ -343,6 +344,7 @@ export default {
             this.nombreCompleto = this.cliente.nombre
 
             this.direccion = this.cliente.dir
+            this.telfcliente = this.cliente.telefono
         }
         const usarDefecto = store.state.configuracion.usar_comprobante_defecto === true
         if (usarDefecto) {

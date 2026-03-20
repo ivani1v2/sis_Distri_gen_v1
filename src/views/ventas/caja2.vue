@@ -367,6 +367,7 @@ export default {
                 dir,
                 dni: data.documento || '',
                 nombre: data.nombre || '',
+                telefono: data.telefono || '',
                 latitud,
                 longitud,
             };
@@ -634,6 +635,7 @@ export default {
             cabecera.descuentos = totaldescuentos
             cabecera.moneda = this.moneda
             this.cabecera_final = cabecera
+            this.cabecera_final.cliente_zona = this.cliente_s?.zona || ''
             this.items_final = items
             this.dial_cobro = true
         },

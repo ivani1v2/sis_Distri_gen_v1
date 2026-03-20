@@ -3,10 +3,14 @@
         <v-btn v-if="false" @click="detalle">mostrar</v-btn>
         <v-card class="pa-2">
             <v-row dense>
-                <v-col cols="6" sm="4">
+                <v-col cols="12" sm="2">
+                    <v-select v-model="sedeSeleccionada" :items="opcionesSedes" item-text="nombre" item-value="base"
+                        label="Vendedor" outlined dense @change="cambiarSede" />
+                </v-col>
+                <v-col cols="6" sm="3">
                     <v-text-field class="mx-1" outlined dense type="date" v-model="date" label="Inicio"></v-text-field>
                 </v-col>
-                <v-col cols="6" sm="4">
+                <v-col cols="6" sm="3">
                     <v-text-field class="mx-1" outlined dense type="date" v-model="date2" label="Fin"></v-text-field>
                 </v-col>
                 <v-col cols="12" sm="4" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
@@ -18,7 +22,7 @@
 
             <v-row class="mt-n8">
                 <v-col cols="12">
-                    <h4 class="text-center">Total General: {{moneda}} {{ sumaventas() }} </h4>
+                    <h4 class="text-center">Total General: {{ moneda }} {{ sumaventas() }} </h4>
                 </v-col>
             </v-row>
 
@@ -38,7 +42,7 @@
                             <th class="text-left">
                                 Estado
                             </th>
-                             <th class="text-left">
+                            <th class="text-left">
                                 Total
                             </th>
                             <th class="text-left">
@@ -63,8 +67,7 @@
                             <td width="100">
                                 <v-row>
                                     <v-col cols="6" xs="6">
-                                        <v-icon color="green"
-                                            @click.prevent="ejecutaConsolida(item)">mdi-eye</v-icon>
+                                        <v-icon color="green" @click.prevent="ejecutaConsolida(item)">mdi-eye</v-icon>
                                     </v-col>
                                     <v-col cols="6" xs="6">
                                         <v-icon color="red"
@@ -90,7 +93,7 @@
                     <v-col cols="12">
                     </v-col>
                 </v-row>
-                
+
                 <v-simple-table dark fixed-header max-width="70vh" dense>
                     <template v-slot:default>
 
@@ -108,16 +111,20 @@
                             </tr>
                         </thead>
 
-                    
+
                         <tbody>
                             <tr v-for="item in arrayConsolidar" :key="item.id" class="">
-                                <td>{{item.id}} - {{ item.nombre }} - {{seleccionado.moneda}}{{ item.precioedita }} x {{ item.medida }}</td>
+                                <td>{{ item.id }} - {{ item.nombre }} - {{ seleccionado.moneda }}{{ item.precioedita }}
+                                    x {{
+                                        item.medida }}</td>
                                 <td>{{ item.cantidad }}</td>
-                                <td v-if="item.operacion == 'GRATUITA'" class="red--text">{{seleccionado.moneda}} 0.00</td>
-                                <td v-else> {{seleccionado.moneda}} {{ redondear(item.precioedita * item.cantidad) }}</td>
+                                <td v-if="item.operacion == 'GRATUITA'" class="red--text">{{ seleccionado.moneda }} 0.00
+                                </td>
+                                <td v-else> {{ seleccionado.moneda }} {{ redondear(item.precioedita * item.cantidad) }}
+                                </td>
                             </tr>
                         </tbody>
-                        
+
                     </template>
                 </v-simple-table>
             </v-card>
@@ -133,7 +140,10 @@ import {
     allCabecera,
     consultaDetalle,
     grabaDatoC,
-    consulta_Cabecera
+    consulta_Cabecera,
+    allCabeceraMultiSedes,
+    consultaCabeceraMultiSedes,
+    consultaDetalleMultiSedes
 } from '../db'
 import store from '@/store/index'
 import imprime from '@/components/dialogos/dialog_imprime'
@@ -157,7 +167,9 @@ export default {
         tipo_doc: 'T',
         numero: '',
         correo: '',
-        moneda: 'S/'
+        moneda: 'S/',
+        sedeSeleccionada: 'TODAS',
+        sedesDisponibles: []
     }),
 
     computed: {
@@ -165,18 +177,50 @@ export default {
             this.desserts.reverse()
             return this.desserts.filter((item) => (item.numeracion)
                 .toLowerCase().includes(this.num_doc.toLowerCase()))
-        }
+        },
+        opcionesSedes() {
+            const opciones = [
+                { nombre: 'TODOS', base: 'TODAS' }
+            ];
+            this.sedesDisponibles.forEach(s => {
+                opciones.push({
+                    nombre: s.nombre,
+                    base: s.base
+                });
+            });
+            return opciones;
+        },
     },
     created() {
-         this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
+        this.moneda = this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
+        this.cargarSedes()
         this.busca()
     },
     methods: {
-
-        selecciona_item(item) {
-
-            this.seleccionado = item
-            this.genera_pdf = true
+        cargarSedes() {
+            if (this.$store.state.array_sedes && this.$store.state.array_sedes.length > 0) {
+                this.sedesDisponibles = this.$store.state.array_sedes.map(s => ({
+                    nombre: s.nombre,
+                    base: s.base,
+                    codigo: s.codigo
+                }));
+                this.sedeSeleccionada = 'TODAS';
+            }
+        },
+        cambiarSede(valor) {
+            this.busca();
+        },
+        async selecciona_item(item) {
+            let sedesABuscar = this.sedesDisponibles;
+            if (this.sedeSeleccionada !== 'TODAS') {
+                const sede = this.sedesDisponibles.find(s => s.base === this.sedeSeleccionada);
+                sedesABuscar = sede ? [sede] : [];
+            }
+            const resultado = await consultaCabeceraMultiSedes(sedesABuscar, item.numeracion)
+            if (resultado) {
+                this.seleccionado = resultado
+                this.genera_pdf = true
+            }
         },
         conviertefecha(date) {
             return moment.unix(date).format('DD/MM/YYYY hh:mm A')
@@ -190,18 +234,29 @@ export default {
             }
             return this.redondear(venta)
         },
-        ejecutaConsolida(value) {
+        async ejecutaConsolida(value) {
             store.commit("dialogoprogress")
             this.seleccionado = value
             this.arrayConsolidar = []
-            consultaDetalle(value.numeracion).once("value").then((snapshot) => {
-                snapshot.forEach((item) => {
-                    this.arrayConsolidar.push(item.val())
-                })
-                this.dialog = true
-                store.commit("dialogoprogress")
-            })
-            console.log(value,this.arrayConsolidar)
+
+            let sedesABuscar = this.sedesDisponibles;
+            if (this.sedeSeleccionada !== 'TODAS') {
+                const sede = this.sedesDisponibles.find(s => s.base === this.sedeSeleccionada);
+                sedesABuscar = sede ? [sede] : [];
+            }
+            const resultado = await consultaDetalleMultiSedes(sedesABuscar, value.numeracion)
+            if (resultado && resultado.detalle) {
+                const detalle = resultado.detalle;
+                if (typeof detalle === 'object' && !Array.isArray(detalle)) {
+                    Object.values(detalle).forEach(item => {
+                        this.arrayConsolidar.push(item)
+                    })
+                } else if (Array.isArray(detalle)) {
+                    this.arrayConsolidar = detalle
+                }
+            }
+            this.dialog = true
+            store.commit("dialogoprogress")
         },
         redondear(valor) {
             return parseFloat(valor).toFixed(2)
@@ -218,38 +273,40 @@ export default {
                 //grabaDatoC(this.desserts[i].numeracion,"automata","no")
             }
         },
-        busca() {
+        async busca() {
             store.commit("dialogoprogress")
-            var array = []
-            this.desserts = []
+
             if (this.num_doc != '') {
-                var data = this.tipo_doc + (this.num_doc).toString().padStart(8, 0)
-                consulta_Cabecera(data)
-                    .once("value").then((snapshot) => {
-                        if (snapshot.exists()) {
-                            var data = snapshot.val()
-                            data.color = this.asigna_color_doc(data),
-                                this.desserts.push(data)
-                        } else {
-                            store.commit('dialogosnackbar', 'Comprobante no existe')
-                        }
-                        store.commit("dialogoprogress")
-                    })
+                let sedesABuscar = this.sedesDisponibles;
+                if (this.sedeSeleccionada !== 'TODAS') {
+                    const sede = this.sedesDisponibles.find(s => s.base === this.sedeSeleccionada);
+                    sedesABuscar = sede ? [sede] : [];
+                }
+
+                const numeracion = this.tipo_doc + this.num_doc.toString().padStart(8, 0)
+                const resultado = await consultaCabeceraMultiSedes(sedesABuscar, numeracion)
+
+                if (resultado) {
+                    resultado.color = this.asigna_color_doc(resultado)
+                    this.desserts = [resultado]
+                } else {
+                    this.desserts = []
+                    store.commit('dialogosnackbar', 'Comprobante no existe')
+                }
             } else {
-                allCabecera()
-                    .orderByChild('fecha')
-                    .startAt(moment(String(this.date)) / 1000)
-                    .endAt(moment(String(this.date2)).add(23, 'h').add(59, 'm').add(59, 's') / 1000)
-                    .once("value").then((snapshot) => {
-                        snapshot.forEach((item) => {
-                            var data = item.val()
-                            data.color = this.asigna_color_doc(data),
-                                array.push(data)
-                        })
-                        this.desserts = array
-                        store.commit("dialogoprogress")
-                    })
+                let sedesABuscar = this.sedesDisponibles;
+                if (this.sedeSeleccionada !== 'TODAS') {
+                    const sede = this.sedesDisponibles.find(s => s.base === this.sedeSeleccionada);
+                    sedesABuscar = sede ? [sede] : [];
+                }
+                const resultados = await allCabeceraMultiSedes(sedesABuscar, this.date, this.date2)
+                resultados.forEach(item => {
+                    item.color = this.asigna_color_doc(item)
+                })
+                this.desserts = resultados
             }
+
+            store.commit("dialogoprogress")
         },
         cambia_doc() {
             if (this.tipo_doc == 'B') {
