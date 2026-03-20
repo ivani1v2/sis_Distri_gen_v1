@@ -51,18 +51,12 @@ async function completa_items(arrays) {
     const tieneDescuentosPorcentaje = d1 !== 0 || d2 !== 0 || d3 !== 0;
 
     const descuentositem = parseFloat(data.preciodescuento) || 0;
-
-    const esGratuita = data.operacion === "GRATUITA";
-
-    // Para gratuitas, priorizar precio_base como referencial
-    const precioFuente = esGratuita
-      ? (parseFloat(data.precio_base) || parseFloat(data.precioedita) || parseFloat(data.precio) || 0)
-      : (parseFloat(data.precioedita) || parseFloat(data.precio) || 0);
-
-    const descuentoUnitario = cantidad > 0 ? descuentositem / cantidad : 0;
+ 
 
     const precio_item = parseFloat(
-      redondear(precioFuente - descuentoUnitario)
+      redondear(
+        data.precio - (data.cantidad ? descuentositem / data.cantidad : 0),
+      ),
     );
 
     let valor_unitario = precio_item;
@@ -123,10 +117,11 @@ async function completa_items(arrays) {
       factor: data.factor || 1,
       medida: data.medida,
       cod_medida: obtencodigomedida(data.medida, data.tipoproducto || "BIEN"),
-      precio: precioFuente,
-      precioedita: precioFuente,
-      precio_base: data.precio_base || precioFuente,
+      precio: data.precio,
+      precioedita: data.precio_base || data.precio,
+      precio_base: data.precio_base || data.precio,
       preciodescuento: data.preciodescuento || 0,
+      peso:data.peso||0,
       tipoproducto: data.tipoproducto || "BIEN",
       operacion: data.operacion,
       valor_unitario: Number(valor_unitario).toFixed(5),
@@ -135,7 +130,7 @@ async function completa_items(arrays) {
       total_antes_impuestos: Number(antesimpuesto).toFixed(2),
       total_impuestos: Number(totalImpuesto).toFixed(2),
       precioVentaUnitario: redondear(precio_item),
-      uuid: crypto.randomUUID() || "",
+      uuid: data.uuid || (crypto?.randomUUID ? crypto.randomUUID() : ""),
     };
 
     if (tieneDescuentosPorcentaje) {
@@ -143,9 +138,10 @@ async function completa_items(arrays) {
         desc_1: d1,
         desc_2: d2,
         desc_3: d3,
-        precioFinal: precioFuente,
-        precioBase: data.precio_base || precioFuente,
-        precioCatalogo: data.descuentos?.precioCatalogo || data.precio_base || precioFuente,
+        precioFinal: precio_item,
+        precioBase: data.precio_base || data.precio,
+        precioCatalogo:
+          data.descuentos?.precioCatalogo || data.precio_base || data.precio,
       };
 
       itemProcesado.desc_1 = d1;
@@ -204,10 +200,10 @@ async function flujo_caja(cabecera) {
       } else {
         if (data.monto != "") {
           var flujo = {
-            operacion: 'credito',
-            observacion: 'VENTA CREDITO - ' + cabecera.numeracion,
+            operacion: "credito",
+            observacion: "VENTA CREDITO - " + cabecera.numeracion,
             numeracion_doc: cabecera.numeracion,
-            modo: 'credito',
+            modo: "credito",
             fecha: cabecera.fecha,
             total: data.monto,
             estado: "activo",
@@ -288,12 +284,12 @@ export const modifica_stock_unitario = async (metodo, item) => {
 
 async function resta_stock_app(data) {
   var producto = store.state.productos.find(
-    (id) => String(id.id) === String(data.id)
+    (id) => String(id.id) === String(data.id),
   );
   if (Boolean(producto)) {
     if (producto.controstock) {
       var nuevo_stock = parseFloat(
-        (parseFloat(producto.stock) - parseFloat(data.cantidad)).toFixed(2)
+        (parseFloat(producto.stock) - parseFloat(data.cantidad)).toFixed(2),
       );
       await editaProducto(data.id, "stock", nuevo_stock);
     }
@@ -302,12 +298,12 @@ async function resta_stock_app(data) {
 }
 async function suma_stock_app(data) {
   var producto = store.state.productos.find(
-    (id) => String(id.id) === String(data.id)
+    (id) => String(id.id) === String(data.id),
   );
   if (Boolean(producto)) {
     if (producto.controstock) {
       var nuevo_stock = parseFloat(
-        (parseFloat(producto.stock) + parseFloat(data.cantidad)).toFixed(2)
+        (parseFloat(producto.stock) + parseFloat(data.cantidad)).toFixed(2),
       );
       await editaProducto(data.id, "stock", nuevo_stock);
     }

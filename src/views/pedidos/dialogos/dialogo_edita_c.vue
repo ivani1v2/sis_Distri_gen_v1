@@ -617,7 +617,7 @@ export default {
                     p.operacion === id.operacion
             );
 
-            if (producto) {
+             if (producto) {
                 this.item_selecto = producto;
                 this.codigoedita = this.listaproductos.indexOf(producto);
                 this.cantidadEdita = producto.cantidad;
@@ -625,69 +625,10 @@ export default {
                 this.preciodescuento = producto.preciodescuento;
                 this.nombreEdita = producto.nombre;
                 this.operacion_edita = producto.operacion;
-                this.descEdita = {
-                    desc_1: desc1,
-                    desc_2: desc2,
-                    desc_3: desc3,
-                    precioFinal: precioFinalActual,
-                    montoDescuento: precioBaseActual - precioFinalActual
-                };
-                this.precioCambiado = producto.precio_base &&
-                    producto.precio_base !== precioCatalogo;
             }
             this.dialogoProducto = true;
         },
-        obtenerPrecioCatalogo(productoId) {
-            if (!productoId) {
-                return 0;
-            }
-            const productoCatalogo = store.state.productos?.find(
-                p => String(p.id) === String(productoId)
-            );
-            if (!productoCatalogo) { return 0; }
-            const precio = Number(productoCatalogo.precio) || 0;
-
-            return precio;
-        },
-
-        onPrecioEditaChange() {
-            const precioActual = Number(this.precioedita) || 0;
-            const precioCatalogo = this.obtenerPrecioCatalogo(this.item_selecto?.id);
-            this.precioCambiado = precioActual !== precioCatalogo;
-
-            if (this.item_selecto) {
-                this.item_selecto.precio_base = precioActual;
-                if (this.precioCambiado) {
-                    this.descEdita = {
-                        desc_1: 0,
-                        desc_2: 0,
-                        desc_3: 0,
-                        precioFinal: precioActual,
-                        montoDescuento: 0
-                    };
-                    this.item_selecto.desc_1 = 0;
-                    this.item_selecto.desc_2 = 0;
-                    this.item_selecto.desc_3 = 0;
-                } else {
-                    if (this.$refs.descEditaRef) {
-                        this.$refs.descEditaRef.recalcularDesdeBase();
-                    }
-                }
-            }
-        },
-        onDescEditaCambio(data) {
-            this.descEdita = data;
-            if (this.item_selecto && data.precioFinal !== undefined) {
-                this.item_selecto.desc_1 = data.desc_1 || 0;
-                this.item_selecto.desc_2 = data.desc_2 || 0;
-                this.item_selecto.desc_3 = data.desc_3 || 0;
-                this.precioFinalActual = data.precioFinal;
-                if (!this.precioCambiado) {
-                    this.item_selecto.precio_base = this.precioOriginalEdita;
-                }
-            }
-        },
-        async grabaEdita() {
+          async grabaEdita() {
             if (!this.cantidadEdita || parseFloat(this.cantidadEdita) === 0) {
                 alert("La cantidad no puede ser vacía o cero.");
                 this.cantidadEdita = 1;

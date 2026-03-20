@@ -931,12 +931,7 @@ async function impresion80(arraydatos, qr, cabecera) {
   doc.text(separacion, pageCenter, linea, "center");
   linea = linea + 3;
 
-  if (arraycabe.descuentos != 0) {
-    doc.setFontSize(8);
-    doc.text("DESCUENTOS", lMargin, linea);
-    doc.text(moneda + arraycabe.descuentos, 68, linea, "right");
-    linea = linea + 3.5;
-  }
+ 
   console.log(arraycabe.total_op_gratuitas);
   if (arraycabe.total_op_gratuitas > 0) {
     doc.setFont("Helvetica", "");

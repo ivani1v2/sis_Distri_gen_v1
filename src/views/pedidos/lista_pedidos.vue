@@ -168,18 +168,15 @@
                                         </v-list-item-icon>
                                         <v-list-item-title>Descargar</v-list-item-title>
                                     </v-list-item>
-                                    <v-list-item @click='editar(item)' v-if="item.estado != 'ANULADO'">
-                                        <v-list-item-icon>
-                                            <v-icon color="success"> mdi-pencil</v-icon>
-                                        </v-list-item-icon>
-                                        <v-list-item-title>Editar</v-list-item-title>
-                                    </v-list-item>
-                                    <v-list-item @click='anular(item)' v-if="item.estado != 'ANULADO'">
-                                        <v-list-item-icon>
-                                            <v-icon color="error"> mdi-delete</v-icon>
-                                        </v-list-item-icon>
-                                        <v-list-item-title>Anular</v-list-item-title>
-                                    </v-list-item>
+                                <v-list-item v-if="puedeEditar(item)" @click="editar(item)">
+                                    <v-list-item-icon><v-icon color="success"
+                                            small>mdi-pencil</v-icon></v-list-item-icon>
+                                    <v-list-item-title>Editar</v-list-item-title>
+                                </v-list-item>
+                                <v-list-item v-if="puedeEditar(item)" @click="anular(item)">
+                                    <v-list-item-icon><v-icon color="error" small>mdi-delete</v-icon></v-list-item-icon>
+                                    <v-list-item-title>Anular</v-list-item-title>
+                                </v-list-item>
                                 </v-list>
                             </v-menu>
                         </v-col>
@@ -611,6 +608,11 @@ export default {
     },
 
     methods: {
+             puedeEditar(item) {
+            const estadosBloqueados = ['anulado', 'atendido', 'procesado'];
+            const estadoNorm = String(item?.estado || '').toLowerCase().trim();
+            return !estadosBloqueados.includes(estadoNorm);
+        },
         aplicarFiltroMovil() {
             this.dialFiltroMovil = false;
             // si tu lógica de cambio ya filtra, puedes llamar solo onVendedorChange
@@ -678,6 +680,7 @@ export default {
                 // Trae en paralelo el detalle de cada pedido
                 const resultados = await Promise.all(
                     pedidos.map(async (cab) => {
+                      
                         const snap = await detalle_pedido(cab.id).once("value");
                         return {
                             cabecera: cab,
@@ -685,6 +688,7 @@ export default {
                         };
                     })
                 );
+                console.log('resutlados',resultados)
                 this.result = resultados
                 store.commit("dialogoprogress")
                 this.dial_avance = true

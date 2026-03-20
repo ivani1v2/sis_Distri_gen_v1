@@ -845,10 +845,10 @@ export default {
             return total;
         },
         apiBaseUrl() {
-            const hostname = window.location.hostname;
+         /*   const hostname = window.location.hostname;
             if (hostname === 'localhost' || hostname === '127.0.0.1') {
                 return 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion';
-            }
+            }*/
             return 'https://api-distribucion-6sfc6tum4a-rj.a.run.app';
         }
     },
@@ -1633,6 +1633,7 @@ export default {
         },
         async edita_c(cabecera) {
             console.log(cabecera)
+               store.commit("dialogoprogress");
             var snapshot = await all_detalle_p(this.router_grupo, cabecera.numeracion).once("value")
             var detalle = snapshot.val()
             if (snapshot.exists()) {
@@ -1641,6 +1642,7 @@ export default {
                 this.detalle_selecto = detalle
                 this.dialogo_edita_ = true
             }
+               store.commit("dialogoprogress");
         },
         async busca_cuentas(doc) {
             var lista = []

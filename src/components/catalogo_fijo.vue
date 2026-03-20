@@ -1,6 +1,6 @@
 <template>
     <div content-class="dialogo-cantidad-centrado">
-         <v-autocomplete v-if="!activaproductos && x_categoria" v-model="producto_sele" :items="productosFiltrados"
+        <v-autocomplete v-if="!activaproductos && x_categoria" v-model="producto_sele" :items="productosFiltrados"
             item-text="displayText" item-value="id" :filter="filtrarProductos"
             :label="muestra_tabla ? 'Buscar Productos (F1)' : 'Buscar Productos'" clearable :auto-select-first="true"
             menu-props="{ maxHeight: '300px', auto: true }" outlined dense ref="buscarField"
@@ -128,7 +128,7 @@
                     <div class="text-caption grey--text text--darken-1" v-if="getFactor(producto_selecto) > 1">
                         Stock:
                         <strong>{{ Math.floor(Number(producto_selecto.stock || 0) / getFactor(producto_selecto))
-                        }}</strong>
+                            }}</strong>
                         cajas
                         + <strong>{{ Number(producto_selecto.stock || 0) % getFactor(producto_selecto) }}</strong> und
                         (total <strong>{{ producto_selecto.stock }}</strong> und)
@@ -690,15 +690,33 @@ export default {
             }
             if (producto) {
                 if (this.esCodigoDeBarras) {
-                    producto.cantidad = 1
-                    this.buscar = ''
-                    this.$emit('agrega_lista', producto)
+                    const factor = this.getFactor(producto);
+
+                    const linea = {
+                        ...producto,
+                        cantidad: 1,
+                        medida: 'UNIDAD', // ✅ importante
+                        factor: factor,
+                        operacion: producto.operacion || 'GRAVADA',
+                        precio: Number(this.precioPorTier(producto, 1).toFixed(4)),
+                        precio_base: Number(this.precioPorTier(producto, 1).toFixed(4)),
+                        _precio_tier: 1,
+                        _unidades: 1,
+                        desc_1: 0,
+                        desc_2: 0,
+                        desc_3: 0,
+                    };
+
+                    this.buscar = '';
+                    this.$emit('agrega_lista', linea);
+
                     this.$nextTick(() => {
                         this.observacionesSeleccionadas = [];
-                        this.observacion_can = ''
-                        this.$refs.buscarField.focus();
+                        this.observacion_can = '';
+                        this.$refs.buscarField && this.$refs.buscarField.focus();
                     });
-                    return
+
+                    return;
                 }
                 this.cantidadInput = 1;
                 this.producto_selecto = producto;
@@ -874,9 +892,11 @@ export default {
 .border-bottom {
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
+
 .v-list-item--active {
     background-color: var(--v-primary-lighten5) !important;
 }
+
 .dialogo-cantidad-centrado {
     display: flex !important;
     align-items: center !important;

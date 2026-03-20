@@ -602,6 +602,7 @@ export function agregarLista({
         preciodescuento: 0,
         peso: pesoLinea,
         totalLinea: "0.00",
+          __tsAdd: Date.now(),
       });
       return;
     }
@@ -631,6 +632,7 @@ export function agregarLista({
       // Si tu "precio" en la línea YA ES el precio final con descuento, esto está bien:
       const precioUnit = Number(existente.precio || 0);
       existente.totalLinea = redondear(precioUnit * nuevaCantidad);
+        existente.__tsAdd = Date.now();
 
       return;
     }
@@ -649,6 +651,7 @@ export function agregarLista({
         val.preciodescuento != null ? Number(val.preciodescuento) : 0,
       peso: pesoLinea,
       totalLinea: redondear(precioNum * cantidad),
+        __tsAdd: Date.now(), 
     });
   });
 

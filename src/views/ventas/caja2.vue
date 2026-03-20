@@ -3,7 +3,8 @@
         <v-row>
             <v-col cols="12" md="4"
                 v-if="$vuetify.breakpoint.mdAndUp || ($vuetify.breakpoint.smAndDown && $vuetify.breakpoint.width > $vuetify.breakpoint.height)">
-                <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true" :x_categoria="true" :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null">
+                <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true" :x_categoria="true"
+                    :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null">
                 </cat_fijo>
             </v-col>
 
@@ -13,7 +14,8 @@
                         <v-row class="mt-n4" dense>
                             <v-col cols="6" xs="6">
                                 <cat_fijo v-if="$store.state.esmovil" ref="catFijo"
-                                    @agrega_lista="agregar_lista($event)" :muestra_tabla="false" :x_categoria="true" :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null">
+                                    @agrega_lista="agregar_lista($event)" :muestra_tabla="false" :x_categoria="true"
+                                    :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null">
                                 </cat_fijo>
 
                             </v-col>
@@ -115,7 +117,7 @@
                                                         style="max-width: 70vw;">
                                                         <span class="font-weight-bold red--text">{{
                                                             Number(item.cantidad)
-                                                        }}×</span>
+                                                            }}×</span>
                                                         {{ item.nombre }}
                                                     </div>
                                                 </div>
@@ -178,7 +180,7 @@
                                                 <v-list-item v-for="m in $store.state.moneda" :key="m.codigo"
                                                     @click="moneda = m.simbolo">
                                                     <v-list-item-title>{{ m.simbolo }} - {{ m.moneda
-                                                    }}</v-list-item-title>
+                                                        }}</v-list-item-title>
                                                 </v-list-item>
                                             </v-list>
                                         </v-menu>
@@ -214,7 +216,8 @@
             </div>
             <v-card class="pa-1">
                 <cat_fijo ref="catFijo" v-if="dial_catalogo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true"
-                    :x_categoria="false" :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null"  :lista_precios="lista_precios_selecta">
+                    :x_categoria="false" :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null"
+                    :lista_precios="lista_precios_selecta">
                 </cat_fijo>
             </v-card>
         </v-dialog>
@@ -381,8 +384,8 @@ export default {
             return !!this.$store.state.permisos.agrega_producto;
         },
         esListaPreciosActivo() {
-        return this.$store.state.configuracion?.lista_precios === true;
-    },
+            return this.$store.state.configuracion?.lista_precios === true;
+        },
 
     },
     mounted() {
@@ -531,8 +534,6 @@ export default {
         },
 
         agregar_lista(value) {
-            console.log(value)
-            // 1) Usamos tu helper para fusionar / sumar cantidades / etc.
             let nuevaLista = agregarLista({
                 listaActual: this.listaproductos,
                 nuevosItems: value,
@@ -540,34 +541,13 @@ export default {
                 redondear: (n) => this.redondear(n),
             });
 
-            // 2) Marcar timestamp interno para controlar el orden visual
-            const baseTs = Date.now();
-            let offset = 0;
-
-            nuevaLista = nuevaLista.map(item => {
-                // si ya tenía marca, la respetamos
-                if (item.__tsAdd) return item;
-
-                // si no, se la ponemos (sirve para items recién agregados)
-                const nuevo = { ...item };
-                nuevo.__tsAdd = baseTs + (offset++); // pequeño offset para evitar empates
-                return nuevo;
-            });
-
-            // 3) Ordenar según modo
             if (this.modoOrdenProductos === 'top') {
-                // Últimos agregados arriba → mayor __tsAdd primero
-                nuevaLista.sort((a, b) => {
-                    const ta = a.__tsAdd || 0;
-                    const tb = b.__tsAdd || 0;
-                    return tb - ta;
-                });
+                nuevaLista.sort((a, b) => (b.__tsAdd || 0) - (a.__tsAdd || 0));
             }
-            // si es 'push', dejamos el orden que devuelve agregarLista
 
-            // 4) Asignamos y recalculamos bonos / precios
             this.listaproductos = nuevaLista;
             this.recalculoUltimoAgregado(value);
+            
         },
 
         recalculoUltimoAgregado(value) {
