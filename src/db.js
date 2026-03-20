@@ -55,7 +55,7 @@ export const all_multiEmpresas = () => {
   return multi_empresas;
 };
 export const lee_multiEmpresas = (id) => {
-  console.log("consultadno",id)
+  console.log("consultadno", id)
   return multi_empresas.child(id);
 };
 export const nueva_multiEmpresa = (id, array) => {
@@ -88,7 +88,7 @@ export const grabaConfigura = (configura, value) => {
     });
   return c;
 };
-export const grabaTipoCambio = (id, dato) => { 
+export const grabaTipoCambio = (id, dato) => {
   return db
     .database()
     .ref(store.state.baseDatos.bd)
@@ -107,7 +107,7 @@ export const all_TipoCambio = () => {
   return db
     .database()
     .ref(store.state.baseDatos.bd)
-    .child("tipo_cambio") 
+    .child("tipo_cambio")
 };
 export const grabaConfiguraImpresora = (id, array) => {
   return db
@@ -396,7 +396,7 @@ export const allCabecera = () => {
 export const allCabecera_general = (bd) => {
   return db.database().ref(bd).child("comprobantecabecera");
 };
-export const allDetalle_general = (bd,numeracion) => {
+export const allDetalle_general = (bd, numeracion) => {
   return db.database().ref(bd).child("comprobantedetalle").child(numeracion);
 };
 export const elimina_Cabecera = (numeracion) => {
@@ -629,7 +629,7 @@ export const nuevoCliente_migra = (ruc, array) => {
     .child("clientes")
     .set(array)
 };
-export const elimina_cliente_migra =(ruc) => {
+export const elimina_cliente_migra = (ruc) => {
   return db
     .database()
     .ref("general")
@@ -1212,10 +1212,11 @@ export const nuevaCuentaxcobrar = (id, array) => {
     .child(id)
     .set(array)
 };
-export const editaCuentaxCobrar = (id, tipo, data) => {
+export const editaCuentaxCobrar = (id, tipo, data, sedeBase = null) => {
+  const base = sedeBase || store.state.baseDatos.bd;
   return db
     .database()
-    .ref(store.state.baseDatos.bd)
+    .ref(base)
     .child("x_cobrar")
     .child(id)
     .child(tipo)
@@ -1226,8 +1227,8 @@ export const editaCuentaxCobrar = (id, tipo, data) => {
     .catch(function (error) {
       return error;
     });
-  return c;
 };
+
 export const allcuentaxcobrar = () => {
   return db.database().ref(store.state.baseDatos.bd).child("x_cobrar");
 };
@@ -1296,7 +1297,7 @@ export const nuevoMovimiento = (id, array) => {
     .child(id)
     .set(array)
 };
-export const nuevoMovimiento_otrabd = (bd,id, array) => {
+export const nuevoMovimiento_otrabd = (bd, id, array) => {
   return db
     .database()
     .ref(bd)
@@ -1338,7 +1339,7 @@ export const elmina_mov_kardex = (id) => {
     .child(id)
     .remove();
 };
-export const elmina_mov_kardex_otrabd = (bd,id) => {
+export const elmina_mov_kardex_otrabd = (bd, id) => {
   return db
     .database()
     .ref(bd)
@@ -1568,7 +1569,7 @@ export const all_tablas_transporte = (tabla) => {
     .child("tabla")
     .child(tabla);
 };
-export const nuevo_tablas_transporte = (tabla,id, array) => {
+export const nuevo_tablas_transporte = (tabla, id, array) => {
   return db
     .database()
     .ref(store.state.baseDatos.bd)
@@ -1774,7 +1775,7 @@ export const busca_bono = (id) => {
     .child("Bono")
     .child(id);
 };
-export const nuevoBono_otraBD  = (bd,id, array) => {
+export const nuevoBono_otraBD = (bd, id, array) => {
   return db
     .database()
     .ref(bd)
@@ -1845,7 +1846,7 @@ export const all_detalle_entrega = (grupo) => {
     .child("pedidos")
     .child("detalle_reparto")
     .child(grupo)
-    .child("entregas"); 
+    .child("entregas");
 };
 
 
@@ -1857,7 +1858,7 @@ export const obten_datos_tienda = (tabla) => {
     .child(tabla)
 };
 
-export const guarda_datos_tienda = (tabla,data) => {
+export const guarda_datos_tienda = (tabla, data) => {
   return db
     .database()
     .ref(store.state.baseDatos.bd)
@@ -1866,7 +1867,7 @@ export const guarda_datos_tienda = (tabla,data) => {
     set(data)
 };
 
-export const elimina_datos_tienda = (tabla,id) => {
+export const elimina_datos_tienda = (tabla, id) => {
   return db
     .database()
     .ref(store.state.baseDatos.bd)
@@ -2011,7 +2012,7 @@ export const allCabeceraMultiSedes = (sedes, fechaInicio, fechaFin) => {
         return resultados;
       });
   });
-  
+
   return Promise.all(promises).then(results => {
     return results.flat();
   });
@@ -2035,7 +2036,7 @@ export const consultaCabeceraMultiSedes = (sedes, numeracion) => {
         return null;
       });
   });
-  
+
   return Promise.all(promises).then(results => {
     return results.find(r => r !== null);
   });
@@ -2060,7 +2061,7 @@ export const consultaDetalleMultiSedes = (sedes, numeracion) => {
         return null;
       });
   });
-  
+
   return Promise.all(promises).then(results => {
     return results.find(r => r !== null);
   });
@@ -2070,7 +2071,7 @@ export const allFlujoMultiSedes = (sedes) => {
   if (!sedes || sedes.length === 0) {
     return Promise.resolve([]);
   }
-  
+
   const promises = sedes.map(sede => {
     return db
       .database()
@@ -2097,8 +2098,82 @@ export const allFlujoMultiSedes = (sedes) => {
         return [];
       });
   });
-  
+
   return Promise.all(promises).then(results => {
     return results.flat();
   });
+};
+
+export const allCxCMultiSedes = (sedes) => {
+  if (!sedes || sedes.length === 0) {
+    return Promise.resolve([]);
+  }
+
+  const promises = sedes.map(sede => {
+    return db
+      .database()
+      .ref(sede.base)
+      .child("x_cobrar")
+      .once("value")
+      .then(snapshot => {
+        const resultados = [];
+        snapshot.forEach(item => {
+          const data = item.val();
+          if (data) {
+            const uniqueKey = `${sede.base}_${data.doc_ref || item.key}`;
+            data.unique_key = uniqueKey;
+            data.id = uniqueKey;
+            data.sede = sede.nombre;
+            data.sede_base = sede.base;
+            resultados.push(data);
+          }
+        });
+        return resultados;
+      })
+      .catch(err => {
+        console.error(`Error consultando CxC de ${sede.nombre}:`, err);
+        return [];
+      });
+  });
+
+  return Promise.all(promises).then(results => {
+    return results.flat();
+  });
+};
+
+export const grabaCabeceraOtraSede = (sedeBase, numeracion, array) => {
+  return db
+    .database()
+    .ref(sedeBase)
+    .child("comprobantecabecera")
+    .child(numeracion)
+    .set(array);
+};
+
+export const editaCuentaxCobrarCampo = (id, campo, data, sedeBase) => {
+  return db
+    .database()
+    .ref(sedeBase)
+    .child("x_cobrar")
+    .child(id)
+    .child(campo)
+    .set(data);
+};
+
+export const consultaCabeceraPorSede = (sedeBase, numeracion) => {
+  return db
+    .database()
+    .ref(sedeBase)
+    .child("comprobantecabecera")
+    .child(numeracion)
+    .once("value");
+};
+
+export const consultaDetallePorSede = (sedeBase, numeracion) => {
+  return db
+    .database()
+    .ref(sedeBase)
+    .child("comprobantedetalle")
+    .child(numeracion)
+    .once("value");
 };

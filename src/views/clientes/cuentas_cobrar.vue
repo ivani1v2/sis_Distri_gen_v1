@@ -22,21 +22,14 @@
             <v-select outlined dense hide-details v-model="cuenta_estado" :items="array_estado" label="Estado"
               prepend-inner-icon="mdi-list-status" @change="filtra" />
           </v-col>
+          <v-col cols="12" md="2">
+            <v-select outlined dense hide-details v-model="sedeSeleccionada" :items="opcionesSedes" item-text="nombre"
+              item-value="base" label="Vendedor" @change="onSedeChange" />
+          </v-col>
           <v-col cols="12" md="3">
             <v-autocomplete outlined dense hide-details label="Buscar Cliente" :items="arra_empleados"
               item-text="nombre" item-value="documento" prepend-inner-icon="mdi-account-search" v-model="busca_p"
               clearable />
-
-          </v-col>
-          <v-col cols="6" md="3">
-            <v-select v-model="vendedoresSeleccionados" :items="vendedoresItems" item-text="nombre" item-value="codigo"
-              label="Vendedor" multiple outlined dense chips small-chips deletable-chips clearable
-              :menu-props="{ closeOnContentClick: true }" @change="onVendedorChange" class="mb-n6" />
-          </v-col>
-          <v-col cols="6" md="3">
-            <v-select v-model="zonasSeleccionadas" :items="zonasItems" item-text="nombre" item-value="codigo"
-              label="Zona/Cliente" multiple outlined dense chips small-chips deletable-chips clearable
-              :menu-props="{ closeOnContentClick: true }" @change="onZonaChange" class="mb-n6" />
           </v-col>
           <v-col cols="12" md="1" class="d-flex align-center">
             <v-btn block color="primary" outlined class="elevation-2" @click="filtra">
@@ -62,7 +55,7 @@
 
       <v-data-table :headers="headersCxc" :items="listafiltrada" :items-per-page="-1" class="elevation-0"
         :sort-by.sync="sortBy" :sort-desc.sync="sortDesc" dense fixed-header height="65vh" mobile-breakpoint="1"
-        no-data-text="No hay cuentas por cobrar disponibles">
+        no-data-text="No hay cuentas por cobrar disponibles" item-key="_rowKey">
         <template v-slot:[`item.cliente`]="{ item }">
           <div class="font-weight-medium">
             {{ item.nombre }}
@@ -88,8 +81,8 @@
           </v-chip>
         </template>
         <template v-slot:[`item.dias_credito`]="{ item }">
-            {{ calcularDiasCredito(item.fecha, item.fecha_vence) }} 
-            {{ calcularDiasCredito(item.fecha, item.fecha_vence) === 1 ? 'día' : 'días' }}
+          {{ calcularDiasCredito(item.fecha, item.fecha_vence) }}
+          {{ calcularDiasCredito(item.fecha, item.fecha_vence) === 1 ? 'día' : 'días' }}
         </template>
 
         <template v-slot:[`item.estado`]="{ item }">
@@ -209,7 +202,8 @@
 
     <v-dialog v-model="genera_pdf" max-width="550">
       <v-card class="rounded-lg">
-        <imprime v-if="genera_pdf" :data="seleccionado" @cierra="genera_pdf = $event" />
+        <imprime v-if="genera_pdf" :data="seleccionado" :sede_base="seleccionado.sede_base"
+          @cierra="genera_pdf = $event" />
       </v-card>
     </v-dialog>
   </div>
@@ -222,6 +216,9 @@ import {
   consultaDetalle,
   consulta_Cabecera,
   editaCuentaxCobrar,
+  allCxCMultiSedes,
+  consultaCabeceraPorSede,
+  consultaDetallePorSede,
 } from '../../db'
 import { reporte_cronograma } from "./cuentas_x_cobrar/formatos_cuentas"
 import store from '@/store/index'
@@ -247,7 +244,6 @@ export default {
   data: () => ({
     headersCxc: [
       { text: 'Cliente', value: 'cliente', sortable: true },
-      { text: 'Zona', value: 'cliente_zona', sortable: true },
       { text: 'Emision', value: 'fecha', sortable: true },
       { text: 'Venci.', value: 'fecha_vence', sortable: true },
       { text: 'Días', value: 'dias_credito', sortable: true, align: 'center' },
@@ -289,13 +285,15 @@ export default {
     zonasSeleccionadas: ['TODOS'],
     zonasPrevios: ['TODOS'],
     allZonas: [],
+    sedeSeleccionada: 'TODAS',
+    sedesDisponibles: [],
+    menuOpc: false,
 
   }),
 
   created() {
-    this.inicializarVendedores();
-    this.inicializarZonas();
-    this.filtra();
+    this.cargarSedes();
+    this.cargarCxCMultiSede();
   },
 
   computed: {
@@ -341,7 +339,19 @@ export default {
     },
     esAdmin() {
       return this.$store.state.permisos?.es_admin === true;
-    }
+    },
+    opcionesSedes() {
+      const opciones = [
+        { nombre: 'TODOS', base: 'TODAS' }
+      ];
+      this.sedesDisponibles.forEach(s => {
+        opciones.push({
+          nombre: s.nombre,
+          base: s.base
+        });
+      });
+      return opciones;
+    },
   },
 
   watch: {
@@ -364,6 +374,50 @@ export default {
   },
 
   methods: {
+    dedupeSedesPorBase(sedes = []) {
+      const usadas = new Set();
+      return (Array.isArray(sedes) ? sedes : []).filter(s => {
+        const base = String(s?.base || '').trim();
+        if (!base || usadas.has(base)) return false;
+        usadas.add(base);
+        return true;
+      });
+    },
+
+    normalizaCxcRows(rows = []) {
+      const contador = new Map();
+      const baseActual = this.$store.state?.baseDatos?.bd;
+      return (Array.isArray(rows) ? rows : []).map((raw, index) => {
+        const item = { ...raw };
+        let vendedor_nombre = 'Sin vendedor';
+        if (item.vendedor && Array.isArray(this.$store.state.array_sedes)) {
+          const vendedorInfo = this.$store.state.array_sedes.find(s => s.codigo === item.vendedor);
+          if (vendedorInfo) vendedor_nombre = vendedorInfo.nombre;
+        }
+
+        const sedeBase = item.sede_base || item.base || baseActual;
+        const ref = item.doc_ref || item.id || item.key || `ROW_${index}`;
+        const uniqueKeyBase = item.unique_key || `${sedeBase}_${ref}`;
+
+        const repeticiones = (contador.get(uniqueKeyBase) || 0) + 1;
+        contador.set(uniqueKeyBase, repeticiones);
+
+        const rowKey = repeticiones === 1 ? uniqueKeyBase : `${uniqueKeyBase}__${repeticiones}`;
+        const nombre = item.nombre || item.cliente || '';
+
+        return {
+          ...item,
+          nombre,
+          cliente: nombre,
+          vendedor_nombre,
+          sede_base: sedeBase,
+          unique_key: uniqueKeyBase,
+          _rowKey: rowKey,
+          id: rowKey,
+        };
+      });
+    },
+
     inicializarZonas() {
       this.zonasSeleccionadas = ['TODOS'];
       this.zonasPrevios = ['TODOS'];
@@ -456,65 +510,31 @@ export default {
 
     async filtra() {
       try {
-        var array = [];
-        this.busca_p = this.busca_p || '';
-        var cli = this.busca_p.split('/')[0].trim();
+        store.commit("dialogoprogress");
 
-        let snap;
+        const textoBusqueda = String(this.busca_p || '').trim();
 
-        if (this.busca_p == '') {
-          snap = await allcuentaxcobrar()
-            .orderByChild("estado")
-            .equalTo(this.cuenta_estado)
-            .once("value");
-        } else {
-          snap = await allcuentaxcobrar()
-            .orderByChild("documento")
-            .equalTo(cli)
-            .once("value");
+        if (!textoBusqueda) {
+          await this.cargarCxCMultiSede();
+          store.commit("dialogoprogress");
+          return;
         }
 
-        if (snap.exists()) {
-          snap.forEach(item => {
-            const data = item.val();
-            if (this.busca_p !== '' && data.estado !== this.cuenta_estado) {
-              return;
-            }
+        const cli = textoBusqueda.split('/')[0].trim();
 
-            let vendedor_nombre = 'Sin vendedor';
-            if (data.vendedor && Array.isArray(this.$store.state.array_sedes)) {
-              const vendedorInfo = this.$store.state.array_sedes.find(s =>
-                s.codigo === data.vendedor
-              );
-              if (vendedorInfo) {
-                vendedor_nombre = vendedorInfo.nombre;
-              }
-            }
+        const filtrados = this.allCuentasRaw.filter(item =>
+          item.documento === cli && item.estado === this.cuenta_estado
+        );
 
-            const nom = data.nombre || data.cliente || '';
-            array.push({
-              ...data,
-              nombre: nom,
-              cliente: nom,
-              vendedor_nombre: vendedor_nombre,
-              cliente_zona: data.cliente_zona || 'SIN ZONA' // Valor por defecto
-            });
-          });
-        }
-
-        this.allCuentasRaw = array;
-
-        // Inicializar zonas después de tener datos
-        if (this.zonasSeleccionadas.length === 0) {
-          this.inicializarZonas();
-        }
-
+        this.allCuentasRaw = this.normalizaCxcRows(filtrados);
         this.applyVendorFilter();
+        store.commit("dialogoprogress");
 
       } catch (error) {
         console.error('Error en filtra:', error);
         this.allCuentasRaw = [];
         this.desserts = [];
+        store.commit("dialogoprogress");
       }
     },
 
@@ -527,18 +547,34 @@ export default {
     },
 
     actualizarItem(nuevo) {
-      this.item_selecto = nuevo;
-      this.filtra();
+      const index = this.allCuentasRaw.findIndex(item => item.unique_key === nuevo.unique_key);
+      if (index !== -1) {
+        this.allCuentasRaw[index] = { ...this.allCuentasRaw[index], ...nuevo };
+      }
+
+      this.applyVendorFilter();
     },
 
     async ejecutaConsolida(value) {
       store.commit("dialogoprogress", 1);
       this.arrayConsolidar = [];
       this.seleccionado = value;
-      var snap = await consultaDetalle(value.doc_ref).once("value");
-      snap.forEach((item) => {
-        this.arrayConsolidar.push(item.val());
-      });
+      const sedeBase = value.sede_base || this.$store.state.baseDatos.bd;
+      const detallesSnap = await consultaDetallePorSede(sedeBase, value.doc_ref);
+      if (detallesSnap.exists()) {
+        const detallesVal = detallesSnap.val();
+        if (Array.isArray(detallesVal)) {
+          detallesVal.forEach(item => {
+            this.arrayConsolidar.push(item);
+          });
+        } else if (typeof detallesVal === 'object') {
+          Object.values(detallesVal).forEach(item => {
+            if (item && typeof item === 'object') {
+              this.arrayConsolidar.push(item);
+            }
+          });
+        }
+      }
       store.commit("dialogoprogress", 1);
       this.dialog = true;
     },
@@ -605,15 +641,17 @@ export default {
 
       try {
         store.commit("dialogoprogress", 1);
-        const cabeceraSnap = await consulta_Cabecera(item.doc_ref).once('value');
+        const sedeBase = item.sede_base || this.$store.state.baseDatos.bd;
+        const cabeceraSnap = await consultaCabeceraPorSede(sedeBase, item.doc_ref);
 
         if (!cabeceraSnap.exists()) {
-          console.warn('No existe cabecera para:', item.doc_ref);
-          store.commit('dialogosnackbar', 'El comprobante no existe');
+          console.warn('No existe cabecera para:', item.doc_ref, 'en sede:', sedeBase);
+          store.commit('dialogosnackbar', 'El comprobante no existe en la sede indicada');
           store.commit("dialogoprogress", 1);
           return;
         }
-        const detallesSnap = await consultaDetalle(item.doc_ref).once('value');
+
+        const detallesSnap = await consultaDetallePorSede(sedeBase, item.doc_ref);
 
         if (!detallesSnap.exists()) {
           console.warn('El comprobante no tiene detalles:', item.doc_ref);
@@ -621,6 +659,7 @@ export default {
           store.commit("dialogoprogress", 1);
           return;
         }
+
         const detallesVal = detallesSnap.val();
         let tieneDetalles = false;
 
@@ -648,6 +687,7 @@ export default {
           numeracion: item.doc_ref,
           cliente_nombre: item.nombre,
           cliente_documento: item.documento,
+          sede_base: sedeBase
         };
 
         this.genera_pdf = true;
@@ -661,6 +701,12 @@ export default {
     },
 
     ejecuta_liquidacion(value) {
+      if (!value.sede_base && value.sede) {
+        const sedeEncontrada = this.sedesDisponibles.find(s => s.nombre === value.sede);
+        if (sedeEncontrada) {
+          value.sede_base = sedeEncontrada.base;
+        }
+      }
       this.item_selecto = value;
       this.dialog_liquidacion = true;
     },
@@ -682,6 +728,39 @@ export default {
       const emision = moment.unix(fechaEmision);
       const vencimiento = moment.unix(fechaVencimiento);
       return vencimiento.diff(emision, 'days');
+    },
+    cargarSedes() {
+      if (this.$store.state.array_sedes && this.$store.state.array_sedes.length > 0) {
+        const sedesUnicas = this.dedupeSedesPorBase(this.$store.state.array_sedes);
+        this.sedesDisponibles = sedesUnicas.map(s => ({
+          nombre: s.nombre,
+          base: s.base,
+          codigo: s.codigo
+        }));
+        this.sedeSeleccionada = 'TODAS';
+      } else {
+        console.log('No hay sedes disponibles en el store');
+      }
+    },
+
+    async cargarCxCMultiSede() {
+      this.dialogoprogress = true;
+
+      let sedesABuscar = this.dedupeSedesPorBase(this.sedesDisponibles);
+      if (this.sedeSeleccionada !== 'TODAS') {
+        const sede = this.sedesDisponibles.find(s => s.base === this.sedeSeleccionada);
+        sedesABuscar = sede ? [sede] : [];
+      }
+
+      const resultados = await allCxCMultiSedes(sedesABuscar);
+
+      this.allCuentasRaw = this.normalizaCxcRows(resultados);
+      this.applyVendorFilter();
+      this.dialogoprogress = false;
+    },
+
+    onSedeChange() {
+      this.cargarCxCMultiSede();
     },
 
     exportarExcel() {
@@ -744,11 +823,10 @@ export default {
       const rows = this.desserts.map(item => [
         item.doc_ref || '',
         `${item.documento || ''} - ${item.nombre || ''}`,
-        item.cliente_zona || 'SIN ZONA',
         item.vendedor || '',
         moment.unix(item.fecha).format('DD/MM/YY'),
         moment.unix(item.fecha_vence).format('DD/MM/YY'),
-        item.dias_credito || 7,
+        this.calcularDiasCredito(item.fecha, item.fecha_vence),
         item.estado || '',
         `${this.monedaSimbolo} ${parseFloat(item.monto_total || 0).toFixed(2)}`,
         `${this.monedaSimbolo} ${parseFloat(item.monto_pendiente || 0).toFixed(2)}`
@@ -757,21 +835,20 @@ export default {
       doc.autoTable({
         startY: 30,
         margin: { left: 10, right: 5 },
-        head: [['Comprobante', 'Doc - Cliente', 'Zona', 'Vend', 'Emisión', 'Vence', 'Días', 'Estado', 'Total', 'Pendiente']],
+        head: [['Comprobante', 'Doc - Cliente', 'Vend', 'Emisión', 'Vence', 'Días', 'Estado', 'Total', 'Pendiente']],
         body: rows,
         styles: { fontSize: 6.5, cellPadding: 1, textColor: [0, 0, 0], fillColor: [255, 255, 255] },
         headStyles: { fillColor: [66, 66, 66], textColor: 255, halign: 'center' },
         columnStyles: {
           0: { cellWidth: 20 },
-          1: { cellWidth: 55 },
-          2: { cellWidth: 17 },
-          3: { cellWidth: 10, halign: 'center' },
-          4: { cellWidth: 14 },
-          5: { cellWidth: 14 },
-          6: { cellWidth: 8, halign: 'center' },
-          7: { cellWidth: 15 },
-          8: { cellWidth: 18, halign: 'right' },
-          9: { cellWidth: 18, halign: 'right' }
+          1: { cellWidth: 60 },
+          2: { cellWidth: 8, halign: 'center' },
+          3: { cellWidth: 20, halign: 'center' },
+          4: { cellWidth: 20, halign: 'center' },
+          5: { cellWidth: 8, halign: 'center' },
+          6: { cellWidth: 15 },
+          7: { cellWidth: 18, halign: 'right' },
+          8: { cellWidth: 18, halign: 'right' }
         }
       })
 

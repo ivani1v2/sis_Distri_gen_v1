@@ -115,7 +115,8 @@
 
 <script>
 import {
-    consultaDetalle
+    consultaDetalle,
+    consultaDetallePorSede
 } from '../../db'
 import {
     pdfGenera
@@ -142,6 +143,10 @@ export default {
         detalle: {
             type: Array,
             default: null
+        },
+        sede_base: {
+            type: String,
+            default: ''
         }
     },
     data() {
@@ -294,8 +299,12 @@ export default {
                 arraydatos = this.detalle
             } else {
                 const referencia = item.numeracion || item.doc_ref
-                let snapshot = await consultaDetalle(referencia).once("value")
-                arraydatos = snapshot.val()
+                const sedeBase = this.sede_base || item.sede_base || this.$store.state.baseDatos.bd
+                let snapshot = await consultaDetallePorSede(sedeBase, referencia)
+                if (!snapshot.exists() && sedeBase !== this.$store.state.baseDatos.bd) {
+                    snapshot = await consultaDetalle(referencia).once("value")
+                }
+                arraydatos = snapshot.exists() ? snapshot.val() : []
             }
             console.log(this.datos_cliente)
             item.referencia = this.getReferenciaPrincipal(this.datos_cliente) || this.datos_cliente.referencia || '';

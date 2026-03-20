@@ -264,17 +264,12 @@ export default {
             this.accionPendiente = 'pre_venta';
             this.dialogoSeleccionCliente = false;
             this.clienteSeleccionado = cliente;
-
             await this.$nextTick();
-            if (this.$store.state.permisos.modulocuentasxcobrar) {
-                this.dialogoDeudasCliente = true;
-            } else {
-                this.iniciarVentaDirecta({
-                    accion: 'pre_venta',
-                    cliente,
-                    tieneDeuda: false
-                });
-            }
+            this.iniciarVentaDirecta({
+                accion: 'pre_venta',
+                cliente,
+                tieneDeuda: false
+            });
         },
 
         iniciarVentaDirecta(payload) {

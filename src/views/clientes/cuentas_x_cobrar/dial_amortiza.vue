@@ -53,7 +53,7 @@
 
         <v-alert v-if="sumaPagos > 0 && sumaPagos < montoCuota" type="info" dense class="mt-2">
           Abono parcial: se creará una nueva cuota por {{ moneda }}{{ redondear(montoCuota - sumaPagos) }}
-          con la misma fecha de vencimiento ({{ cuotaFecha  }}).
+          con la misma fecha de vencimiento ({{ cuotaFecha }}).
         </v-alert>
       </v-card-text>
 
@@ -92,11 +92,11 @@ export default {
 
   computed: {
     cuotaFecha() {
-        const idx = this.item_selecto_cuota_index
-        if (idx !== null && this.item_selecto?.datos?.[idx]) {
-            return moment.unix(this.item_selecto.datos[idx].fecha_vence).format('DD/MM/YYYY')
-        }
-        return ''
+      const idx = this.item_selecto_cuota_index
+      if (idx !== null && this.item_selecto?.datos?.[idx]) {
+        return moment.unix(this.item_selecto.datos[idx].fecha_vence).format('DD/MM/YYYY')
+      }
+      return ''
     },
     sumaPagos() {
       return this.pagos.reduce((acc, p) => acc + (Number(p.monto) || 0), 0)
@@ -148,6 +148,7 @@ export default {
       try {
         const index = this.item_selecto_cuota_index
         const deuda = this.item_selecto
+        const sedeBase = deuda.sede_base || store.state.baseDatos.bd
 
         if (!this.validarDatos(deuda, index)) return
 
@@ -201,26 +202,25 @@ export default {
           cuota.monto = cuota.monto_pagado_acum
           cuota.pagos = [...(cuota.pagos || []), ...pagosFiltrados]
         }
+
         const totalPagadoGlobal = Number(
           datos.reduce((acc, c) => acc + (Number(c.monto_pagado_acum || 0)), 0).toFixed(2)
         )
 
         let montoPendienteReal = Number((Number(deuda.monto_total || 0) - totalPagadoGlobal).toFixed(2))
         if (montoPendienteReal < 0) montoPendienteReal = 0
-        await editaCuentaxCobrar(deuda.doc_ref, 'datos', datos)
-        await editaCuentaxCobrar(deuda.doc_ref, 'monto_pendiente', montoPendienteReal)
-        await editaCuentaxCobrar(deuda.doc_ref, 'pagado', totalPagadoGlobal)
+
+        await editaCuentaxCobrar(deuda.doc_ref, 'datos', datos, sedeBase)
+        await editaCuentaxCobrar(deuda.doc_ref, 'monto_pendiente', montoPendienteReal, sedeBase)
+        await editaCuentaxCobrar(deuda.doc_ref, 'pagado', totalPagadoGlobal, sedeBase)
 
         const todoPagado = montoPendienteReal <= EPS
 
         if (todoPagado) {
-          await editaCuentaxCobrar(deuda.doc_ref, 'estado', 'LIQUIDADO')
-          await grabaCabecera(deuda.doc_ref + '/forma_pago', 'PAGADO')
+          await editaCuentaxCobrar(deuda.doc_ref, 'estado', 'LIQUIDADO', sedeBase)
         } else {
-          await editaCuentaxCobrar(deuda.doc_ref, 'estado', 'PENDIENTE')
-          await grabaCabecera(deuda.doc_ref + '/forma_pago', 'PENDIENTE')
+          await editaCuentaxCobrar(deuda.doc_ref, 'estado', 'PENDIENTE', sedeBase)
         }
-
         await Promise.all(pagosFiltrados.map(p => this.generarFlujo(p.nombre, p.monto, deuda)))
 
         this.$emit('actualizar-item', {
@@ -228,7 +228,8 @@ export default {
           datos,
           monto_pendiente: montoPendienteReal,
           pagado: totalPagadoGlobal,
-          estado: todoPagado ? 'LIQUIDADO' : 'PENDIENTE'
+          estado: todoPagado ? 'LIQUIDADO' : 'PENDIENTE',
+          unique_key: deuda.unique_key
         })
 
         this.cerrar()
