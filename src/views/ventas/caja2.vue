@@ -3,8 +3,7 @@
         <v-row>
             <v-col cols="12" md="4"
                 v-if="$vuetify.breakpoint.mdAndUp || ($vuetify.breakpoint.smAndDown && $vuetify.breakpoint.width > $vuetify.breakpoint.height)">
-                <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true" :x_categoria="true"
-                    :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null">
+           
                 <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="true" :x_categoria="true"
                     :cliente_selecto="cliente_s && cliente_s.nombre ? cliente_s : null">
                 </cat_fijo>
@@ -392,8 +391,7 @@ export default {
         esListaPreciosActivo() {
             return this.$store.state.configuracion?.lista_precios === true;
         },
-            return this.$store.state.configuracion?.lista_precios === true;
-        },
+            
 
     },
     mounted() {
