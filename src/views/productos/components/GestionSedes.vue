@@ -110,7 +110,7 @@
                         <v-list-item v-for="sede in sedesSincronizacion" :key="sede.base" class="px-0">
                             <template v-slot:default>
                                 <v-list-item-action class="mr-3">
-                                    <v-checkbox v-model="sede.seleccionada" :value="sede.base"
+                                    <v-checkbox v-model="sede.seleccionada"
                                         :disabled="sincronizando || sede.checking" color="teal" hide-details
                                         class="mt-0"></v-checkbox>
                                 </v-list-item-action>
@@ -313,7 +313,7 @@ export default {
                     checking: false,
                     existe: null,
                     productoData: null,
-                    seleccionada: false
+                    seleccionada: true
                 }));
             this.verificarExistenciaEnSedes();
         },
