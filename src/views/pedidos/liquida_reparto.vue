@@ -1094,14 +1094,21 @@ export default {
         async pdf_almacen() {
             try {
                 store.commit("dialogoprogress", true);
-                const response = await axios.post(this.apiBaseUrl, {
+                const pedidosSeleccionados = this.desserts
+                    .filter(d => d.consolida && d.estado !== 'ANULADO')
+                    .map(d => d.numeracion);
+                const payload = {
                     bd: this.$store.state.baseDatos.bd,
                     metodo: "productos_consolidados_almacen",
                     data: {
                         repartos: [this.router_grupo]
                     }
-                });
+                };
 
+                if (pedidosSeleccionados.length > 0) {
+                    payload.data.pedidos = pedidosSeleccionados;
+                }
+                const response = await axios.post(this.apiBaseUrl, payload);
                 if (!response.data?.data) {
                     throw new Error('No se recibieron datos');
                 }
@@ -1112,6 +1119,9 @@ export default {
                     totalCajas,
                     totalUnd
                 } = response.data.data;
+                if (pedidosSeleccionados.length > 0) {
+                    this.$store.commit('dialogosnackbar', `Generando reporte para ${pedidosSeleccionados.length} pedido(s) seleccionado(s)`);
+                }
 
                 reporte_almacen_consolidado(
                     this.router_grupo,
@@ -1120,7 +1130,8 @@ export default {
                     totalCajas,
                     totalUnd,
                     this.observacion_reporte,
-                    this.formato_descarga
+                    this.formato_descarga,
+                    pedidosSeleccionados.length > 0 ? pedidosSeleccionados : null
                 );
 
                 this.dial_descarga = false;

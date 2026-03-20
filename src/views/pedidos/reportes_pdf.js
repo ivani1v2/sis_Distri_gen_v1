@@ -5,7 +5,7 @@ import { consultaArchivo } from '../../db'
 import QR from 'qrcode-base64'
 import moment from 'moment'
 
-export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, totalCajas, totalUnd, observacion, formato = "F1") => {
+export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, totalCajas, totalUnd, observacion, formato = "F1", pedidosFiltrados = null) => {
   console.log("arraydatos consolidado", arraydatos)
   const array = arraydatos || []
   const fechaImpresion = moment(String(new Date)).format('DD/MM/YYYY hh:mm a')
@@ -34,7 +34,6 @@ export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, to
       nuevoArray.push([
         item.id,
         item.nombre,
-        item.medida,
         cajas,
         und,
         peso.toFixed(2),
@@ -56,7 +55,6 @@ export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, to
 
       nuevoArray.push([
         cajasUndStr,
-        item.medida,
         descripcionConCodigo,
         peso.toFixed(2),
       ])
@@ -65,8 +63,13 @@ export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, to
 
   const esF1 = formato === 'F1'
 
+  let topMargin = linea
+  if (pedidosFiltrados && pedidosFiltrados.length > 0) {
+    topMargin = linea + 6
+  }
+
   doc.autoTable({
-    margin: { top: linea, left: 5 },
+    margin: { top: topMargin, left: 5 },
     styles: {
       fontSize: 8,
       cellPadding: 1,
@@ -84,21 +87,19 @@ export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, to
     columnStyles: esF1
       ? {
         0: { columnWidth: 15, halign: 'center', fontStyle: 'bold' },
-        1: { columnWidth: 115, halign: 'left' },
-        2: { columnWidth: 20, halign: 'center' },
+        1: { columnWidth: 135, halign: 'left' },
+        2: { columnWidth: 12, halign: 'center' },
         3: { columnWidth: 12, halign: 'center' },
-        4: { columnWidth: 12, halign: 'center' },
-        5: { columnWidth: 20, halign: 'center' },
+        4: { columnWidth: 20, halign: 'center' },
       }
       : {
         0: { columnWidth: 20, halign: 'center' },
-        1: { columnWidth: 20, halign: 'center' },
-        2: { columnWidth: 115, halign: 'left' },
-        3: { columnWidth: 25, halign: 'center' },
+        1: { columnWidth: 155, halign: 'left' },
+        2: { columnWidth: 25, halign: 'center' },
       },
     head: esF1
-      ? [['Codigo', 'Descripcion', 'Medida', 'Cajas', 'Und', 'Peso(KG)']]
-      : [['Caj/Und', 'Medida', 'Descripcion', 'Peso(KG)']],
+      ? [['Codigo', 'Descripcion', 'Cajas', 'Und', 'Peso(KG)']]
+      : [['Caj/Und', 'Descripcion', 'Peso(KG)']],
     body: nuevoArray,
   })
 
@@ -108,24 +109,47 @@ export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, to
     const pageCurrent = doc.internal.getCurrentPageInfo().pageNumber
 
     doc.setFontSize(14)
-    doc.setFont('Helvetica', '')
-    let texto = doc.splitTextToSize('RP. N° ' + cabecera, pdfInMM - lMargin - rMargin)
+    doc.setFont('Helvetica', 'Bold')
+    let texto = doc.splitTextToSize(`RP. N° ${cabecera}`, pdfInMM - lMargin - rMargin)
     doc.text(texto, 10, 10, 'left')
 
-    doc.setFontSize(10)
-    doc.setFont('Helvetica', '')
-    texto = doc.splitTextToSize('Fecha Impresion: ' + fechaImpresion, pdfInMM - lMargin - rMargin)
-    doc.text(texto, 10, 15, 'left')
-
-    doc.setFontSize(10)
-    doc.setFont('Helvetica', '')
-    texto = doc.splitTextToSize('Observacion: ' + observacion, pdfInMM - lMargin - rMargin)
-    doc.text(texto, 10, 20, 'left')
-
-    doc.setFontSize(14)
-    doc.setFont('Helvetica', 'Bold')
-    texto = doc.splitTextToSize('TOTAL KG : ' + peso, pdfInMM - lMargin - rMargin)
-    doc.text(texto, 140, 10, 'left')
+    if (pedidosFiltrados && pedidosFiltrados.length > 0) {
+      doc.setFontSize(8)
+      doc.setFont('Helvetica', 'italic')
+      let pedidosTexto = `${pedidosFiltrados.length} pedido(s) seleccionado(s)`
+      let pedidosWrap = doc.splitTextToSize(pedidosTexto, pdfInMM - lMargin - rMargin - 20)
+      doc.text(pedidosWrap, 10, 16, 'left')
+      
+      doc.setFontSize(10)
+      doc.setFont('Helvetica', '')
+      texto = doc.splitTextToSize('Fecha Impresion: ' + fechaImpresion, pdfInMM - lMargin - rMargin)
+      doc.text(texto, 10, 22, 'left')
+      
+      doc.setFontSize(10)
+      doc.setFont('Helvetica', '')
+      texto = doc.splitTextToSize('Observacion: ' + observacion, pdfInMM - lMargin - rMargin)
+      doc.text(texto, 10, 27, 'left')
+      
+      doc.setFontSize(14)
+      doc.setFont('Helvetica', 'Bold')
+      texto = doc.splitTextToSize('TOTAL KG : ' + peso, pdfInMM - lMargin - rMargin)
+      doc.text(texto, 140, 10, 'left')
+    } else {
+      doc.setFontSize(10)
+      doc.setFont('Helvetica', '')
+      texto = doc.splitTextToSize('Fecha Impresion: ' + fechaImpresion, pdfInMM - lMargin - rMargin)
+      doc.text(texto, 10, 15, 'left')
+      
+      doc.setFontSize(10)
+      doc.setFont('Helvetica', '')
+      texto = doc.splitTextToSize('Observacion: ' + observacion, pdfInMM - lMargin - rMargin)
+      doc.text(texto, 10, 20, 'left')
+      
+      doc.setFontSize(14)
+      doc.setFont('Helvetica', 'Bold')
+      texto = doc.splitTextToSize('TOTAL KG : ' + peso, pdfInMM - lMargin - rMargin)
+      doc.text(texto, 140, 10, 'left')
+    }
 
     doc.setFontSize(10)
     doc.setFont('Helvetica', '')
@@ -143,6 +167,7 @@ export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, to
   doc.setFontSize(10)
   doc.text(`Cajas: ${totalCajas}`, 35, yTotales)
   doc.text(`Und: ${totalUnd}`, 65, yTotales)
+  
   window.open(doc.output('bloburl'))
 }
 
