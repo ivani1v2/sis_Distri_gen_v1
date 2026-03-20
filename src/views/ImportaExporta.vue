@@ -144,14 +144,38 @@ export default {
         return [
           'id', 'activo', 'codbarra', 'nombre', 'categoria', 'medida', 'stock', 'stock_minimo', 'factor',
           'precio', 'escala_may1', 'precio_may1', 'escala_may2', 'precio_may2',
-          'peso', 'costo', 'margen', 'tipoproducto', 'operacion', 'icbper', 'controstock',  'marca', 'proveedor', 'obs1'
+          'peso', 'costo', 'margen', 'tipoproducto', 'operacion', 'icbper', 'controstock', 'marca', 'proveedor', 'obs1'
         ]
       }
       if (this.target === 'clientes') {
         return [
-          'activo', 'id', 'tipodoc', 'documento', 'nombre', 'giro', 'correo', 'direccion', 'telefono',
-          'sede', 'nota', 'referencia', 'departamento', 'provincia', 'distrito', 'ubigeo',
-          'tipocomprobante', 'zona', 'dia', 'latitud', 'longitud', 'permite_credito', 'linea_credito', 'listas_precios'
+          'activo',
+          'id',
+          'tipodoc',
+          'documento',
+          'nombre',
+          'giro',
+          'correo',
+          'telefono',
+          'sede',
+          'nota',
+          'zona',
+          'dia',
+          'tipocomprobante',
+          'frecuencia',
+          'permite_credito',
+          'linea_credito',
+          'dias_credito',
+          'listas_precios',
+          'direccion',
+          'referencia',
+          'departamento',
+          'provincia',
+          'distrito',
+          'ubigeo',
+          'latitud',
+          'longitud',
+          'direcciones'
         ]
       }
       // stock
@@ -194,29 +218,36 @@ export default {
       } else if (this.target === 'clientes') {
         plantilla = [{
           activo: true,
-          id: '',                 // opcional si igualas al doc
+          id: '',
           tipodoc: 'DNI',
           documento: '',
           nombre: '',
           giro: '',
           correo: '',
-          direccion: '',
           telefono: '',
           sede: '',
           nota: '',
+          zona: '',
+          dia: 'lun',
+          tipocomprobante: 'T',
+          frecuencia: 'DIARIA',
+          permite_credito: false,
+          linea_credito: 0,
+          dias_credito: 0,
+          listas_precios: '[]',
+
+          // formato simple / antiguo
+          direccion: '',
           referencia: '',
-          departamento: '',       // nombre o código
+          departamento: '',
           provincia: '',
           distrito: '',
           ubigeo: '',
-          tipocomprobante: 'T',
-          zona: '',
-          dia: '',
           latitud: '',
           longitud: '',
-          permite_credito: false,
-          linea_credito: 0,
-          listas_precios: '[]'
+
+          // formato nuevo
+          direcciones: '[]'
         }]
         sheetName = 'clientes'
       } else {
@@ -281,23 +312,51 @@ export default {
           nombre: c.nombre || '',
           giro: c.giro || '',
           correo: c.correo || '',
-          direccion: c.direccion || '',
           telefono: c.telefono || '',
           sede: c.sede || '',
           nota: c.nota || '',
-          referencia: c.referencia || '',
-          departamento: (c.departamento && c.departamento.nombre) || c.departamento || '',
-          provincia: (c.provincia && c.provincia.nombre) || c.provincia || '',
-          distrito: (c.distrito && c.distrito.nombre) || c.distrito || '',
-          ubigeo: c.ubigeo || '',
-          tipocomprobante: c.tipocomprobante || 'T',
           zona: c.zona || '',
           dia: Array.isArray(c.dia) ? c.dia.join(',') : (c.dia || ''),
-          latitud: c.latitud || '',
-          longitud: c.longitud || '',
+          tipocomprobante: c.tipocomprobante || 'T',
+          frecuencia: c.frecuencia || 'DIARIA',
           permite_credito: c.permite_credito === true,
           linea_credito: Number(c.linea_credito) || 0,
-          listas_precios: JSON.stringify(Array.isArray(c.listas_precios) ? c.listas_precios : [])
+          dias_credito: Number(c.dias_credito) || 0,
+          listas_precios: JSON.stringify(Array.isArray(c.listas_precios) ? c.listas_precios : []),
+
+          // compatibilidad antigua
+          direccion: c.direccion || (Array.isArray(c.direcciones) && c.direcciones.length ? c.direcciones[0].direccion || '' : ''),
+          referencia: c.referencia || (Array.isArray(c.direcciones) && c.direcciones.length ? c.direcciones[0].referencia || '' : ''),
+          departamento:
+            (c.departamento && c.departamento.nombre) ||
+            c.departamento ||
+            (
+              Array.isArray(c.direcciones) && c.direcciones.length
+                ? ((c.direcciones[0].departamento && c.direcciones[0].departamento.nombre) || c.direcciones[0].departamento || '')
+                : ''
+            ),
+          provincia:
+            (c.provincia && c.provincia.nombre) ||
+            c.provincia ||
+            (
+              Array.isArray(c.direcciones) && c.direcciones.length
+                ? ((c.direcciones[0].provincia && c.direcciones[0].provincia.nombre) || c.direcciones[0].provincia || '')
+                : ''
+            ),
+          distrito:
+            (c.distrito && c.distrito.nombre) ||
+            c.distrito ||
+            (
+              Array.isArray(c.direcciones) && c.direcciones.length
+                ? ((c.direcciones[0].distrito && c.direcciones[0].distrito.nombre) || c.direcciones[0].distrito || '')
+                : ''
+            ),
+          ubigeo: c.ubigeo || (Array.isArray(c.direcciones) && c.direcciones.length ? c.direcciones[0].ubigeo || '' : ''),
+          latitud: c.latitud || (Array.isArray(c.direcciones) && c.direcciones.length ? c.direcciones[0].latitud || '' : ''),
+          longitud: c.longitud || (Array.isArray(c.direcciones) && c.direcciones.length ? c.direcciones[0].longitud || '' : ''),
+
+          // formato nuevo
+          direcciones: JSON.stringify(Array.isArray(c.direcciones) ? c.direcciones : [])
         }))
         name = 'clientes'
       } else {
@@ -313,7 +372,17 @@ export default {
       XLSX.writeFile(wb, `${name.toUpperCase()}.xlsx`)
       this.alerta('Exportación completada.')
     },
+    _parseDirecciones(v) {
+      if (Array.isArray(v)) return v
+      if (v === null || v === undefined || v === '') return []
 
+      try {
+        const arr = JSON.parse(String(v))
+        return Array.isArray(arr) ? arr : []
+      } catch {
+        return []
+      }
+    },
     // ===== Importar =====
     leerExcel(e) {
       const file = e.target.files && e.target.files[0]
@@ -407,31 +476,64 @@ export default {
       const o = {}
       Object.keys(row).forEach(k => o[String(k).toLowerCase().trim()] = row[k])
 
+      const direccion = this._toStr(o.direccion)
+      const referencia = this._toStr(o.referencia)
+      const departamento = this._toStr(o.departamento)
+      const provincia = this._toStr(o.provincia)
+      const distrito = this._toStr(o.distrito)
+      const ubigeo = this._toStr(o.ubigeo)
+      const latitud = this._toStr(o.latitud)
+      const longitud = this._toStr(o.longitud)
+
+      let direcciones = this._parseDirecciones(o.direcciones)
+
+      // si no vino direcciones JSON, armamos una desde el formato simple
+      if (!direcciones.length && (direccion || referencia || departamento || provincia || distrito || ubigeo)) {
+        direcciones = [{
+          direccion,
+          referencia,
+          departamento: departamento || null,
+          provincia: provincia || null,
+          distrito: distrito || null,
+          ubigeo,
+          latitud: latitud || null,
+          longitud: longitud || null,
+          principal: true
+        }]
+      }
+
       return {
         activo: this._toBool(o.activo, true),
-        id: this._toStr(o.id), // opcional
+        id: this._toStr(o.id),
         tipodoc: this._toStr(o.tipodoc || 'DNI').toUpperCase(),
         documento: this._toStr(o.documento),
         nombre: this._toStr(o.nombre),
-        giro: this._toStr(o.giro),            // ← nuevo
+        giro: this._toStr(o.giro),
         correo: this._toStr(o.correo),
-        direccion: this._toStr(o.direccion),
         telefono: this._toStr(o.telefono),
         sede: this._toStr(o.sede),
         nota: this._toStr(o.nota),
-        referencia: this._toStr(o.referencia),
-        departamento: this._toStr(o.departamento),
-        provincia: this._toStr(o.provincia),
-        distrito: this._toStr(o.distrito),
-        ubigeo: this._toStr(o.ubigeo),
-        tipocomprobante: this._toStr(o.tipocomprobante || 'T'),
         zona: this._toStr(o.zona),
         dia: this._normalizaDiaAArray(o.dia),
-        latitud: this._toStr(o.latitud),
-        longitud: this._toStr(o.longitud),
+        tipocomprobante: this._toStr(o.tipocomprobante || 'T'),
+        frecuencia: this._toStr(o.frecuencia || 'DIARIA').toUpperCase(),
+        latitud,
+        longitud,
         permite_credito: this._toBool(o.permite_credito, false),
         linea_credito: this._toNum(o.linea_credito, 0),
+        dias_credito: this._toNum(o.dias_credito, 0),
         listas_precios: this._parseArrayJSON(o.listas_precios, []),
+
+        // compatibilidad antigua
+        direccion,
+        referencia,
+        departamento,
+        provincia,
+        distrito,
+        ubigeo,
+
+        // formato nuevo
+        direcciones
       }
     },
 
@@ -464,9 +566,12 @@ export default {
           if (!r.categoria || r.categoria === '1') issues.push('categoría inválida')
           if (Number(r.precio) === 0) issues.push('precio no puede ser 0')
         } else if (this.target === 'clientes') {
-          if (!r.documento) issues.push('documento requerido')
           if (!r.tipodoc) issues.push('tipodoc requerido')
           if (!r.nombre) issues.push('nombre requerido')
+
+          if (r.tipodoc !== 'SIN DOCUMENTO' && !r.documento) {
+            issues.push('documento requerido')
+          }
         } else {
           if (!r.id) issues.push('id requerido')
           // stock puede ser 0
@@ -536,34 +641,42 @@ export default {
           })
         } else if (this.target === 'clientes') {
           tasks = this.importRows.map(r => () => {
+            const direccionesFinal = Array.isArray(r.direcciones) ? r.direcciones : []
+
             const form = {
               activo: !!r.activo,
               id: r.id || r.documento,
-              tipodoc: r.tipodoc || '1',
+              tipodoc: r.tipodoc || 'DNI',
               documento: r.documento,
               nombre: String(r.nombre || '').trim(),
               giro: r.giro || '',
               correo: r.correo || '',
-              direccion: r.direccion || '',
               telefono: r.telefono || '',
               sede: r.sede || '',
               nota: r.nota || '',
-              referencia: r.referencia || '',
-              departamento: r.departamento || null,
-              provincia: r.provincia || null,
-              distrito: r.distrito || null,
-              ubigeo: r.ubigeo || '',
-              tipocomprobante: r.tipocomprobante || 'T',
               zona: r.zona || '',
+              tipocomprobante: r.tipocomprobante || 'T',
+              frecuencia: r.frecuencia || 'DIARIA',
               ...(r.dia ? { dia: r.dia } : {}),
               latitud: String(r.latitud ?? ''),
               longitud: String(r.longitud ?? ''),
               permite_credito: !!r.permite_credito,
               linea_credito: Number(r.linea_credito) || 0,
+              dias_credito: Number(r.dias_credito) || 0,
               listas_precios: Array.isArray(r.listas_precios) ? r.listas_precios : [],
+              direcciones: direccionesFinal,
               editado: ahora,
             }
-            return crearOActualizarCliente(r.documento, { ...form })
+
+            // compatibilidad con estructura antigua
+            if (r.direccion) form.direccion = r.direccion
+            if (r.referencia) form.referencia = r.referencia
+            if (r.departamento) form.departamento = r.departamento
+            if (r.provincia) form.provincia = r.provincia
+            if (r.distrito) form.distrito = r.distrito
+            if (r.ubigeo) form.ubigeo = r.ubigeo
+
+            return crearOActualizarCliente(r.documento || r.id, { ...form })
           })
         } else {
           // stock inicial (rápido) — solo actualiza campos necesarios

@@ -62,13 +62,13 @@
                         :item-text="formatItemText" item-value="cod" label="Selecciona Detraccion"
                         outlined></v-autocomplete>
                 </v-row>
-                <v-row class="mt-n9 mb-n3">
+                <v-row class="mt-n9 mb-n3" v-if="$store.state.permisos.moduloempresa">
                     <v-col cols="6">
                         <v-switch v-model="genera_guia" label="Genera G-Rem" :false-value="false"
                             :true-value="true"></v-switch>
                     </v-col>
                     <v-col cols="6">
-                        <v-select v-if="$store.state.permisos.moduloempresa" outlined dense v-model="cod_vendedor"
+                        <v-select  outlined dense v-model="cod_vendedor"
                             class="mt-2" :items="$store.state.array_sedes" item-text="nombre" item-value="codigo" :disabled="!esAdmin"
                             label="Vendedor">
                             <template v-slot:item="{ item }"><span>{{ item.nombre }}</span></template>
@@ -79,7 +79,7 @@
 
                 <v-row class="mt-n2" dense>
                     <v-col cols="12" sm="6">
-                        <v-btn block color="primary" @click="cobrarContado()" small>
+                        <v-btn  :disabled="formaPago=='CREDITO'" block color="primary" @click="cobrarContado()" small>
                             EFECTIVO<span v-if="!$store.state.esmovil">(F3)</span>
                         </v-btn>
                     </v-col>
@@ -104,7 +104,7 @@
                 <v-card flat outlined class="mt-2 pa-2" v-if="formaPago === 'CREDITO'">
                     <v-row dense>
                         <v-col cols="12" sm="6">
-                            <v-text-field outlined dense type="date" v-model="fechaVencimiento" :min="hoyISO"
+                            <v-text-field  :disabled="!esAdmin" outlined dense type="date" v-model="fechaVencimiento" :min="hoyISO"
                                 label="Vence el" prepend-inner-icon="mdi-calendar" />
                         </v-col>
                         <v-col cols="12" sm="6" v-if="esAdmin">

@@ -75,7 +75,7 @@
                         <v-list-item-icon><v-icon small>mdi-point-of-sale</v-icon></v-list-item-icon>
                         <v-list-item-title>Punto de Venta</v-list-item-title>
                     </v-list-item>
-                    <v-list-item link @click.prevent="router('reporte_proformas')">
+                    <v-list-item link @click.prevent="router('reporte_proformas')" v-if="false">
                         <v-list-item-icon><v-icon small>mdi-text-box-multiple-outline</v-icon></v-list-item-icon>
                         <v-list-item-title>Proformas</v-list-item-title>
                     </v-list-item>
@@ -83,7 +83,7 @@
                         <v-list-item-icon><v-icon small>mdi-chart-areaspline</v-icon></v-list-item-icon>
                         <v-list-item-title>Flujo de Caja</v-list-item-title>
                     </v-list-item>
-                    <v-list-item link @click.prevent="router('cuentas_cobrar')">
+                    <v-list-item  v-if="$store.state.permisos.modulocuentasxcobrar" link @click.prevent="router('cuentas_cobrar')">
                         <v-list-item-icon><v-icon small>mdi-account-cash</v-icon></v-list-item-icon>
                         <v-list-item-title>Créditos</v-list-item-title>
                     </v-list-item>
@@ -190,16 +190,16 @@
                         </v-list-item>
                     </v-container>
                 </v-list-group>
-                <v-list-group v-if="false" :value="listaMenu" prepend-icon="mdi-finance"
+                <v-list-group  :value="listaMenu" prepend-icon="mdi-finance" v-if="$store.state.permisos.tesoreria"
                     color="primary">
                     <template v-slot:activator>
                         <v-list-item-title class="font-weight-medium">Finanzas</v-list-item-title>
                     </template>
-                    <v-list-item v-if="false" link @click.prevent="router('tesoreria')">
+                    <v-list-item  link @click.prevent="router('tesoreria')">
                         <v-list-item-icon><v-icon small>mdi-bank</v-icon></v-list-item-icon>
                         <v-list-item-title>Tesoreria</v-list-item-title>
                     </v-list-item>
-                    <v-list-item v-if="$store.state.permisos.modulocuentasxcobrar" link
+                    <v-list-item v link
                         @click.prevent="router('cuentas_cobrar')">
                         <v-list-item-icon><v-icon small>mdi-cash-remove</v-icon></v-list-item-icon>
                         <v-list-item-title>C x Cobrar</v-list-item-title>

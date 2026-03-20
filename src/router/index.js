@@ -871,7 +871,7 @@ const routes = [
     },
     beforeEnter: (to, from, next) => {
       if (to.matched.some((ruta) => ruta.meta.requireAuth)) {
-        if (store.state.permisos.modulosunat) {
+        if (store.state.permisos.tesoreria) {
           next();
         } else {
           next({

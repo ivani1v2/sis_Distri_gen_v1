@@ -45,24 +45,24 @@
                                 <v-list-item @click.stop>
                                     <v-select class="mt-2" outlined dense v-model="sedeSeleccionada"
                                         :items="opcionesSedes" item-text="nombre" item-value="base" label="Vendedor"
-                                        hide-details @change="onSedeChange" :disabled="!esAdmin" />
+                                        hide-details @change="onSedeChange" :disabled="!$store.state.permisos.tesoreria"" />
                                 </v-list-item>
                                 <v-divider class="my-1"></v-divider>
 
-                                <v-list-item @click="evento(5)">
+                                <v-list-item @click="evento(5)" v-if="false">
                                     <v-list-item-icon><v-icon color="info">mdi-cash-plus</v-icon></v-list-item-icon>
                                     <v-list-item-title>Inicio / Apertura Caja</v-list-item-title>
                                 </v-list-item>
-                                <v-list-item @click="evento(2)">
+                                <v-list-item @click="evento(2)" v-if="$store.state.permisos.tesoreria">
                                     <v-list-item-icon><v-icon
                                             color="info">mdi-swap-horizontal</v-icon></v-list-item-icon>
                                     <v-list-item-title>Nuevo Ingreso / Egreso</v-list-item-title>
                                 </v-list-item>
-                                <v-list-item @click="evento(3)">
+                                <v-list-item @click="evento(3)" v-if="$store.state.permisos.tesoreria">
                                     <v-list-item-icon><v-icon color="info">mdi-lock</v-icon></v-list-item-icon>
                                     <v-list-item-title>Cerrar Caja (Reporte)</v-list-item-title>
                                 </v-list-item>
-                                <v-list-item @click="evento(4)">
+                                <v-list-item @click="evento(4)" v-if="$store.state.permisos.tesoreria">
                                     <v-list-item-icon><v-icon color="info">mdi-history</v-icon></v-list-item-icon>
                                     <v-list-item-title>Ver Historial</v-list-item-title>
                                 </v-list-item>
