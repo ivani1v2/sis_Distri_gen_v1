@@ -267,7 +267,7 @@
                 </div>
 
                 <!-- BOTÓN PARA MOSTRAR CRÉDITO -->
-                <v-btn v-if="!esCredito" small block color="indigo" class="mb-2" @click="toggleCredito">
+                <v-btn v-if="!esCredito" small block color="indigo" dark class="mb-2" @click="toggleCredito">
                     <v-icon left small>mdi-calendar-clock</v-icon>
                     Generar crédito
                 </v-btn>
@@ -785,6 +785,7 @@ export default {
                     vendedor: cab.vendedor || "",
                     doc_ref: cab.numeracion || "",
                     fecha: cab.fecha,
+                    cliente_zona: cab.cliente_zona || "",
                     fecha_vence: fechaVenceUnix,
                     datos: [
                         {

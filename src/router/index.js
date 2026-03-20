@@ -1132,6 +1132,14 @@ const routes = [
   },
 
   {
+    path: "/seguimiento",
+    name: "seguimiento",
+    component: () => import("../views/reportes/seguimiento-stock.vue"),
+    meta: {
+      requireAuth: true,
+    },
+  },
+  {
     path: "/lista",
     name: "lista",
     // route level code-splitting

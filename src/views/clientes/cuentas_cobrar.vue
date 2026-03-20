@@ -7,6 +7,11 @@
           <span :class="{ 'text-h5': $vuetify.breakpoint.mdAndUp, 'text-h6': $vuetify.breakpoint.smAndDown }"
             class="font-weight-bold blue-grey--text text--darken-3">Cx Cobrar</span>
           <v-spacer></v-spacer>
+          <!-- <v-btn color="purple" small @click="actualizarZonasCXC" class="ml-2 white--text font-weight-medium"
+            :loading="cargandoZonas" :disabled="cargandoZonas">
+            <v-icon left small>mdi-map-marker</v-icon>
+            <span>Actualizar Zonas</span>
+          </v-btn> -->
           <v-btn color="green" small @click="exportarExcel" class="ml-2 white--text font-weight-medium">
             <v-icon left small>mdi-file-excel</v-icon>
             <span>Exportar</span>
@@ -61,8 +66,8 @@
       <v-divider></v-divider>
 
       <v-data-table :headers="headersCxc" :items="listafiltrada" :items-per-page="-1" class="elevation-0"
-        :sort-by.sync="sortBy" :sort-desc.sync="sortDesc" dense fixed-header height="65vh" mobile-breakpoint="1" item-key="doc_ref" 
-        no-data-text="No hay cuentas por cobrar disponibles">
+        :sort-by.sync="sortBy" :sort-desc.sync="sortDesc" dense fixed-header height="65vh" mobile-breakpoint="1"
+        item-key="doc_ref" no-data-text="No hay cuentas por cobrar disponibles">
         <template v-slot:[`item.cliente`]="{ item }">
           <div class="font-weight-medium">
             {{ item.nombre }}
@@ -235,6 +240,7 @@ import {
   pdf_cuentas_cobrar,
   pdf_liquida_prestamo
 } from '../../pdf_reportes'
+import { fs } from '../../db_firestore'
 import XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
@@ -290,6 +296,7 @@ export default {
     zonasSeleccionadas: ['TODOS'],
     zonasPrevios: ['TODOS'],
     allZonas: [],
+    cargandoZonas: false,
 
   }),
 
@@ -754,7 +761,7 @@ export default {
         margin: { left: 10, right: 5 },
         head: [['Comprobante', 'Doc - Cliente', 'Zona', 'Vend', 'Emisión', 'Vence', 'Días', 'Estado', 'Total', 'Pendiente']],
         body: rows,
-        styles: { fontSize: 6.5, cellPadding: 1,textColor: [0, 0, 0], fillColor: [255, 255, 255]},
+        styles: { fontSize: 6.5, cellPadding: 1, textColor: [0, 0, 0], fillColor: [255, 255, 255] },
         headStyles: { fillColor: [66, 66, 66], textColor: 255, halign: 'center' },
         columnStyles: {
           0: { cellWidth: 20 },
@@ -771,7 +778,91 @@ export default {
       })
 
       window.open(doc.output('bloburl'))
-    }
+    },
+    async actualizarZonasCXC() {
+      if (!confirm('¿Actualizar zonas de las cuentas por cobrar PENDIENTES?')) return;
+
+      this.cargandoZonas = true;
+      store.commit('dialogoprogress', 1);
+
+      try {
+        const ruc_asociado = this.$store.state.baseDatos?.ruc_asociado;
+        const bd = this.$store.state.baseDatos?.bd || '';
+
+        if (!ruc_asociado || !bd) {
+          throw new Error('No se pudo obtener ruc_asociado o bd');
+        }
+
+        const cxcSnapshot = await allcuentaxcobrar()
+          .orderByChild('estado')
+          .equalTo('PENDIENTE')
+          .once('value');
+
+        if (!cxcSnapshot.exists()) {
+          store.commit('dialogoprogress', 0);
+          this.$store.commit('dialogosnackbar', 'No hay cuentas por cobrar pendientes');
+          return;
+        }
+
+        const clientesSnapshot = await fs
+          .collection('general')
+          .doc(ruc_asociado)
+          .collection('clientes')
+          .get();
+
+        const clientesMap = new Map();
+        clientesSnapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.zona && data.zona.trim() !== '') {
+            clientesMap.set(data.documento, data.zona.trim());
+          }
+        });
+
+        let total = 0;
+        let actualizadas = 0;
+        let sinZona = 0;
+        const keys = [];
+
+        cxcSnapshot.forEach(childSnapshot => {
+          keys.push({
+            key: childSnapshot.key,
+            cuenta: childSnapshot.val()
+          });
+        });
+
+        total = keys.length;
+        const batchSize = 10;
+        for (let i = 0; i < keys.length; i += batchSize) {
+          const batch = keys.slice(i, i + batchSize);
+          const promises = batch.map(async ({ key, cuenta }) => {
+            const zona = clientesMap.get(cuenta.documento);
+            if (zona) {
+              await editaCuentaxCobrar(key, 'cliente_zona', zona);
+              actualizadas++;
+            } else {
+              sinZona++;
+            }
+          });
+
+          await Promise.all(promises);
+          const progreso = Math.floor(((i + batch.length) / total) * 99) + 1;
+          store.commit('dialogoprogress', progreso);
+        }
+        store.commit('dialogoprogress', 0);
+        this.$store.commit('dialogosnackbar',
+          `Zonas actualizadas: ${actualizadas} de ${total} cuentas | ${sinZona} sin zona (ignoradas)`
+        );
+        await this.filtra();
+
+      } catch (error) {
+        console.error('Error:', error);
+        store.commit('dialogoprogress', 0);
+        this.$store.commit('dialogosnackbar', '❌ Error: ' + error.message);
+
+      } finally {
+        this.cargandoZonas = false;
+      }
+    },
   }
 }
 </script>

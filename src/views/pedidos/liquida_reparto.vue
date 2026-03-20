@@ -287,7 +287,7 @@
                         <tbody>
                             <tr v-for="d in pedidoSeleccionado" :key="`${d.id}-${d.nombre}`">
                                 <td class="caption">
-                                    <strong class="red--text mr-1">{{ d.cantidad }}</strong> x {{ d.nombre }}
+                                    <strong class="red--text mr-1">{{ d.cantidad }}</strong> x {{d.id }} - {{ d.nombre }}
                                     <v-chip v-if="d.operacion == 'GRATUITA'" x-small color="teal" dark
                                         class="ml-1">GRATUITA</v-chip>
                                 </td>
@@ -845,10 +845,10 @@ export default {
             return total;
         },
         apiBaseUrl() {
-         /*   const hostname = window.location.hostname;
+           /* const hostname = window.location.hostname;
             if (hostname === 'localhost' || hostname === '127.0.0.1') {
-                return 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion';
-            }*/
+                return 'http://127.0.0.1:5001/sis-distribucion/southamerica-east1/api_distribucion';
+            } */
             return 'https://api-distribucion-6sfc6tum4a-rj.a.run.app';
         }
     },
