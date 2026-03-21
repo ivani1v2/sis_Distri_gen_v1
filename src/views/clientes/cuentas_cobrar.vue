@@ -93,7 +93,7 @@
           </v-chip>
         </template>
         <template v-slot:[`item.dias_credito`]="{ item }">
-          <v-chip small :color="item.dias_credito ? 'blue lighten-4' : 'grey lighten-4'" class="font-weight-bold">
+          <v-chip small color="blue lighten-4" class="font-weight-bold">
             {{ item.dias_credito || 7 }} días
           </v-chip>
         </template>
@@ -551,6 +551,12 @@ export default {
       this.dialog = true;
     },
 
+    calcularDiasCredito(fecha_emision, fecha_vence) {
+      const emision = moment.unix(fecha_emision);
+      const vencimiento = moment.unix(fecha_vence);
+      return vencimiento.diff(emision, 'days');
+    },
+
     async imprime_cuenta() {
       store.commit("dialogoprogress", 1);
       var array = [];
@@ -693,6 +699,7 @@ export default {
         Comprobante: item.doc_ref,
         Emision: this.conviertefecha(item.fecha),
         Vencimiento: this.conviertefecha(item.fecha_vence),
+        'Días de Crédito': this.calcularDiasCredito(item.fecha, item.fecha_vence) || 0,
         Estado: item.estado,
         Vendedor: item.vendedor_nombre || 'Sin vendedor',
         'Código Vendedor': item.vendedor || '',
@@ -750,7 +757,7 @@ export default {
         item.vendedor || '',
         moment.unix(item.fecha).format('DD/MM/YY'),
         moment.unix(item.fecha_vence).format('DD/MM/YY'),
-        item.dias_credito || 7,
+        this.calcularDiasCredito(item.fecha, item.fecha_vence) || 0,
         item.estado || '',
         `${this.monedaSimbolo} ${parseFloat(item.monto_total || 0).toFixed(2)}`,
         `${this.monedaSimbolo} ${parseFloat(item.monto_pendiente || 0).toFixed(2)}`

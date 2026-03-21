@@ -99,6 +99,9 @@
                             <v-col cols="12" class="mt-n6">
                                 <v-switch inset dense v-model="no_mostrar_logo_nota_pedido" label="No Mostrar Logo en Nota de Venta" />
                             </v-col>
+                            <v-col cols="12" class="mt-n6">
+                                <v-switch inset dense v-model="no_mostrar_ruc_nota_venta" label="No Mostrar RUC en Nota de Venta" />
+                            </v-col>
                         </v-row>
 
                         <v-row dense>
@@ -155,6 +158,7 @@ export default {
             log_largo: false,
             mostrar_logo_pedido: true,
             no_mostrar_logo_nota_pedido: false,
+            no_mostrar_ruc_nota_venta: false,
             mensaje_final_proforma: '',
             impresora_auto: false,
 
@@ -186,6 +190,7 @@ export default {
                     this.log_largo = snapshot.val().log_largo || false
                     this.mostrar_logo_pedido = snapshot.val().mostrar_logo_pedido !== false
                     this.no_mostrar_logo_nota_pedido = snapshot.val().no_mostrar_logo_nota_pedido === true
+                    this.no_mostrar_ruc_nota_venta = snapshot.val().no_mostrar_ruc_nota_venta === true
                     this.impresora_auto = snapshot.val().impresora_auto || false
                 } else {
                     this.ip_cocina = "192.168.1.5"
@@ -204,6 +209,7 @@ export default {
                     this.log_largo = false
                     this.mostrar_logo_pedido = true
                     this.no_mostrar_logo_nota_pedido = false
+                    this.no_mostrar_ruc_nota_venta = false
                     this.impresora_auto = false
                     this.mensaje_final_proforma = ''
                 }
@@ -230,6 +236,7 @@ export default {
                 log_largo: this.log_largo || false,
                 mostrar_logo_pedido: this.mostrar_logo_pedido !== false,
                 no_mostrar_logo_nota_pedido: this.no_mostrar_logo_nota_pedido || false,
+                no_mostrar_ruc_nota_venta: this.no_mostrar_ruc_nota_venta || false,
                 mensaje_final_proforma: this.mensaje_final_proforma || ''
 
             }
@@ -251,6 +258,7 @@ export default {
             actualizaImpresoras('log_largo', this.log_largo || false)
             actualizaImpresoras('mostrar_logo_pedido', this.mostrar_logo_pedido !== false)
             actualizaImpresoras('no_mostrar_logo_nota_pedido', this.no_mostrar_logo_nota_pedido || false)
+            actualizaImpresoras('no_mostrar_ruc_nota_venta', this.no_mostrar_ruc_nota_venta || false)
             actualizaImpresoras('mensaje_final_proforma', this.mensaje_final_proforma || '')
             actualizaImpresoras('impresora_auto', this.impresora_auto || false)
             store.commit("dialogoImpresora")

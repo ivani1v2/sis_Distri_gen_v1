@@ -237,6 +237,7 @@ async function impresion58(arraydatos, qr, cabecera) {
 
   const esNotaVenta58 = arraycabe.tipocomprobante === "T";
   const ocultarLogo58 = esNotaVenta58 && store.state.configImpresora.no_mostrar_logo_nota_pedido;
+  const ocultarRuc58 = esNotaVenta58 && store.state.configImpresora.no_mostrar_ruc_nota_venta;
   if (imagen != "" && !ocultarLogo58) {
     doc.addImage(
       "data:image/png;base64," + imagen,
@@ -269,10 +270,12 @@ async function impresion58(arraydatos, qr, cabecera) {
     linea = linea + 4 * texto.length;
   }
 
-  doc.setFont("Helvetica", "");
-  var texto = doc.splitTextToSize(Ruc, pdfInMM - lMargin - rMargin);
-  doc.text(texto, pageCenter, linea, "center"); //RUC
-  linea = linea + 4.5;
+  if (!ocultarRuc58) {
+    doc.setFont("Helvetica", "");
+    var texto = doc.splitTextToSize(Ruc, pdfInMM - lMargin - rMargin);
+    doc.text(texto, pageCenter, linea, "center"); //RUC
+    linea = linea + 4.5;
+  }
   doc.setFont("Helvetica", "");
   if (store.state.configImpresora.nom_comercial) {
     var texto = doc.splitTextToSize(
@@ -740,6 +743,7 @@ async function impresion80(arraydatos, qr, cabecera) {
   //console.log(imagen)
   const esNotaVenta80 = arraycabe.tipocomprobante === "T";
   const ocultarLogo80 = esNotaVenta80 && store.state.configImpresora.no_mostrar_logo_nota_pedido;
+  const ocultarRuc80 = esNotaVenta80 && store.state.configImpresora.no_mostrar_ruc_nota_venta;
   if (imagen != "" && !ocultarLogo80) {
     doc.addImage(
       "data:image/png;base64," + imagen,
@@ -762,8 +766,9 @@ async function impresion80(arraydatos, qr, cabecera) {
   linea = linea + 4 * texto.length;
 
   doc.setFont("Helvetica", "");
+  var encabezadoRucDir = ocultarRuc80 ? Direccion : Ruc + "\n" + Direccion;
   var texto = doc.splitTextToSize(
-    Ruc + "\n" + Direccion,
+    encabezadoRucDir,
     pdfInMM - lMargin - rMargin
   );
   doc.text(texto, pageCenter, linea, "center"); //RUC
@@ -1232,6 +1237,7 @@ async function impresionA4(array, qr, arraycabecera) {
 
   const esNotaVentaA4 = arraycabe.tipocomprobante === "T";
   const ocultarLogoA4 = esNotaVentaA4 && store.state.configImpresora.no_mostrar_logo_nota_pedido;
+  const ocultarRucA4 = esNotaVentaA4 && store.state.configImpresora.no_mostrar_ruc_nota_venta;
   if (imagen != "" && !ocultarLogoA4) {
     console.log(store.state.configImpresora.log_largo);
 
@@ -1310,19 +1316,26 @@ async function impresionA4(array, qr, arraycabecera) {
   doc.setLineWidth(0.7);
   doc.rect(140, 10, 60, 25);
 
-  doc.setFontSize(11);
-  doc.setFont("Helvetica", "Bold");
-  var texto = doc.splitTextToSize("Ruc: " + store.state.baseDatos.ruc, 50);
-  doc.text(texto, 170, 18, "center");
+  let yDocA4 = 22;
+  let ySerieA4 = 26;
+  if (!ocultarRucA4) {
+    doc.setFontSize(11);
+    doc.setFont("Helvetica", "Bold");
+    var texto = doc.splitTextToSize("Ruc: " + store.state.baseDatos.ruc, 50);
+    doc.text(texto, 170, 18, "center");
+  } else {
+    yDocA4 = 19;
+    ySerieA4 = 24;
+  }
   doc.setFontSize(8);
   var texto = doc.splitTextToSize(documento, 50);
-  doc.text(texto, 170, 22, "center");
+  doc.text(texto, 170, yDocA4, "center");
   doc.setFontSize(10);
   var texto = doc.splitTextToSize(
     arraycabe.serie + "-" + arraycabe.correlativoDocEmitido,
     50
   );
-  doc.text(texto, 170, 26, "center");
+  doc.text(texto, 170, ySerieA4, "center");
 
   doc.setFontSize(8);
   doc.setLineWidth(0.3);
@@ -1737,6 +1750,7 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
 
   const esNotaVentaA5 = arraycabe.tipocomprobante === "T";
   const ocultarLogoA5 = esNotaVentaA5 && store.state.configImpresora.no_mostrar_logo_nota_pedido;
+  const ocultarRucA5 = esNotaVentaA5 && store.state.configImpresora.no_mostrar_ruc_nota_venta;
   if (imagen != "" && !ocultarLogoA5) {
     doc.addImage("data:image/png;base64," + imagen, "png", 10, 5, 26, 26);
     leftX = 40;
@@ -1771,24 +1785,31 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
   doc.setLineWidth(0.3);
   doc.rect(boxX, boxY, boxW, boxH);
 
-  doc.setFontSize(10);
-  doc.setFont("Helvetica", "Bold");
-  texto = doc.splitTextToSize(
-    "Ruc: " + (store.state.baseDatos.ruc || ""),
-    boxW - 6
-  );
-  doc.text(texto, boxX + boxW / 2, boxY + 7, "center");
+  let yDocA5 = boxY + 12;
+  let ySerieA5 = boxY + 18;
+  if (!ocultarRucA5) {
+    doc.setFontSize(10);
+    doc.setFont("Helvetica", "Bold");
+    texto = doc.splitTextToSize(
+      "Ruc: " + (store.state.baseDatos.ruc || ""),
+      boxW - 6
+    );
+    doc.text(texto, boxX + boxW / 2, boxY + 7, "center");
+  } else {
+    yDocA5 = boxY + 10;
+    ySerieA5 = boxY + 16;
+  }
 
   doc.setFontSize(8.5);
   texto = doc.splitTextToSize(documento, boxW - 6);
-  doc.text(texto, boxX + boxW / 2, boxY + 12, "center");
+  doc.text(texto, boxX + boxW / 2, yDocA5, "center");
 
   doc.setFontSize(10);
   texto = doc.splitTextToSize(
     (arraycabe.serie || "") + "-" + (arraycabe.correlativoDocEmitido || ""),
     boxW - 6
   );
-  doc.text(texto, boxX + boxW / 2, boxY + 18, "center");
+  doc.text(texto, boxX + boxW / 2, ySerieA5, "center");
 
   const yHeaderBottom = Math.max(linea, boxY + boxH);
 
