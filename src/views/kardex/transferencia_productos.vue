@@ -9,7 +9,7 @@
                     </h2>
                 </v-col>
                 <v-col class="text-right">
-                    <v-btn depressed color="primary" class="text-none rounded-lg"
+                    <v-btn v-if="esAdmin" depressed color="primary" class="text-none rounded-lg"
                         @click="mostrarDialogo = !mostrarDialogo" :disabled="periodoCerrado">
                         <v-icon left>mdi-plus</v-icon>
                         Nuevo <span class="d-none d-sm-inline ml-1">Movimiento</span>
@@ -51,7 +51,7 @@
         <v-card outlined>
             <v-data-table :headers="headers" :items="movimientos" dense class="elevation-1 d-none d-md-block"
                 :items-per-page="10">
-                <template v-slot:item.fecha="{ item }">
+                <template v-slot:[`item.fecha`]="{ item }">
                     <span>
                         {{ formatoFecha(item.fecha_unix) }}
                         <v-chip v-if="item.estado === 'anulado'" color="red" text-color="white" x-small class="ml-2">
@@ -63,26 +63,26 @@
                         </v-chip>
                     </span>
                 </template>
-                <template v-slot:item.sede_origen="{ item }">
+                <template v-slot:[`item.sede_origen`]="{ item }">
                     <v-chip color="blue lighten-4" text-color="blue darken-2" small>
                         {{ nombreSede(item.sede_origen) }}
                     </v-chip>
                 </template>
-                <template v-slot:item.sede_destino="{ item }">
+                <template v-slot:[`item.sede_destino`]="{ item }">
                     <v-chip color="green lighten-4" text-color="green darken-2" small>
                         {{ nombreSede(item.sede_destino) }}
                     </v-chip>
                 </template>
-                <template v-slot:item.productos="{ item }">
+                <template v-slot:[`item.productos`]="{ item }">
                     <v-chip small color="primary" text-color="white" @click="verDetalle(item)" style="cursor: pointer;">
                         <v-icon left x-small>mdi-package-variant</v-icon>
                         {{ item.productos.length }} productos
                     </v-chip>
                 </template>
-                <template v-slot:item.usuario="{ item }">
+                <template v-slot:[`item.usuario`]="{ item }">
                     {{ moneda }} {{ item.total || '-' }}
                 </template>
-                <template v-slot:item.accion="{ item }">
+                <template v-slot:[`item.accion`]="{ item }">
                     <v-menu bottom left>
                         <template v-slot:activator="{ on, attrs }">
                             <v-btn icon v-bind="attrs" v-on="on">
@@ -94,11 +94,11 @@
                                 <v-list-item-icon><v-icon color="blue">mdi-eye</v-icon></v-list-item-icon>
                                 <v-list-item-content>Ver Detalle</v-list-item-content>
                             </v-list-item>
-                            <v-list-item @click="editarTransferencia(item)" :disabled="esPeriodoCerradoItem(item)">
+                            <v-list-item v-if="esAdmin" @click="editarTransferencia(item)" :disabled="esPeriodoCerradoItem(item)">
                                 <v-list-item-icon><v-icon color="orange">mdi-pencil</v-icon></v-list-item-icon>
                                 <v-list-item-content>Editar</v-list-item-content>
                             </v-list-item>
-                            <v-list-item @click="anularTransferencia(item)" :disabled="esPeriodoCerradoItem(item)">
+                            <v-list-item v-if="esAdmin" @click="anularTransferencia(item)" :disabled="esPeriodoCerradoItem(item)">
                                 <v-list-item-icon><v-icon color="red">mdi-cancel</v-icon></v-list-item-icon>
                                 <v-list-item-content>Anular</v-list-item-content>
                             </v-list-item>
