@@ -241,7 +241,7 @@
                         <v-list-item-icon><v-icon small>mdi-truck-fast-outline</v-icon></v-list-item-icon>
                         <v-list-item-title>Transferencias</v-list-item-title>
                     </v-list-item>
-                    <v-list-item link @click.prevent="router('reporte_stock')">
+                    <v-list-item v-if="false" link @click.prevent="router('reporte_stock')">
                         <v-list-item-icon><v-icon small>mdi-counter</v-icon></v-list-item-icon>
                         <v-list-item-title>Stock Actual</v-list-item-title>
                     </v-list-item>
@@ -917,7 +917,7 @@ export default {
             store.commit("dialogoprogress")
         },
         async select_tienda(data) {
-            if (!store.state.permisos.moduloempresa) {
+            if (!store.state.permisos.transferencias) {
                 alert('no cuenta con permiso para cambiar de sede!')
                 return
             }

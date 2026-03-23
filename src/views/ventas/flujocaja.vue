@@ -24,7 +24,7 @@
                     </v-col>
 
                     <v-col cols="12" md="2" sm="4" class="text-center">
-                        <v-btn small v-if="$store.state.permisos.punto_venta" block color="error" @click="abrir_caja()">
+                        <v-btn small v-if="false" block color="error" @click="abrir_caja()">
                             <v-icon left>mdi-cash-register</v-icon> Punto Venta
                         </v-btn>
                     </v-col>
@@ -42,7 +42,7 @@
                                     <v-select outlined dense v-model="filtroMov" :items="arrayFiltroMov"
                                         item-text="text" item-value="value" label="Filtrar movimientos" hide-details />
                                 </v-list-item>
-                                <v-list-item @click.stop>
+                                <v-list-item @click.stop >
                                     <v-select class="mt-2" outlined dense v-model="sedeSeleccionada"
                                         :items="opcionesSedes" item-text="nombre" item-value="base" label="Vendedor"
                                         hide-details @change="onSedeChange" :disabled="!$store.state.permisos.tesoreria"" />
@@ -66,7 +66,7 @@
                                     <v-list-item-icon><v-icon color="info">mdi-history</v-icon></v-list-item-icon>
                                     <v-list-item-title>Ver Historial</v-list-item-title>
                                 </v-list-item>
-                                <v-list-item @click="dialog_reporte = true">
+                                <v-list-item @click="dialog_reporte = true" v-if="false">
                                     <v-list-item-icon><v-icon
                                             color="info">mdi-chart-box-outline</v-icon></v-list-item-icon>
                                     <v-list-item-title>Productos Vendidos</v-list-item-title>
@@ -936,7 +936,7 @@ export default {
                     id_flujo: key,
                     responsable
                 };
-                await nuevoflujo_teso(flujoCredito);
+               // await nuevoflujo_teso(flujoCredito);
             }
 
             this.dialogo_apertura = false;

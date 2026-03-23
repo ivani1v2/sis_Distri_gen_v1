@@ -35,7 +35,7 @@
                 />
             </v-col>
             <v-col cols="6" md="2" xs="6">
-                <v-btn color="orange darken-1" dark block small @click="dialCuentasCobrar = true">
+                <v-btn v-if="false" color="orange darken-1" dark block small @click="dialCuentasCobrar = true">
                     <v-icon left small>mdi-cash-multiple</v-icon>
                     Cuentas x Cobrar
                 </v-btn>
@@ -52,8 +52,8 @@
                         </v-btn>
                     </template>
                     <v-list dense>
-                        <v-list-item>
-                            <v-btn dark small color="info" block @click="evento(5)">
+                        <v-list-item v-if="false">
+                            <v-btn  dark small color="info" block @click="evento(5)">
                                 Inicio Caja
                             </v-btn>
                         </v-list-item>
@@ -62,13 +62,13 @@
                                 INGR/EGRE
                             </v-btn>
                         </v-list-item>
-                        <v-list-item>
+                        <v-list-item v-if="$store.state.permisos.es_master">
                             <v-btn dark small color="info" block @click="evento(3)">
                                 CIERRA TESORERIA
                             </v-btn>
                         </v-list-item>
-                        <v-list-item>
-                            <v-btn dark small color="info" block @click="evento(4)">
+                        <v-list-item v-if="false">
+                            <v-btn  dark small color="info" block @click="evento(4)">
                                 HISTORIAL
                             </v-btn>
                         </v-list-item>
