@@ -693,7 +693,7 @@ export default {
                 nextCabecera.igv = cab.igv;
                 nextCabecera.total_op_exoneradas = cab.total_op_exoneradas;
                 nextCabecera.totalIGV_GRATUITA = cab.totalIGV_GRATUITA;
-                nextCabecera.total = (Number(cab.total_op_gravadas) + Number(cab.igv)).toFixed(2);
+                nextCabecera.total = (Number(cab.total_op_gravadas) + Number(cab.total_op_exoneradas) + Number(cab.igv)).toFixed(2);
 
                 // pendiente pago (arregla el bug de "total" no definido)
                 if (nextCabecera.forma_pago === "CONTADO") {

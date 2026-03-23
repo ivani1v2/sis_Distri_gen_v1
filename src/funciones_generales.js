@@ -51,7 +51,6 @@ async function completa_items(arrays) {
     const tieneDescuentosPorcentaje = d1 !== 0 || d2 !== 0 || d3 !== 0;
 
     const descuentositem = parseFloat(data.preciodescuento) || 0;
- 
 
     const precio_item = parseFloat(
       redondear(
@@ -92,8 +91,7 @@ async function completa_items(arrays) {
     }
 
     if (data.operacion === "GRATUITA") {
-      // Comportamiento antiguo
-      const precioVentaUnitario = precio_item;
+      const precioVentaUnitario = precio_item / (1 + porcentaje_igv);
 
       valor_unitario = precioVentaUnitario;
       igv = 0.0;
@@ -105,7 +103,6 @@ async function completa_items(arrays) {
       totalIGV += 0;
       totalIGV_GRATUITA += 0;
 
-      // Igual que antes: dejar valor_unitario en 0 al final
       valor_unitario = 0.0;
       totalImpuesto = 0.0;
     }
@@ -121,7 +118,7 @@ async function completa_items(arrays) {
       precioedita: data.precio_base || data.precio,
       precio_base: data.precio_base || data.precio,
       preciodescuento: data.preciodescuento || 0,
-      peso:data.peso||0,
+      peso: data.peso || 0,
       tipoproducto: data.tipoproducto || "BIEN",
       operacion: data.operacion,
       valor_unitario: Number(valor_unitario).toFixed(5),
@@ -129,7 +126,11 @@ async function completa_items(arrays) {
       igv: Number(igv).toFixed(2),
       total_antes_impuestos: Number(antesimpuesto).toFixed(2),
       total_impuestos: Number(totalImpuesto).toFixed(2),
-      precioVentaUnitario: redondear(precio_item),
+      precioVentaUnitario: Number(
+        data.operacion === "GRATUITA"
+          ? precio_item / (1 + porcentaje_igv)
+          : precio_item,
+      ).toFixed(3),
       uuid: data.uuid || (crypto?.randomUUID ? crypto.randomUUID() : ""),
     };
 
