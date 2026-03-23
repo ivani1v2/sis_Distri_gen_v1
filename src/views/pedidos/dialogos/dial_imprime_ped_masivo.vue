@@ -214,53 +214,71 @@ export default {
                 this.printDone = 0;
                 this.printError = '';
 
-                await this.imprimir_recursivo(lista, 0, tama);
+                for (let i = 0; i < lista.length; i++) {
+                    let trabajoCompletado = false;
+                    let timeoutId = null;
+
+                    try {
+                        const cab = lista[i];
+
+                        if (String(cab.estado || '').toLowerCase() === 'anulado') {
+                            this.printDone = i + 1;
+                            continue;
+                        }
+
+                        this.printDone = i;
+
+                        const snapshot = await detalle_pedido(cab.id).once('value');
+                        if (!snapshot.exists()) {
+                            throw new Error('Pedido sin detalle');
+                        }
+
+                        const val = snapshot.val() || [];
+                        const items = Array.isArray(val) ? val : Object.values(val);
+                        const cabecera = await this.buildCabeceraCompleta(cab);
+
+                        await Promise.race([
+                            impresionQueue.add(async (docId) => {
+                                await pdfGenera(cabecera, items, tama, 'abre', 1, docId);
+                                trabajoCompletado = true;
+                            }),
+                            new Promise((_, reject) => {
+                                timeoutId = setTimeout(() => {
+                                    reject(new Error(`Timeout en pedido ${i + 1}`));
+                                }, 120000);
+                            })
+                        ]);
+
+                        if (timeoutId) clearTimeout(timeoutId);
+
+                        if (trabajoCompletado) {
+                            this.printDone = i + 1;
+                        }
+
+                    } catch (error) {
+                        console.error('Error imprimiendo pedido:', error);
+                        this.printError = `Error en pedido ${i + 1}: ${error.message}`;
+
+                        if (timeoutId) clearTimeout(timeoutId);
+
+                        const continuar = confirm(`Error en pedido ${i + 1}. ¿Continuar con los siguientes?`);
+                        if (!continuar) {
+                            break;
+                        }
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+
+                const mensaje = `${this.printDone} pedido(s) procesado(s) en formato ${tama}`;
+                store.commit('dialogosnackbar', mensaje);
+                this.$emit('impresion-completada', true);
 
             } catch (e) {
                 console.error("imprimirMasivo:", e);
                 this.printError = "Error en impresión masiva";
             } finally {
                 this.imprimiendo = false;
-            }
-        },
-        async imprimir_recursivo(array, index, tama) {
-            try {
-                if (index < array.length) {
-                    const cab = array[index];
-
-                    if (String(cab.estado || "").toLowerCase() === "anulado") {
-                        this.printDone = index + 1;
-                        await this.imprimir_recursivo(array, index + 1, tama);
-                        return;
-                    }
-
-                    this.printDone = index;
-                    const snap = await detalle_pedido(cab.id).once("value");
-                    const val = snap.val() || [];
-                    const items = Array.isArray(val) ? val : Object.values(val);
-
-                    const cabecera = await this.buildCabeceraCompleta(cab);
-                    await impresionQueue.add(async (docId) => {
-                        await pdfGenera(cabecera, items, tama, 'abre', docId);
-                    });
-
-                    this.printDone = index + 1;
-                    setTimeout(() => {
-                        this.imprimir_recursivo(array, index + 1, tama);
-                    }, 500);
-
-                } else {
-                    const mensaje = `${array.length} pedido(s) impreso(s) en formato ${tama}`;
-                    store.commit('dialogosnackbar', mensaje);
-                    this.$emit("impresion-completada", true);
-                }
-            } catch (e) {
-                console.error("Error imprimiendo pedido:", e);
-                this.printError = `Error en pedido ${index + 1}`;
-
-                setTimeout(() => {
-                    this.imprimir_recursivo(array, index + 1, tama);
-                }, 500);
             }
         },
         cerrar() {

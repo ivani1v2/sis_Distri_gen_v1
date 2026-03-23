@@ -11,6 +11,7 @@ let resolvers = {};
 
 let moneda = "S/";
 let modo_genera = "abre";
+let copias_genera = 1;
 
 function permite_impresion_host() {
   if (store?.state?.esmovil) return false;
@@ -61,6 +62,7 @@ async function abre_dialogo_impresion_host(doc, copias = 1, docId = Date.now()) 
         type: "PRINT_PDF",
         token,
         printer: configHost.nombre_impresora || "POS-80-Series",
+        copies: copias,
         meta,
         pdf: buffer,
       };
@@ -164,22 +166,25 @@ export const pdfGenera = (
   arraydatos,
   medida = "80",
   modo = "abre",
+  copias = 1,
+  docId = Date.now(),
 ) => {
   moneda = cabecera?.moneda || "S/";
   modo_genera = modo;
+  copias_genera = Number(copias) > 0 ? Number(copias) : 1;
 
   switch (medida) {
     case "A4":
-      return impresionA4_ordenPedido(cabecera, arraydatos);
+      return impresionA4_ordenPedido(cabecera, arraydatos, modo, docId, copias_genera);
     case "58":
-      return impresion58_ordenPedido(cabecera, arraydatos);
+      return impresion58_ordenPedido(cabecera, arraydatos, modo, docId, copias_genera);
     case "80":
     default:
-      return impresion80_ordenPedido(cabecera, arraydatos);
+      return impresion80_ordenPedido(cabecera, arraydatos, modo, docId, copias_genera);
   }
 };
 
-async function impresionA4_ordenPedido(cabecera, items = [], modo = 'abre', docId = Date.now()) {
+async function impresionA4_ordenPedido(cabecera, items = [], modo = 'abre', docId = Date.now(), copias = 1) {
   const emp = store.state.baseDatos || {};
   const cfg = store.state.configImpresora || {};
   const imagen = store.state.logoempresa || "";
@@ -550,14 +555,14 @@ async function impresionA4_ordenPedido(cabecera, items = [], modo = 'abre', docI
         window.open(url, "_blank");
       }
     } else {
-      await abre_dialogo_impresion(doc, 1, docId);
+      await abre_dialogo_impresion(doc, copias, docId);
     }
   }
 
   return true;
 }
 
-async function impresion80_ordenPedido(cabecera, items = [], modo = 'abre', docId = Date.now()) {
+async function impresion80_ordenPedido(cabecera, items = [], modo = 'abre', docId = Date.now(), copias = 1) {
   const emp = store.state.baseDatos || {};
   const cfg = store.state.configImpresora || {};
   const imagen = store.state.logoempresa || "";
@@ -946,14 +951,14 @@ async function impresion80_ordenPedido(cabecera, items = [], modo = 'abre', docI
         window.open(url, "_blank");
       }
     } else {
-      await abre_dialogo_impresion(doc, 1, docId);
+      await abre_dialogo_impresion(doc, copias, docId);
     }
   }
 
   return true;
 }
 // === NUEVO: 58mm ===
-async function impresion58_ordenPedido(cabecera, items = [], modo = 'abre', docId = Date.now()) {
+async function impresion58_ordenPedido(cabecera, items = [], modo = 'abre', docId = Date.now(), copias = 1) {
   const emp = store.state.baseDatos || {};
   const cfg = store.state.configImpresora || {};
   const imagen = store.state.logoempresa || "";
@@ -1357,7 +1362,7 @@ async function impresion58_ordenPedido(cabecera, items = [], modo = 'abre', docI
         window.open(url, "_blank");
       }
     } else {
-      await abre_dialogo_impresion(doc, 1, docId);
+      await abre_dialogo_impresion(doc, copias, docId);
     }
   }
 
