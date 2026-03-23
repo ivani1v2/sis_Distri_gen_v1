@@ -42,10 +42,10 @@
                                     <v-select outlined dense v-model="filtroMov" :items="arrayFiltroMov"
                                         item-text="text" item-value="value" label="Filtrar movimientos" hide-details />
                                 </v-list-item>
-                                <v-list-item @click.stop >
+                                <v-list-item v-if="$store.state.permisos.es_supervisor"  @click.stop >
                                     <v-select class="mt-2" outlined dense v-model="sedeSeleccionada"
                                         :items="opcionesSedes" item-text="nombre" item-value="base" label="Vendedor"
-                                        hide-details @change="onSedeChange" :disabled="!$store.state.permisos.tesoreria"" />
+                                        hide-details @change="onSedeChange" />
                                 </v-list-item>
                                 <v-divider class="my-1"></v-divider>
 
