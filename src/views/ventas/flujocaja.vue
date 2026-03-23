@@ -42,7 +42,7 @@
                                     <v-select outlined dense v-model="filtroMov" :items="arrayFiltroMov"
                                         item-text="text" item-value="value" label="Filtrar movimientos" hide-details />
                                 </v-list-item>
-                                <v-list-item v-if="$store.state.permisos.es_supervisor"  @click.stop >
+                                <v-list-item v-if="esSupervisor" @click.stop>
                                     <v-select class="mt-2" outlined dense v-model="sedeSeleccionada"
                                         :items="opcionesSedes" item-text="nombre" item-value="base" label="Vendedor"
                                         hide-details @change="onSedeChange" />
@@ -419,17 +419,13 @@ export default {
             fecha_inicio: moment(String(new Date)).format('MM-DD'),
             cambia_metodo: false,
             pre_anular: false,
-            sedeSeleccionada: 'TODAS',
+            sedeSeleccionada: '',
             sedesDisponibles: [],
             menuOpc: false,
         }
     },
     mounted() {
         this.cargarSedes();
-        if (!this.esAdmin) {
-            const bdActual = this.$store.state.baseDatos.bd;
-            this.sedeSeleccionada = bdActual;
-        }
         this.cargarFlujoMultiSede();
     },
     computed: {
@@ -452,9 +448,7 @@ export default {
             );
         },
         opcionesSedes() {
-            const opciones = [
-                { nombre: 'TODAS', base: 'TODAS' }
-            ];
+            const opciones = [];
             this.sedesDisponibles.forEach(s => {
                 opciones.push({
                     nombre: s.nombre,
@@ -465,6 +459,9 @@ export default {
         },
         esAdmin() {
             return this.$store.state.permisos?.es_admin === true;
+        },
+        esSupervisor() {
+            return this.$store.state.permisos?.es_supervisor === true;
         }
     },
     methods: {
@@ -473,22 +470,23 @@ export default {
         },
 
         cargarSedes() {
+            const bdActual = this.$store.state.baseDatos.bd;
+
             if (this.$store.state.array_sedes && this.$store.state.array_sedes.length > 0) {
                 this.sedesDisponibles = this.$store.state.array_sedes.map(s => ({
                     nombre: s.nombre,
                     base: s.base,
                     codigo: s.codigo
                 }));
-                if (!this.esAdmin) {
-                    const bdActual = this.$store.state.baseDatos.bd;
+
+                if (!this.esSupervisor) {
                     const sedeActual = this.sedesDisponibles.find(s => s.base === bdActual);
                     if (sedeActual) {
                         this.sedesDisponibles = [sedeActual];
-                        this.sedeSeleccionada = bdActual;
                     }
-                } else {
-                    this.sedeSeleccionada = 'TODAS';
                 }
+
+                this.sedeSeleccionada = bdActual;
             } else {
                 console.log('No se encontraron sedes disponibles en el store. Verifica la carga de sedes.');
             }
@@ -497,11 +495,10 @@ export default {
         async cargarFlujoMultiSede() {
             this.dialogoprogress = true;
 
-            let sedesABuscar = this.sedesDisponibles;
-            if (this.sedeSeleccionada !== 'TODAS') {
-                const sede = this.sedesDisponibles.find(s => s.base === this.sedeSeleccionada);
-                sedesABuscar = sede ? [sede] : [];
-            }
+            const bdActual = this.$store.state.baseDatos.bd;
+            const baseObjetivo = this.sedeSeleccionada || bdActual;
+            const sede = this.sedesDisponibles.find(s => s.base === baseObjetivo);
+            const sedesABuscar = sede ? [sede] : [];
 
             const resultados = await allFlujoMultiSedes(sedesABuscar);
 
