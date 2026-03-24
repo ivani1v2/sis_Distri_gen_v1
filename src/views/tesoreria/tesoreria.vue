@@ -59,11 +59,11 @@
                         </v-list-item>
                         <v-list-item>
                             <v-btn dark small color="info" block @click="evento(2)">
-                                INGR/EGRE
+                                EGRESO
                             </v-btn>
                         </v-list-item>
                         <v-list-item v-if="$store.state.permisos.es_master">
-                            <v-btn dark small color="info" block @click="evento(3)">
+                            <v-btn  dark small color="success" block @click="evento(3)">
                                 CIERRA TESORERIA
                             </v-btn>
                         </v-list-item>
@@ -73,7 +73,7 @@
                             </v-btn>
                         </v-list-item>
                         <v-list-item>
-                            <v-btn dark small color="info" block @click="evento(6)">
+                            <v-btn dark small color="warning" block @click="evento(6)">
                                 REPORTE GENERAL
                             </v-btn>
                         </v-list-item>
@@ -371,7 +371,7 @@
                 <v-row>
                     <v-col cols="6">
                         <v-btn color="warning" block @click="ejecuta_reporte_detallado()">
-                            TOTAL
+                            PDF
                         </v-btn>
                     </v-col>
                     <v-col cols="6">
@@ -484,7 +484,7 @@ export default {
             dialogocierre: false,
             guardar_stock: false,
             operacionfiltra: 'todos',
-            operacion: 'ingreso',
+            operacion: 'egreso',
             arrayoperacion: ["todos", "ingreso", "egreso"],
             arrayoperacion2: ["ingreso", "egreso"],
             observacion: '',

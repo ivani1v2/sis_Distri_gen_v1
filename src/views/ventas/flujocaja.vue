@@ -38,16 +38,16 @@
                             </template>
 
                             <v-list dense>
-                                <v-list-item @click.stop>
+                                <v-list-item @click.stop v-if="false">
                                     <v-select outlined dense v-model="filtroMov" :items="arrayFiltroMov"
                                         item-text="text" item-value="value" label="Filtrar movimientos" hide-details />
                                 </v-list-item>
-                                <v-list-item @click.stop >
+                                <v-list-item @click.stop v-if="false">
                                     <v-select class="mt-2" outlined dense v-model="sedeSeleccionada"
                                         :items="opcionesSedes" item-text="nombre" item-value="base" label="Vendedor"
                                         hide-details @change="onSedeChange" :disabled="!$store.state.permisos.tesoreria"" />
                                 </v-list-item>
-                                <v-divider class="my-1"></v-divider>
+                   
 
                                 <v-list-item @click="evento(5)" v-if="false">
                                     <v-list-item-icon><v-icon color="info">mdi-cash-plus</v-icon></v-list-item-icon>
