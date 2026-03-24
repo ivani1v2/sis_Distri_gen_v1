@@ -7,10 +7,10 @@ import moment from 'moment'
 
 export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, totalCajas, totalUnd, observacion, formato = "F1", pedidosFiltrados = null) => {
   console.log("arraydatos consolidado", arraydatos)
-  const array = arraydatos || []
+  let array = arraydatos || []
   const fechaImpresion = moment(String(new Date)).format('DD/MM/YYYY hh:mm a')
-  const lMargin = store.state.configImpresora.lMargin
-  const rMargin = store.state.configImpresora.rMargin
+  const lMargin = store.state.configImpresora.lMargin || 10
+  const rMargin = store.state.configImpresora.rMargin || 10
   const pdfInMM = 210
   const doc = new jspdf({
     orientation: 'portrait',
@@ -23,22 +23,62 @@ export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, to
   let linea = 23
   const nuevoArray = []
 
+  if (formato === 'F3') {
+    array = [...array].sort((a, b) => {
+      const proveedorA = (a.presentacion?.proveedor || '-').toUpperCase()
+      const proveedorB = (b.presentacion?.proveedor || '-').toUpperCase()
+
+      if (proveedorA === proveedorB) {
+        const nombreA = (a.nombre || '').toUpperCase()
+        const nombreB = (b.nombre || '').toUpperCase()
+        return nombreA.localeCompare(nombreB)
+      }
+      return proveedorA.localeCompare(proveedorB)
+    })
+  }
+
+  let proveedorActual = ''
+
   for (let i = 0; i < array.length; i++) {
     const item = array[i]
+    const proveedorItem = (item.presentacion?.proveedor || '-').toUpperCase()
+    if (formato === 'F3' && proveedorItem !== proveedorActual) {
+      proveedorActual = proveedorItem
+      nuevoArray.push({
+        isSeparator: true,
+        proveedor: proveedorActual,
+        colCount: 6
+      })
+    }
 
     const cajas = item.enteros || 0
     const und = item.unidades_sueltas || 0
-    const peso = item.peso || 0
+    const pesoItem = item.peso || 0
 
     if (formato === 'F1') {
-      nuevoArray.push([
-        item.id,
-        item.nombre,
-        item.presentacion?.medida || '',
-        cajas,
-        und,
-        peso.toFixed(2),
-      ])
+      nuevoArray.push({
+        isSeparator: false,
+        cells: [
+          item.id,
+          item.nombre,
+          item.presentacion?.medida || '',
+          cajas,
+          und,
+          pesoItem.toFixed(2),
+        ]
+      })
+    } else if (formato === 'F3') {
+      nuevoArray.push({
+        isSeparator: false,
+        cells: [
+          item.id,
+          item.nombre,
+          item.presentacion?.medida || '',
+          cajas,
+          und,
+          pesoItem.toFixed(2),
+        ]
+      })
     } else {
       let cajasUndStr = ''
 
@@ -54,58 +94,115 @@ export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, to
 
       const descripcionConCodigo = `${item.id} - ${item.nombre}`
 
-      nuevoArray.push([
-        cajasUndStr,
-        item.presentacion?.medida || '',
-        descripcionConCodigo,
-        peso.toFixed(2),
-      ])
+      nuevoArray.push({
+        isSeparator: false,
+        cells: [
+          cajasUndStr,
+          item.presentacion?.medida || '',
+          descripcionConCodigo,
+          pesoItem.toFixed(2),
+        ]
+      })
+    }
+  }
+
+  const bodyRows = []
+  for (const row of nuevoArray) {
+    if (row.isSeparator) {
+      const separatorRow = []
+      const colCount = row.colCount || (formato === 'F3' ? 7 : (formato === 'F1' ? 6 : 4))
+      for (let c = 0; c < colCount; c++) {
+        if (c === 0) {
+          separatorRow.push(`=== ${row.proveedor} ===`)
+        } else {
+          separatorRow.push('')
+        }
+      }
+      bodyRows.push(separatorRow)
+    } else {
+      bodyRows.push(row.cells)
     }
   }
 
   const esF1 = formato === 'F1'
+  const esF3 = formato === 'F3'
 
   let topMargin = linea
   if (pedidosFiltrados && pedidosFiltrados.length > 0) {
     topMargin = linea + 6
   }
 
-  doc.autoTable({
-    margin: { top: topMargin, left: 5 },
-    styles: {
-      fontSize: 8,
-      cellPadding: 1,
-      valign: 'middle',
-      halign: 'center',
-      lineWidth: 0.2,
-      lineColor: 1
-    },
-    headStyles: {
-      lineWidth: 0.2,
-      lineColor: 1,
-      fillColor: [0, 0, 0],
-      textColor: [255, 255, 255]
-    },
-    columnStyles: esF1
-      ? {
-        0: { columnWidth: 15, halign: 'center', fontStyle: 'bold' },
-        1: { columnWidth: 110, halign: 'left' },
-        2: { columnWidth: 25, halign: 'center' },
-        3: { columnWidth: 12, halign: 'center' },
-        4: { columnWidth: 12, halign: 'center' },
-        5: { columnWidth: 20, halign: 'center' },
+  let head, columnStyles
+
+  if (esF1) {
+    head = [['Codigo', 'Descripcion', 'Medida', 'Cajas', 'Und', 'Peso(KG)']]
+    columnStyles = {
+      0: { columnWidth: 15, halign: 'center', fontStyle: 'bold' },
+      1: { columnWidth: 110, halign: 'left' },
+      2: { columnWidth: 25, halign: 'center' },
+      3: { columnWidth: 12, halign: 'center' },
+      4: { columnWidth: 12, halign: 'center' },
+      5: { columnWidth: 20, halign: 'center' },
+    }
+  } else if (esF3) {
+    head = [['Codigo', 'Descripcion', 'Medida', 'Cajas', 'Und', 'Peso(KG)']]
+    columnStyles = {
+      0: { columnWidth: 15, halign: 'center', fontStyle: 'bold' },
+      1: { columnWidth: 110, halign: 'left' },
+      2: { columnWidth: 25, halign: 'center' },
+      3: { columnWidth: 12, halign: 'center' },
+      4: { columnWidth: 12, halign: 'center' },
+      5: { columnWidth: 20, halign: 'center' },
+    }
+  } else {
+    head = [['Caj/Und', 'Medida', 'Descripcion', 'Peso(KG)']]
+    columnStyles = {
+      0: { columnWidth: 20, halign: 'center' },
+      1: { columnWidth: 25, halign: 'center' },
+      2: { columnWidth: 125, halign: 'left' },
+      3: { columnWidth: 25, halign: 'center' },
+    }
+  }
+
+doc.autoTable({
+  margin: { top: topMargin, left: 5 },
+  styles: {
+    fontSize: 8,
+    cellPadding: 1,
+    valign: 'middle',
+    halign: 'center',
+    lineWidth: 0.2,
+    lineColor: 1
+  },
+  headStyles: {
+    lineWidth: 0.2,
+    lineColor: 1,
+    fillColor: [0, 0, 0],
+    textColor: [255, 255, 255]
+  },
+  columnStyles: columnStyles,
+  head: head,
+  body: bodyRows,
+  didParseCell: (data) => {
+    if (
+      data.row.section === 'body' &&
+      bodyRows[data.row.index] &&
+      bodyRows[data.row.index][0]?.startsWith('===')
+    ) {
+      if (data.column.index === 0) {
+        data.cell.colSpan = data.table.columns.length
       }
-      : {
-        0: { columnWidth: 20, halign: 'center' },
-        1: { columnWidth: 25, halign: 'center' },
-        2: { columnWidth: 125, halign: 'left' },
-        3: { columnWidth: 25, halign: 'center' },
-      },
-    head: esF1
-      ? [['Codigo', 'Descripcion', 'Medida', 'Cajas', 'Und', 'Peso(KG)']]
-      : [['Caj/Und', 'Medida', 'Descripcion', 'Peso(KG)']],
-    body: nuevoArray,
-  })
+
+      data.cell.styles.fillColor = [255, 255, 255]
+      data.cell.styles.fontStyle = 'bold'
+      data.cell.styles.fontSize = 8
+      data.cell.styles.halign = 'center'
+      data.cell.styles.lineWidth = 0.4
+      data.cell.styles.lineColor = [80, 80, 80]
+      data.cell.styles.textColor = [0, 0, 0]
+    }
+  }
+})
 
   const pageCount = doc.internal.getNumberOfPages()
   for (let i = 1; i <= pageCount; i++) {
@@ -123,17 +220,17 @@ export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, to
       let pedidosTexto = `${pedidosFiltrados.length} pedido(s) seleccionado(s)`
       let pedidosWrap = doc.splitTextToSize(pedidosTexto, pdfInMM - lMargin - rMargin - 20)
       doc.text(pedidosWrap, 10, 16, 'left')
-      
+
       doc.setFontSize(10)
       doc.setFont('Helvetica', '')
       texto = doc.splitTextToSize('Fecha Impresion: ' + fechaImpresion, pdfInMM - lMargin - rMargin)
       doc.text(texto, 10, 22, 'left')
-      
+
       doc.setFontSize(10)
       doc.setFont('Helvetica', '')
       texto = doc.splitTextToSize('Observacion: ' + observacion, pdfInMM - lMargin - rMargin)
       doc.text(texto, 10, 27, 'left')
-      
+
       doc.setFontSize(14)
       doc.setFont('Helvetica', 'Bold')
       texto = doc.splitTextToSize('TOTAL KG : ' + peso, pdfInMM - lMargin - rMargin)
@@ -143,12 +240,12 @@ export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, to
       doc.setFont('Helvetica', '')
       texto = doc.splitTextToSize('Fecha Impresion: ' + fechaImpresion, pdfInMM - lMargin - rMargin)
       doc.text(texto, 10, 15, 'left')
-      
+
       doc.setFontSize(10)
       doc.setFont('Helvetica', '')
       texto = doc.splitTextToSize('Observacion: ' + observacion, pdfInMM - lMargin - rMargin)
       doc.text(texto, 10, 20, 'left')
-      
+
       doc.setFontSize(14)
       doc.setFont('Helvetica', 'Bold')
       texto = doc.splitTextToSize('TOTAL KG : ' + peso, pdfInMM - lMargin - rMargin)
@@ -171,7 +268,7 @@ export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, to
   doc.setFontSize(10)
   doc.text(`Cajas: ${totalCajas}`, 35, yTotales)
   doc.text(`Und: ${totalUnd}`, 65, yTotales)
-  
+
   window.open(doc.output('bloburl'))
 }
 

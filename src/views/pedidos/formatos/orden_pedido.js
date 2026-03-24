@@ -205,16 +205,16 @@ async function impresionA4_ordenPedido(cabecera, items = [], modo = 'abre', docI
   const fechaVence = cabecera?.fecha_vencimiento
     ? cabecera.fecha_vencimiento
     : condicion === "CRÉDITO" && diasCredito > 0
-    ? moment.unix(fechaEmiUnix).add(diasCredito, "days").format("DD/MM/YYYY")
-    : "";
+      ? moment.unix(fechaEmiUnix).add(diasCredito, "days").format("DD/MM/YYYY")
+      : "";
 
   const total = Number(cabecera?.total || 0);
   const subtotal = Number(
     cabecera?.subtotal ??
-      (items || []).reduce(
-        (s, it) => s + Number(it.precio || 0) * Number(it.cantidad || 0),
-        0,
-      ),
+    (items || []).reduce(
+      (s, it) => s + Number(it.precio || 0) * Number(it.cantidad || 0),
+      0,
+    ),
   );
   const descuentos = Number(cabecera?.descuentos || 0);
   const numeroOP =
@@ -528,9 +528,8 @@ async function impresionA4_ordenPedido(cabecera, items = [], modo = 'abre', docI
       .slice(0, 2)
       .join("_")
       .replace(/[^a-zA-Z0-9_]/g, "");
-    const nombre = `${
-      numeroOP || moment().format("YYYYMMDD-HHmm")
-    }_${clienteNombre}.pdf`;
+    const nombre = `${numeroOP || moment().format("YYYYMMDD-HHmm")
+      }_${clienteNombre}.pdf`;
     doc.save(nombre);
   } else {
     if (store.state.esmovil) {
@@ -581,19 +580,19 @@ async function impresion80_ordenPedido(cabecera, items = [], modo = 'abre', docI
   const fechaVence = cabecera?.fecha_vencimiento
     ? moment.unix(cabecera.fecha_vencimiento).format("DD/MM/YYYY")
     : condicion === "CRÉDITO" && diasCredito > 0
-    ? moment
+      ? moment
         .unix(cabecera?.fecha_emision || moment().unix())
         .add(diasCredito, "days")
         .format("DD/MM/YYYY")
-    : "";
+      : "";
 
   const total = Number(cabecera?.total || 0);
   const subtotal = Number(
     cabecera?.subtotal ??
-      (items || []).reduce(
-        (s, it) => s + Number(it.precio || 0) * Number(it.cantidad || 0),
-        0,
-      ),
+    (items || []).reduce(
+      (s, it) => s + Number(it.precio || 0) * Number(it.cantidad || 0),
+      0,
+    ),
   );
   const descuentos = Number(cabecera?.descuentos || 0);
 
@@ -708,7 +707,7 @@ async function impresion80_ordenPedido(cabecera, items = [], modo = 'abre', docI
 
   texto = doc.splitTextToSize(
     "Documento: " +
-      [cabecera?.doc_tipo, cabecera?.doc_numero].filter(Boolean).join(" "),
+    [cabecera?.doc_tipo, cabecera?.doc_numero].filter(Boolean).join(" "),
     pdfInMM - lMargin - rMargin,
   );
   doc.text(texto, lMargin, linea, "left");
@@ -772,9 +771,8 @@ async function impresion80_ordenPedido(cabecera, items = [], modo = 'abre', docI
 
     const pt = Number(it.totalLinea ?? pu * cant);
 
-    const descLinea = `${it.nombre || ""}\n- ${String(
-      it.medida || "",
-    ).toUpperCase()}`;
+    const codigoSunat = obtenerCodigoSunat(it.medida);
+    const descLinea = `${it.nombre || ""}\n- ${codigoSunat}`;
 
     return [cant, descLinea, pu.toFixed(2), pt.toFixed(2)];
   });
@@ -924,9 +922,8 @@ async function impresion80_ordenPedido(cabecera, items = [], modo = 'abre', docI
       .slice(0, 2)
       .join("_")
       .replace(/[^a-zA-Z0-9_]/g, "");
-    const nombre = `${
-      numeroOP || moment().format("YYYYMMDD-HHmm")
-    }_${clienteNombre}.pdf`;
+    const nombre = `${numeroOP || moment().format("YYYYMMDD-HHmm")
+      }_${clienteNombre}.pdf`;
     doc.save(nombre);
   } else {
     if (store.state.esmovil) {
@@ -979,19 +976,19 @@ async function impresion58_ordenPedido(cabecera, items = [], modo = 'abre', docI
   const fechaVence = cabecera?.fecha_vencimiento
     ? moment.unix(cabecera.fecha_vencimiento).format("DD/MM/YYYY")
     : condicion === "CRÉDITO" && diasCredito > 0
-    ? moment
+      ? moment
         .unix(cabecera?.fecha_emision || moment().unix())
         .add(diasCredito, "days")
         .format("DD/MM/YYYY")
-    : "";
+      : "";
 
   const total = Number(cabecera?.total || 0);
   const subtotal = Number(
     cabecera?.subtotal ??
-      (items || []).reduce(
-        (s, it) => s + Number(it.precio || 0) * Number(it.cantidad || 0),
-        0,
-      ),
+    (items || []).reduce(
+      (s, it) => s + Number(it.precio || 0) * Number(it.cantidad || 0),
+      0,
+    ),
   );
   const descuentos = Number(cabecera?.descuentos || 0);
 
@@ -1180,9 +1177,13 @@ async function impresion58_ordenPedido(cabecera, items = [], modo = 'abre', docI
 
     const pt = Number(it.total_linea || it.totalLinea);
     const esBono = String(it.operacion || "").toUpperCase() === "GRATUITA";
-    const descLinea = esBono
-      ? `${it.nombre || ""} *BONIFICACION*`
-      : `${it.nombre || ""}`;
+    let descLinea;
+    if (esBono) {
+      descLinea = `${it.nombre || ""} *BONIFICACION*`;
+    } else {
+      const codigoSunat = obtenerCodigoSunat(it.medida);
+      descLinea = `${it.nombre || ""} (${codigoSunat})`;
+    }
 
     return [cant, descLinea, pu.toFixed(2), pt.toFixed(2)];
   });
@@ -1335,9 +1336,8 @@ async function impresion58_ordenPedido(cabecera, items = [], modo = 'abre', docI
       .slice(0, 2)
       .join("_")
       .replace(/[^a-zA-Z0-9_]/g, "");
-    const nombre = `${
-      numeroOP || moment().format("YYYYMMDD-HHmm")
-    }_${clienteNombre}.pdf`;
+    const nombre = `${numeroOP || moment().format("YYYYMMDD-HHmm")
+      }_${clienteNombre}.pdf`;
     doc.save(nombre);
   } else {
     if (store.state.esmovil) {
@@ -1416,8 +1416,8 @@ function tabla_A4(array, linea) {
     // Texto descuentos combinados en una sola celda (si aplica)
     const textoDescuento = existeDescuento
       ? `${Number(item.desc_1 || 0)} / ${Number(item.desc_2 || 0)} / ${Number(
-          item.desc_3 || 0,
-        )}`
+        item.desc_3 || 0,
+      )}`
       : null;
 
     let obs = "";
@@ -1434,23 +1434,25 @@ function tabla_A4(array, linea) {
 
     if (!existeDescuento) {
       // SIN DESCUENTOS
+      const codigoSunat = obtenerCodigoSunat(item.medida);
       nuevoArray.push([
         item.cantidad,
-        item.medida,
-        item.id +' - ' + item.nombre + tg,
+        codigoSunat,
+        item.id + ' - ' + item.nombre + tg,
         precioBase.toFixed(2),
         totalLinea.toFixed(2) + obs,
       ]);
     } else {
       // CON DESCUENTOS
+      const codigoSunat = obtenerCodigoSunat(item.medida);
       nuevoArray.push([
         item.cantidad,
-        item.medida,
-        item.id +' - ' +item.nombre + tg,
-        precioBase.toFixed(2), // P.Unitario base
-        textoDescuento, // %Desc 1/2/3
-        precioNeto.toFixed(2), // P.Neto
-        totalLinea.toFixed(2) + obs, // Total
+        codigoSunat,
+        item.id + ' - ' + item.nombre + tg,
+        precioBase.toFixed(2),
+        textoDescuento,
+        precioNeto.toFixed(2),
+        totalLinea.toFixed(2) + obs,
       ]);
     }
   }
@@ -1463,9 +1465,9 @@ function tabla_A4(array, linea) {
   const headConDescuento = [
     [
       "Cant",
-       "Medida",
+      "Medida",
       "Descripcion",
-     
+
       "P.Unitario",
       "%Desc",
       "P.Neto",
@@ -1476,8 +1478,8 @@ function tabla_A4(array, linea) {
   // COLUMNAS
   const columnStylesSinDesc = {
     0: { columnWidth: 20 },
-    1: { columnWidth: 20},
-    2: { columnWidth: 110, halign: "left"  },
+    1: { columnWidth: 20 },
+    2: { columnWidth: 110, halign: "left" },
     3: { columnWidth: 20 },
     4: { columnWidth: 20 },
   };
@@ -1485,7 +1487,7 @@ function tabla_A4(array, linea) {
   const columnStylesConDesc = {
     0: { columnWidth: 12 },
     1: { columnWidth: 18 },
-    2: { columnWidth: 80, halign: "left"  },
+    2: { columnWidth: 80, halign: "left" },
     3: { columnWidth: 20 }, // P.Unitario
     4: { columnWidth: 20 }, // %Desc
     5: { columnWidth: 20 }, // P.Neto
@@ -1541,4 +1543,30 @@ function formatMoney(num) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+function obtenerCodigoSunat(medida) {
+  const medidasSunat = store.state.medidassunat || [];
+  const medidaUpper = (medida || "").toUpperCase().trim();
+  const medidaLimpia = medidaUpper.replace(/X\d+$/, '').trim();
+
+  let encontrado = medidasSunat.find(m =>
+    (m.nombre || "").toUpperCase() === medidaUpper
+  );
+
+  if (!encontrado) {
+    encontrado = medidasSunat.find(m =>
+      medidaLimpia.includes((m.nombre || "").toUpperCase()) ||
+      (m.nombre || "").toUpperCase().includes(medidaLimpia)
+    );
+  }
+
+  if (!encontrado) {
+    encontrado = medidasSunat.find(m =>
+      (m.general || "").toUpperCase() === medidaUpper ||
+      (m.general || "").toUpperCase() === medidaLimpia
+    );
+  }
+
+  return encontrado ? encontrado.general : "NIU";
 }

@@ -382,7 +382,7 @@
             </v-card>
         </v-dialog>
 
-        <v-dialog v-model="dial_descarga" max-width="500">
+        <v-dialog v-model="dial_descarga" max-width="590">
             <v-card class="rounded-lg">
                 <v-toolbar color="red darken-2" dense dark>
                     <v-toolbar-title>Reporte de Almacén</v-toolbar-title>
@@ -398,6 +398,7 @@
                     <v-radio-group v-model="formato_descarga" row dense>
                         <v-radio value="F1" label="CODIGO - DESCRIPCION - MEDIDA - CAJAS - UND - PESO" />
                         <v-radio value="F2" label="CAJAS - UND - MEDIDA - DESCRIPCION - PESO" />
+                        <v-radio value="F3" label="CODIGO - DESCRIPCION - PROVEEDOR - MEDIDA - CAJAS - UND - PESO" />
                     </v-radio-group>
 
                     <v-textarea v-model="observacion_reporte" label="Observación" outlined dense rows="2" auto-grow

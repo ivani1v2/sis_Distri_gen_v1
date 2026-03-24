@@ -780,10 +780,8 @@ export default {
             const { accion, cliente } = payload
             this.cerrarDialogDeudas()
             if (accion === 'vender') {
-                await this.guardarEstadoRuta(cliente, 'venta');
                 this.ejecutarVenta(cliente)
             } else if (accion === 'pre_venta') {
-                await this.guardarEstadoRuta(cliente, 'pre-venta');
                 this.ejecutarPreVenta(cliente)
             }
         },
