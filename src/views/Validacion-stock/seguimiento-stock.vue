@@ -21,7 +21,7 @@
                             Cargar
                         </v-btn>
                     </v-col>
-                  
+
                     <v-col cols="12" sm="5" md="4">
                         <v-text-field v-model="filtros.busqueda" label="Buscar producto (ID o nombre)" outlined dense
                             hide-details prepend-inner-icon="mdi-magnify" clearable
@@ -32,11 +32,12 @@
                             outlined dense hide-details prepend-inner-icon="mdi-alert-circle" />
                     </v-col>
                     <v-col cols="12" sm="2" md="2">
-  <v-btn color="error" @click="corregirStockErrores" :loading="cargando" block class="font-weight-bold">
-    <v-icon left small>mdi-database-sync</v-icon>
-    Corregir
-  </v-btn>
-</v-col>
+                        <v-btn color="error" @click="corregirStockErrores" :loading="cargando" block
+                            class="font-weight-bold">
+                            <v-icon left small>mdi-database-sync</v-icon>
+                            Corregir
+                        </v-btn>
+                    </v-col>
                 </v-row>
 
                 <!-- Botones de exportación -->
@@ -162,7 +163,7 @@
 
 <script>
 import { mapState } from 'vuex'
-import { all_pedidos, detalle_pedido,editaProducto  } from '../../db'
+import { all_pedidos, detalle_pedido, editaProducto } from '../../db'
 import axios from 'axios'
 import moment from 'moment'
 import * as XLSX from 'xlsx'
@@ -342,71 +343,71 @@ export default {
 
     methods: {
         convierte_stock(stockTotal, factor) {
-    const total = Number(stockTotal || 0)
-    const f = Number(factor || 1) || 1
-    const cajas = Math.floor(total / f)
-    const und = total - (cajas * f)
-    return { entero: cajas, und }
-  },
+            const total = Number(stockTotal || 0)
+            const f = Number(factor || 1) || 1
+            const cajas = Math.floor(total / f)
+            const und = total - (cajas * f)
+            return { entero: cajas, und }
+        },
 
-  async corregirStockErrores() {
-    try {
-      if (!this.datosCargados) {
-        this.mostrarSnackbar('Primero debes cargar los datos.', 'warning')
-        return
-      }
+        async corregirStockErrores() {
+            try {
+                if (!this.datosCargados) {
+                    this.mostrarSnackbar('Primero debes cargar los datos.', 'warning')
+                    return
+                }
 
-      // SOLO inconsistentes (no dependas del filtro actual)
-      const errores = (this.datosConsolidados || []).filter(x => !x.consistente)
+                // SOLO inconsistentes (no dependas del filtro actual)
+                const errores = (this.datosConsolidados || []).filter(x => !x.consistente)
 
-      if (!errores.length) {
-        this.mostrarSnackbar('No hay productos con error.', 'success')
-        return
-      }
+                if (!errores.length) {
+                    this.mostrarSnackbar('No hay productos con error.', 'success')
+                    return
+                }
 
-      const ok = confirm(`Se actualizará el stock en ${errores.length} productos (solo errores). ¿Continuar?`)
-      if (!ok) return
+                const ok = confirm(`Se actualizará el stock en ${errores.length} productos (solo errores). ¿Continuar?`)
+                if (!ok) return
 
-      this.cargando = true
-      this.estadoCarga = 'Corrigiendo stock en productos...'
+                this.cargando = true
+                this.estadoCarga = 'Corrigiendo stock en productos...'
 
-      const CONCURRENCY = 20
+                const CONCURRENCY = 20
 
-      for (let i = 0; i < errores.length; i += CONCURRENCY) {
-        const chunk = errores.slice(i, i + CONCURRENCY)
-        this.estadoCarga = `Corrigiendo ${Math.min(i + CONCURRENCY, errores.length)}/${errores.length}`
+                for (let i = 0; i < errores.length; i += CONCURRENCY) {
+                    const chunk = errores.slice(i, i + CONCURRENCY)
+                    this.estadoCarga = `Corrigiendo ${Math.min(i + CONCURRENCY, errores.length)}/${errores.length}`
 
-        await Promise.all(chunk.map(async (row) => {
-          const prod = (this.productos || []).find(p => String(p.id) === String(row.id)) || {}
-          const factor = Number(prod.factor || row.factor || 1) || 1
+                    await Promise.all(chunk.map(async (row) => {
+                        const prod = (this.productos || []).find(p => String(p.id) === String(row.id)) || {}
+                        const factor = Number(prod.factor || row.factor || 1) || 1
 
-          // stock_prevenda_real es el total en unidades base
-          const stockTotal = Number(row.stock_prevenda_real || 0)
+                        // stock_prevenda_real es el total en unidades base
+                        const stockTotal = Number(row.stock_prevenda_real || 0)
 
-          // si quieres forzar entero:
-          const stockTotalInt = Math.round(stockTotal)
+                        // si quieres forzar entero:
+                        const stockTotalInt = Math.round(stockTotal)
 
-          const conv = this.convierte_stock(stockTotalInt, factor)
+                        const conv = this.convierte_stock(stockTotalInt, factor)
 
-          // ✅ actualiza los 3 campos en tabla productos
-          console.log(stockTotalInt)
-          await Promise.all([
-            editaProducto(row.id, 'stock', stockTotalInt),
-          ])
-        }))
+                        // ✅ actualiza los 3 campos en tabla productos
+                        console.log(stockTotalInt)
+                        await Promise.all([
+                            editaProducto(row.id, 'stock', stockTotalInt),
+                        ])
+                    }))
 
-        await this.$nextTick()
-      }
+                    await this.$nextTick()
+                }
 
-      this.mostrarSnackbar(`Stock corregido en ${errores.length} productos.`, 'success')
-    } catch (e) {
-      console.error(e)
-      this.mostrarSnackbar('Error corrigiendo stock: ' + (e.message || e), 'error')
-    } finally {
-      this.cargando = false
-      this.estadoCarga = ''
-    }
-  },
+                this.mostrarSnackbar(`Stock corregido en ${errores.length} productos.`, 'success')
+            } catch (e) {
+                console.error(e)
+                this.mostrarSnackbar('Error corrigiendo stock: ' + (e.message || e), 'error')
+            } finally {
+                this.cargando = false
+                this.estadoCarga = ''
+            }
+        },
 
         generarYears() {
             const currentYear = new Date().getFullYear()
@@ -517,8 +518,6 @@ export default {
 
         async cargarPedidosPendientes() {
             try {
-                console.log('Cargando pedidos pendientes...')
-
                 const snapshot = await all_pedidos()
                     .orderByChild('estado')
                     .equalTo('pendiente')
@@ -528,29 +527,17 @@ export default {
                 const pedidosIds = Object.keys(cabeceras)
 
                 if (!pedidosIds.length) {
-                    this.pedidosPendientesDetalle = []
                     this.pendientesPorProducto = {}
                     this.numPedidosPorProducto = {}
                     return
                 }
 
-                // Factor por producto (para convertir a unidades base)
-                const factorMap = new Map()
-                    ; (this.productos || []).forEach(p => {
-                        factorMap.set(String(p.id || ''), Number(p.factor || 1) || 1)
-                    })
-
-                // Agregadores
-                const unidadesMap = new Map() // prodId -> unidadesPendientes
-                const pedidosSetMap = new Map() // prodId -> Set(pedidoId)
-
-                // ✅ Control de concurrencia (ajusta 15/20/30 según tu red)
+                const unidadesMap = new Map()
+                const pedidosSetMap = new Map()
                 const CONCURRENCY = 20
 
                 for (let i = 0; i < pedidosIds.length; i += CONCURRENCY) {
                     const chunk = pedidosIds.slice(i, i + CONCURRENCY)
-
-                    // opcional: estado visual
                     this.estadoCarga = `Leyendo detalles: ${Math.min(i + CONCURRENCY, pedidosIds.length)}/${pedidosIds.length}`
 
                     const snaps = await Promise.all(
@@ -559,7 +546,6 @@ export default {
                                 const ds = await detalle_pedido(pedidoId).once('value')
                                 return { pedidoId, val: ds.val() }
                             } catch (e) {
-                                console.warn('No se pudo leer detalle de pedido', pedidoId, e)
                                 return { pedidoId, val: null }
                             }
                         })
@@ -577,27 +563,22 @@ export default {
                             const cant = Number(linea?.cantidad || 0)
                             if (!cant) continue
 
+                            const factor = Number(linea?.factor || 1) || 1
                             const medida = String(linea?.medida || '').toUpperCase()
-                            const factor = factorMap.get(prodId) || 1
 
-                            // Misma regla que ya tenías: si NO es unidad => multiplicar por factor
                             const esUnidad = (medida === 'UNIDAD' || medida === 'UND' || medida === 'NIU')
                             const unidades = esUnidad ? cant : (cant * factor)
 
-                            // acumula unidades
                             unidadesMap.set(prodId, (unidadesMap.get(prodId) || 0) + unidades)
 
-                            // cuenta pedidos únicos
                             if (!pedidosSetMap.has(prodId)) pedidosSetMap.set(prodId, new Set())
                             pedidosSetMap.get(prodId).add(pedidoId)
                         }
                     }
 
-                    // deja respirar UI si hay muchísimos pedidos
                     await this.$nextTick()
                 }
 
-                // Convertir a objetos simples (reactivo)
                 const pendObj = {}
                 const numObj = {}
 
@@ -611,8 +592,6 @@ export default {
                 this.pendientesPorProducto = pendObj
                 this.numPedidosPorProducto = numObj
 
-                // ya no lo necesitas para cálculos
-                this.pedidosPendientesDetalle = []
             } catch (error) {
                 console.error('Error cargando pedidos pendientes:', error)
                 throw error

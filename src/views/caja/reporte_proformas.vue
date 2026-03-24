@@ -23,8 +23,8 @@
             </v-col>
 
             <v-col cols="4" v-if="esAdmin">
-                <v-select outlined dense v-model="vendedor_filtro" :items="vendedoresItems" 
-                    item-text="text" item-value="value" label="Vendedor" clearable hide-details></v-select>
+                <v-select outlined dense v-model="vendedor_filtro" :items="vendedoresItems" item-text="text"
+                    item-value="value" label="Vendedor" clearable hide-details></v-select>
             </v-col>
 
         </v-row>
@@ -59,7 +59,7 @@
                             <td style="font-family:verdana;font-size:75%;">{{ item.id }}</td>
                             <td style="font-family:verdana;font-size:75%;">{{ conviertefecha(item.fecha_emision) }}</td>
                             <td style="font-family:verdana;font-size:75%;">{{ item.num_cliente }} - {{ item.nom_cliente
-                                }}</td>
+                            }}</td>
                             <td style="font-family:verdana;font-size:75%;" v-if="esAdmin">
                                 {{ getNombreVendedor(item.responsable) }}
                             </td>
@@ -146,8 +146,8 @@
                             <tr v-for="item in lista_productos" :key="item.id">
                                 <td>{{ item.nombre }}</td>
                                 <td width="100">{{ item.cantidad }}</td>
-                                <td width="100">{{monedaSimbolo}}.{{ item.precioedita }}</td>
-                                <td width="100">{{monedaSimbolo}} {{ redondear(item.cantidad * item.precio) }}</td>
+                                <td width="100">{{ monedaSimbolo }}.{{ item.precioedita }}</td>
+                                <td width="100">{{ monedaSimbolo }} {{ redondear(item.cantidad * item.precio) }}</td>
                             </tr>
                         </tbody>
                     </template>
@@ -378,7 +378,7 @@ export default {
         },
         listafiltrada() {
             let lista = this.desserts;
-            
+
             // Si NO es admin, filtrar solo sus proformas
             if (!this.esAdmin) {
                 lista = lista.filter(item => item.responsable === this.usuarioActual);
@@ -386,10 +386,10 @@ export default {
                 // Si es admin y hay filtro de vendedor seleccionado
                 lista = lista.filter(item => item.responsable === this.vendedor_filtro);
             }
-            
+
             return lista.reverse();
         },
-        monedaSimbolo(){
+        monedaSimbolo() {
             return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/';
         }
     },
@@ -507,8 +507,10 @@ export default {
                 desc_2: Number(item.desc_2 || 0),
                 desc_3: Number(item.desc_3 || 0),
                 operacion: item.operacion || 'GRAVADA',
-                totalLinea: Number(item.precioedita ?? item.precio ?? 0) * Number(item.cantidad || 0)
+                totalLinea: Number(item.precioedita ?? item.precio ?? 0) * Number(item.cantidad || 0),
+                factor: Number(item.factor || 1)
             }))
+
             store.commit("cliente_selecto", clienteData)
             store.commit("lista_productos", productos)
             this.$router.push({

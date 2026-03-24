@@ -152,14 +152,11 @@
                     </v-col>
                 </v-row>
 
-                <!-- ============================================= -->
-                <!-- SELECTOR DE PRESENTACIONES (NUEVO) -->
-                <!-- ============================================= -->
                 <v-row v-if="tienePresentaciones(selecto)" class="mt-2">
                     <v-col cols="12">
                         <v-select v-model="presentacionEditaSeleccionada" :items="opcionesPresentacionesEdita"
-                            item-text="descripcion" item-value="id" label="Presentación / Precio" outlined dense
-                            hide-details @change="onPresentacionEditaChange">
+                            item-text="descripcion" item-value="id" label="Presentación (no editable)" outlined dense
+                            hide-details disabled>
                             <template v-slot:selection="{ item }">
                                 <span>{{ item.descripcion }} - {{ monedaSimbolo }} {{ redondear(item.precio) }}</span>
                             </template>
@@ -186,8 +183,7 @@
                     </v-col>
                     <v-col cols="6" xs="6">
                         <v-text-field dense outlined type="number" v-model.number="selecto.precioedita" label="Precio"
-                            :prefix="monedaSimbolo" :disabled="presentacionEditaSeleccionada !== 'fijo'"
-                            @input="onPrecioEditaChange"></v-text-field>
+                            :prefix="monedaSimbolo" @input="onPrecioEditaChange"></v-text-field>
                     </v-col>
                 </v-row>
 
@@ -195,7 +191,7 @@
                     Total unidades: <strong>{{ totalUnidadesEdita }}</strong> und
                 </div>
 
-                <v-alert v-if="precioCambiado" type="warning" dense text class="mt-2 mb-0" style="font-size: 11px;">
+                <v-alert v-if="precioCambiado" type="warning" dense text class="mt-n2 mb-6" style="font-size: 11px;">
                     El precio fue modificado. Ajuste los descuentos si es necesario.
                 </v-alert>
 
@@ -378,24 +374,30 @@ export default {
 
             const precioBase = Number(data.precio_base) || Number(data.precio) || 0;
             this.precioOriginalEdita = Number(data.precioedita) || precioBase;
+            const productoCompleto = store.state.productos.find(p => String(p.id) === String(data.id)) || {};
 
-            // Copiar TODO lo necesario para la edición
             this.selecto = {
-                ...data,  // ← NECESARIO para tener presentaciones, descuentos, etc.
-                cantidad: Number(data.cantidad) || 1,
+                ...data,
+                ...productoCompleto,
+                cantidad: data.cantidad || 1,
                 precioedita: Number(data.precioedita) || precioBase,
                 precio_base: precioBase,
                 precio_original: precioBase,
-                desc_1: Number(data.desc_1) || 0,
-                desc_2: Number(data.desc_2) || 0,
-                desc_3: Number(data.desc_3) || 0
+                desc_1: data.desc_1 || 0,
+                desc_2: data.desc_2 || 0,
+                desc_3: data.desc_3 || 0,
+                operacion: data.operacion || 'GRAVADA',
+                tipoproducto: data.tipoproducto || 'BIEN',
+                uuid: data.uuid,
             };
 
-            // Determinar qué presentación está seleccionada
             if (data._presentacion_id) {
                 this.presentacionEditaSeleccionada = `pres_${data._presentacion_id}`;
             } else {
                 this.presentacionEditaSeleccionada = 'fijo';
+            }
+            if (this.$refs.descEditaRef) {
+                this.$refs.descEditaRef.reset();
             }
 
             this.dial_edita = true;
@@ -428,36 +430,7 @@ export default {
         },
 
         onPresentacionEditaChange() {
-            if (this.presentacionEditaSeleccionada && this.presentacionEditaSeleccionada !== 'fijo') {
-                const pres = this.opcionesPresentacionesEdita.find(p => p.id === this.presentacionEditaSeleccionada);
-                if (pres) {
-                    // SOLO actualizar precio
-                    this.selecto.precioedita = pres.precio;
-                    this.selecto.precio_base = pres.precio;
-
-                    // ✅ NO TOCAR this.selecto.medida (elimina esta línea)
-                    // this.selecto.medida = pres.descripcion; ← BORRAR
-
-                    this.precioOriginalEdita = pres.precio;
-                    this.precioCambiado = false;
-
-                    if (this.$refs.descEditaRef) {
-                        this.$refs.descEditaRef.reset();
-                    }
-                }
-            } else {
-                const precioBase = Number(this.selecto.precio_original) ||
-                    Number(this.selecto.precio_base) ||
-                    Number(this.selecto.precio) || 0;
-                this.selecto.precioedita = precioBase;
-                this.selecto.precio_base = precioBase;
-
-                // ✅ NO RESTAURAR medida (nunca se modificó)
-                // this.selecto.medida = this.selecto.medida_original || 'UNIDAD'; ← BORRAR
-
-                this.precioOriginalEdita = precioBase;
-                this.precioCambiado = false;
-            }
+            ///
         },
 
         abrir_comprobantes() {
@@ -542,8 +515,8 @@ export default {
                     const precio = array[i].precioedita != null
                         ? Number(array[i].precioedita)
                         : Number(array[i].precio || 0)
-
-                    suma += Number(array[i].cantidad || 0) * precio
+                    const cantidad = Number(array[i].cantidad || 0)
+                    suma += cantidad * precio
                 }
             }
             return this.redondear(suma)
@@ -625,52 +598,22 @@ export default {
                 this.dial_edita = false;
                 return;
             }
-
             const clave = this.selecto.uuid || this.selecto.id;
             const index = this.listaproductos.findIndex(p => (p.uuid || p.id) === clave);
 
             if (index !== -1) {
-                // Crear objeto LIMPIO con SOLO lo necesario
                 const productoEditado = {
-                    // Datos básicos del producto
-                    id: this.selecto.id,
-                    nombre: this.selecto.nombre,
-                    medida: this.selecto.medida,
-                    cod_interno: this.selecto.cod_interno,
-                    codbarra: this.selecto.codbarra,
-
-                    // Datos de venta
-                    cantidad: this.selecto.cantidad,
+                    ...this.listaproductos[index],
+                    cantidad: this.selecto.cantidad || 1,
                     precio: parseFloat(this.selecto.precioedita) || 0,
-                    precio_base: this.selecto.precio_base,
-
-                    // Descuentos
+                    precioedita: parseFloat(this.selecto.precioedita) || 0,
                     desc_1: this.selecto.desc_1 || 0,
                     desc_2: this.selecto.desc_2 || 0,
                     desc_3: this.selecto.desc_3 || 0,
-
-                    // Datos de producto
-                    operacion: this.selecto.operacion,
-                    tipoproducto: this.selecto.tipoproducto,
-                    icbper: this.selecto.icbper || false,
-                    controstock: this.selecto.controstock || false,
-                    stock: this.selecto.stock || 0,
-                    costo: this.selecto.costo || 0,
-
-                    // Referencia de presentación (opcional, pero útil)
-                    _factor: this.selecto._factor,
-                    _presentacion_id: this.selecto._presentacion_id,
-                    _presentacion_nombre: this.selecto._presentacion_nombre
                 };
-
-                // Si quieres mantener UUID para editar después
-                if (this.selecto.uuid) {
-                    productoEditado.uuid = this.selecto.uuid;
-                }
 
                 this.$set(this.listaproductos, index, productoEditado);
             }
-
             this.dial_edita = false;
             this.descEdita = { desc_1: 0, desc_2: 0, desc_3: 0, precioFinal: 0, montoDescuento: 0 };
         },

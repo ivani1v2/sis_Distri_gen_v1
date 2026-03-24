@@ -83,7 +83,9 @@
                                                             {{ moneda }} {{ redondear(item.precio_base) }}
                                                         </v-chip>
                                                         <v-chip v-if="item.medida" x-small class="ml-1" label>
-                                                            {{ item.medida }}
+                                                            {{ item.medida }}<span v-if="item._presentacion_nombre"
+                                                                class="ml-2">({{
+                                                                    item._presentacion_nombre }})</span>
                                                         </v-chip>
                                                         <v-chip v-if="item.operacion === 'GRATUITA'" x-small
                                                             class="ml-1" color="pink" text-color="white" label>
@@ -104,8 +106,7 @@
                                                 <div class="text-right mr-1">
                                                     <div class="subtitle-2 font-weight-bold">
                                                         {{ moneda }}
-                                                        {{ item.totalLinea
-                                                        }}
+                                                        {{ redondear(item.cantidad * item.precio) }}
                                                     </div>
                                                     <div class="caption grey--text">Total</div>
                                                 </div>
@@ -426,8 +427,11 @@ export default {
         if ((!this.listaproductos || this.listaproductos.length === 0) &&
             Array.isArray(store.state.lista_productos) &&
             store.state.lista_productos.length > 0) {
-            // clon simple para no mutar directamente el state
-            this.listaproductos = JSON.parse(JSON.stringify(store.state.lista_productos));
+
+            this.listaproductos = store.state.lista_productos.map(prod => ({
+                ...prod,
+                factor: Number(prod.factor || 1)
+            }));
         }
         const savedModo = localStorage.getItem("modoOrdenProductos");
         if (savedModo === "push" || savedModo === "top") {

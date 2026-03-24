@@ -281,8 +281,7 @@ export default {
                 desc_1: this.descuentoAplicado.desc_1 || 0,
                 desc_2: this.descuentoAplicado.desc_2 || 0,
                 desc_3: this.descuentoAplicado.desc_3 || 0,
-
-                _factor: opcion.factor || 1,
+                factor: opcion.factor || 1, 
                 _presentacion_id: opcion.esPresentacion ? opcion.presentacionId : null,
                 _presentacion_nombre: opcion.esPresentacion ? opcion.descripcion : null,
             };
