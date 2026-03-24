@@ -154,6 +154,12 @@ import store from '@/store/index'
 import DescuentosPorcentaje from '@/components/descuentos_porcentaje.vue'
 
 export default {
+    props: {
+        validar_stock: {
+            type: Boolean,
+            default: true
+        }
+    },
     components: {
         DescuentosPorcentaje
     },
@@ -244,7 +250,7 @@ export default {
                 store.commit('dialogosnackbar', 'Seleccione un precio');
                 return;
             }
-            if (this.producto_selecto.controstock) {
+            if (this.validar_stock && this.producto_selecto.controstock) {
                 const stockDisponible = Number(this.producto_selecto.stock || 0);
                 const unidadesTotal = cant * opcion.factor;
                 if (unidadesTotal > stockDisponible) {

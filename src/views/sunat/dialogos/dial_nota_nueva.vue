@@ -18,123 +18,59 @@
         <v-card class="pa-3">
             <v-row dense>
                 <v-col cols="12" md="3">
-                    <v-text-field
-                        type="date"
-                        outlined
-                        dense
-                        v-model="date"
-                        label="Emisión"
-                    />
+                    <v-text-field type="date" outlined dense v-model="date" label="Emisión" />
                 </v-col>
 
                 <v-col cols="12" md="3">
-                    <v-select
-                        outlined
-                        dense
-                        v-model="tipoReferencia"
-                        :items="tiposReferencia"
-                        label="Tipo Doc. Ref."
-                        item-text="text"
-                        item-value="value"
-                    />
+                    <v-select outlined dense v-model="tipoReferencia" :items="tiposReferencia" label="Tipo Doc. Ref."
+                        item-text="text" item-value="value" />
                 </v-col>
 
                 <v-col cols="12" md="3">
-                    <v-text-field
-                        outlined
-                        dense
-                        v-model="serieReferencia"
-                        label="Serie Ref."
-                        placeholder="F001 / B001"
-                    />
+                    <v-text-field outlined dense v-model="serieReferencia" label="Serie Ref."
+                        placeholder="F001 / B001" />
                 </v-col>
 
                 <v-col cols="12" md="3">
-                    <v-text-field
-                        outlined
-                        dense
-                        v-model="correlativoReferencia"
-                        label="Correlativo Ref."
-                        placeholder="1234"
-                    />
+                    <v-text-field outlined dense v-model="correlativoReferencia" label="Correlativo Ref."
+                        placeholder="1234" />
                 </v-col>
             </v-row>
 
             <!-- DATOS CLIENTE -->
             <v-row dense class="mt-n2">
                 <v-col cols="12" md="3">
-                    <v-select
-                        outlined
-                        dense
-                        v-model="documento"
-                        :items="documentos"
-                        label="Tipo Doc"
-                    />
+                    <v-select outlined dense v-model="documento" :items="documentos" label="Tipo Doc" />
                 </v-col>
 
                 <v-col cols="12" md="3">
-                    <v-text-field
-                        outlined
-                        dense
-                        v-model="dni"
-                        label="Número Documento"
-                        append-icon="mdi-magnify"
-                        @click:append="BuscarDocumento"
-                        @keyup.enter="BuscarDocumento"
-                    />
+                    <v-text-field outlined dense v-model="dni" label="Número Documento" append-icon="mdi-magnify"
+                        @click:append="BuscarDocumento" @keyup.enter="BuscarDocumento" />
                 </v-col>
 
                 <v-col cols="12" md="6">
-                    <v-text-field
-                        outlined
-                        dense
-                        v-model="cliente"
-                        label="Cliente"
-                    />
+                    <v-text-field outlined dense v-model="cliente" label="Cliente" />
                 </v-col>
             </v-row>
 
             <v-row dense class="mt-n2">
                 <v-col cols="12" md="8">
-                    <v-text-field
-                        outlined
-                        dense
-                        v-model="direccion"
-                        label="Dirección"
-                    />
+                    <v-text-field outlined dense v-model="direccion" label="Dirección" />
                 </v-col>
 
                 <v-col cols="12" md="4">
-                    <v-text-field
-                        outlined
-                        dense
-                        v-model="telfcliente"
-                        label="Teléfono"
-                    />
+                    <v-text-field outlined dense v-model="telfcliente" label="Teléfono" />
                 </v-col>
             </v-row>
 
             <v-row dense class="mt-n2">
                 <v-col cols="12" md="8">
-                    <v-select
-                        outlined
-                        dense
-                        v-model="motivo"
-                        :items="$store.state.motivosSunat"
-                        item-text="nombre"
-                        item-value="nombre"
-                        label="Motivo de Nota de Crédito"
-                    />
+                    <v-select outlined dense v-model="motivo" :items="$store.state.motivosSunat" item-text="nombre"
+                        item-value="nombre" label="Motivo de Nota de Crédito" />
                 </v-col>
 
                 <v-col cols="12" md="4">
-                    <v-switch
-                        dense
-                        class="mt-1"
-                        v-model="regresar_stock"
-                        label="Regresar stock"
-                        inset
-                    />
+                    <v-switch dense class="mt-1" v-model="regresar_stock" label="Regresar stock" inset />
                 </v-col>
             </v-row>
 
@@ -176,16 +112,13 @@
                                 </td>
                             </tr>
 
-                            <tr
-                                v-for="(item, index) in listaproductos"
-                                :key="item.id + '_' + index"
-                            >
+                            <tr v-for="(item, index) in listaproductos" :key="item.id + '_' + index">
                                 <td>{{ item.id }}</td>
                                 <td>{{ item.nombre }}</td>
                                 <td>{{ item.medida }}</td>
-<td class="text-right">{{ item.cantidad }}</td>
-<td class="text-right">{{ redondear(item.precio) }}</td>
-<td class="text-right">{{ redondear(item.cantidad * item.precio) }}</td>
+                                <td class="text-right">{{ item.cantidad }}</td>
+                                <td class="text-right">{{ redondear(item.precio) }}</td>
+                                <td class="text-right">{{ redondear(item.cantidad * item.precio) }}</td>
                                 <td class="text-center">
                                     <v-btn icon small color="info" @click="editaProducto(index)">
                                         <v-icon small>mdi-pencil</v-icon>
@@ -206,21 +139,15 @@
                 </v-col>
                 <v-spacer />
                 <v-col cols="12" md="3">
-                    <v-btn
-                        block
-                        color="error"
-                        elevation="10"
-                        rounded
-                        :disabled="!puedeGenerar"
-                        @click="obtencorrelativo()"
-                    >
+                    <v-btn block color="error" elevation="10" rounded :disabled="!puedeGenerar"
+                        @click="obtencorrelativo()">
                         GENERAR NC
                     </v-btn>
                 </v-col>
             </v-row>
         </v-card>
 
-     
+
 
         <!-- DIALOG EDITAR PRODUCTO -->
         <v-dialog v-model="dialogoProducto" max-width="390">
@@ -237,14 +164,8 @@
                     </v-col>
 
                     <v-col cols="4">
-                        <v-text-field
-                            dense
-                            type="number"
-                            outlined
-                            v-model.number="cantidadEdita"
-                            label="Cantidad"
-                            @keyup.enter="grabaEdita()"
-                        />
+                        <v-text-field dense type="number" outlined v-model.number="cantidadEdita" label="Cantidad"
+                            @keyup.enter="grabaEdita()" />
                     </v-col>
 
                     <v-col cols="4">
@@ -258,14 +179,8 @@
                     </v-col>
 
                     <v-col cols="12">
-                        <v-text-field
-                            dense
-                            type="number"
-                            class="pa-3"
-                            v-model.number="precioedita"
-                            label="Precio"
-                            @keyup.enter="grabaEdita()"
-                        />
+                        <v-text-field dense type="number" class="pa-3" v-model.number="precioedita" label="Precio"
+                            @keyup.enter="grabaEdita()" />
                     </v-col>
                 </v-row>
 
@@ -306,25 +221,8 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
-        <v-dialog v-model="dialogoCatalogo" max-width="650px">
-    <div>
-        <v-system-bar window dark>
-            <v-icon @click="dialogoCatalogo = false">mdi-close</v-icon>
-            <v-spacer></v-spacer>
-        </v-system-bar>
-    </div>
 
-    <v-card class="pa-1">
-        <cat_fijo
-            v-if="dialogoCatalogo"
-            ref="catFijoNC"
-            @agrega_lista="agregar_lista($event)"
-            :muestra_tabla="true"
-            :x_categoria="false"
-            :lista_precios="lista_precios_selecta"
-        />
-    </v-card>
-</v-dialog>
+        <dialogocatalogo v-if="dialogoCatalogo" @array="agregar_lista" @cierra="dialogoCatalogo = false" :validar_stock="false" />
     </v-dialog>
 </template>
 
@@ -343,11 +241,13 @@ import { pdfGenera } from '../../../pdf_notaCD'
 import { modifica_stock_array } from '../../../control_stock'
 import store from '@/store/index'
 import cat_fijo from '@/components/catalogo_fijo'
+import dialogocatalogo from '../../../components/dialogos/dialogocatalogo.vue'
 
 export default {
     name: 'dialogoNotaNueva',
     components: {
-        cat_fijo
+        cat_fijo,
+        dialogocatalogo
     },
 
     data() {
@@ -394,7 +294,7 @@ export default {
             ordenNcredito: '',
             data_array: [],
             moneda: 'S/',
-            porcentaje_igv: 18
+            porcentaje_igv: 18,
         }
     },
 
@@ -541,14 +441,14 @@ export default {
                 this.listaproductos[index].cantidad =
                     Number(this.listaproductos[index].cantidad || 0) + Number(linea.cantidad || 0)
             } else {
-               this.listaproductos.push({
-    ...linea,
-    cantidad: Number(linea.cantidad || 1),
-    precio: Number(linea.precio || 0),
-    precioedita: Number(linea.precio || 0),
-    preciodescuento: Number(linea.preciodescuento || 0),
-    cod_medida: linea.cod_medida || 'NIU'
-})
+                this.listaproductos.push({
+                    ...linea,
+                    cantidad: Number(linea.cantidad || 1),
+                    precio: Number(linea.precio || 0),
+                    precioedita: Number(linea.precio || 0),
+                    preciodescuento: Number(linea.preciodescuento || 0),
+                    cod_medida: linea.cod_medida || 'NIU'
+                })
             }
 
             this.dialogoCatalogo = false
@@ -855,4 +755,4 @@ export default {
         }
     }
 }
-</script> 
+</script>
