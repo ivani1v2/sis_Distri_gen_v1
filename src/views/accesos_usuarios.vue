@@ -71,6 +71,7 @@ export default {
                         ],
                         [
                             { label: 'Administrador', value: 'es_admin' },
+                            { label: 'Supervisor', value: 'es_supervisor' },
                             { label: 'Master', value: 'es_master' },
                         ],
                         [
