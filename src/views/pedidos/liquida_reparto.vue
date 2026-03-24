@@ -133,7 +133,7 @@
                     <v-col cols="12" sm="4">
                         <h4 class="text-subtitle-1">
                             FECHA TRASLADO: <span class="primary--text">{{ conviertefecha(cabecera_total.fecha_traslado)
-                                }}</span>
+                            }}</span>
                         </h4>
                         <!-- Chip de transporte asignado -->
                         <div v-if="cabecera_total.d_transporte?.usuario_nombre" class="mt-1">
@@ -158,7 +158,7 @@
                             TOTAL VENTA: <span class="green--text text--darken-2">{{ moneda }} {{ t_general }}</span>
                         </h4>
                         <span class="caption">Contado: {{ moneda }} {{ t_contado }} | Crédito: {{ moneda }} {{ t_credito
-                        }}</span>
+                            }}</span>
                     </v-col>
                 </v-row>
             </v-card-text>
@@ -214,7 +214,7 @@
                                 </v-chip>
                             </td>
                             <td class="text-right caption red--text">{{ item.moneda }}{{ redondear(item.pendiente_pago)
-                                }}</td>
+                            }}</td>
                             <td class="text-right caption font-weight-bold">{{ item.moneda }}{{ redondear(item.total) }}
                             </td>
                             <td class="text-center">
@@ -287,7 +287,8 @@
                         <tbody>
                             <tr v-for="d in pedidoSeleccionado" :key="`${d.id}-${d.nombre}`">
                                 <td class="caption">
-                                    <strong class="red--text mr-1">{{ d.cantidad }}</strong> x {{d.id }} - {{ d.nombre }}
+                                    <strong class="red--text mr-1">{{ d.cantidad }}</strong> x {{ d.id }} - {{ d.nombre
+                                    }}
                                     <v-chip v-if="d.operacion == 'GRATUITA'" x-small color="teal" dark
                                         class="ml-1">GRATUITA</v-chip>
                                 </td>
@@ -296,7 +297,7 @@
                                     S/.{{ d.precio }}
                                     <strong v-if="d.preciodescuento != 0" class="red--text ml-1">(-S/.{{
                                         d.preciodescuento
-                                        }})</strong>
+                                    }})</strong>
                                 </td>
                                 <td class="text-right caption font-weight-bold">S/.{{
                                     redondear((Number(d.total_antes_impuestos)
@@ -319,7 +320,7 @@
                 <v-card-text class="pt-4">
                     <div class="mb-3 text-subtitle-2 grey--text text--darken-1">
                         Anulando comprobante: <strong class="error--text">{{ comp_anular ? comp_anular.numeracion : ''
-                            }}</strong>
+                        }}</strong>
                     </div>
 
                     <v-select dense outlined clearable :items="motivos_predeterminados"
@@ -487,7 +488,7 @@
                 <v-toolbar class="text-caption"
                     :color="guia_individual_tipo === 'transporte' ? 'purple darken-1' : 'cyan darken-1'" dense dark>
                     <v-toolbar-title>{{ guia_individual_tipo === 'transporte' ? 'Guía Transporte' : 'Guía Remisión'
-                        }}</v-toolbar-title>
+                    }}</v-toolbar-title>
                     <v-spacer></v-spacer>
                     <v-btn icon @click="dialogo_guia_individual = false">
                         <v-icon>mdi-close</v-icon>
@@ -618,7 +619,7 @@ import moment from 'moment'
 import dialogo_edita_c from './dialogos/dialogo_edita_c'
 import genera_guias from './dialogos/genera_guias.vue'
 import impresorahost from '@/components/configEmpresa/impresorahost.vue'
-import { impresionQueue } from '../../impresionQueue';
+
 import {
     pdfGenera
 } from '../../pdf_comprobantes'
@@ -640,7 +641,11 @@ import { colClientes } from '../../db_firestore'
 import dial_transporte from '../reparto/dialogos/dial_transporte.vue'
 import impresion_guias_masivas from './dialogos/impresion_guias_masivas.vue'
 import { reporte_almacen_consolidado } from '../pedidos/reportes_pdf';
-
+import {
+    abrir_bridge_impresion,
+    impresion_bridge,
+    cerrar_bridge_impresion
+} from '../../views/funciones/impresion_bridge'
 export default {
     components: {
         dialogo_edita_c,
@@ -845,10 +850,10 @@ export default {
             return total;
         },
         apiBaseUrl() {
-           /* const hostname = window.location.hostname;
-            if (hostname === 'localhost' || hostname === '127.0.0.1') {
-                return 'http://127.0.0.1:5001/sis-distribucion/southamerica-east1/api_distribucion';
-            } */
+            /* const hostname = window.location.hostname;
+             if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                 return 'http://127.0.0.1:5001/sis-distribucion/southamerica-east1/api_distribucion';
+             } */
             return 'https://api-distribucion-6sfc6tum4a-rj.a.run.app';
         }
     },
@@ -1555,7 +1560,9 @@ export default {
             this.dialogoExporta = false
         },
         async imprime_comprobante(tamano) {
-            const array = this.desserts.filter((item) => item.consolida === true);
+            const array = this.desserts.filter(
+                item => item.consolida === true && item.estado !== 'ANULADO'
+            );
 
             if (!array.length) {
                 this.$store.commit('dialogosnackbar', 'Seleccione al menos un comprobante.');
@@ -1567,76 +1574,66 @@ export default {
             this.printDone = 0;
             this.printError = '';
             this.printDialog = true;
-            for (let i = 0; i < array.length; i++) {
-                let trabajoCompletado = false;
-                let timeoutId = null;
 
-                try {
-                    const data = array[i];
-                    this.printDone = i;
+            try {
+                await abrir_bridge_impresion();
 
-                    const snapshot = await all_detalle_p(this.router_grupo, data.numeracion).once("value");
-                    const arraydatos = snapshot.val();
+                for (let i = 0; i < array.length; i++) {
+                    try {
+                        const data = { ...array[i] };
 
-                    if (!snapshot.exists()) {
-                        throw new Error('Comprobante sin detalle');
-                    }
+                        const snapshot = await all_detalle_p(this.router_grupo, data.numeracion).once("value");
 
-                    const doc = await colClientes().doc(String(data.dni)).get();
-                    if (doc.exists) {
-                        const datas = doc.data() || {};
-                        data.referencia = this.getReferenciaPrincipal(datas) || datas.referencia || '';
-                    }
+                        if (!snapshot.exists()) {
+                            throw new Error('Comprobante sin detalle');
+                        }
 
-                    await Promise.race([
-                        impresionQueue.add(async (docId) => {
-                            if (this.modo_impresion_comp === 'descarga') {
-                                for (let c = 1; c <= this.copias_comprobante; c++) {
-                                    if (c > 1) await new Promise(resolve => setTimeout(resolve, 500));
-                                    const dataConCopia = {
-                                        ...data,
-                                        numero_copia: c,
-                                        total_copias: this.copias_comprobante
-                                    };
-                                    await pdfGenera(arraydatos, dataConCopia, tamano, this.modo_impresion_comp, 1);
-                                }
-                            } else {
-                                await pdfGenera(arraydatos, data, tamano, this.modo_impresion_comp, this.copias_comprobante);
-                            }
-                            trabajoCompletado = true;
-                        }),
-                        new Promise((_, reject) => {
-                            timeoutId = setTimeout(() => {
-                                reject(new Error(`Timeout en comprobante ${i + 1}`));
-                            }, 120000);
-                        })
-                    ]);
+                        const arraydatos = snapshot.val();
 
-                    clearTimeout(timeoutId);
+                        const docCliente = await colClientes().doc(String(data.dni)).get();
+                        if (docCliente.exists) {
+                            const datas = docCliente.data() || {};
+                            data.referencia = this.getReferenciaPrincipal(datas) || datas.referencia || '';
+                        }
 
-                    if (trabajoCompletado) {
+                        const resp = await pdfGenera(
+                            arraydatos,
+                            data,
+                            tamano,
+                            this.modo_impresion_comp
+                        );
+
+                        await impresion_bridge(
+                            resp,
+                            this.copias_comprobante || 1,
+                            `${data.numeracion}-${i}-${Date.now()}`,
+                            i === array.length - 1
+                        );
+
                         this.printDone = i + 1;
-                    }
 
-                } catch (error) {
-                    console.error('Error en comprobante:', error);
-                    this.printError = `Error en comprobante ${i + 1}: ${error.message}`;
+                        // pausa corta para PCs lentas
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    } catch (error) {
+                        console.error('Error en comprobante:', error);
+                        this.printError = `Error en comprobante ${i + 1}: ${error.message}`;
 
-                    if (timeoutId) clearTimeout(timeoutId);
-                    const continuar = confirm(`Error en comprobante ${i + 1}. ¿Continuar con los siguientes?`);
-                    if (!continuar) {
-                        break;
+                        const continuar = confirm(`Error en comprobante ${i + 1}. ¿Continuar con los siguientes?`);
+                        if (!continuar) break;
                     }
                 }
-                await new Promise(resolve => setTimeout(resolve, 500));
+
+                this.$store.commit(
+                    'dialogosnackbar',
+                    this.modo_impresion_comp === 'descarga'
+                        ? 'Descarga completada'
+                        : 'Documentos enviados a la cola de impresión'
+                );
+            } finally {
+                this.printDialog = false;
+                await cerrar_bridge_impresion();
             }
-
-            this.$store.commit('dialogosnackbar',
-                this.modo_impresion_comp === 'descarga' ? 'Descarga completada' : 'Impresión finalizada'
-            );
-            this.printDialog = false;
         },
-
         getReferenciaPrincipal(cliente) {
             if (!cliente || !Array.isArray(cliente.direcciones) || cliente.direcciones.length === 0) return '';
             const dir = cliente.direcciones.find(d => d && d.principal) || cliente.direcciones[0];
@@ -1644,7 +1641,7 @@ export default {
         },
         async edita_c(cabecera) {
             console.log(cabecera)
-               store.commit("dialogoprogress");
+            store.commit("dialogoprogress");
             var snapshot = await all_detalle_p(this.router_grupo, cabecera.numeracion).once("value")
             var detalle = snapshot.val()
             if (snapshot.exists()) {
@@ -1653,7 +1650,7 @@ export default {
                 this.detalle_selecto = detalle
                 this.dialogo_edita_ = true
             }
-               store.commit("dialogoprogress");
+            store.commit("dialogoprogress");
         },
         async busca_cuentas(doc) {
             var lista = []

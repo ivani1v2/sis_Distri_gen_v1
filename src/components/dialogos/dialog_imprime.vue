@@ -131,7 +131,7 @@ import store from '@/store/index'
 import moment from 'moment'
 import { colClientes } from '../../db_firestore'
 import impresorahost from '../configEmpresa/impresorahost.vue'
-
+import { impresion_bridge } from '../../views/funciones/impresion_bridge'
 export default {
     name: 'caja',
     components: {
@@ -285,36 +285,61 @@ export default {
             this.cierra()
         },
         async verPDF(modo) {
-            var item = this.seleccionado
-            console.log(item)
-            this.progress = true
-            var arraydatos = []
-            console.log(this.detalle)
-            if (this.detalle) {
-                arraydatos = this.detalle
-            } else {
-                const referencia = item.numeracion || item.doc_ref
-                let snapshot = await consultaDetalle(referencia).once("value")
-                arraydatos = snapshot.val()
-            }
-            console.log(this.datos_cliente)
-            item.referencia = this.getReferenciaPrincipal(this.datos_cliente) || this.datos_cliente.referencia || '';
-            item.telefono = this.numero || ''
-            let modoFinal = modo;
-            if (modo === 'imprime') {
-                modoFinal = 'abre';
-            } else if (modo === 'descarga') {
-                modoFinal = 'descarga';
-            } else {
-                modoFinal = 'abre';
-            }
-            pdfGenera(arraydatos, item, this.medida_comprobante, modoFinal);
-            if (modo === 'imprime') {
-                store.commit('dialogosnackbar', 'Enviando a impresión...');
-            }
+            const item = { ...this.seleccionado };
+            this.progress = true;
 
-            this.progress = false
-            this.cierra()
+            try {
+                let arraydatos = [];
+
+                if (this.detalle) {
+                    arraydatos = this.detalle;
+                } else {
+                    const referencia = item.numeracion || item.doc_ref;
+                    const snapshot = await consultaDetalle(referencia).once("value");
+                    arraydatos = snapshot.val();
+                }
+
+                item.referencia =
+                    this.getReferenciaPrincipal(this.datos_cliente) ||
+                    this.datos_cliente.referencia ||
+                    "";
+
+                item.telefono = this.numero || "";
+
+                let modoFinal = modo;
+                if (modo === "imprime") {
+                    modoFinal = "abre";
+                } else if (modo === "descarga") {
+                    modoFinal = "descarga";
+                } else {
+                    modoFinal = "abre";
+                }
+
+                const resp = await pdfGenera(
+                    arraydatos,
+                    item,
+                    this.medida_comprobante,
+                    modoFinal
+                );
+
+                if (modo === "imprime") {
+                    await impresion_bridge(
+                        resp,
+                        1,
+                        `${item.numeracion || item.doc_ref || Date.now()}`,
+                        true
+                    );
+
+                    store.commit("dialogosnackbar", "Enviado a impresión");
+                }
+
+                this.cierra();
+            } catch (e) {
+                console.error(e);
+                store.commit("dialogosnackbar", e.message || "No se pudo imprimir");
+            } finally {
+                this.progress = false;
+            }
         },
         getReferenciaPrincipal(cliente) {
             if (!cliente || !Array.isArray(cliente.direcciones) || cliente.direcciones.length === 0) return '';

@@ -44,11 +44,11 @@
                     icon="mdi-alert-octagon">
                     <div class="d-flex flex-wrap justify-space-between align-center text-caption">
                         <span>Línea de crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2)
-                                }}</strong></span>
+                        }}</strong></span>
                         <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2)
-                                }}</strong></span>
+                        }}</strong></span>
                         <span>Disponible: <strong class="red--text">{{ moneda }} {{ saldoDisponible.toFixed(2)
-                                }}</strong></span>
+                        }}</strong></span>
                     </div>
                     <div class="mt-1 red--text text-caption font-weight-medium">
                         El monto del pedido ({{ moneda }} {{ totalDetalle.toFixed(2) }}) supera el saldo disponible
@@ -111,7 +111,7 @@
                                                         style="max-width: 70vw;">
                                                         <span class="font-weight-bold red--text">{{
                                                             Number(item.cantidad)
-                                                            }}×</span>
+                                                        }}×</span>
                                                         {{ item.nombre }}
                                                     </div>
                                                 </div>
@@ -961,9 +961,16 @@ export default {
 
         agregar_lista(value) {
             const productoNuevo = Array.isArray(value) ? value[0] : value;
-            const indiceExistente = this.listaproductos.findIndex(
-                item => String(item.id) === String(productoNuevo.id)
+
+            const operacionNueva = String(productoNuevo.operacion || '').toUpperCase();
+            const medidaNueva = String(productoNuevo.medida || '').trim().toUpperCase();
+
+            const indiceExistente = this.listaproductos.findIndex(item =>
+                String(item.id) === String(productoNuevo.id) &&
+                String(item.operacion || '').toUpperCase() === operacionNueva &&
+                String(item.medida || '').trim().toUpperCase() === medidaNueva
             );
+
 
             let nuevaLista;
 

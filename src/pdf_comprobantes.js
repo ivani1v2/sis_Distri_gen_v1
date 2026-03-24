@@ -8,7 +8,6 @@ let modo_genera = "abre";
 let copias_genera = 1;
 import axios from "axios";
 
-import { impresionQueue } from "./impresionQueue";
 let ventanaImpresionActual = null;
 let resolvers = {};
 
@@ -17,87 +16,9 @@ let moneda = "S/";
 function permite_impresion_host() {
   if (store?.state?.esmovil) return false;
   const tienePermiso = store?.state?.permisos?.permite_impresion_host === true;
-  const tieneConfig = store?.state?.permisos?.config_impresion_host?.ip_dispositivo;
+  const tieneConfig =
+    store?.state?.permisos?.config_impresion_host?.ip_dispositivo;
   return tienePermiso && tieneConfig;
-}
-
-async function abre_dialogo_impresion(doc, copias = 1, docId = Date.now()) {
-  try {
-    if (!permite_impresion_host()) {
-      return await abre_dialogo_impresion_original(doc, docId);
-    }
-    
-    return new Promise((resolve, reject) => {
-      const configHost = store?.state?.permisos?.config_impresion_host || {};
-      const IP_PC = configHost.ip_dispositivo || "192.168.1.19";
-      const PORT = configHost.puerto_dispositivo || 8090;
-      const BRIDGE_URL = `http://${IP_PC}:${PORT}/bridge-pdf`;
-      const token = store?.state?.configImpresora?.token_host || configHost.token || "1234";
-      
-      const meta = {
-        bd: store?.state?.baseDatos?.bd || "",
-        usuario: store?.state?.permisos?.nombre || "",
-        tipo: "comprobante",
-        ts: Date.now(),
-      };
-      
-      const buffer = doc.output("arraybuffer");
-      
-      if (ventanaImpresionActual && !ventanaImpresionActual.closed) {
-        ventanaImpresionActual.close();
-      }
-      
-      const ventana = window.open(
-        BRIDGE_URL, 
-        "_blank", 
-        "width=500,height=400,menubar=no,toolbar=no,location=no,status=no"
-      );
-      
-      ventanaImpresionActual = ventana;
-      
-      if (!ventana) {
-        alert("Permite ventanas emergentes para imprimir.");
-        reject(new Error('Ventana bloqueada'));
-        return;
-      }
-      
-      const mensaje = { 
-        type: "PRINT_PDF", 
-        token, 
-        printer: configHost.nombre_impresora || "POS-80-Series", 
-        copies: copias,
-        meta, 
-        pdf: buffer 
-      };
-      
-      const timer = setInterval(() => {
-        try {
-          ventana.postMessage(mensaje, "*", [buffer]);
-          clearInterval(timer);
-          
-          resolvers[docId] = { resolve, reject };
-          
-          const checkClosed = setInterval(() => {
-            if (ventana.closed) {
-              clearInterval(checkClosed);
-              if (resolvers[docId]) {
-                resolvers[docId].resolve();
-                delete resolvers[docId];
-              }
-            }
-          }, 500);
-          
-        } catch (e) {
-          clearInterval(timer);
-          reject(e);
-        }
-      }, 250);
-      
-      setTimeout(() => reject(new Error('Timeout')), 60000);
-    });
-  } catch (e) {
-    return await abre_dialogo_impresion_original(doc, docId);
-  }
 }
 
 async function abre_dialogo_impresion_original(doc, docId = Date.now()) {
@@ -105,10 +26,10 @@ async function abre_dialogo_impresion_original(doc, docId = Date.now()) {
     if (store.state.configImpresora.impresora_auto && isElectronEnv()) {
       axios_imp(doc.output("arraybuffer"))
         .then(() => resolve())
-        .catch(err => reject(err));
+        .catch((err) => reject(err));
       return;
     }
-    
+
     var blob = doc.output("bloburi");
     var Ancho = screen.width;
     var Alto = screen.height;
@@ -118,17 +39,26 @@ async function abre_dialogo_impresion_original(doc, docId = Date.now()) {
     var difH = Alto - H;
     var tope = difH / 2;
     var lado = difA / 2;
-    var Opciones = "status=no, menubar=no, directories=no, location=no, toolbar=no, scrollbars=yes, resizable=no, width=" + A + ", height=" + H + ", top=" + tope + ", left=" + lado + "";
-    
+    var Opciones =
+      "status=no, menubar=no, directories=no, location=no, toolbar=no, scrollbars=yes, resizable=no, width=" +
+      A +
+      ", height=" +
+      H +
+      ", top=" +
+      tope +
+      ", left=" +
+      lado +
+      "";
+
     if (ventanaImpresionActual && !ventanaImpresionActual.closed) {
       ventanaImpresionActual.close();
     }
-    
+
     ventanaImpresionActual = window.open(blob, "_blank", Opciones);
-    
+
     if (ventanaImpresionActual) {
       resolvers[docId] = { resolve, reject };
-      
+
       const checkClosed = setInterval(() => {
         if (ventanaImpresionActual.closed) {
           clearInterval(checkClosed);
@@ -138,41 +68,49 @@ async function abre_dialogo_impresion_original(doc, docId = Date.now()) {
           }
         }
       }, 500);
-      
+
       setTimeout(() => {
         if (resolvers[docId]) {
-          resolvers[docId].reject(new Error('Timeout en impresión'));
+          resolvers[docId].reject(new Error("Timeout en impresión"));
           delete resolvers[docId];
         }
       }, 300000);
-      
+
       ventanaImpresionActual.print();
     } else {
-      reject(new Error('No se pudo abrir ventana de impresión'));
+      reject(new Error("No se pudo abrir ventana de impresión"));
     }
   });
 }
 
-export const pdfGenera = (arraydatos, cabecera, medida, modo, copias = 1) => {
+export const pdfGenera = async (
+  arraydatos,
+  cabecera,
+  medida,
+  modo,
+  copias = 1,
+) => {
   //console.log(arraydatos, cabecera, medida, modo);
   moneda = cabecera.moneda || "S/";
   modo_genera = modo;
-  copias_genera = copias; 
+  copias_genera = copias;
   var qrs = generaQR(cabecera);
   switch (medida) {
     case "A4":
-      impresionA4(arraydatos, qrs, cabecera);
-      break;
+      var resp = await impresionA4(arraydatos, qrs, cabecera);
+      return resp;
+
     case "A5":
       //impresionA5_vertical(arraydatos, qrs, cabecera);
-      impresionA5_horizontal(arraydatos, qrs, cabecera);
-      break;
+      var resp = await impresionA5_horizontal(arraydatos, qrs, cabecera);
+      return resp;
     case "80":
-      var resp = impresion80(arraydatos, qrs, cabecera);
-      break;
+      var resp = await impresion80(arraydatos, qrs, cabecera);
+      return resp;
+
     case "58":
-      impresion58(arraydatos, qrs, cabecera);
-      break;
+      var resp = await impresion58(arraydatos, qrs, cabecera);
+      return resp;
   }
 };
 async function impresion58(arraydatos, qr, cabecera) {
@@ -236,8 +174,10 @@ async function impresion58(arraydatos, qr, cabecera) {
   //console.log(imagen)
 
   const esNotaVenta58 = arraycabe.tipocomprobante === "T";
-  const ocultarLogo58 = esNotaVenta58 && store.state.configImpresora.no_mostrar_logo_nota_pedido;
-  const ocultarRuc58 = esNotaVenta58 && store.state.configImpresora.no_mostrar_ruc_nota_venta;
+  const ocultarLogo58 =
+    esNotaVenta58 && store.state.configImpresora.no_mostrar_logo_nota_pedido;
+  const ocultarRuc58 =
+    esNotaVenta58 && store.state.configImpresora.no_mostrar_ruc_nota_venta;
   if (imagen != "" && !ocultarLogo58) {
     doc.addImage(
       "data:image/png;base64," + imagen,
@@ -245,7 +185,7 @@ async function impresion58(arraydatos, qr, cabecera) {
       pdfInMM / 2 - 27,
       linea,
       55,
-      30
+      30,
     );
     linea = linea + parseInt(store.state.configImpresora.minferior) - 10; /// modificar margenes de logo
   }
@@ -254,7 +194,7 @@ async function impresion58(arraydatos, qr, cabecera) {
   if (store.state.configImpresora.nom_comercial) {
     var texto = doc.splitTextToSize(
       store.state.baseDatos.namecomercial,
-      pdfInMM - lMargin - rMargin
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, pageCenter, linea, "center"); //EMPRESA
 
@@ -263,7 +203,7 @@ async function impresion58(arraydatos, qr, cabecera) {
   } else {
     var texto = doc.splitTextToSize(
       store.state.baseDatos.name,
-      pdfInMM - lMargin - rMargin
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, pageCenter, linea, "center"); //EMPRESA
 
@@ -280,7 +220,7 @@ async function impresion58(arraydatos, qr, cabecera) {
   if (store.state.configImpresora.nom_comercial) {
     var texto = doc.splitTextToSize(
       store.state.baseDatos.name,
-      pdfInMM - lMargin - rMargin
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, pageCenter, linea, "center"); //EMPRESA
     linea = linea + 4.5;
@@ -300,7 +240,7 @@ async function impresion58(arraydatos, qr, cabecera) {
   if (telefono != "") {
     var texto = doc.splitTextToSize(
       "Telf: " + telefono,
-      pdfInMM - lMargin - rMargin
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, pageCenter, linea, "center"); //cabecera
     linea = linea + 4 * texto.length;
@@ -316,14 +256,14 @@ async function impresion58(arraydatos, qr, cabecera) {
   doc.setFont("Helvetica", "");
   var texto = doc.splitTextToSize(
     arraycabe.serie + "-" + arraycabe.correlativoDocEmitido,
-    pdfInMM - lMargin - rMargin
+    pdfInMM - lMargin - rMargin,
   );
   doc.text(texto, pageCenter, linea, "center");
   linea = linea + 5;
 
   var texto = doc.splitTextToSize(
     "EMISION: " + fechaImpresion,
-    pdfInMM - lMargin - rMargin
+    pdfInMM - lMargin - rMargin,
   );
   doc.text(texto, pageCenter, linea, "center");
   linea = linea + 5;
@@ -332,14 +272,14 @@ async function impresion58(arraydatos, qr, cabecera) {
   doc.setFontSize(9.5);
   var texto = doc.splitTextToSize(
     "Nombre   : " + arraycabe.cliente,
-    pdfInMM - lMargin - rMargin
+    pdfInMM - lMargin - rMargin,
   );
   doc.text(texto, lMargin, linea, "left");
   linea = linea + 4 * texto.length;
 
   var texto = doc.splitTextToSize(
     "Documento: " + arraycabe.dni,
-    pdfInMM - lMargin - rMargin
+    pdfInMM - lMargin - rMargin,
   );
   doc.text(texto, lMargin, linea, "left");
   linea = linea + 4 * texto.length;
@@ -347,7 +287,7 @@ async function impresion58(arraydatos, qr, cabecera) {
   if (arraycabe.direccion != "") {
     var texto = doc.splitTextToSize(
       "Direccion: " + arraycabe.direccion,
-      pdfInMM - lMargin - rMargin
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, lMargin, linea, "left");
     linea = linea + 4 * texto.length;
@@ -355,7 +295,7 @@ async function impresion58(arraydatos, qr, cabecera) {
   if (arraycabe.referencia != "") {
     var texto = doc.splitTextToSize(
       "Ref: " + arraycabe.referencia,
-      pdfInMM - lMargin - rMargin
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, lMargin, linea, "left");
     linea = linea + 3.5 * texto.length;
@@ -363,7 +303,7 @@ async function impresion58(arraydatos, qr, cabecera) {
   if (arraycabe.tipocomprobante != "T") {
     var texto = doc.splitTextToSize(
       "Condiciones: " + arraycabe.forma_pago,
-      pdfInMM - lMargin - rMargin
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, lMargin, linea, "left");
     linea = linea + 4 * texto.length;
@@ -371,7 +311,7 @@ async function impresion58(arraydatos, qr, cabecera) {
   if (arraycabe.telefono != "") {
     var texto = doc.splitTextToSize(
       "Telf: " + arraycabe.telefono,
-      pdfInMM - lMargin - rMargin
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, lMargin, linea, "left");
     linea = linea + 4 * texto.length;
@@ -379,7 +319,7 @@ async function impresion58(arraydatos, qr, cabecera) {
   if (arraycabe.observacion) {
     var texto = doc.splitTextToSize(
       "Observacion: " + arraycabe.observacion,
-      pdfInMM - lMargin - rMargin
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, lMargin, linea, "left");
     linea = linea + 4 * texto.length;
@@ -477,7 +417,7 @@ async function impresion58(arraydatos, qr, cabecera) {
         moneda + String(parseFloat(data.monto).toFixed(2)),
         50,
         linea,
-        "right"
+        "right",
       );
       linea = linea + 3.5;
     }
@@ -495,7 +435,7 @@ async function impresion58(arraydatos, qr, cabecera) {
         moneda + arraycabe.total_op_exoneradas.toString(),
         50,
         linea,
-        "right"
+        "right",
       );
       linea = linea + 4;
     }
@@ -505,7 +445,7 @@ async function impresion58(arraydatos, qr, cabecera) {
         moneda + arraycabe.total_op_gratuitas.toString(),
         50,
         linea,
-        "right"
+        "right",
       );
       linea = linea + 4;
     }
@@ -515,7 +455,7 @@ async function impresion58(arraydatos, qr, cabecera) {
         moneda + arraycabe.total_op_inafectas.toString(),
         50,
         linea,
-        "right"
+        "right",
       );
       linea = linea + 4;
     }
@@ -540,7 +480,7 @@ async function impresion58(arraydatos, qr, cabecera) {
       parseFloat(total);
     var texto = doc.splitTextToSize(
       "TOTAL " + store.state.configuracion.nom_moneda + ": " + tot_moneda,
-      pdfInMM - lMargin - rMargin
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, pageCenter, linea, "center");
     doc.setFontSize(9);
@@ -556,7 +496,7 @@ async function impresion58(arraydatos, qr, cabecera) {
     doc.setFont("Helvetica", "");
     var texto = doc.splitTextToSize(
       "Vendedor: " + arraycabe.nomempleado,
-      pdfInMM - lMargin - rMargin
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, pageCenter, linea, "center");
     linea = linea + 3.5 * texto.length;
@@ -568,7 +508,7 @@ async function impresion58(arraydatos, qr, cabecera) {
   doc.setFontSize(9);
   var texto = doc.splitTextToSize(
     "Son: " + NumerosALetras(parseFloat(total).toFixed(2), moneda),
-    pdfInMM - lMargin - rMargin
+    pdfInMM - lMargin - rMargin,
   );
   doc.text(texto, pageCenter, linea, "center");
   linea = linea + 3.5 * texto.length;
@@ -577,9 +517,9 @@ async function impresion58(arraydatos, qr, cabecera) {
     doc.setFontSize(9);
     var texto = doc.splitTextToSize(
       "Representación Impresa de la " +
-      documento +
-      " Consultar su validez en https://domo.pe/buscardocumentos",
-      pdfInMM - lMargin - rMargin
+        documento +
+        " Consultar su validez en https://domo.pe/buscardocumentos",
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, pageCenter, linea, "center");
     linea = linea + 3 * texto.length;
@@ -650,7 +590,7 @@ async function impresion58(arraydatos, qr, cabecera) {
           `${arraycabe.serie}-${arraycabe.correlativoDocEmitido}.pdf`,
           {
             type: "application/pdf",
-          }
+          },
         );
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -660,25 +600,29 @@ async function impresion58(arraydatos, qr, cabecera) {
               text: "Selecciona una app para compartir o imprimir",
               files: [file],
             });
-          } catch (err) {
-          }
+          } catch (err) {}
         } else {
           const url = URL.createObjectURL(blob);
           window.open(url, "_blank");
         }
       } else {
-        await abre_dialogo_impresion(doc, copias_genera);
+        //  await abre_dialogo_impresion(doc, copias_genera);
+        if (!permite_impresion_host()) {
+          return await abre_dialogo_impresion_original(doc, docId);
+        } else {
+          var blob = doc.output("arraybuffer");
+          return blob;
+        }
       }
       break;
     case "host":
       break;
     case "descarga":
       doc.save(
-        arraycabe.serie + "-" + arraycabe.correlativoDocEmitido + ".pdf"
+        arraycabe.serie + "-" + arraycabe.correlativoDocEmitido + ".pdf",
       );
       break;
   }
-
 }
 async function impresion80(arraydatos, qr, cabecera) {
   var arraycabe = cabecera;
@@ -742,8 +686,10 @@ async function impresion80(arraydatos, qr, cabecera) {
   linea = linea + 3;
   //console.log(imagen)
   const esNotaVenta80 = arraycabe.tipocomprobante === "T";
-  const ocultarLogo80 = esNotaVenta80 && store.state.configImpresora.no_mostrar_logo_nota_pedido;
-  const ocultarRuc80 = esNotaVenta80 && store.state.configImpresora.no_mostrar_ruc_nota_venta;
+  const ocultarLogo80 =
+    esNotaVenta80 && store.state.configImpresora.no_mostrar_logo_nota_pedido;
+  const ocultarRuc80 =
+    esNotaVenta80 && store.state.configImpresora.no_mostrar_ruc_nota_venta;
   if (imagen != "" && !ocultarLogo80) {
     doc.addImage(
       "data:image/png;base64," + imagen,
@@ -751,7 +697,7 @@ async function impresion80(arraydatos, qr, cabecera) {
       pdfInMM / 2 - 20,
       linea,
       40,
-      40
+      40,
     );
     linea = linea + parseInt(store.state.configImpresora.minferior); /// modificar margenes de logo
   }
@@ -759,7 +705,7 @@ async function impresion80(arraydatos, qr, cabecera) {
   doc.setFont("Helvetica", "Bold");
   var texto = doc.splitTextToSize(
     store.state.baseDatos.name,
-    pdfInMM - lMargin - rMargin
+    pdfInMM - lMargin - rMargin,
   );
   doc.text(texto, pageCenter, linea, "center"); //EMPRESA
 
@@ -769,7 +715,7 @@ async function impresion80(arraydatos, qr, cabecera) {
   var encabezadoRucDir = ocultarRuc80 ? Direccion : Ruc + "\n" + Direccion;
   var texto = doc.splitTextToSize(
     encabezadoRucDir,
-    pdfInMM - lMargin - rMargin
+    pdfInMM - lMargin - rMargin,
   );
   doc.text(texto, pageCenter, linea, "center"); //RUC
 
@@ -784,7 +730,7 @@ async function impresion80(arraydatos, qr, cabecera) {
   if (telefono != "") {
     var texto = doc.splitTextToSize(
       "Telf: " + telefono,
-      pdfInMM - lMargin - rMargin
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, pageCenter, linea, "center"); //cabecera
     linea = linea + 3.5 * texto.length;
@@ -800,14 +746,14 @@ async function impresion80(arraydatos, qr, cabecera) {
   doc.setFont("Helvetica", "");
   var texto = doc.splitTextToSize(
     arraycabe.serie + "-" + arraycabe.correlativoDocEmitido,
-    pdfInMM - lMargin - rMargin
+    pdfInMM - lMargin - rMargin,
   );
   doc.text(texto, pageCenter, linea, "center");
   linea = linea + 5;
 
   var texto = doc.splitTextToSize(
     "EMISION: " + fechaImpresion,
-    pdfInMM - lMargin - rMargin
+    pdfInMM - lMargin - rMargin,
   );
   doc.text(texto, pageCenter, linea, "center");
   linea = linea + 5;
@@ -816,14 +762,14 @@ async function impresion80(arraydatos, qr, cabecera) {
 
   var texto = doc.splitTextToSize(
     "Nombre   : " + arraycabe.cliente,
-    pdfInMM - lMargin - rMargin
+    pdfInMM - lMargin - rMargin,
   );
   doc.text(texto, lMargin, linea, "left");
   linea = linea + 3.5 * texto.length;
 
   var texto = doc.splitTextToSize(
     "Documento: " + arraycabe.dni,
-    pdfInMM - lMargin - rMargin
+    pdfInMM - lMargin - rMargin,
   );
   doc.text(texto, lMargin, linea, "left");
   linea = linea + 3.5 * texto.length;
@@ -831,7 +777,7 @@ async function impresion80(arraydatos, qr, cabecera) {
   if (arraycabe.direccion != "") {
     var texto = doc.splitTextToSize(
       "Direccion: " + arraycabe.direccion,
-      pdfInMM - lMargin - rMargin
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, lMargin, linea, "left");
     linea = linea + 3.5 * texto.length;
@@ -839,14 +785,14 @@ async function impresion80(arraydatos, qr, cabecera) {
   if (arraycabe.referencia != "") {
     var texto = doc.splitTextToSize(
       "Ref: " + arraycabe.referencia,
-      pdfInMM - lMargin - rMargin
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, lMargin, linea, "left");
     linea = linea + 3.5 * texto.length;
   }
   var texto = doc.splitTextToSize(
     "Condiciones: " + arraycabe.forma_pago,
-    pdfInMM - lMargin - rMargin
+    pdfInMM - lMargin - rMargin,
   );
   doc.text(texto, lMargin, linea, "left");
   linea = linea + 3.5 * texto.length;
@@ -854,7 +800,7 @@ async function impresion80(arraydatos, qr, cabecera) {
   if (arraycabe.observacion) {
     var texto = doc.splitTextToSize(
       "Observacion: " + arraycabe.observacion,
-      pdfInMM - lMargin - rMargin
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, lMargin, linea, "left");
     linea = linea + 3.5 * texto.length;
@@ -863,7 +809,7 @@ async function impresion80(arraydatos, qr, cabecera) {
   if (arraycabe.telefono) {
     var texto = doc.splitTextToSize(
       "Telf: " + arraycabe.telefono,
-      pdfInMM - lMargin - rMargin
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, lMargin, linea, "left");
     linea = linea + 3.5 * texto.length;
@@ -871,7 +817,7 @@ async function impresion80(arraydatos, qr, cabecera) {
   if (arraycabe.id_pedido) {
     var texto = doc.splitTextToSize(
       "# Pedido: " + arraycabe.id_pedido,
-      pdfInMM - lMargin - rMargin
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, lMargin, linea, "left");
     linea = linea + 3.5 * texto.length;
@@ -936,14 +882,13 @@ async function impresion80(arraydatos, qr, cabecera) {
   doc.text(separacion, pageCenter, linea, "center");
   linea = linea + 3;
 
- 
   console.log(arraycabe.total_op_gratuitas);
   if (arraycabe.total_op_gratuitas > 0) {
     doc.setFont("Helvetica", "");
     doc.setFontSize(8);
     var texto = doc.splitTextToSize(
       "* Transferencia Gratuita y/o Servicio Prestado Gratuitamente",
-      100
+      100,
     );
     doc.text(texto, 2, linea, "left");
     linea = linea + 3;
@@ -964,7 +909,7 @@ async function impresion80(arraydatos, qr, cabecera) {
         moneda + arraycabe.total_op_exoneradas.toString(),
         68,
         linea,
-        "right"
+        "right",
       );
       linea = linea + 3.8;
     }
@@ -974,7 +919,7 @@ async function impresion80(arraydatos, qr, cabecera) {
         moneda + arraycabe.total_op_gratuitas.toString(),
         68,
         linea,
-        "right"
+        "right",
       );
       linea = linea + 3.8;
     }
@@ -1011,7 +956,7 @@ async function impresion80(arraydatos, qr, cabecera) {
         moneda + String(parseFloat(data.monto).toFixed(2)),
         68,
         linea,
-        "right"
+        "right",
       );
       linea = linea + 3;
     }
@@ -1027,13 +972,13 @@ async function impresion80(arraydatos, qr, cabecera) {
     doc.setFont("Helvetica", "");
     var texto = doc.splitTextToSize(
       "DETRACCION: " +
-      arraycabe.detraccion.porcentaje +
-      "%  : " +
-      moneda +
-      arraycabe.detraccion.monto +
-      "\nCTA. BANCO DE LA NACION: " +
-      arraycabe.detraccion.cuenta,
-      80
+        arraycabe.detraccion.porcentaje +
+        "%  : " +
+        moneda +
+        arraycabe.detraccion.monto +
+        "\nCTA. BANCO DE LA NACION: " +
+        arraycabe.detraccion.cuenta,
+      80,
     );
     doc.text(texto, pageCenter, linea, "center");
     linea = linea + 6.5;
@@ -1050,7 +995,7 @@ async function impresion80(arraydatos, qr, cabecera) {
     doc.setFont("Helvetica", "");
     var texto = doc.splitTextToSize(
       "Vendedor: " + vendedor,
-      pdfInMM - lMargin - rMargin
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, pageCenter, linea, "center");
     linea = linea + 3.5 * texto.length;
@@ -1061,7 +1006,7 @@ async function impresion80(arraydatos, qr, cabecera) {
   doc.setFont("Helvetica", "");
   var texto = doc.splitTextToSize(
     "Son: " + NumerosALetras(parseFloat(total).toFixed(2), moneda),
-    pdfInMM - lMargin - rMargin
+    pdfInMM - lMargin - rMargin,
   );
   doc.text(texto, pageCenter, linea, "center");
   linea = linea + 3.5 * texto.length;
@@ -1070,9 +1015,9 @@ async function impresion80(arraydatos, qr, cabecera) {
     doc.setFontSize(8);
     var texto = doc.splitTextToSize(
       "Representación Impresa de la " +
-      documento +
-      " Consultar su validez en https://domo.pe/buscardocumentos",
-      pdfInMM - lMargin - rMargin
+        documento +
+        " Consultar su validez en https://domo.pe/buscardocumentos",
+      pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, pageCenter, linea, "center");
     linea = linea + 3 * texto.length;
@@ -1136,15 +1081,15 @@ async function impresion80(arraydatos, qr, cabecera) {
 
   switch (modo_genera) {
     case "abre":
- if (store.state.esmovil) {
-      const arrayBuffer = doc.output("arraybuffer");
+      if (store.state.esmovil) {
+        const arrayBuffer = doc.output("arraybuffer");
         const blob = new Blob([arrayBuffer], { type: "application/pdf" });
         const file = new File(
           [blob],
           `${arraycabe.serie}-${arraycabe.correlativoDocEmitido}.pdf`,
           {
             type: "application/pdf",
-          }
+          },
         );
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -1154,26 +1099,26 @@ async function impresion80(arraydatos, qr, cabecera) {
               text: "Selecciona una app para compartir o imprimir",
               files: [file],
             });
-          } catch (err) {
-          }
+          } catch (err) {}
         } else {
           const url = URL.createObjectURL(blob);
           window.open(url, "_blank");
         }
       } else {
-        await abre_dialogo_impresion(doc, copias_genera);
+        //  await abre_dialogo_impresion(doc, copias_genera);
+        if (!permite_impresion_host()) {
+          return await abre_dialogo_impresion_original(doc, docId);
+        } else {
+          var blob = doc.output("arraybuffer");
+          return blob;
+        }
       }
       break;
     case "host":
-      envia_host(
-        doc.output("blob"),
-        arraycabe.serie + "-" + arraycabe.correlativoDocEmitido + ".pdf",
-        "caja",
-      );
       break;
     case "descarga":
       doc.save(
-        arraycabe.serie + "-" + arraycabe.correlativoDocEmitido + ".pdf"
+        arraycabe.serie + "-" + arraycabe.correlativoDocEmitido + ".pdf",
       );
       break;
   }
@@ -1236,8 +1181,10 @@ async function impresionA4(array, qr, arraycabecera) {
   linea = linea + 3;
 
   const esNotaVentaA4 = arraycabe.tipocomprobante === "T";
-  const ocultarLogoA4 = esNotaVentaA4 && store.state.configImpresora.no_mostrar_logo_nota_pedido;
-  const ocultarRucA4 = esNotaVentaA4 && store.state.configImpresora.no_mostrar_ruc_nota_venta;
+  const ocultarLogoA4 =
+    esNotaVentaA4 && store.state.configImpresora.no_mostrar_logo_nota_pedido;
+  const ocultarRucA4 =
+    esNotaVentaA4 && store.state.configImpresora.no_mostrar_ruc_nota_venta;
   if (imagen != "" && !ocultarLogoA4) {
     console.log(store.state.configImpresora.log_largo);
 
@@ -1333,7 +1280,7 @@ async function impresionA4(array, qr, arraycabecera) {
   doc.setFontSize(10);
   var texto = doc.splitTextToSize(
     arraycabe.serie + "-" + arraycabe.correlativoDocEmitido,
-    50
+    50,
   );
   doc.text(texto, 170, ySerieA4, "center");
 
@@ -1419,7 +1366,7 @@ async function impresionA4(array, qr, arraycabecera) {
     doc.setFontSize(8);
     var texto = doc.splitTextToSize(
       "* Transferencia Gratuita y/o Servicio Prestado Gratuitamente",
-      100
+      100,
     );
     doc.text(texto, 10, lineaqr, "left");
     lineaqr = lineaqr + 5;
@@ -1429,7 +1376,7 @@ async function impresionA4(array, qr, arraycabecera) {
   doc.setFontSize(8);
   var texto = doc.splitTextToSize(
     "Son: " + NumerosALetras(parseFloat(total).toFixed(2), moneda),
-    100
+    100,
   );
   doc.text(texto, 10, lineaqr, "left");
   lineaqr = lineaqr + 6;
@@ -1477,7 +1424,7 @@ async function impresionA4(array, qr, arraycabecera) {
       moneda + arraycabe.total_op_inafectas.toString(),
       190,
       linea,
-      "right"
+      "right",
     );
     linea = linea + 4;
   }
@@ -1490,7 +1437,7 @@ async function impresionA4(array, qr, arraycabecera) {
     moneda + arraycabe.total_op_exoneradas.toString(),
     190,
     linea,
-    "right"
+    "right",
   );
   linea = linea + 4;
 
@@ -1503,7 +1450,7 @@ async function impresionA4(array, qr, arraycabecera) {
     moneda + arraycabe.total_op_gratuitas.toString(),
     190,
     linea,
-    "right"
+    "right",
   );
   linea = linea + 4;
 
@@ -1523,8 +1470,7 @@ async function impresionA4(array, qr, arraycabecera) {
   doc.text(moneda + total.toString(), 190, linea, "right");
   linea = linea + 2;
 
-  if ((arraycabe.forma_pago).toLowerCase() == "credito") {
-
+  if (arraycabe.forma_pago.toLowerCase() == "credito") {
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(8);
     doc.text("DETALLE DE CRONOGRAMA", 10, lineaqr - 10);
@@ -1540,7 +1486,13 @@ async function impresionA4(array, qr, arraycabecera) {
         lineWidth: 0.2,
         lineColor: 1,
       },
-      headStyles: { lineWidth: 0.2, lineColor: 1, fillColor: [220, 220, 220], textColor: [0, 0, 0], fontStyle: "bold" },
+      headStyles: {
+        lineWidth: 0.2,
+        lineColor: 1,
+        fillColor: [220, 220, 220],
+        textColor: [0, 0, 0],
+        fontStyle: "bold",
+      },
       columnStyles: {
         0: { columnWidth: 35, halign: "center", fontStyle: "bold" },
         1: { columnWidth: 35, halign: "center" },
@@ -1563,13 +1515,13 @@ async function impresionA4(array, qr, arraycabecera) {
     doc.setFont("Helvetica", "bold");
     var texto = doc.splitTextToSize(
       "DETRACCION: " +
-      arraycabe.detraccion.porcentaje +
-      "%  : " +
-      moneda +
-      arraycabe.detraccion.monto +
-      "\nCTA. BANCO DE LA NACION: " +
-      arraycabe.detraccion.cuenta,
-      80
+        arraycabe.detraccion.porcentaje +
+        "%  : " +
+        moneda +
+        arraycabe.detraccion.monto +
+        "\nCTA. BANCO DE LA NACION: " +
+        arraycabe.detraccion.cuenta,
+      80,
     );
     doc.text(texto, 35, lineaqr2, "left");
   }
@@ -1587,9 +1539,9 @@ async function impresionA4(array, qr, arraycabecera) {
       doc.setFontSize(9);
       var texto = doc.splitTextToSize(
         "Representación Impresa de la " +
-        documento +
-        " Consultar su validez en https://domo.pe/buscardocumentos",
-        90
+          documento +
+          " Consultar su validez en https://domo.pe/buscardocumentos",
+        90,
       );
       doc.text(texto, 40, lineaqr, "left");
     }
@@ -1610,7 +1562,7 @@ async function impresionA4(array, qr, arraycabecera) {
           moneda + String(parseFloat(data.monto).toFixed(2)),
           118,
           linea,
-          "right"
+          "right",
         );
         linea = linea + 3;
       }
@@ -1665,14 +1617,20 @@ async function impresionA4(array, qr, arraycabecera) {
       if (store.state.esmovil) {
         window.open(doc.output("bloburi"));
       } else {
-        await abre_dialogo_impresion(doc, copias_genera);
+        //  await abre_dialogo_impresion(doc, copias_genera);
+        if (!permite_impresion_host()) {
+          return await abre_dialogo_impresion_original(doc, docId);
+        } else {
+          var blob = doc.output("arraybuffer");
+          return blob;
+        }
       }
       break;
     case "host":
       break;
     case "descarga":
       doc.save(
-        arraycabe.serie + "-" + arraycabe.correlativoDocEmitido + ".pdf"
+        arraycabe.serie + "-" + arraycabe.correlativoDocEmitido + ".pdf",
       );
       break;
   }
@@ -1749,8 +1707,10 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
   const leftW = Math.max(120, boxX - leftX - 6);
 
   const esNotaVentaA5 = arraycabe.tipocomprobante === "T";
-  const ocultarLogoA5 = esNotaVentaA5 && store.state.configImpresora.no_mostrar_logo_nota_pedido;
-  const ocultarRucA5 = esNotaVentaA5 && store.state.configImpresora.no_mostrar_ruc_nota_venta;
+  const ocultarLogoA5 =
+    esNotaVentaA5 && store.state.configImpresora.no_mostrar_logo_nota_pedido;
+  const ocultarRucA5 =
+    esNotaVentaA5 && store.state.configImpresora.no_mostrar_ruc_nota_venta;
   if (imagen != "" && !ocultarLogoA5) {
     doc.addImage("data:image/png;base64," + imagen, "png", 10, 5, 26, 26);
     leftX = 40;
@@ -1792,7 +1752,7 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
     doc.setFont("Helvetica", "Bold");
     texto = doc.splitTextToSize(
       "Ruc: " + (store.state.baseDatos.ruc || ""),
-      boxW - 6
+      boxW - 6,
     );
     doc.text(texto, boxX + boxW / 2, boxY + 7, "center");
   } else {
@@ -1807,7 +1767,7 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
   doc.setFontSize(10);
   texto = doc.splitTextToSize(
     (arraycabe.serie || "") + "-" + (arraycabe.correlativoDocEmitido || ""),
-    boxW - 6
+    boxW - 6,
   );
   doc.text(texto, boxX + boxW / 2, ySerieA5, "center");
 
@@ -1833,7 +1793,7 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
     (arraycabe.tipoDocumento || "").substring(0, 10),
     margin + 5,
     linea,
-    "left"
+    "left",
   );
   doc.text(" : ", margin + 22, linea, "left");
   doc.setFont("Helvetica", "");
@@ -1938,9 +1898,9 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
       (
         parseFloat(
           array[i].precioedita ||
-          array[i].precio ||
-          array[i].precioVentaUnitario ||
-          0
+            array[i].precio ||
+            array[i].precioVentaUnitario ||
+            0,
         ) * (array[i].cantidad || 0)
       ).toFixed(2) + obs;
   }
@@ -1987,7 +1947,7 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
     doc.setFontSize(8);
     texto = doc.splitTextToSize(
       "* Transferencia Gratuita y/o Servicio Prestado Gratuitamente",
-      140
+      140,
     );
     doc.text(texto, margin, lineaqr, "left");
     lineaqr += 3;
@@ -1997,7 +1957,7 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
   doc.setFontSize(8);
   texto = doc.splitTextToSize(
     "Son: " + NumerosALetras(parseFloat(total).toFixed(2), moneda),
-    140
+    140,
   );
   doc.text(texto, margin, lineaqr, "left");
   lineaqr += 3;
@@ -2041,7 +2001,7 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
       moneda + (arraycabe.descuentos || 0),
       totBoxX + totBoxW - 2,
       yTot,
-      "right"
+      "right",
     );
     yTot += 4;
   }
@@ -2055,7 +2015,7 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
       moneda + (arraycabe.total_op_gravadas || 0),
       totBoxX + totBoxW - 2,
       yTot,
-      "right"
+      "right",
     );
     yTot += 4;
   } else {
@@ -2067,7 +2027,7 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
       moneda + (arraycabe.total_op_gravadas || 0),
       totBoxX + totBoxW - 2,
       yTot,
-      "right"
+      "right",
     );
     yTot += 4;
   }
@@ -2080,7 +2040,7 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
     moneda + String(arraycabe.total_op_exoneradas || 0),
     totBoxX + totBoxW - 2,
     yTot,
-    "right"
+    "right",
   );
   yTot += 4;
 
@@ -2092,7 +2052,7 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
     moneda + String(arraycabe.total_op_gratuitas || 0),
     totBoxX + totBoxW - 2,
     yTot,
-    "right"
+    "right",
   );
   yTot += 4;
 
@@ -2101,7 +2061,7 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
     "IGV " + (arraycabe.porcentaje_igv || 0) + "%",
     totBoxX + 5,
     yTot,
-    "left"
+    "left",
   );
   doc.text(" : ", totBoxX + 33, yTot, "left");
   doc.setFont("Helvetica", "");
@@ -2159,13 +2119,13 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
     doc.setFont("Helvetica", "bold");
     texto = doc.splitTextToSize(
       "DETRACCION: " +
-      arraycabe.detraccion.porcentaje +
-      "%  : " +
-      moneda +
-      arraycabe.detraccion.monto +
-      "\nCTA. BANCO DE LA NACION: " +
-      arraycabe.detraccion.cuenta,
-      110
+        arraycabe.detraccion.porcentaje +
+        "%  : " +
+        moneda +
+        arraycabe.detraccion.monto +
+        "\nCTA. BANCO DE LA NACION: " +
+        arraycabe.detraccion.cuenta,
+      110,
     );
     doc.text(texto, margin + 25, lineaqr2, "left");
   }
@@ -2210,7 +2170,7 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
           moneda + String(parseFloat(data.monto).toFixed(2)),
           margin + 58,
           yLine,
-          "right"
+          "right",
         );
         yLine += 3;
       }
@@ -2226,7 +2186,7 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
       store.state.configImpresora.piepagina,
       pdfW / 2,
       lineaqr,
-      "center"
+      "center",
     );
   }
 
@@ -2239,7 +2199,13 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
       if (store.state.esmovil) {
         window.open(doc.output("bloburi"));
       } else {
-        await abre_dialogo_impresion(doc, copias_genera);
+        //  await abre_dialogo_impresion(doc, copias_genera);
+        if (!permite_impresion_host()) {
+          return await abre_dialogo_impresion_original(doc, docId);
+        } else {
+          var blob = doc.output("arraybuffer");
+          return blob;
+        }
       }
       break;
     case "host":
@@ -2247,9 +2213,9 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
     case "descarga":
       doc.save(
         (arraycabe.serie || "") +
-        "-" +
-        (arraycabe.correlativoDocEmitido || "") +
-        ".pdf"
+          "-" +
+          (arraycabe.correlativoDocEmitido || "") +
+          ".pdf",
       );
       break;
   }
@@ -2260,28 +2226,28 @@ export const generaQR = (cabecera) => {
   var fecha = moment.unix(cabecera.fecha).format("DD/MM/YYYY");
   var imgData = QR.drawImg(
     ruc +
-    "|" +
-    cabecera.cod_comprobante +
-    "|" +
-    cabecera.serie +
-    "|" +
-    cabecera.correlativoDocEmitido +
-    "|" +
-    cabecera.igv +
-    "|" +
-    cabecera.total +
-    "|" +
-    fecha +
-    "|" +
-    cabecera.cod_tipoDocumento +
-    "|" +
-    cabecera.dni +
-    "|",
+      "|" +
+      cabecera.cod_comprobante +
+      "|" +
+      cabecera.serie +
+      "|" +
+      cabecera.correlativoDocEmitido +
+      "|" +
+      cabecera.igv +
+      "|" +
+      cabecera.total +
+      "|" +
+      fecha +
+      "|" +
+      cabecera.cod_tipoDocumento +
+      "|" +
+      cabecera.dni +
+      "|",
     {
       typeNumber: 4,
       errorCorrectLevel: "M",
       size: 500,
-    }
+    },
   );
   return imgData;
 };
@@ -2345,20 +2311,20 @@ async function axios_imp(pdfBuffer) {
 
   // 🔹 Filtrar impresoras según el tipo
   const impresoraEncontrada = data.impresoras.filter(
-    (impresora) => impresora.tipo === impresoras
+    (impresora) => impresora.tipo === impresoras,
   );
 
   if (!Array.isArray(impresoraEncontrada) || impresoraEncontrada.length === 0) {
     store.commit(
       "dialogosnackbar",
-      `No se encontró una impresora con el tipo: ${impresoras}`
+      `No se encontró una impresora con el tipo: ${impresoras}`,
     );
 
     return;
   }
 
   const nombresImpresoras = impresoraEncontrada.map(
-    (impresora) => impresora.deviceId
+    (impresora) => impresora.deviceId,
   );
 
   let serverIp = data.ip;
@@ -2392,7 +2358,7 @@ async function axios_imp(pdfBuffer) {
     console.error("❌ Error al enviar la impresión:", error);
     store.commit(
       "dialogosnackbar",
-      "❌ Error al enviar el documento a la impresora."
+      "❌ Error al enviar el documento a la impresora.",
     );
   }
 }
@@ -2401,11 +2367,11 @@ function isElectronEnv() {
   const p = typeof process !== "undefined" ? process : undefined;
   return Boolean(
     (p && p.versions && p.versions.electron) || // main / preload
-    (w && w.process && w.process.type === "renderer") || // renderer
-    (w &&
-      w.navigator &&
-      w.navigator.userAgent &&
-      w.navigator.userAgent.includes("Electron"))
+      (w && w.process && w.process.type === "renderer") || // renderer
+      (w &&
+        w.navigator &&
+        w.navigator.userAgent &&
+        w.navigator.userAgent.includes("Electron")),
   );
 }
 
@@ -2416,7 +2382,7 @@ function tabla_A4(array, linea) {
       it.descuentos &&
       (Number(it.descuentos.desc_1) > 0 ||
         Number(it.descuentos.desc_2) > 0 ||
-        Number(it.descuentos.desc_3) > 0)
+        Number(it.descuentos.desc_3) > 0),
   );
 
   let ope_grat = 0;
@@ -2431,8 +2397,9 @@ function tabla_A4(array, linea) {
 
     // Texto descuentos combinados en una sola celda
     const textoDescuento = existeDescuento
-      ? `${descuentos.desc_1 || 0} / ${descuentos.desc_2 || 0} / ${descuentos.desc_3 || 0
-      }`
+      ? `${descuentos.desc_1 || 0} / ${descuentos.desc_2 || 0} / ${
+          descuentos.desc_3 || 0
+        }`
       : null;
 
     let obs = "";
@@ -2452,7 +2419,7 @@ function tabla_A4(array, linea) {
       nuevoArray.push([
         item.cantidad,
         item.medida,
-        item.id + " - " +item.nombre + tg,
+        item.id + " - " + item.nombre + tg,
         precioBase.toFixed(2),
         totalLinea.toFixed(2) + obs,
       ]);
@@ -2472,7 +2439,7 @@ function tabla_A4(array, linea) {
 
   // CABECERA SEGÚN MODO
   const headSinDescuento = [
-    ["Cantidad", "Medida","Descripcion" , "P.Unitario", "P.Total"],
+    ["Cantidad", "Medida", "Descripcion", "P.Unitario", "P.Total"],
   ];
 
   const headConDescuento = [
