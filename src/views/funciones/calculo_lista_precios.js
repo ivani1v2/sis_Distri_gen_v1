@@ -312,13 +312,14 @@ export function aplicarPreciosPorCategoria({
   const prodById = new Map(productos.map(p => [String(p.id), p]));
 
   let categoriasAfectadas = new Set();
-  if (idsAfectados) {
+
+  if (idsAfectados && idsAfectados.length > 0) {
     const idsSet = new Set(idsAfectados.map(id => String(id)));
 
     res.forEach(linea => {
       const idLinea = String(linea?.id || '');
       if (idsSet.has(idLinea)) {
-        const prod = prodById.get(idLinea) || linea;
+        const prod = prodById.get(idLinea);
         if (prod?.categoria) {
           categoriasAfectadas.add(prod.categoria);
         }
@@ -327,27 +328,41 @@ export function aplicarPreciosPorCategoria({
   }
 
   if (categoriasAfectadas.size === 0) return res;
-  for (let i = 0; i < res.length; i++) {
-    const linea = res[i];
 
-    if (String(linea?.operacion || '').toUpperCase() === 'GRATUITA') continue;
+  let cambio = true;
+  let maxPasadas = 10;
+  let pasada = 0;
 
-    const producto = prodById.get(String(linea.id));
-    if (!producto) continue;
+  while (cambio && pasada < maxPasadas) {
+    cambio = false;
+    pasada++;
 
-    // Solo procesar si la línea pertenece a una categoría afectada
-    if (!categoriasAfectadas.has(producto.categoria)) continue;
+    for (let i = 0; i < res.length; i++) {
+      const linea = res[i];
 
-    const nuevaLinea = aplicarPrecioALinea({
-      linea,
-      producto,
-      listasCliente,
-      productosEnVenta: res,
-      forzar
-    });
+      if (String(linea?.operacion || '').toUpperCase() === 'GRATUITA') continue;
 
-    if (nuevaLinea !== linea) {
-      res[i] = nuevaLinea;
+      const producto = prodById.get(String(linea.id));
+      if (!producto) continue;
+
+      if (!categoriasAfectadas.has(producto.categoria)) continue;
+
+      const precioAnterior = linea.precio;
+
+      const nuevaLinea = aplicarPrecioALinea({
+        linea,
+        producto,
+        listasCliente,
+        productosEnVenta: res,
+        forzar
+      });
+
+      if (nuevaLinea !== linea) {
+        res[i] = nuevaLinea;
+        if (precioAnterior !== nuevaLinea.precio) {
+          cambio = true;
+        }
+      }
     }
   }
 

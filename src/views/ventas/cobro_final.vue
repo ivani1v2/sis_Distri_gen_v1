@@ -96,11 +96,6 @@
                     </v-col> -->
                 </v-row>
 
-                <v-alert v-if="$store.state.configuracion.creditofactura && numero != '' && !permiteCreditoCliente"
-                    type="warning" dense border="left" colored-border class="mt-2 mb-1" icon="mdi-alert-circle-outline">
-                    Este cliente no tiene permiso de crédito.
-                </v-alert>
-
                 <v-card flat outlined class="mt-2 pa-2" v-if="formaPago === 'CREDITO'">
                     <v-row dense>
                         <v-col cols="12" sm="6">

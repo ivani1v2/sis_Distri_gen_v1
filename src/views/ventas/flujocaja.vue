@@ -464,6 +464,13 @@ export default {
             return this.$store.state.permisos?.es_supervisor === true;
         }
     },
+    watch: {
+        dialogocierre(val, oldVal) {
+            if (oldVal === true && val === false) {
+                this.cargarFlujoMultiSede();
+            }
+        }
+    },
     methods: {
         abrir_caja() {
             this.$router.push('/caja2'); // Redirige a la ruta flujocaja
