@@ -21,7 +21,7 @@
                     <v-col cols="6" sm="" md="4">
                         <v-select v-model="sede_origen" :items="sedes" label="Sede Origen" item-text="nombre"
                             item-value="base" outlined dense @change="cargarProductos" prepend-inner-icon="mdi-store"
-                            :rules="[v => !!v || 'Seleccione sede origen']" :disabled="modoEdicion || !esAdmin">
+                            :rules="[v => !!v || 'Seleccione sede origen']" :disabled="modoEdicion || !(esAdmin || esSupervisor)">
                         </v-select>
                     </v-col>
                     <v-col cols="6" sm="6" md="4">
@@ -59,7 +59,7 @@
                                     <v-list-item-subtitle>
                                         <v-chip x-small color="grey" class="mr-1">ID: {{ item.id }}</v-chip>
                                         <v-chip x-small color="blue" class="mr-1" v-if="item.codbarra">{{ item.codbarra
-                                        }}</v-chip>
+                                            }}</v-chip>
                                         <v-chip x-small :color="item.stock > 0 ? 'success' : 'error'">
                                             Stock: {{ item.stock || 0 }}
                                         </v-chip>
@@ -231,7 +231,7 @@
                         <div class="text-body-2">
                             <span v-if="modoEdicion">
                                 ¿Está seguro de actualizar esta transferencia con <strong>{{ lista_transferencia.length
-                                }}
+                                    }}
                                     productos</strong>?
                             </span>
                             <span v-else>
@@ -398,7 +398,10 @@ export default {
         nombreSedeDestino() {
             const sede = this.sedes.find(s => s.base === this.sede_destino);
             return sede ? sede.nombre : this.sede_destino;
-        }
+        },
+        esSupervisor() {
+            return store.state.permisos?.es_supervisor === true;
+        },
     },
     methods: {
         async inicializar() {

@@ -79,9 +79,6 @@
                         {{ item.productos.length }} productos
                     </v-chip>
                 </template>
-                <template v-slot:item.usuario="{ item }">
-                    {{ moneda }} {{ item.total || '-' }}
-                </template>
                 <template v-slot:item.accion="{ item }">
                     <v-menu bottom left>
                         <template v-slot:activator="{ on, attrs }">
