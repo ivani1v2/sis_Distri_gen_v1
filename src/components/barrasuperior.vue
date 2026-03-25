@@ -110,7 +110,7 @@
                         <v-list-item-icon><v-icon small>mdi-package-variant-closed</v-icon></v-list-item-icon>
                         <v-list-item-title>Productos</v-list-item-title>
                     </v-list-item>
-                    <v-list-item link @click.prevent="router('bonos_globales')">
+                    <v-list-item link @click.prevent="router('bonos_globales')" v-if="false">
                         <v-list-item-icon><v-icon small>mdi-gift</v-icon></v-list-item-icon>
                         <v-list-item-title>Bonos Globales</v-list-item-title>
                     </v-list-item>
@@ -231,7 +231,7 @@
                         <v-list-item-icon><v-icon small>mdi-swap-horizontal-bold</v-icon></v-list-item-icon>
                         <v-list-item-title>Movimientos</v-list-item-title>
                     </v-list-item>
-                    <v-list-item v-if="$store.state.permisos.modulokardex && $store.state.baseDatos.kardex_avanzado" link
+                    <v-list-item v-if="false" link
                         @click.prevent="router('rep_mov_producto')">
                         <v-list-item-icon><v-icon small>mdi-file-chart-outline</v-icon></v-list-item-icon>
                         <v-list-item-title>Mov x Producto</v-list-item-title>
@@ -245,7 +245,7 @@
                         <v-list-item-icon><v-icon small>mdi-counter</v-icon></v-list-item-icon>
                         <v-list-item-title>Stock Actual</v-list-item-title>
                     </v-list-item>
-                    <v-list-item v-if="$store.state.baseDatos.kardex_avanzado" link
+                    <v-list-item v-if="false" link
                         @click.prevent="router('stock_x_periodo')">
                         <v-list-item-icon><v-icon small>mdi-calendar-clock</v-icon></v-list-item-icon>
                         <v-list-item-title>Stock x Período</v-list-item-title>
@@ -285,17 +285,17 @@
                     <template v-slot:activator>
                         <v-list-item-title class="font-weight-medium">REPORTES</v-list-item-title>
                     </template>
-                    <v-list-item @click.prevent="router('reporte_ventas')">
+                    <v-list-item @click.prevent="router('reporte_ventas')" v-if="false">
                         <v-list-item-icon><v-icon small>mdi-file-document-outline</v-icon></v-list-item-icon>
                         <v-list-item-title>Reporte Ventas</v-list-item-title>
                     </v-list-item>
                     <v-list-item @click.prevent="router('ventasxempleado')"
-                        v-if="$store.state.configuracion.comisiones">
+                        v-if="false">
                         <v-list-item-icon><v-icon small>mdi-account-tie</v-icon></v-list-item-icon>
                         <v-list-item-title>Ventas x Emp.</v-list-item-title>
                     </v-list-item>
 
-                    <v-list-item @click.prevent="router('reporteVentaDetalle')">
+                    <v-list-item @click.prevent="router('reporteVentaDetalle')" v-if="false">
                         <v-list-item-icon><v-icon small>mdi-package-variant-closed</v-icon></v-list-item-icon>
                         <v-list-item-title>Ventas X Producto</v-list-item-title>
                     </v-list-item>
