@@ -18,31 +18,9 @@
                     </template>
                     <v-list dense>
                         <v-list-item>
-                            <v-btn :disabled="!$store.state.sedeActual.principal" small color="warning" block
-                                @click="dialogostock = true, Procesa()">
-                                <v-icon left>mdi-chart-bar</v-icon> Ver Estadistica
-                            </v-btn>
-                        </v-list-item>
-                        <v-list-item>
-                            <v-btn :disabled="!$store.state.sedeActual.principal" dark small color="success" block
-                                @click="dialogoFiltro = true">
-                                <v-icon left>mdi-filter</v-icon> Filtro
-                            </v-btn>
-                        </v-list-item>
-                        <v-list-item>
                             <v-btn :disabled="!$store.state.sedeActual.principal" dark small color="info" block
                                 @click="subirXLS">
                                 <v-icon left>mdi-microsoft-excel</v-icon> Exportar Excel
-                            </v-btn>
-                        </v-list-item>
-                        <v-list-item>
-                            <v-btn dark small color="warning" block @click="dialogoAlertaStockManual = true">
-                                <v-icon left>mdi-alert</v-icon> Alerta Stock Mínimo
-                            </v-btn>
-                        </v-list-item>
-                        <v-list-item>
-                            <v-btn dark small color="purple" block @click="irABonosGlobales">
-                                <v-icon left>mdi-gift</v-icon> Configuración de Bonos
                             </v-btn>
                         </v-list-item>
                     </v-list>

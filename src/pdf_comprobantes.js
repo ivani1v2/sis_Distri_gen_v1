@@ -21,6 +21,21 @@ function permite_impresion_host() {
   return tienePermiso && tieneConfig;
 }
 
+function obtieneNombreVendedor(vendedorRaw) {
+  const codigo = String(vendedorRaw || "").trim();
+  if (!codigo) return "";
+
+  const sedes = Array.isArray(store?.state?.array_sedes)
+    ? store.state.array_sedes.filter((e) => e?.tipo === "sede")
+    : [];
+
+  const sede = sedes.find(
+    (s) => String(s?.codigo || "").trim().toUpperCase() === codigo.toUpperCase()
+  );
+
+  return sede?.nombre || codigo;
+}
+
 async function abre_dialogo_impresion(doc, copias = 1, docId = Date.now()) {
   try {
     if (!permite_impresion_host()) {
@@ -549,10 +564,13 @@ async function impresion58(arraydatos, qr, cabecera) {
   linea = linea + 3;
   doc.setFont("Helvetica", "");
   doc.setFontSize(9);
-  if (arraycabe.nomempleado != "" && arraycabe.nomempleado != undefined) {
+  const vendedor58 = obtieneNombreVendedor(
+    arraycabe.nomempleado
+  );
+  if (vendedor58 != "" && vendedor58 != undefined) {
     doc.setFont("Helvetica", "");
     var texto = doc.splitTextToSize(
-      "Vendedor: " + arraycabe.nomempleado,
+      "Vendedor: " + vendedor58,
       pdfInMM - lMargin - rMargin
     );
     doc.text(texto, pageCenter, linea, "center");
@@ -1044,7 +1062,9 @@ async function impresion80(arraydatos, qr, cabecera) {
   var texto = doc.splitTextToSize('Vendedor : ' + arraycabe.vendedor, (pdfInMM - lMargin - rMargin));
   doc.text(texto, pageCenter, linea, 'center');
   linea = linea + (3.5 * texto.length)*/
-  const vendedor = arraycabe.cod_vendedor ?? arraycabe.vendedor;
+  const vendedor = obtieneNombreVendedor(
+    arraycabe.cod_vendedor
+  );
   if (vendedor) {
     linea = linea + 1 * texto.length;
     doc.setFont("Helvetica", "");
