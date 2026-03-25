@@ -170,6 +170,7 @@ export default {
                         ],
                         [
                             { label: 'Reparto', value: 'reparto' },
+                            { label: 'Ver GPS Usuarios', value: 'ver_gps_usairpos' },
                         ],
                     ],
                 },

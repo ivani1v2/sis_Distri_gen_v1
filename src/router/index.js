@@ -101,7 +101,7 @@ const routes = [
     },
     beforeEnter: (to, from, next) => {
       if (to.matched.some((ruta) => ruta.meta.requireAuth)) {
-        if (store.state.permisos.reparto) {
+        if (store.state.permisos.reparto || store.state.permisos.ver_gps_usairpos) {
           next();
         } else {
           next({

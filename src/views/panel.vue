@@ -55,6 +55,14 @@
                     </v-container>
                 </v-card>
             </v-col>
+            <v-col v-if="$store.state.permisos.ver_gps_usairpos" cols="6" class="pa-1 mx-auto " md="4" sm="4" xs="6">
+                <v-card @click.prevent="router('gps_usuarios')">
+                    <v-container>
+                        <v-img class="mx-auto" height="70" width="70" src="/repe.png"></v-img>
+                        <h4 block class="text-center pa-1">GPS Usuarios</h4>
+                    </v-container>
+                </v-card>
+            </v-col>
             <v-col v-if="false" cols="6" class="pa-1 mx-auto " md="4" sm="4" xs="6">
                 <v-card @click.prevent="dialogo_avance = !dialogo_avance">
                     <v-container>
