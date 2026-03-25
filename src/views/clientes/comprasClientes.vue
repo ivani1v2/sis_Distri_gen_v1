@@ -420,51 +420,49 @@
                         <div class="subtitle-1 grey--text">No hay detalles para mostrar</div>
                     </div>
 
-                    <v-row v-else>
-                        <v-col cols="12" md="6" lg="4" v-for="(item, index) in arrayConsolidar" :key="index">
-                            <v-card class="mb-n2 elevation-1" outlined>
-                                <v-card-text class="pa-3">
-                                    <div class="mb-2">
-                                        <div class="caption blue-grey--text font-weight-bold mb-1">
-                                            ID: {{ item.id }}
-                                        </div>
-                                        <div class="subtitle-2 font-weight-medium">
-                                            {{ item.nombre }}
-                                        </div>
+                    <v-data-table v-else-if="!$vuetify.breakpoint.smAndDown" dense class="elevation-0"
+                        :items="arrayConsolidar" item-key="_rowKey"
+                        :items-per-page="-1" :headers="[
+                            { text: 'ID', value: 'id' },
+                            { text: 'Descripción', value: 'nombre' },
+                            { text: 'Medida', value: 'medida' },
+                            { text: 'Cantidad', value: 'cantidad', align: 'end' },
+                            { text: 'Precio Unit.', value: 'precioedita', align: 'end' },
+                            { text: 'Descuento', value: 'preciodescuento', align: 'end' },
+                            { text: 'Total', value: 'total_linea', align: 'end' }
+                        ]">
+                        <template v-slot:[`item.precioedita`]="{ item }">
+                            {{ monedaSimbolo }}{{ redondear(item.precioedita) }}
+                        </template>
+                        <template v-slot:[`item.preciodescuento`]="{ item }">
+                            <span class="red--text">{{ monedaSimbolo }}{{ redondear(item.preciodescuento) }}</span>
+                        </template>
+                        <template v-slot:[`item.total_linea`]="{ item }">
+                            <span class="font-weight-bold primary--text">
+                                {{ monedaSimbolo }}{{ redondear(item.precioedita * item.cantidad - item.preciodescuento) }}
+                            </span>
+                        </template>
+                    </v-data-table>
+
+                    <div v-else>
+                        <v-card v-for="(item, idx) in arrayConsolidar" :key="item._rowKey || idx" outlined
+                            class="mb-2">
+                            <v-card-text class="py-2 px-3">
+                                <div class="d-flex justify-space-between align-start">
+                                    <div class="caption font-weight-bold">{{ item.id }} - {{ item.nombre }}</div>
+                                    <div class="caption font-weight-bold primary--text">
+                                        {{ monedaSimbolo }}{{ redondear(item.precioedita * item.cantidad - item.preciodescuento) }}
                                     </div>
-                                    <div class="mb-2">
-                                        <span class="caption grey--text">Medida:</span>
-                                        <span class="caption ml-1">{{ item.medida }}</span>
-                                    </div>
-                                    <div class="mb-2">
-                                        <span class="caption grey--text">Cantidad:</span>
-                                        <span class="caption ml-1 font-weight-bold">{{ item.cantidad }}</span>
-                                    </div>
-                                    <div class="mb-2">
-                                        <div class="d-flex justify-space-between">
-                                            <span class="caption grey--text">Precio Unit.:</span>
-                                            <span class="caption">{{ monedaSimbolo }}{{ redondear(item.precioedita)
-                                            }}</span>
-                                        </div>
-                                        <div class="d-flex justify-space-between">
-                                            <span class="caption grey--text">Descuento:</span>
-                                            <span class="caption red--text">
-                                                {{ monedaSimbolo }}{{ redondear(item.preciodescuento) }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <v-divider class="my-1"></v-divider>
-                                    <div class="text-right">
-                                        <div class="caption grey--text">Total:</div>
-                                        <div class="subtitle-2 font-weight-bold primary--text">
-                                            {{ monedaSimbolo }}{{ redondear(item.precioedita * item.cantidad -
-                                                item.preciodescuento) }}
-                                        </div>
-                                    </div>
-                                </v-card-text>
-                            </v-card>
-                        </v-col>
-                    </v-row>
+                                </div>
+                                <div class="caption grey--text mt-1">
+                                    {{ item.medida }} | Cant: {{ item.cantidad }} | PU: {{ monedaSimbolo }}{{ redondear(item.precioedita) }}
+                                </div>
+                                <div class="caption red--text text-right">
+                                    Desc: {{ monedaSimbolo }}{{ redondear(item.preciodescuento) }}
+                                </div>
+                            </v-card-text>
+                        </v-card>
+                    </div>
                 </v-card-text>
             </v-card>
         </v-dialog>
@@ -834,7 +832,10 @@ export default {
                 .once('value')
                 .then((snapshot) => {
                     snapshot.forEach((item) => {
-                        this.arrayConsolidar.push(item.val())
+                        this.arrayConsolidar.push({
+                            ...item.val(),
+                            _rowKey: item.key
+                        })
                     })
                     this.dialog = true
                     store.commit('dialogoprogress', false)
