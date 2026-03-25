@@ -131,7 +131,7 @@
 
         </v-dialog>
 
-        <imprime v-if="genera_pdf" :data="seleccionado" @cierra="genera_pdf = $event" />
+        <imprime v-if="genera_pdf" :data="seleccionado" :detalle="detalleProductos" @cierra="genera_pdf = $event" />
     </div>
 </template>
 
@@ -169,7 +169,8 @@ export default {
         correo: '',
         moneda: 'S/',
         sedeSeleccionada: 'TODAS',
-        sedesDisponibles: []
+        sedesDisponibles: [],
+        detalleProductos: [],
     }),
 
     computed: {
@@ -211,15 +212,34 @@ export default {
             this.busca();
         },
         async selecciona_item(item) {
-            let sedesABuscar = this.sedesDisponibles;
-            if (this.sedeSeleccionada !== 'TODAS') {
+            let sedesABuscar = [];
+
+            if (this.sedeSeleccionada === 'TODAS') {
+                sedesABuscar = [...this.sedesDisponibles];
+            } else {
                 const sede = this.sedesDisponibles.find(s => s.base === this.sedeSeleccionada);
-                sedesABuscar = sede ? [sede] : [];
+                if (sede) {
+                    sedesABuscar = [sede];
+                }
             }
-            const resultado = await consultaCabeceraMultiSedes(sedesABuscar, item.numeracion)
-            if (resultado) {
-                this.seleccionado = resultado
-                this.genera_pdf = true
+
+            const cabecera = await consultaCabeceraMultiSedes(sedesABuscar, item.numeracion);
+
+            if (cabecera) {
+                const detalleResult = await consultaDetalleMultiSedes(sedesABuscar, item.numeracion);
+
+                let productos = [];
+                if (detalleResult && detalleResult.detalle) {
+                    if (typeof detalleResult.detalle === 'object' && !Array.isArray(detalleResult.detalle)) {
+                        productos = Object.values(detalleResult.detalle);
+                    } else if (Array.isArray(detalleResult.detalle)) {
+                        productos = detalleResult.detalle;
+                    }
+                }
+
+                this.seleccionado = cabecera;
+                this.detalleProductos = productos;
+                this.genera_pdf = true;
             }
         },
         conviertefecha(date) {
