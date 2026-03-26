@@ -978,6 +978,7 @@ export default {
                 nuevaLista = [...this.listaproductos];
                 const productoExistente = nuevaLista.splice(indiceExistente, 1)[0];
                 productoExistente.cantidad = (productoExistente.cantidad || 0) + (productoNuevo.cantidad || 1);
+                productoExistente.totalLinea = (productoExistente.cantidad * productoExistente.precio)
                 productoExistente.__tsAdd = Date.now();
                 nuevaLista.unshift(productoExistente);
             } else {

@@ -1181,8 +1181,7 @@ async function impresion58_ordenPedido(cabecera, items = [], modo = 'abre', docI
     if (esBono) {
       descLinea = `${it.nombre || ""} *BONIFICACION*`;
     } else {
-      const codigoSunat = obtenerCodigoSunat(it.medida);
-      descLinea = `${it.nombre || ""} (${codigoSunat})`;
+      descLinea = `${it.nombre || ""}`;
     }
 
     return [cant, descLinea, pu.toFixed(2), pt.toFixed(2)];
