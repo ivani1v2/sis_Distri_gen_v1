@@ -471,10 +471,8 @@ export default {
             let costoUnitarioMostrar = costoCatalogo
             let costoUnitarioParaCalculo = costoCatalogo
 
-            if (factor > 1) {
-              if (medida.toUpperCase().includes('CAJA')) {
-                costoUnitarioParaCalculo = costoCatalogo * factor
-              }
+            if (factor > 1 && !medida.toUpperCase().includes('UNIDAD')) {
+              costoUnitarioParaCalculo = costoCatalogo * factor
             }
 
             const ventaLinea = esGratuita
