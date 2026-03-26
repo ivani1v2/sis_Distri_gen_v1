@@ -2,25 +2,35 @@
   <div class="pa-4">
     <v-card class="elevation-3 rounded-lg">
       <v-card-title class="pa-4 blue-grey lighten-5 d-block">
-        <div class="d-flex align-center mb-3">
-          <v-icon :large="$vuetify.breakpoint.mdAndUp" left color="blue-grey darken-3">mdi-cash-multiple</v-icon>
-          <span :class="{ 'text-h5': $vuetify.breakpoint.mdAndUp, 'text-h6': $vuetify.breakpoint.smAndDown }"
-            class="font-weight-bold blue-grey--text text--darken-3">Cx Cobrar</span>
-          <v-spacer></v-spacer>
-          <!-- <v-btn color="purple" small @click="actualizarZonasCXC" class="ml-2 white--text font-weight-medium"
-            :loading="cargandoZonas" :disabled="cargandoZonas">
-            <v-icon left small>mdi-map-marker</v-icon>
-            <span>Actualizar Zonas</span>
-          </v-btn> -->
-          <v-btn color="green" small @click="exportarExcel" class="ml-2 white--text font-weight-medium">
-            <v-icon left small>mdi-file-excel</v-icon>
-            <span>Exportar</span>
-          </v-btn>
-          <v-btn color="error" small @click="exportarPdf" class="ml-2 font-weight-medium">
-            <v-icon left small>mdi-file</v-icon>
-            <span>PDF</span>
-          </v-btn>
-        </div>
+        <v-row class="mb-3" align="center">
+          <v-col cols="12" md="6" class="d-flex align-center justify-center justify-md-start">
+            <v-icon :large="$vuetify.breakpoint.mdAndUp" color="blue-grey darken-3">mdi-cash-multiple</v-icon>
+            <span :class="{ 'text-h5': $vuetify.breakpoint.mdAndUp, 'text-h6': $vuetify.breakpoint.smAndDown }"
+              class="font-weight-bold blue-grey--text text--darken-3 ml-2">Cx Cobrar</span>
+          </v-col>
+          <v-col cols="12" md="6" class="mt-n4 mb-n4 mt-md-0">
+            <div class="d-flex justify-center justify-md-end ga-2">
+              <!-- <v-btn color="purple" small @click="actualizarZonasCXC" class="white--text font-weight-medium"
+                :loading="cargandoZonas" :disabled="cargandoZonas">
+                <v-icon left small>mdi-map-marker</v-icon>
+                <span>Actualizar Zonas</span>
+              </v-btn> -->
+              <v-btn v-if="esAdmin" color="primary" small @click="abrirDialogoNuevaCuenta"
+                class="mx-1 white--text font-weight-medium">
+                <v-icon left small>mdi-plus-circle</v-icon>
+                <span>NUEVA</span>
+              </v-btn>
+              <v-btn color="green" small @click="exportarExcel" class="mx-1 white--text font-weight-medium">
+                <v-icon left small>mdi-file-excel</v-icon>
+                <span>EXCEL</span>
+              </v-btn>
+              <v-btn color="error" small @click="exportarPdf" class="mx-1 font-weight-medium">
+                <v-icon left small>mdi-file</v-icon>
+                <span>PDF</span>
+              </v-btn>
+            </div>
+          </v-col>
+        </v-row>
 
         <v-row dense>
           <v-col cols="12" md="2">
@@ -94,7 +104,7 @@
         </template>
         <template v-slot:[`item.dias_credito`]="{ item }">
           <v-chip small color="blue lighten-4" class="font-weight-bold">
-            {{ item.dias_credito || 7 }} días
+            {{ calcularDiasCredito(item.fecha, item.fecha_vence) || 0 }} días
           </v-chip>
         </template>
 
@@ -155,6 +165,9 @@
           </v-menu>
         </template>
       </v-data-table>
+
+      <dial-nueva-cuenta-manual v-model="dialogNuevaCuentaManual" :clientes="arra_empleados"
+        :cargando-clientes="cargandoClientes" @cuenta-guardada="cuentaGuardada" />
 
     </v-card>
 
@@ -223,11 +236,12 @@
 
 <script>
 import imprime from '@/components/dialogos/dialog_imprime'
+import dialNuevaCuentaManual from './cuentas_x_cobrar/dial_nueva_cuenta_manual.vue'
 import {
   allcuentaxcobrar,
   consultaDetalle,
   consulta_Cabecera,
-  editaCuentaxCobrar,
+  editaCuentaxCobrar
 } from '../../db'
 import { reporte_cronograma } from "./cuentas_x_cobrar/formatos_cuentas"
 import store from '@/store/index'
@@ -245,10 +259,12 @@ import XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
 
+
 export default {
   components: {
     imprime,
     dial_liquidacion_cliente,
+    dialNuevaCuentaManual
   },
 
   data: () => ({
@@ -297,6 +313,10 @@ export default {
     zonasPrevios: ['TODOS'],
     allZonas: [],
     cargandoZonas: false,
+    dialogNuevaCuentaManual: false,
+    arra_empleadosCompleto: [],
+    clientesCargados: false,
+    cargandoClientes: false,
 
   }),
 
@@ -358,6 +378,7 @@ export default {
       handler(nuevo) {
         const base = Array.isArray(nuevo) ? nuevo : []
         this.arra_empleados = base.map(it => ({
+          id: String(it.id || ''),
           documento: it.id,
           nombre: it.nombre,
         }))
@@ -610,6 +631,41 @@ export default {
 
     redondear(valor) {
       return parseFloat(valor).toFixed(store.state.configuracion.decimal);
+    },
+    async cargarClientesCompletos() {
+      if (this.clientesCargados) return;
+
+      try {
+        const snapshot = await colClientes().get()
+        const clientes = []
+
+        snapshot.forEach(doc => {
+          const data = doc.data()
+          clientes.push({
+            id: String(doc.id || ''),
+            nombre: data.nombre,
+            documento: String(data.documento || ''),
+            direccion: data.direccion || '',
+            telefono: data.telefono || '',
+            zona: data.zona || '',
+          })
+        })
+
+        this.arra_empleadosCompleto = clientes
+        this.clientesCargados = true
+        console.log('Clientes cargados:', clientes.length)
+
+      } catch (error) {
+        console.error('Error cargando clientes:', error)
+      }
+    },
+
+    async abrirDialogoNuevaCuenta() {
+      this.dialogNuevaCuentaManual = true
+    },
+
+    cuentaGuardada(nuevaCuenta) {
+      this.filtra()
     },
     async verPDF(item) {
       if (!item || !item.doc_ref) {

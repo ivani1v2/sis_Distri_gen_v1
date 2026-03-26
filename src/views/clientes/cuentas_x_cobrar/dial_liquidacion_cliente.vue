@@ -5,8 +5,14 @@
         <v-btn icon @click="cerrar" color="red"><v-icon>mdi-close</v-icon></v-btn>
         <v-toolbar-title>Liquidación de Crédito</v-toolbar-title>
         <v-spacer></v-spacer>
-
-        <v-icon v-if="esAdmin" color="red" @click.prevent="eliminarCuenta">mdi-delete</v-icon>
+        <template v-if="esAdmin">
+          <v-btn fab x-small color="blue darken-2" class="mx-1" @click.prevent="abrirEditarPendiente">
+            <v-icon small color="white">mdi-pencil</v-icon>
+          </v-btn>
+          <v-btn fab x-small color="red accent-4" class="mx-1" @click.prevent="eliminarCuenta">
+            <v-icon small color="white">mdi-delete</v-icon>
+          </v-btn>
+        </template>
       </v-toolbar>
 
       <v-card-text class="pa-4">
@@ -106,6 +112,27 @@
 
     <d_nueva_cuota v-if="dialog_nueva_cuota" :item_selecto="cuentaLocal" @actualizar-item="actualizarItem"
       @cerrar="dialog_nueva_cuota = false" />
+
+    <v-dialog v-model="dialog_editar_pendiente" max-width="300" persistent>
+      <v-card>
+        <v-toolbar color="blue darken-1" dark dense>
+          <v-toolbar-title class="subtitle-1">Editar Montos de Cuenta</v-toolbar-title>
+          <v-spacer></v-spacer>
+          <v-btn icon @click="dialog_editar_pendiente = false"><v-icon>mdi-close</v-icon></v-btn>
+        </v-toolbar>
+        <v-card-text class="pt-6">
+          <v-text-field v-model="montoTotalEdit" :label="`Monto Total (${monedaSimbolo})`" outlined dense type="number"
+            min="0" :error="!!montoTotalError" :error-messages="montoTotalError" />
+          <v-text-field v-model="montoPendienteEdit" :label="`Monto Pendiente (${monedaSimbolo})`" outlined dense
+            type="number" min="0" :error="!!montoPendienteError" :error-messages="montoPendienteError" class="mb-n5" />
+        </v-card-text>
+        <v-card-actions>
+          <v-btn text @click="dialog_editar_pendiente = false">Cancelar</v-btn>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" :loading="guardandoPendiente" @click="guardarMontoPendiente">Guardar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-dialog>
 </template>
 
@@ -129,10 +156,16 @@ export default {
     dialog_amortiza: false,
     dialog_editar_cuota: false,
     dialog_nueva_cuota: false,
+    dialog_editar_pendiente: false,
+    guardandoPendiente: false,
     item_selecto_cuota_index: null,
     cuota_edit_index: null,
     cuota_edit_monto: '',
     cuota_edit_fecha_str: '',
+    montoTotalEdit: '',
+    montoTotalError: '',
+    montoPendienteEdit: '',
+    montoPendienteError: '',
     cuentaLocal: {}
   }),
   watch: {
@@ -243,6 +276,65 @@ export default {
     abrirNuevaCuota() {
       if (!this.cuentaLocal) return alert('No hay un crédito seleccionado.')
       this.dialog_nueva_cuota = true
+    },
+
+    abrirEditarPendiente() {
+      const totalActual = parseFloat(this.cuentaLocal?.monto_total || 0)
+      const montoActual = parseFloat(this.cuentaLocal?.monto_pendiente || 0)
+      this.montoTotalEdit = Number.isFinite(totalActual) ? totalActual.toFixed(store.state.configuracion?.decimal || 2) : '0'
+      this.montoPendienteEdit = Number.isFinite(montoActual) ? montoActual.toFixed(store.state.configuracion?.decimal || 2) : '0'
+      this.montoTotalError = ''
+      this.montoPendienteError = ''
+      this.dialog_editar_pendiente = true
+    },
+
+    async guardarMontoPendiente() {
+      const nuevoMontoTotal = parseFloat(this.montoTotalEdit)
+      const nuevoMontoPendiente = parseFloat(this.montoPendienteEdit)
+
+      if (!Number.isFinite(nuevoMontoTotal) || nuevoMontoTotal < 0) {
+        this.montoTotalError = 'Ingrese un monto total valido'
+        return
+      }
+
+      this.montoTotalError = ''
+
+      if (!Number.isFinite(nuevoMontoPendiente) || nuevoMontoPendiente < 0) {
+        this.montoPendienteError = 'Ingrese un monto pendiente válido'
+        return
+      }
+
+      if (nuevoMontoPendiente > nuevoMontoTotal) {
+        this.montoPendienteError = 'El pendiente no puede ser mayor al monto total'
+        return
+      }
+
+      this.montoPendienteError = ''
+      const nuevoPagado = Math.max(0, nuevoMontoTotal - nuevoMontoPendiente)
+      const nuevoEstado = nuevoMontoPendiente <= 0 ? 'LIQUIDADO' : 'PENDIENTE'
+
+      this.guardandoPendiente = true
+      store.commit('dialogoprogress', 1)
+      try {
+        await editaCuentaxCobrar(this.cuentaLocal.doc_ref, 'monto_total', nuevoMontoTotal)
+        await editaCuentaxCobrar(this.cuentaLocal.doc_ref, 'monto_pendiente', nuevoMontoPendiente)
+        await editaCuentaxCobrar(this.cuentaLocal.doc_ref, 'pagado', nuevoPagado)
+        await editaCuentaxCobrar(this.cuentaLocal.doc_ref, 'estado', nuevoEstado)
+
+        this.cuentaLocal.monto_total = nuevoMontoTotal
+        this.cuentaLocal.monto_pendiente = nuevoMontoPendiente
+        this.cuentaLocal.pagado = nuevoPagado
+        this.cuentaLocal.estado = nuevoEstado
+        this.dialog_editar_pendiente = false
+        this.$emit('actualizar', { ...this.cuentaLocal })
+        store.commit('dialogosnackbar', 'Montos actualizados')
+      } catch (error) {
+        console.error('Error al actualizar monto pendiente:', error)
+        alert('No se pudo actualizar el monto pendiente')
+      } finally {
+        this.guardandoPendiente = false
+        store.commit('dialogoprogress', 0)
+      }
     },
 
     async eliminarCuenta() {
