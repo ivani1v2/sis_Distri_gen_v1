@@ -607,8 +607,9 @@ async function impresion58(arraydatos, qr, cabecera) {
         }
       } else {
         //  await abre_dialogo_impresion(doc, copias_genera);
-        if (!permite_impresion_host()) {
-          return await abre_dialogo_impresion_original(doc, docId);
+         if (!permite_impresion_host()) {
+           abre_dialogo_impresion_original(doc);
+           return true
         } else {
           var blob = doc.output("arraybuffer");
           return blob;
@@ -1107,7 +1108,8 @@ async function impresion80(arraydatos, qr, cabecera) {
       } else {
         //  await abre_dialogo_impresion(doc, copias_genera);
         if (!permite_impresion_host()) {
-          return await abre_dialogo_impresion_original(doc, docId);
+           abre_dialogo_impresion_original(doc);
+           return true
         } else {
           var blob = doc.output("arraybuffer");
           return blob;
@@ -1618,8 +1620,9 @@ async function impresionA4(array, qr, arraycabecera) {
         window.open(doc.output("bloburi"));
       } else {
         //  await abre_dialogo_impresion(doc, copias_genera);
-        if (!permite_impresion_host()) {
-          return await abre_dialogo_impresion_original(doc, docId);
+         if (!permite_impresion_host()) {
+           abre_dialogo_impresion_original(doc);
+           return true
         } else {
           var blob = doc.output("arraybuffer");
           return blob;
@@ -2201,7 +2204,8 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
       } else {
         //  await abre_dialogo_impresion(doc, copias_genera);
         if (!permite_impresion_host()) {
-          return await abre_dialogo_impresion_original(doc, docId);
+           abre_dialogo_impresion_original(doc);
+           return true
         } else {
           var blob = doc.output("arraybuffer");
           return blob;
