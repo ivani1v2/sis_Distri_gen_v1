@@ -230,10 +230,10 @@ export default {
                         ],
                         [
                             { label: 'Utilidad', value: 'reportes_utilidad' },
-                            { label: 'Tipo Operaciones', value: 'reportes_operaciones' },
+                            { label: 'exportar data', value: 'exportar_data' },
                         ],
                         [
-                            { label: 'Avance de Ventas', value: 'reporte_avance' },
+                            { label: 'reg contable', value: 'registro_contable' },
 
                         ],
                     ],

@@ -10,7 +10,7 @@
                 </v-col>
                 <v-col cols="12" sm="4">
                     <v-select v-model="sede_actual" :items="$store.state.array_sedes" item-text="nombre"
-                        item-value="codigo" label="Vendedor" outlined dense clearable />
+                        item-value="codigo" label="Vendedor" outlined dense clearable @change="cargar" />
                 </v-col>
             </v-row>
 
@@ -53,12 +53,12 @@
                 </template>
 
                 <template v-if="!agrupado" v-slot:item.precio="{ item }">
-                    {{ monedaSimbolo }} {{ n2(item.precio) }}
+                    {{ monedaSimbolo }}{{ n2(item.precio) }}
                 </template>
 
                 <template v-if="!agrupado" v-slot:item.total="{ item }">
                     <span :class="item.esGratuita ? 'grey--text' : ''">
-                        {{ monedaSimbolo }} {{ n2(item.total) }}
+                        {{ monedaSimbolo }}{{ n2(item.total) }}
                     </span>
                 </template>
 
@@ -67,7 +67,7 @@
                         <td :colspan="headersTabla.length - 1" class="text-right">
                             Total General:
                         </td>
-                        <td class="text-right">{{ monedaSimbolo }} {{ totalGeneralVista }}</td>
+                        <td class="text-right">{{ monedaSimbolo }}{{ totalGeneralVista }}</td>
                     </tr>
                 </template>
             </v-data-table>
@@ -79,7 +79,11 @@
 <script>
 import moment from 'moment'
 import 'moment/locale/es'
-import { allCabecera, consultaDetalle } from '../../db'
+import {
+    allCabecera, consultaDetalle, allCabeceraMultiSedes, db,
+    consultaCabeceraMultiSedes,
+    consultaDetalleMultiSedes
+} from '../../db'
 import store from '@/store/index'
 
 moment.locale('es')
@@ -95,6 +99,8 @@ export default {
         agrupado: false,
         headers: [
             { text: 'Fecha', value: 'fecha', sortable: true },
+            { text: 'Hora', value: 'hora', sortable: true },
+            { text: 'Tipo venta', value: 'forma_pago', sortable: true },
             { text: 'Cliente', value: 'cliente', sortable: true },
             { text: 'Doc', value: 'numeracion', sortable: true },
             { text: 'Producto', value: 'producto', sortable: true },
@@ -164,85 +170,161 @@ export default {
                 .map(x => ({ ...x, docs: x.docsSet.size })) // convertir Set a número
                 .sort((a, b) => b.total - a.total)
         },
-        monedaSimbolo(){
+        monedaSimbolo() {
             return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/'
         }
     },
     methods: {
+        cargarSedes() {
+            if (this.$store.state.array_sedes && this.$store.state.array_sedes.length > 0) {
+                this.sedesDisponibles = this.$store.state.array_sedes.map(s => ({
+                    nombre: s.nombre,
+                    base: s.base,
+                    codigo: s.codigo
+                }))
+                this.sedeSeleccionada = 'TODAS'
+            }
+        },
+
+        obtenerSedesABuscar() {
+            if (this.sedeSeleccionada === 'TODAS') {
+                return [...this.sedesDisponibles]
+            }
+
+            const sede = this.sedesDisponibles.find(s => s.base === this.sedeSeleccionada)
+            return sede ? [sede] : []
+        },
+
+        cambiarSede() {
+            this.busca()
+        },
+
+        async selecciona_item(item) {
+            const sedesABuscar = this.obtenerSedesABuscar()
+            const cabecera = await consultaCabeceraMultiSedes(sedesABuscar, item.numeracion)
+
+            if (cabecera) {
+                const detalleResult = await consultaDetalleMultiSedes(sedesABuscar, item.numeracion)
+
+                let productos = []
+                if (detalleResult && detalleResult.detalle) {
+                    if (typeof detalleResult.detalle === 'object' && !Array.isArray(detalleResult.detalle)) {
+                        productos = Object.values(detalleResult.detalle)
+                    } else if (Array.isArray(detalleResult.detalle)) {
+                        productos = detalleResult.detalle
+                    }
+                }
+
+                this.seleccionado = cabecera
+                this.detalleProductos = productos
+                this.genera_pdf = true
+            }
+        },
+
+        async ejecutaConsolida(value) {
+            store.commit("dialogoprogress")
+            this.seleccionado = value
+            this.arrayConsolidar = []
+
+            const sedesABuscar = this.obtenerSedesABuscar()
+            const resultado = await consultaDetalleMultiSedes(sedesABuscar, value.numeracion)
+
+            if (resultado && resultado.detalle) {
+                const detalle = resultado.detalle
+                if (typeof detalle === 'object' && !Array.isArray(detalle)) {
+                    Object.values(detalle).forEach(item => {
+                        this.arrayConsolidar.push(item)
+                    })
+                } else if (Array.isArray(detalle)) {
+                    this.arrayConsolidar = detalle
+                }
+            }
+
+            this.dialog = true
+            store.commit("dialogoprogress")
+        },
         n2(n) {
             const dec = store.state?.configuracion?.decimal ?? 2
             return Number(n || 0).toFixed(dec)
         },
-        unixInicioFin() {
-            // Lo que pediste textual:
-            const start = moment(String(this.date)) / 1000
-            const end = moment(String(this.date2)).add(23, 'h').add(59, 'm').add(59, 's') / 1000
-            return { start, end }
-        },
+
         async cargar() {
             this.cargando = true
             this.filas = []
-            try {
-                const { start, end } = this.unixInicioFin()
 
-                // 1) Cabeceras por rango de fecha
-                const snap = await allCabecera()
-                    .orderByChild('fecha')
-                    .startAt(start)
-                    .endAt(end)
-                    .once('value')
+            try {
+                const sede = (this.$store.state.array_sedes || []).find(
+                    s => String(s.codigo) === String(this.sede_actual)
+                )
+
+                if (!sede || !sede.base) {
+                    this.filas = []
+                    return
+                }
+
+                const snap = await db
+                    .database()
+                    .ref(sede.base)
+                    .child("comprobantecabecera")
+                    .orderByChild("fecha")
+                    .startAt(moment(this.date).unix())
+                    .endAt(moment(this.date2).endOf("day").unix())
+                    .once("value")
 
                 if (!snap.exists()) {
                     this.filas = []
-                    this.cargando = false
                     return
                 }
 
-                // 2) Filtra ANULADOS y por sede (si se eligió)
                 const cabeceras = []
-                snap.forEach((child) => {
+                snap.forEach(child => {
                     const c = child.val()
-                    if (String(c.estado || '').toLowerCase() === 'anulado') return
-                    console.log(c, this.sede_actual)
-                    if (this.sede_actual && c.vendedor && String(c.vendedor) !== String(this.sede_actual)) return
+                    console.log(c)
+                    if (String(c.estado || "").toUpperCase() === "ANULADO") return
                     cabeceras.push(c)
                 })
 
-                if (!cabeceras.length) {
-                    this.filas = []
-                    return
-                }
-
-                // 3) Para cada cabecera, trae detalles
                 const pack = await Promise.all(
-                    cabeceras.map(cab =>
-                        consultaDetalle(cab.numeracion).once('value').then(detSnap => {
-                            const val = detSnap.val() || []
-                            const dets = Array.isArray(val) ? val.filter(Boolean) : Object.values(val)
-                            return { cab, dets }
-                        })
-                    )
+                    cabeceras.map(async cab => {
+                        const detSnap = await db
+                            .database()
+                            .ref(sede.base)
+                            .child("comprobantedetalle")
+                            .child(cab.numeracion)
+                            .once("value")
+
+                        const val = detSnap.val() || []
+                        const dets = Array.isArray(val) ? val.filter(Boolean) : Object.values(val || {})
+                        return { cab, dets }
+                    })
                 )
 
-                // 4) Aplanar filas
-                console.log(pack)
                 const filas = []
                 for (const { cab, dets } of pack) {
-                    const fechaStr = moment.unix(Number(cab.fecha || 0)).format('YYYY-MM-DD')
-                    const dni = cab.dni || cab.documento || ''
+                    const fechaMoment = moment.unix(Number(cab.fecha || 0))
+                    const fechaStr = fechaMoment.format("YYYY-MM-DD")
+                    const horaStr = fechaMoment.format("HH:mm:ss")
+                    const fechaHoraStr = fechaMoment.format("YYYY-MM-DD HH:mm:ss")
+                    const dni = cab.dni || cab.documento || ""
+                    const formaPago = cab.forma_pago || ""
+
                     dets.forEach((det, idx) => {
-                        const esGratuita = String(det.operacion || '').toUpperCase() === 'GRATUITA'
+                        const esGratuita = String(det.operacion || "").toUpperCase() === "GRATUITA"
                         const precio = Number(det.precio ?? 0)
                         const cantidad = Number(det.cantidad || 0)
-                        const total = esGratuita ? 0 : (precio * cantidad)
+                        const total = esGratuita ? 0 : precio * cantidad
+
                         filas.push({
-                            rid: `${cab.numeracion}-${idx}`,        // 👈 clave única
+                            rid: `${cab.numeracion}-${idx}`,
                             fecha: fechaStr,
-                            cliente: cab.cliente || '',
+                            hora: horaStr,
+                            fechaHora: fechaHoraStr,
+                            forma_pago: formaPago,
+                            cliente: cab.cliente || "",
                             dni,
-                            producto: det.nombre || (det.id ? String(det.id) : ''),
-                            medida: det.medida || '',
-                            numeracion: cab.numeracion || '',
+                            numeracion: cab.numeracion || "",
+                            producto: det.nombre || det.id || "",
+                            medida: det.medida || "",
                             cantidad,
                             precio,
                             total,
@@ -250,41 +332,78 @@ export default {
                         })
                     })
                 }
+
                 this.filas = filas.sort((a, b) => {
-                    if (a.fecha === b.fecha) return (a.cliente || '').localeCompare(b.cliente || '')
-                    return a.fecha.localeCompare(b.fecha)
+                    if (a.fecha === b.fecha) {
+                        return String(a.cliente || "").localeCompare(String(b.cliente || ""))
+                    }
+                    return String(a.fecha).localeCompare(String(b.fecha))
                 })
-            } catch (e) {
-                console.error('Error cargando reporte:', e)
+            } catch (error) {
+                console.error("Error cargando reporte:", error)
                 this.filas = []
             } finally {
                 this.cargando = false
             }
         },
+
         exportarCSV() {
             if (!this.filas.length) return
+
             const rows = [
-                ['Fecha', 'Cliente', 'Doc', 'Producto', 'Medida', 'Cantidad', 'Precio', 'Total', 'Gratuita'],
+                ["Fecha", "Cliente", "Doc", "Producto", "Medida", "Cantidad", "Precio", "Total", "Gratuita"],
                 ...this.filas.map(r => [
                     r.fecha,
                     r.cliente,
-                    r.dni,
+                    r.numeracion,
                     r.producto,
                     r.medida,
                     r.cantidad,
                     this.n2(r.precio),
                     this.n2(r.total),
-                    r.esGratuita ? 'SI' : 'NO',
+                    r.esGratuita ? "SI" : "NO",
                 ])
             ]
-            const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+
+            const csv = rows
+                .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
+                .join("\n")
+
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
             const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
+            const a = document.createElement("a")
             a.href = url
             a.download = `reporte_clientes_productos_${this.date}_${this.date2}.csv`
             a.click()
             URL.revokeObjectURL(url)
+        },
+        async busca() {
+            store.commit("dialogoprogress")
+
+            try {
+                const sedesABuscar = this.obtenerSedesABuscar()
+
+                if (this.num_doc != '') {
+                    const numeracion = this.tipo_doc + this.num_doc.toString().padStart(8, 0)
+                    const resultado = await consultaCabeceraMultiSedes(sedesABuscar, numeracion)
+
+                    if (resultado) {
+                        resultado.color = this.asigna_color_doc(resultado)
+                        this.desserts = [resultado]
+                    } else {
+                        this.desserts = []
+                        store.commit('dialogosnackbar', 'Comprobante no existe')
+                    }
+                } else {
+                    const resultados = await allCabeceraMultiSedes(sedesABuscar, this.date, this.date2)
+                    resultados.forEach(item => {
+                        item.color = this.asigna_color_doc(item)
+                    })
+                    this.desserts = resultados
+                }
+            } finally {
+                store.commit("dialogoprogress")
+            }
         },
     },
     mounted() {

@@ -303,12 +303,12 @@
                         <v-list-item-icon><v-icon small>mdi-account-tie-voice</v-icon></v-list-item-icon>
                         <v-list-item-title>Ventas X Vendedor</v-list-item-title>
                     </v-list-item>
-                    <v-list-item @click.prevent="router('reg_contables')">
+                    <v-list-item @click.prevent="router('reg_contables')" v-if="$store.state.permisos.registro_contable">
                         <v-list-item-icon>
                             <v-icon small>mdi-calculator-variant-outline</v-icon></v-list-item-icon>
                         <v-list-item-title>Reg. Contable</v-list-item-title>
                     </v-list-item>
-                    <v-list-item @click.prevent="router('exportar_data')">
+                    <v-list-item @click.prevent="router('exportar_data')" v-if="$store.state.permisos.exportar_data">
                         <v-list-item-icon>
                             <v-icon color="green" small>mdi-file-excel</v-icon></v-list-item-icon>
                         <v-list-item-title>Exportar Data</v-list-item-title>
