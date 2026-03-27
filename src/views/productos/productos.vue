@@ -943,7 +943,8 @@ export default {
         arrayOperacion: [
             'GRAVADA',
             'EXONERADA',
-            'INAFECTA'
+            'INAFECTA',
+            'GRATUITA'
         ],
         operacion: "GRAVADA",
         icbper: false,
