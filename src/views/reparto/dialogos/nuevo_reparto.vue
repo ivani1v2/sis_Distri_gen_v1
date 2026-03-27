@@ -663,8 +663,8 @@ export default {
                     fecha_emision: moment().unix(),
                     fecha_comprobantes: unixEmision,
                     vendedor: vendedorStr,
-                    pedidos: pedidosConOrden.map(p => p.id),
-                    pedidos_orden: pedidosConOrden,
+                    pedidos: this.selectedIds,
+                    //pedidos_orden: pedidosConOrden,
                     obs: this.obs,
                     resumen: {
                         total_contado: this.totalContadoSel.toFixed(2),
@@ -673,7 +673,7 @@ export default {
                         total_pedidos: String(this.totalPedidosSel),
                         total_general: this.totalGeneralSel.toFixed(2),
                     },
-                    resumen_monedas: this.resumenPorMoneda
+                    //resumen_monedas: this.resumenPorMoneda
                 };
 
                 var resp = await this.api_rest(payload, "crea_reparto");
@@ -698,7 +698,7 @@ export default {
             var a = axios({
                 method: 'POST',
                 url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
-                //url:'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
+                //url:'http://127.0.0.1:5001/distri-365/us-central1/api_distribucion',
                 headers: {
                     'X-Idempotency-Key': idem,
                 },

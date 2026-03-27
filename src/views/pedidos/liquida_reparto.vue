@@ -133,7 +133,7 @@
                     <v-col cols="12" sm="4">
                         <h4 class="text-subtitle-1">
                             FECHA TRASLADO: <span class="primary--text">{{ conviertefecha(cabecera_total.fecha_traslado)
-                            }}</span>
+                                }}</span>
                         </h4>
                         <!-- Chip de transporte asignado -->
                         <div v-if="cabecera_total.d_transporte?.usuario_nombre" class="mt-1">
@@ -158,7 +158,7 @@
                             TOTAL VENTA: <span class="green--text text--darken-2">{{ moneda }} {{ t_general }}</span>
                         </h4>
                         <span class="caption">Contado: {{ moneda }} {{ t_contado }} | Crédito: {{ moneda }} {{ t_credito
-                            }}</span>
+                        }}</span>
                     </v-col>
                 </v-row>
             </v-card-text>
@@ -214,7 +214,7 @@
                                 </v-chip>
                             </td>
                             <td class="text-right caption red--text">{{ item.moneda }}{{ redondear(item.pendiente_pago)
-                            }}</td>
+                                }}</td>
                             <td class="text-right caption font-weight-bold">{{ item.moneda }}{{ redondear(item.total) }}
                             </td>
                             <td class="text-center">
@@ -297,7 +297,7 @@
                                     S/.{{ d.precio }}
                                     <strong v-if="d.preciodescuento != 0" class="red--text ml-1">(-S/.{{
                                         d.preciodescuento
-                                    }})</strong>
+                                        }})</strong>
                                 </td>
                                 <td class="text-right caption font-weight-bold">S/.{{
                                     redondear((Number(d.total_antes_impuestos)
@@ -320,7 +320,7 @@
                 <v-card-text class="pt-4">
                     <div class="mb-3 text-subtitle-2 grey--text text--darken-1">
                         Anulando comprobante: <strong class="error--text">{{ comp_anular ? comp_anular.numeracion : ''
-                        }}</strong>
+                            }}</strong>
                     </div>
 
                     <v-select dense outlined clearable :items="motivos_predeterminados"
@@ -489,7 +489,7 @@
                 <v-toolbar class="text-caption"
                     :color="guia_individual_tipo === 'transporte' ? 'purple darken-1' : 'cyan darken-1'" dense dark>
                     <v-toolbar-title>{{ guia_individual_tipo === 'transporte' ? 'Guía Transporte' : 'Guía Remisión'
-                    }}</v-toolbar-title>
+                        }}</v-toolbar-title>
                     <v-spacer></v-spacer>
                     <v-btn icon @click="dialogo_guia_individual = false">
                         <v-icon>mdi-close</v-icon>
@@ -906,7 +906,7 @@ export default {
             }
             store.commit("dialogoprogress", 1)
         },
-        recalcula_cabecera() {
+        async recalcula_cabecera() {
             const resumen = {
                 peso_total: 0,
                 total_contado: 0,
@@ -942,34 +942,31 @@ export default {
             resumen.total_general = Number(resumen.total_general.toFixed(2));
 
             // Actualiza la cabecera del reparto
-            nueva_cabecera_reparto(this.router_grupo + '/total', resumen.total_general);
-            nueva_cabecera_reparto(this.router_grupo + '/total_pedidos', resumen.total_pedidos);
-            nueva_cabecera_reparto(this.router_grupo + '/resumen', resumen);
+            await nueva_cabecera_reparto(this.router_grupo + '/total', resumen.total_general);
+            await nueva_cabecera_reparto(this.router_grupo + '/total_pedidos', resumen.total_pedidos);
+            await nueva_cabecera_reparto(this.router_grupo + '/resumen', resumen);
         },
 
-        actualizaEstadoReparto() {
+        async actualizaEstadoReparto() {
             const pedidos = this.desserts || [];
             if (!pedidos.length) return;
-            const estadosValidos = pedidos.filter(p => p.estado);
-            const totalPedidos = estadosValidos.length;
-            const enviados = estadosValidos.filter(p => p.estado === 'ENVIADO').length;
-            const anulados = estadosValidos.filter(p => p.estado === 'ANULADO').length;
-            const pendientes = estadosValidos.filter(p => p.estado === 'PENDIENTE').length;
+            const totalPedidos = pedidos.length;
+            const enviados = pedidos.filter(p => p.estado === 'ENVIADO').length;
+            const anulados = pedidos.filter(p => p.estado === 'ANULADO').length;
+
             let nuevoEstado = 'PENDIENTE';
-            if (enviados > 0 && (enviados + anulados) === totalPedidos) {
-                nuevoEstado = 'ENVIADO';
+            if (anulados === totalPedidos && totalPedidos > 0) {
+                nuevoEstado = 'ANULADO';
             }
             else if (enviados === totalPedidos && totalPedidos > 0) {
                 nuevoEstado = 'ENVIADO';
             }
-            else if (anulados === totalPedidos && totalPedidos > 0) {
-                nuevoEstado = 'ANULADO';
-            }
             else if (enviados > 0 || anulados > 0) {
                 nuevoEstado = 'PARCIAL';
             }
-            nueva_cabecera_reparto(this.router_grupo + '/estado', nuevoEstado);
-            nueva_cabecera_reparto(this.router_grupo + '/resumen/total_anulados', anulados);
+
+            await nueva_cabecera_reparto(this.router_grupo + '/estado', nuevoEstado);
+            await nueva_cabecera_reparto(this.router_grupo + '/resumen/total_anulados', anulados);
         },
 
         async transferir_pedidos() {
@@ -1900,7 +1897,7 @@ export default {
                 };
 
                 await this.api_rest(array, 'sunat_reparto');
-                this.actualizaEstadoReparto();
+                await this.actualizaEstadoReparto();
 
                 this.$store.commit('dialogosnackbar', 'Envío a Sunat iniciado correctamente.');
             } catch (e) {
