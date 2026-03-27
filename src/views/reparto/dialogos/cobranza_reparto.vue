@@ -86,6 +86,19 @@
                 </v-col>
             </v-row>
 
+            <v-alert dense outlined class="mt-2 mb-0" type="info">
+                <div class="d-flex justify-space-between align-center">
+                    <div class="caption pr-2">
+                        <strong>Observación de entrega:</strong>
+                        {{ hasObservacionEntrega ? observacionEntrega : 'Sin observación registrada' }}
+                    </div>
+                    <v-btn x-small text color="primary" @click="dialObservacion = true">
+                        <v-icon left x-small>mdi-note-edit</v-icon>
+                        {{ hasObservacionEntrega ? 'Editar' : 'Agregar' }}
+                    </v-btn>
+                </div>
+            </v-alert>
+
             <v-row class="mt-6 mb-2" dense>
                 <v-col cols="12" sm="4">
                     <v-btn color="error" dark block @click="dialog = true" :disabled="totalItemsRechazados === 0"
@@ -318,18 +331,23 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <observacion_entrega_dialog v-model="dialObservacion" :grupo="grupo"
+            :observacion-actual="observacionEntrega" @guardado="onObservacionGuardada" />
     </v-dialog>
 </template>
 <script>
-import { all_detalle_entrega, all_Cabecera_p, all_gastos_reparto, nuevo_gasto_reparto, elimina_gasto_reparto, edita_gasto_reparto } from "../../../db";
+import { all_detalle_entrega, all_Cabecera_p, all_gastos_reparto, nuevo_gasto_reparto, elimina_gasto_reparto, edita_gasto_reparto, all_observacion_entrega } from "../../../db";
 import { pdfGenera, pdfGeneraDetalle } from "../../reparto/formatos/formato_liquida";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import * as XLSX from "xlsx";
+import observacion_entrega_dialog from "./observacion_entrega_dialog.vue";
 export default {
     name: "cobranza_reparto",
+    components: { observacion_entrega_dialog },
     props: {
-        grupo: { type: String, required: true },
+        grupo: { type: [String, Number], required: true },
         pedidos: { type: Array, required: true }
     },
     data() {
@@ -338,11 +356,13 @@ export default {
             dataEntrega: {},
             cabeceraGrupo: {},
             rechazos: [],
+            observacionEntrega: "",
             gastos: [],
             dialog: false,
             dialogPdfOpciones: false,
             dialogGastos: false,
             dialogNuevoGasto: false,
+            dialObservacion: false,
             mostrarGastosEnPdf: false,
             nuevoGasto: {
                 descripcion: '',
@@ -379,6 +399,9 @@ export default {
         },
         totalItemsRechazados() {
             return this.rechazos.reduce((acc, r) => acc + (r.cantidad || 0), 0);
+        },
+        hasObservacionEntrega() {
+            return String(this.observacionEntrega || '').trim().length > 0;
         },
         totalesPorPago() {
             const tot = {};
@@ -417,6 +440,10 @@ export default {
                 this.cabeceraGrupo = snap.val() || {};
             });
 
+            all_observacion_entrega(grupo).once("value", snap => {
+                this.observacionEntrega = String(snap.val() || '').trim();
+            });
+
             all_detalle_entrega(grupo).once("value", snap => {
                 this.dataEntrega = snap.val() || {};
 
@@ -434,6 +461,9 @@ export default {
                     });
                 });
             });
+        },
+        onObservacionGuardada(valor) {
+            this.observacionEntrega = valor || '';
         },
 
         obtenerGastos(grupo) {

@@ -45,8 +45,9 @@
           </v-col>
           <v-col cols="6" md="3">
             <v-select v-model="vendedoresSeleccionados" :items="vendedoresItems" item-text="nombre" item-value="codigo"
-              label="Vendedor" multiple outlined dense chips small-chips deletable-chips clearable
-              :menu-props="{ closeOnContentClick: true }" @change="onVendedorChange" class="mb-n6" />
+              label="Vendedor" multiple outlined dense chips small-chips deletable-chips :clearable="esAdmin"
+              :menu-props="{ closeOnContentClick: true }" @change="onVendedorChange" :disabled="!esAdmin"
+              class="mb-n6" />
           </v-col>
           <v-col cols="6" md="3">
             <v-select v-model="zonasSeleccionadas" :items="zonasItems" item-text="nombre" item-value="codigo"
@@ -356,6 +357,12 @@ export default {
       })
     },
     vendedoresItems() {
+      if (!this.esAdmin) {
+        const codigo = this.$store.state.sedeActual?.codigo || '';
+        const nombre = this.$store.state.sedeActual?.nombre || codigo;
+        return codigo ? [{ nombre, codigo }] : [];
+      }
+
       const base = Array.isArray(this.$store.state.array_sedes)
         ? this.$store.state.array_sedes
         : [];
@@ -421,10 +428,12 @@ export default {
     },
     inicializarVendedores() {
       if (!store.state.permisos?.es_admin) {
-        this.vendedoresSeleccionados = [store.state.sedeActual?.codigo || 'TODOS'];
+        const codigo = store.state.sedeActual?.codigo || '';
+        this.vendedoresSeleccionados = codigo ? [codigo] : [];
       } else {
         this.vendedoresSeleccionados = ['TODOS'];
       }
+      this.vendedoresPrevios = [...this.vendedoresSeleccionados];
     },
 
     aplicarFiltroMovil() {

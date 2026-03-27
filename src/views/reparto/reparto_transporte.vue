@@ -14,6 +14,11 @@
                 <v-select v-if="!isMobile" v-model="estadoFiltro" :items="estadosEntrega" outlined dense hide-details
                     class="ml-2" label="Estado" />
                 <v-spacer></v-spacer>
+                <v-btn v-if="!isMobile" small :color="hasObservacion ? 'warning' : 'blue-grey'" dark rounded depressed lock class="mt-1 mr-2"
+                    @click="dial_observacion = true">
+                    <v-icon left>mdi-note-edit</v-icon>
+                    Observación
+                </v-btn>
                 <v-btn v-if="!isMobile" small color="info" dark rounded depressed lock class="mt-1 mr-2"
                     @click="dial_cobranza = !dial_cobranza">
                     <v-icon left>mdi-cash-register</v-icon>
@@ -40,6 +45,14 @@
                         <v-divider class="my-2" />
 
                         <v-list dense>
+                            <v-list-item @click="dial_observacion = true">
+                                <v-list-item-icon>
+                                    <v-icon :color="hasObservacion ? 'warning' : 'grey darken-1'">mdi-note-edit</v-icon>
+                                </v-list-item-icon>
+                                <v-list-item-title>
+                                    {{ hasObservacion ? 'Editar observación' : 'Agregar observación' }}
+                                </v-list-item-title>
+                            </v-list-item>
                             <v-list-item @click="dial_cobranza = !dial_cobranza">
                                 <v-list-item-icon><v-icon color="info">mdi-cash-register</v-icon></v-list-item-icon>
                                 <v-list-item-title>Ver Cobranza</v-list-item-title>
@@ -237,13 +250,15 @@
             @guardado=" dial_aceptado = false" :grupo="repartoActual" />
             <cobranza_reparto v-if="dial_cobranza" :pedidos="pedidosFiltrados" :grupo="repartoActual"
             @cerrar="dial_cobranza = false" />
+            <observacion_entrega_dialog v-model="dial_observacion" :grupo="repartoActual"
+            :observacion-actual="observacionEntrega" @guardado="onObservacionGuardada" />
             <busca_reparto v-if="dial_repartos" v-model="dial_repartos" @seleccionado="ver_reparto" />
         </div>
 </template>
 
 <script>
 import moment from "moment";
-import { all_Cabecera_p } from "../../db";
+import { all_Cabecera_p, all_observacion_entrega } from "../../db";
 import { colClientes } from '../../db_firestore'
 import dial_mapas from '../clientes/dial_mapa.vue'
 import mapa_reparto from './mapa_reparto.vue'
@@ -251,9 +266,10 @@ import dial_rechaza from './dialogos/rechaza_pedido.vue'
 import busca_reparto from './dialogos/buscar_reparto.vue'
 import acepta_pedido from './dialogos/acepta_pedido.vue'
 import cobranza_reparto from './dialogos/cobranza_reparto.vue'
+import observacion_entrega_dialog from './dialogos/observacion_entrega_dialog.vue'
 import { llamarCliente, enviarWhatsApp, irGoogleMaps, copiarUrlMaps, chipColor, chipColorEntrega } from './funciones'
 export default {
-    components: { dial_mapas, mapa_reparto, dial_rechaza, busca_reparto, acepta_pedido, cobranza_reparto },
+    components: { dial_mapas, mapa_reparto, dial_rechaza, busca_reparto, acepta_pedido, cobranza_reparto, observacion_entrega_dialog },
     data() {
         return {
             dial_cobranza: false,
@@ -264,15 +280,19 @@ export default {
             dialogoMapa_reparto: false,
             dial_rechazo: false,
             dial_aceptado: false,
+            dial_observacion: false,
             lista_pedidos: [],
             item_selecto: [],
             motivo_rechazo: '',
             busqueda: '',
             page: 1,
             pageSize: 10, // cantidad por “página” en móvil
+            observacionEntrega: '',
             repartoActual: null,        // guarda el id_grupo actual
             repartoRef: null,           // referencia firebase actual
             repartoListener: null,      // callback actual
+            observacionRef: null,
+            observacionListener: null,
         };
     },
     created() {
@@ -296,6 +316,9 @@ export default {
 
     computed: {
         isMobile() { return this.$vuetify.breakpoint.smAndDown; },
+        hasObservacion() {
+            return String(this.observacionEntrega || '').trim().length > 0;
+        },
         pedidosFiltrados() {
             const q = this.busqueda.trim().toLowerCase();
             const estadoSel = (this.estadoFiltro || 'todos').toLowerCase();
@@ -342,8 +365,14 @@ export default {
         if (this.repartoRef && this.repartoListener) {
             this.repartoRef.off("value", this.repartoListener);
         }
+        if (this.observacionRef && this.observacionListener) {
+            this.observacionRef.off("value", this.observacionListener);
+        }
     },
     methods: {
+        onObservacionGuardada(valor) {
+            this.observacionEntrega = valor || '';
+        },
         verMas() {
             this.page += 1;
         },
@@ -370,6 +399,9 @@ export default {
             // 🔄 si ya había un listener anterior, lo apagamos
             if (this.repartoRef && this.repartoListener) {
                 this.repartoRef.off("value", this.repartoListener);
+            }
+            if (this.observacionRef && this.observacionListener) {
+                this.observacionRef.off("value", this.observacionListener);
             }
 
             // guarda cuál es el reparto actual
@@ -413,6 +445,14 @@ export default {
             // guardar ref y listener para apagarlos más tarde
             this.repartoRef = ref;
             this.repartoListener = listener;
+
+            const obsRef = all_observacion_entrega(grupoId);
+            const obsListener = (snap) => {
+                this.observacionEntrega = String(snap.val() || '').trim();
+            };
+            obsRef.on("value", obsListener);
+            this.observacionRef = obsRef;
+            this.observacionListener = obsListener;
 
             // Mostrar notificación de éxito
             this.$store.commit('dialogosnackbar', 'Reparto cargado correctamente');

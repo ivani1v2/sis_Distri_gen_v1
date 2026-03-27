@@ -1832,6 +1832,16 @@ export const all_detalle_entrega = (grupo) => {
     .child("entregas"); 
 };
 
+export const all_observacion_entrega = (grupo) => {
+  return db
+    .database().ref(store.state.baseDatos.bd).child("pedidos").child("detalle_reparto").child(grupo).child("entregas").child("observacion_entrega");
+};
+
+export const graba_observacion_entrega = (grupo, observacion) => {
+  return db
+    .database().ref(store.state.baseDatos.bd).child("pedidos").child("detalle_reparto").child(grupo).child("entregas").child("observacion_entrega").set(observacion || "");
+};
+
 
 export const obten_datos_tienda = (tabla) => {
   return db
