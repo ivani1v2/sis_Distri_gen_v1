@@ -284,63 +284,68 @@ export default {
             this.progress = false
             this.cierra()
         },
-        async verPDF(modo) {
-            const item = { ...this.seleccionado };
-            this.progress = true;
+       async verPDF(modo) {
+  const item = { ...this.seleccionado };
+  this.progress = true;
 
-            try {
-                let arraydatos = [];
+  try {
+    let arraydatos = [];
 
-                if (this.detalle) {
-                    arraydatos = this.detalle;
-                } else {
-                    const referencia = item.numeracion || item.doc_ref;
-                    const snapshot = await consultaDetalle(referencia).once("value");
-                    arraydatos = snapshot.val();
-                }
+    if (this.detalle) {
+      arraydatos = this.detalle;
+    } else {
+      const referencia = item.numeracion || item.doc_ref;
+      const snapshot = await consultaDetalle(referencia).once("value");
+      arraydatos = snapshot.val();
+    }
 
-                item.referencia =
-                    this.getReferenciaPrincipal(this.datos_cliente) ||
-                    this.datos_cliente.referencia ||
-                    "";
+    item.referencia =
+      this.getReferenciaPrincipal(this.datos_cliente) ||
+      this.datos_cliente.referencia ||
+      "";
 
-                item.telefono = this.numero || "";
+    item.telefono = this.numero || "";
 
-                let modoFinal = modo;
-                if (modo === "imprime") {
-                    modoFinal = "abre";
-                } else if (modo === "descarga") {
-                    modoFinal = "descarga";
-                } else {
-                    modoFinal = "abre";
-                }
+    let modoFinal = modo;
+    if (modo === "imprime") {
+      modoFinal = "abre";
+    } else if (modo === "descarga") {
+      modoFinal = "descarga";
+    } else {
+      modoFinal = "abre";
+    }
 
-                const resp = await pdfGenera(
-                    arraydatos,
-                    item,
-                    this.medida_comprobante,
-                    modoFinal
-                );
+    const resp = await pdfGenera(
+      arraydatos,
+      item,
+      this.medida_comprobante,
+      modoFinal
+    );
 
-                if (modo === "imprime") {
-                    await impresion_bridge(
-                        resp,
-                        1,
-                        `${item.numeracion || item.doc_ref || Date.now()}`,
-                        true
-                    );
+    if (modo === "imprime") {
+      // Solo mandar al bridge si realmente regresó un ArrayBuffer
+      if (resp instanceof ArrayBuffer) {
+        await impresion_bridge(
+          resp,
+          1,
+          `${item.numeracion || item.doc_ref || Date.now()}`,
+          true
+        );
+        store.commit("dialogosnackbar", "Enviado a impresión");
+      } else {
+        // Ya fue manejado por abre_dialogo_impresion_original
+        store.commit("dialogosnackbar", "Impresión abierta");
+      }
+    }
 
-                    store.commit("dialogosnackbar", "Enviado a impresión");
-                }
-
-                this.cierra();
-            } catch (e) {
-                console.error(e);
-                store.commit("dialogosnackbar", e.message || "No se pudo imprimir");
-            } finally {
-                this.progress = false;
-            }
-        },
+    this.cierra();
+  } catch (e) {
+    console.error(e);
+    store.commit("dialogosnackbar", e.message || "No se pudo imprimir");
+  } finally {
+    this.progress = false;
+  }
+},
         getReferenciaPrincipal(cliente) {
             if (!cliente || !Array.isArray(cliente.direcciones) || cliente.direcciones.length === 0) return '';
             const dir = cliente.direcciones.find(d => d && d.principal) || cliente.direcciones[0];
