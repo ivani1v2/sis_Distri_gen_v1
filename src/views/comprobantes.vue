@@ -5,7 +5,7 @@
             <v-row dense>
                 <v-col cols="12" sm="2">
                     <v-select v-model="sedeSeleccionada" :items="opcionesSedes" item-text="nombre" item-value="base"
-                        label="Vendedor" outlined dense @change="cambiarSede" />
+                        label="Almacen" outlined dense @change="cambiarSede" />
                 </v-col>
                 <v-col cols="6" sm="3">
                     <v-text-field class="mx-1" outlined dense type="date" v-model="date" label="Inicio"></v-text-field>
@@ -36,6 +36,9 @@
                             <th class="text-left" v-if="!$store.state.esmovil">
                                 Cliente
                             </th>
+                             <th class="text-left" >
+                                Vendedor
+                            </th>
                             <th class="text-left">
                                 Fecha
                             </th>
@@ -57,6 +60,7 @@
                             }}
                                 <span v-if="item.observacion != ''">- {{ item.observacion }}</span>
                             </td>
+                      <td style="font-size:75%;">{{ obtenerNombreSede(item.sede_codigo) }}</td>
                             <td style="font-size:75%;">{{ conviertefecha(item.fecha) }}</td>
                             <td>
                                 <v-icon :color="item.color">mdi-circle</v-icon>
@@ -198,6 +202,10 @@ export default {
         this.busca()
     },
     methods: {
+        obtenerNombreSede(codigo) {
+    const sede = this.sedesDisponibles.find(s => s.codigo === codigo || s.base === codigo);
+    return sede ? sede.nombre : codigo || '';
+},
         cargarSedes() {
             if (this.$store.state.array_sedes && this.$store.state.array_sedes.length > 0) {
                 this.sedesDisponibles = this.$store.state.array_sedes.map(s => ({

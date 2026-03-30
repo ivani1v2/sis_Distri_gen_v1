@@ -257,7 +257,7 @@
                     </v-col>
 
                     <v-col cols="6" xs="6" sm="4" md="4">
-                        <v-text-field outlined :disabled="!$store.state.permisos.productos_edita" type="number" dense
+                        <v-text-field outlined disabled type="number" dense
                             v-model="stock" label="Stock"></v-text-field>
                     </v-col>
 

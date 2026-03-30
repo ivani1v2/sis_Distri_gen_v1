@@ -231,7 +231,7 @@
                         <v-list-item-icon><v-icon small>mdi-swap-horizontal-bold</v-icon></v-list-item-icon>
                         <v-list-item-title>Movimientos</v-list-item-title>
                     </v-list-item>
-                    <v-list-item v-if="false" link
+                    <v-list-item v-if="$store.state.permisos.modulokardex" link
                         @click.prevent="router('rep_mov_producto')">
                         <v-list-item-icon><v-icon small>mdi-file-chart-outline</v-icon></v-list-item-icon>
                         <v-list-item-title>Mov x Producto</v-list-item-title>
