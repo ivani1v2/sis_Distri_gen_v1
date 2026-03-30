@@ -203,7 +203,7 @@ export default {
                 const ventana = window.open(
                     BRIDGE_URL,
                     "_blank",
-                    "width=1100,height=820,left=80,top=40,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes"
+                    "width=500,height=400,left=80,top=40,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes"
                 );
 
                 if (!ventana) {

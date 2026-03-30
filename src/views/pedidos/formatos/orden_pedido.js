@@ -3,8 +3,6 @@ import "jspdf-autotable";
 import store from "@/store/index";
 import moment from "moment";
 import { NumerosALetras } from "numero-a-letras";
-import axios from "axios";
-import { impresionQueue } from "@/impresionQueue";
 
 let ventanaImpresionActual = null;
 let resolvers = {};
@@ -19,83 +17,6 @@ function permite_impresion_host() {
   const tieneConfig =
     store?.state?.permisos?.config_impresion_host?.ip_dispositivo;
   return tienePermiso && tieneConfig;
-}
-
-async function abre_dialogo_impresion_host(doc, copias = 1, docId = Date.now()) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const configHost = store?.state?.permisos?.config_impresion_host || {};
-      const IP_PC = configHost.ip_dispositivo || "192.168.1.19";
-      const PORT = configHost.puerto_dispositivo || 8090;
-      const BRIDGE_URL = `http://${IP_PC}:${PORT}/bridge-pdf`;
-      const token =
-        store?.state?.configImpresora?.token_host || configHost.token || "1234";
-
-      const buffer = doc.output("arraybuffer");
-
-      if (ventanaImpresionActual && !ventanaImpresionActual.closed) {
-        ventanaImpresionActual.close();
-      }
-
-      const ventana = window.open(
-        BRIDGE_URL,
-        "_blank",
-        "width=500,height=400,menubar=no,toolbar=no,location=no,status=no",
-      );
-
-      ventanaImpresionActual = ventana;
-
-      if (!ventana) {
-        alert("Permite ventanas emergentes para imprimir.");
-        reject(new Error('Ventana bloqueada'));
-        return;
-      }
-
-      const meta = {
-        bd: store?.state?.baseDatos?.bd || "",
-        usuario: store?.state?.permisos?.nombre || "",
-        tipo: "pedido",
-        ts: Date.now(),
-      };
-
-      const mensaje = {
-        type: "PRINT_PDF",
-        token,
-        printer: configHost.nombre_impresora || "POS-80-Series",
-        copies: copias,
-        meta,
-        pdf: buffer,
-      };
-
-      const timer = setInterval(() => {
-        try {
-          ventana.postMessage(mensaje, "*", [buffer]);
-          clearInterval(timer);
-
-          resolvers[docId] = { resolve, reject };
-
-          const checkClosed = setInterval(() => {
-            if (ventana.closed) {
-              clearInterval(checkClosed);
-              if (resolvers[docId]) {
-                resolvers[docId].resolve();
-                delete resolvers[docId];
-              }
-            }
-          }, 500);
-
-        } catch (e) {
-          clearInterval(timer);
-          reject(e);
-        }
-      }, 250);
-
-      setTimeout(() => reject(new Error('Timeout')), 60000);
-    } catch (e) {
-      console.error("Error impresión host:", e);
-      abre_dialogo_impresion_original(doc, docId).then(resolve).catch(reject);
-    }
-  });
 }
 
 async function abre_dialogo_impresion_original(doc, docId = Date.now()) {
@@ -153,12 +74,8 @@ async function abre_dialogo_impresion_original(doc, docId = Date.now()) {
   });
 }
 
-async function abre_dialogo_impresion(doc, copias = 1, docId = Date.now()) {
-  if (permite_impresion_host()) {
-    return await abre_dialogo_impresion_host(doc, copias, docId);
-  } else {
-    return await abre_dialogo_impresion_original(doc, docId);
-  }
+async function abre_dialogo_impresion(doc, docId = Date.now()) {
+  return await abre_dialogo_impresion_original(doc, docId);
 }
 
 export const pdfGenera = (
@@ -554,7 +471,11 @@ async function impresionA4_ordenPedido(cabecera, items = [], modo = 'abre', docI
         window.open(url, "_blank");
       }
     } else {
-      await abre_dialogo_impresion(doc, copias, docId);
+      if (!permite_impresion_host()) {
+        await abre_dialogo_impresion(doc, docId);
+        return true;
+      }
+      return doc.output("arraybuffer");
     }
   }
 
@@ -948,7 +869,11 @@ async function impresion80_ordenPedido(cabecera, items = [], modo = 'abre', docI
         window.open(url, "_blank");
       }
     } else {
-      await abre_dialogo_impresion(doc, copias, docId);
+      if (!permite_impresion_host()) {
+        await abre_dialogo_impresion(doc, docId);
+        return true;
+      }
+      return doc.output("arraybuffer");
     }
   }
 
@@ -1361,7 +1286,11 @@ async function impresion58_ordenPedido(cabecera, items = [], modo = 'abre', docI
         window.open(url, "_blank");
       }
     } else {
-      await abre_dialogo_impresion(doc, copias, docId);
+      if (!permite_impresion_host()) {
+        await abre_dialogo_impresion(doc, docId);
+        return true;
+      }
+      return doc.output("arraybuffer");
     }
   }
 

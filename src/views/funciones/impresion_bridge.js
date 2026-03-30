@@ -18,6 +18,15 @@ function getBridgeConfig() {
   };
 }
 
+export function ep(modo = "abre") {
+  const valor = String(modo || "abre").toLowerCase().trim();
+  if (valor !== "abre") return false;
+  if (store?.state?.esmovil) return false;
+
+  const tienePermiso = store?.state?.permisos?.permite_impresion_host === true;
+  return tienePermiso;
+}
+
 export async function abrir_bridge_impresion() {
   if (ventanaBridge && !ventanaBridge.closed && bridgeReadyPromise) {
     return bridgeReadyPromise;

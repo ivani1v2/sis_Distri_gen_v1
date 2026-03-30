@@ -645,7 +645,8 @@ import { reporte_almacen_consolidado } from '../pedidos/reportes_pdf';
 import {
     abrir_bridge_impresion,
     impresion_bridge,
-    cerrar_bridge_impresion
+    cerrar_bridge_impresion,
+    ep
 } from '../../views/funciones/impresion_bridge'
 export default {
     components: {
@@ -672,7 +673,8 @@ export default {
                 'Datos del cliente incorrectos',
                 'Producto/servicio cargado por error',
                 'Duplicado',
-                'Solicitud del cliente'
+                'Solicitud del cliente',
+                'Ausente', 'Sin dinero', 'Cerrado'
             ],
             dial_anular_masivo: false,
             motivo_anulacion_masivo: '',
@@ -1561,6 +1563,7 @@ export default {
             const array = this.desserts.filter(
                 item => item.consolida === true && item.estado !== 'ANULADO'
             );
+            const usaBridge = ep(this.modo_impresion_comp);
 
             if (!array.length) {
                 this.$store.commit('dialogosnackbar', 'Seleccione al menos un comprobante.');
@@ -1574,7 +1577,9 @@ export default {
             this.printDialog = true;
 
             try {
-                await abrir_bridge_impresion();
+                if (usaBridge) {
+                    await abrir_bridge_impresion();
+                }
 
                 for (let i = 0; i < array.length; i++) {
                     try {
@@ -1601,12 +1606,14 @@ export default {
                             this.modo_impresion_comp
                         );
 
-                        await impresion_bridge(
-                            resp,
-                            this.copias_comprobante || 1,
-                            `${data.numeracion}-${i}-${Date.now()}`,
-                            i === array.length - 1
-                        );
+                        if (usaBridge && resp instanceof ArrayBuffer) {
+                            await impresion_bridge(
+                                resp,
+                                this.copias_comprobante || 1,
+                                `${data.numeracion}-${i}-${Date.now()}`,
+                                i === array.length - 1
+                            );
+                        }
 
                         this.printDone = i + 1;
 
@@ -1629,7 +1636,9 @@ export default {
                 );
             } finally {
                 this.printDialog = false;
-                await cerrar_bridge_impresion();
+                if (usaBridge) {
+                    await cerrar_bridge_impresion();
+                }
             }
         },
         getReferenciaPrincipal(cliente) {
@@ -2239,6 +2248,7 @@ export default {
         async ejecutarImpresionGuia(formato) {
             this.dialogo_guia_individual = false;
             this.$store.commit('dialogoprogress', 1);
+            const usaBridge = ep(this.modo_guia_individual);
 
             try {
                 let snapshot;
@@ -2254,6 +2264,10 @@ export default {
                 if (snapshot.exists()) {
                     const arraydatos = snapshot.val();
 
+                    if (usaBridge) {
+                        await abrir_bridge_impresion();
+                    }
+
                     if (this.modo_guia_individual === 'descarga') {
                         for (let c = 1; c <= this.copias_guia_individual; c++) {
                             if (c > 1) {
@@ -2266,10 +2280,24 @@ export default {
                                 total_copias: this.copias_guia_individual
                             };
 
-                            generaGuia(dataConCopia, formato, this.modo_guia_individual, 1);
+                            await generaGuia(dataConCopia, formato, this.modo_guia_individual, 1);
                         }
                     } else {
-                        generaGuia(arraydatos, formato, this.modo_guia_individual, this.copias_guia_individual);
+                        const resp = await generaGuia(
+                            arraydatos,
+                            formato,
+                            this.modo_guia_individual,
+                            this.copias_guia_individual
+                        );
+
+                        if (usaBridge && resp instanceof ArrayBuffer) {
+                            await impresion_bridge(
+                                resp,
+                                this.copias_guia_individual || 1,
+                                `${this.guia_individual_data || Date.now()}-guia-individual`,
+                                true
+                            );
+                        }
                     }
 
                     this.$store.commit('dialogosnackbar',
@@ -2284,6 +2312,9 @@ export default {
                 console.error('Error procesando guía:', e);
                 this.$store.commit('dialogosnackbar', 'Error al procesar la guía');
             } finally {
+                if (usaBridge) {
+                    await cerrar_bridge_impresion();
+                }
                 this.$store.commit('dialogoprogress');
             }
         },

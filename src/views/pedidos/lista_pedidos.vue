@@ -409,6 +409,12 @@ import BuscaClientesPedido from './dialogos/dialogo_cliente_pedido.vue'
 import dial_deudas_cliente from '@/views/clientes/dialogos/dial_deudas_cliente.vue'
 import store from '@/store/index'
 import { pdfGenera } from './formatos/orden_pedido.js'
+import {
+    abrir_bridge_impresion,
+    impresion_bridge,
+    cerrar_bridge_impresion,
+    ep
+} from '../funciones/impresion_bridge'
 import anular_p from './anular_pedido.vue'
 import axios from "axios";
 import { colClientes } from '../../db_firestore'
@@ -928,20 +934,52 @@ export default {
         sortPedidos(arr) {
             return (arr || []).slice().sort((a, b) => (b.fecha_emision || 0) - (a.fecha_emision || 0));
         },
-        async imprimir(tama) {
-            var pedido = this.pedidoSeleccionado
-            console.log('seleccionado', this.pedidoSeleccionado)
-            store.commit("dialogoprogress")
+        async imprimir(arg) {
+            const esTamano = typeof arg === 'string';
+            const pedidoSeleccionado = esTamano ? this.pedidoSeleccionado : arg;
+            const tamano = esTamano ? arg : (store.state.configImpresora.tamano || '80');
 
-            var snap = await detalle_pedido(pedido.id).once('value')
-            const val = snap.val() || [];
-            const items = Array.isArray(val) ? val : Object.values(val);
-            const doc = await colClientes().doc(String(pedido.doc_numero)).get()
-            store.commit("dialogoprogress")
-            pedido.referencia = this.getReferenciaPrincipal(doc.data())
-            // pdfGenera(pedido, items, tama);
+            if (!pedidoSeleccionado || !pedidoSeleccionado.id) {
+                this.$toast?.error?.("Seleccione un pedido para imprimir") || alert("Seleccione un pedido para imprimir");
+                return;
+            }
 
-            pdfGenera(pedido, items, store.state.configImpresora.tamano);
+            const pedido = { ...pedidoSeleccionado };
+            const usaBridge = ep('abre');
+
+            try {
+                store.commit("dialogoprogress");
+
+                if (usaBridge) {
+                    await abrir_bridge_impresion();
+                }
+
+                const snap = await detalle_pedido(pedido.id).once('value');
+                const val = snap.val() || [];
+                const items = Array.isArray(val) ? val : Object.values(val);
+
+                const docCliente = await colClientes().doc(String(pedido.doc_numero)).get();
+                pedido.referencia = this.getReferenciaPrincipal(docCliente?.data?.() || {}) || '';
+
+                const resp = await pdfGenera(pedido, items, tamano, 'abre', 1);
+
+                if (usaBridge && resp instanceof ArrayBuffer) {
+                    await impresion_bridge(
+                        resp,
+                        1,
+                        `${pedido.id || pedido.numero_pedido || Date.now()}-single`,
+                        true
+                    );
+                }
+            } catch (e) {
+                console.error('Error al imprimir pedido:', e);
+                this.$toast?.error?.("No se pudo imprimir el pedido") || alert("No se pudo imprimir el pedido");
+            } finally {
+                if (usaBridge) {
+                    await cerrar_bridge_impresion();
+                }
+                store.commit("dialogoprogress");
+            }
         },
         async descargar(pedido) {
             store.commit("dialogoprogress")

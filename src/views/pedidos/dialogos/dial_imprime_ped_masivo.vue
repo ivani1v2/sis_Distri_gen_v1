@@ -76,7 +76,12 @@ import { detalle_pedido } from "../../../db";
 import store from "@/store/index";
 import { colClientes } from "../../../db_firestore";
 import { pdfGenera } from "../formatos/orden_pedido.js";
-import { impresionQueue } from "../../../impresionQueue";
+import {
+    abrir_bridge_impresion,
+    impresion_bridge,
+    cerrar_bridge_impresion,
+    ep
+} from '../../funciones/impresion_bridge'
 import impresorahost from '@/components/configEmpresa/impresorahost.vue'
 
 export default {
@@ -200,6 +205,7 @@ export default {
 
         async imprimirMasivo(tama = "A4") {
             if (this.imprimiendo) return;
+            const usaBridge = ep('abre');
 
             try {
                 const lista = this.pedidosSeleccionados || [];
@@ -214,10 +220,11 @@ export default {
                 this.printDone = 0;
                 this.printError = '';
 
-                for (let i = 0; i < lista.length; i++) {
-                    let trabajoCompletado = false;
-                    let timeoutId = null;
+                if (usaBridge) {
+                    await abrir_bridge_impresion();
+                }
 
+                for (let i = 0; i < lista.length; i++) {
                     try {
                         const cab = lista[i];
 
@@ -237,29 +244,22 @@ export default {
                         const items = Array.isArray(val) ? val : Object.values(val);
                         const cabecera = await this.buildCabeceraCompleta(cab);
 
-                        await Promise.race([
-                            impresionQueue.add(async (docId) => {
-                                await pdfGenera(cabecera, items, tama, 'abre', 1, docId);
-                                trabajoCompletado = true;
-                            }),
-                            new Promise((_, reject) => {
-                                timeoutId = setTimeout(() => {
-                                    reject(new Error(`Timeout en pedido ${i + 1}`));
-                                }, 120000);
-                            })
-                        ]);
+                        const resp = await pdfGenera(cabecera, items, tama, 'abre', 1);
 
-                        if (timeoutId) clearTimeout(timeoutId);
-
-                        if (trabajoCompletado) {
-                            this.printDone = i + 1;
+                        if (usaBridge && resp instanceof ArrayBuffer) {
+                            await impresion_bridge(
+                                resp,
+                                1,
+                                `${cab.id || cab.numero_pedido || Date.now()}-${i}`,
+                                i === lista.length - 1
+                            );
                         }
+
+                        this.printDone = i + 1;
 
                     } catch (error) {
                         console.error('Error imprimiendo pedido:', error);
                         this.printError = `Error en pedido ${i + 1}: ${error.message}`;
-
-                        if (timeoutId) clearTimeout(timeoutId);
 
                         const continuar = confirm(`Error en pedido ${i + 1}. ¿Continuar con los siguientes?`);
                         if (!continuar) {
@@ -278,6 +278,9 @@ export default {
                 console.error("imprimirMasivo:", e);
                 this.printError = "Error en impresión masiva";
             } finally {
+                if (usaBridge) {
+                    await cerrar_bridge_impresion();
+                }
                 this.imprimiendo = false;
             }
         },

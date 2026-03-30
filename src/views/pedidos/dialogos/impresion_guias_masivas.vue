@@ -51,7 +51,6 @@
                                 <v-container class="text-center">
                                     <v-icon size="35" color="red">mdi-file-pdf-box</v-icon>
                                     <h5 class="pa-1">PDF A4</h5>
-                                    <span class="caption grey--text">Formato carta</span>
                                 </v-container>
                             </v-card>
                         </v-col>
@@ -60,7 +59,6 @@
                                 <v-container class="text-center">
                                     <v-icon size="35" color="red">mdi-printer-pos</v-icon>
                                     <h5 class="pa-1">Ticket 80mm</h5>
-                                    <span class="caption grey--text">Formato térmico</span>
                                 </v-container>
                             </v-card>
                         </v-col>
@@ -97,8 +95,13 @@
 <script>
 import { buscaGuiaremision } from '../../../db'
 import { generaGuia } from '../../../pdf_guia'
-import { impresionQueue } from '../../../impresionQueue'
 import impresorahost from '../../../components/configEmpresa/impresorahost.vue'
+import {
+    abrir_bridge_impresion,
+    impresion_bridge,
+    cerrar_bridge_impresion,
+    ep
+} from '../../funciones/impresion_bridge'
 import store from '@/store/index'
 
 export default {
@@ -198,6 +201,7 @@ export default {
         },
         async imprimir_guias_masivo(formato) {
             const seleccionados = this.guiasPendientes;
+            const usaBridge = ep(this.modo_impresion_guia);
 
             if (seleccionados.length === 0) return;
 
@@ -205,65 +209,80 @@ export default {
             this.printGuiaDone = 0;
             this.printGuiaError = '';
 
-            await this.imprimir_guia_recursivo(seleccionados, 0, formato);
-        },
-        async imprimir_guia_recursivo(array, index, formato) {
             try {
-                if (index < array.length) {
-                    const item = array[index];
-
-                    this.printGuiaDone = index;
-
-                    const snapshot = await buscaGuiaremision(item.guia_id).once("value");
-
-                    if (snapshot.exists()) {
-                        const datosGuia = snapshot.val();
-                        
-                        await impresionQueue.add(async (docId) => {
-                            if (this.modo_impresion_guia === 'descarga') {
-                                for (let c = 1; c <= this.copias_guia; c++) {
-                                    if (c > 1) {
-                                        await new Promise(resolve => setTimeout(resolve, 500));
-                                    }
-                                    
-                                    const datosGuiaConCopia = {
-                                        ...datosGuia,
-                                        numero_copia: c,
-                                        total_copias: this.copias_guia
-                                    };
-                                    
-                                    await generaGuia(datosGuiaConCopia, formato, this.modo_impresion_guia, 1, docId);
-                                }
-                            } else {
-                                await generaGuia(datosGuia, formato, this.modo_impresion_guia, this.copias_guia, docId);
-                            }
-                        });
-                        
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                    }
-
-                    this.printGuiaDone = index + 1;
-                    await this.imprimir_guia_recursivo(array, index + 1, formato);
-                } else {
-                    this.printGuiaDone = array.length;
-                    
-                    const mensaje = this.modo_impresion_guia === 'descarga' 
-                        ? `${array.length} guía(s) descargada(s) en formato ${formato === 'A4' ? 'PDF A4' : 'Ticket 80mm'} con ${this.copias_guia} copia(s) cada una.`
-                        : `${array.length} guía(s) impresa(s) en formato ${formato === 'A4' ? 'PDF A4' : 'Ticket 80mm'} con ${this.copias_guia} copia(s) cada una.`;
-                    
-                    store.commit('dialogosnackbar', mensaje);
-
-                    this.$emit('update:impresion-completada', true);
-
-                    setTimeout(() => {
-                        this.cerrar();
-                    }, 2000);
+                if (usaBridge) {
+                    await abrir_bridge_impresion();
                 }
-            } catch (e) {
-                console.error('Error imprimiendo guía:', e);
-                this.printGuiaError = `Error en guía ${index + 1}: ${e.message}`;
-                this.printGuiaDone = index + 1;
-                await this.imprimir_guia_recursivo(array, index + 1, formato);
+
+                for (let i = 0; i < seleccionados.length; i++) {
+                    try {
+                        const item = seleccionados[i];
+                        const snapshot = await buscaGuiaremision(item.guia_id).once("value");
+
+                        if (!snapshot.exists()) {
+                            throw new Error('No se encontró la guía');
+                        }
+
+                        const datosGuia = snapshot.val();
+
+                        if (this.modo_impresion_guia === 'descarga') {
+                            for (let c = 1; c <= this.copias_guia; c++) {
+                                if (c > 1) {
+                                    await new Promise(resolve => setTimeout(resolve, 500));
+                                }
+
+                                const datosGuiaConCopia = {
+                                    ...datosGuia,
+                                    numero_copia: c,
+                                    total_copias: this.copias_guia
+                                };
+
+                                await generaGuia(datosGuiaConCopia, formato, this.modo_impresion_guia, 1);
+                            }
+                        } else {
+                            const resp = await generaGuia(
+                                datosGuia,
+                                formato,
+                                this.modo_impresion_guia,
+                                this.copias_guia
+                            );
+
+                            if (usaBridge && resp instanceof ArrayBuffer) {
+                                await impresion_bridge(
+                                    resp,
+                                    this.copias_guia || 1,
+                                    `${item.guia_id || item.numeracion || Date.now()}-${i}`,
+                                    i === seleccionados.length - 1
+                                );
+                            }
+                        }
+
+                        this.printGuiaDone = i + 1;
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    } catch (e) {
+                        console.error('Error imprimiendo guía:', e);
+                        this.printGuiaError = `Error en guía ${i + 1}: ${e.message}`;
+
+                        const continuar = confirm(`Error en guía ${i + 1}. ¿Continuar con las siguientes?`);
+                        if (!continuar) break;
+                    }
+                }
+
+                const mensaje = this.modo_impresion_guia === 'descarga'
+                    ? `${this.printGuiaDone} guía(s) descargada(s) en formato ${formato === 'A4' ? 'PDF A4' : 'Ticket 80mm'} con ${this.copias_guia} copia(s) cada una.`
+                    : `${this.printGuiaDone} guía(s) impresa(s) en formato ${formato === 'A4' ? 'PDF A4' : 'Ticket 80mm'} con ${this.copias_guia} copia(s) cada una.`;
+
+                store.commit('dialogosnackbar', mensaje);
+                this.$emit('update:impresion-completada', true);
+
+                setTimeout(() => {
+                    this.cerrar();
+                }, 1500);
+            } finally {
+                if (usaBridge) {
+                    await cerrar_bridge_impresion();
+                }
+                this.imprimiendo = false;
             }
         },
         cerrar() {
