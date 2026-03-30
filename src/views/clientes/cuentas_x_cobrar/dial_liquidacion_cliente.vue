@@ -83,7 +83,7 @@
                           <v-list-item-icon><v-icon color="warning">mdi-printer</v-icon></v-list-item-icon>
                           <v-list-item-title>Imprime Constancia</v-list-item-title>
                         </v-list-item>
-                        <v-list-item v-if="esAdmin" @click="editarCuota(item, index)" :disabled="item.estado === 'PAGADO'">
+                        <v-list-item v-if="esAdmin" @click="editarCuota(item, index)">
                           <v-list-item-icon><v-icon color="blue">mdi-pencil</v-icon></v-list-item-icon>
                           <v-list-item-title>Editar</v-list-item-title>
                         </v-list-item>

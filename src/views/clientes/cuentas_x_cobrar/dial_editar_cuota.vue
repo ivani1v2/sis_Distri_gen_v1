@@ -38,6 +38,9 @@
           Monto pendiente total del crédito:
           <strong>S/.{{ redondear(item_selecto.monto_pendiente || 0) }}</strong>
         </div>
+        <v-alert type="info" class="mt-3 caption">
+          Solo modificará el monto y fecha de vencimiento. Corregir cuotas posteriores si es necesario.
+        </v-alert>
       </v-card-text>
     </v-card>
   </v-dialog>
