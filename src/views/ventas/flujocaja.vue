@@ -47,7 +47,7 @@
                                         :items="opcionesSedes" item-text="nombre" item-value="base" label="Vendedor"
                                         hide-details @change="onSedeChange" />
                                 </v-list-item>
-                   
+
 
                                 <v-list-item @click="evento(5)" v-if="false">
                                     <v-list-item-icon><v-icon color="info">mdi-cash-plus</v-icon></v-list-item-icon>
@@ -368,6 +368,8 @@ import {
 } from '../../pdf'
 import dial_rep_vend from './reportes/rep_productos_vendidos.vue'
 import store from '@/store/index'
+import axios from 'axios'
+import CryptoJS from 'crypto-js'
 
 export default {
     name: 'flujocaja',
@@ -763,123 +765,85 @@ export default {
         async cierraflujos() {
             this.$store.commit("dialogoprogress", 1);
             try {
-                // 1) Calcula totales por método con los flujos actuales
-                const tot = this.calcTotalesPorMetodo(this.desserts);
-
-                // 2) Arma registro de historial (incluye desagregado por método)
-                const id_historial = this.generateUUID(); // id para idempotencia
-                const ahora_unix = moment().unix();
-
-                const historial = {
-                    id_historial,
-                    fecha_inicio: ahora_unix,
-                    fecha_cierre: ahora_unix,
-                    monto_apertura: 0,
-                    ingreso: tot.total_ingreso,
-                    egreso: tot.total_egreso,
+                const payload = {
+                    id_historial: this.generateUUID(),
                     observacion: this.observacion || '',
-                    estado: 'cerrado',
-                    data: this.desserts, // respaldo de movimientos
-                    totales_por_modo: tot.por_modo,
-                    saldos_finales_por_modo: tot.saldos_finales
+                    flujos: this.desserts,
+                    modopagos: store.state.modopagos || [],
+                    sede: store.state.sedeActual || {},
+                    correo: store.state.permisos.correo || '',
+                    ruc_asociado: store.state.baseDatos.ruc_asociado || '',
+                    copia_saldos_caja: Boolean(store.state.configuracion.copia_saldos_caja)
                 };
 
-                // 3) Guarda historial: con retries y timeout
-                const guardarHistorial = async () => {
-                    // asume que nuevoflujo_historial(historial) => Promise que devuelve { key }
-                    return await nuevoflujo_historial(historial);
-                };
+                const idem = this.buildIdemKeyCierre({
+                    bd: store.state.baseDatos.bd,
+                    payload,
+                });
 
-                const r = await this.withTimeout(
-                    this.retryAsync(guardarHistorial, {
-                        retries: 4,
-                        delay: 600,
-                        factor: 2,
-                        onRetry: (att, err) => console.warn('retry guardarHistorial', att, err.message)
-                    }),
-                    15000,
-                    'Guardar historial timeout'
-                );
-
-                // 4) Crear movimientos de tesorería (netos por método)
-                // encapsular en función para retries
-                const crearTesoreria = async () => {
-                    await this.crear_flujo_tesoreria(historial, r.key);
-                    return true;
-                };
-
-                await this.withTimeout(
-                    this.retryAsync(crearTesoreria, { retries: 3, delay: 500, factor: 2 }),
-                    20000,
-                    'Crear tesorería timeout'
-                );
-
-                // 5) Eliminar todos los flujos: operación crítica. Si falla: guardar pendiente.
-                // intenta elimina_all_flujo() con timeout/retry. Si falla, registra pending action para worker.
-                const eliminaFn = async () => {
-                    return await elimina_all_flujo(); // debe ser Promise
-                };
-
-                try {
-                    await this.withTimeout(this.retryAsync(eliminaFn, { retries: 3, delay: 500, factor: 2 }), 15000, 'Eliminar flujos timeout');
-                } catch (errElimina) {
-                    console.error('No se pudo eliminar flujos directamente:', errElimina);
-
-                    // Guardar acción pendiente en RTDB para que un CF o worker la procese luego
-                    // Supongo que tienes una referencia pública para pending: all_histo_stock / pending_actions
-                    try {
-                        const pendingRef = (bd) => {
-                            // sustituye 'pending_actions' por la ruta que uses
-                            return all_histo_stock().ref.root.child('pending_actions').push();
-                        };
-
-                        await pendingRef().set({
-                            type: 'elimina_all_flujo',
-                            id_historial,
-                            fecha: moment().unix(),
-                            descripcion: 'Eliminar flujos pendiente por fallo en cliente',
-                        });
-                        console.warn('Se registró acción pendiente para eliminar flujos en pending_actions.');
-                    } catch (e) {
-                        console.error('Fallo al registrar pending action para elimina_all_flujo:', e);
+                const resp = await axios({
+                    method: 'POST',
+                    url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
+                    headers: {
+                        'X-Idempotency-Key': idem,
+                    },
+                    data: {
+                        bd: store.state.baseDatos.bd,
+                        data: payload,
+                        metodo: 'cierra_flujos'
                     }
+                });
+
+                if (!resp || !resp.data || resp.data.message !== 'OK') {
+                    throw new Error('Respuesta no valida del cierre de caja');
                 }
 
-                // 6) Aplica saldos finales como saldos iniciales del NUEVO flujo (si está configurado)
-                if (store.state.configuracion.copia_saldos_caja) {
-                    try {
-                        await this.withTimeout(
-                            this.retryAsync(() => this.aplica_saldos_iniciales(tot.saldos_finales), { retries: 3, delay: 500, factor: 2 }),
-                            15000,
-                            'Aplica saldos timeout'
-                        );
-                    } catch (errAplica) {
-                        console.error('No se pudo aplicar saldos iniciales automáticamente:', errAplica);
-                        // Registra pending action para aplicar saldos más tarde
-                        try {
-                            const pendingRef = all_histo_stock().ref.root.child('pending_actions').push();
-                            await pendingRef.set({
-                                type: 'aplica_saldos_iniciales',
-                                id_historial,
-                                saldos_finales: tot.saldos_finales,
-                                fecha: moment().unix()
-                            });
-                        } catch (e) {
-                            console.error('Fallo al guardar pending action aplica_saldos:', e);
-                        }
-                    }
+                if (Array.isArray(resp.data?.data?.warnings) && resp.data.data.warnings.length > 0) {
+                    console.warn('Advertencias cierre de caja:', resp.data.data.warnings);
                 }
 
-                // 7) Resultado final: notificar al usuario y limpiar UI
                 this.$store.commit("dialogoprogress", 0);
                 this.dialogocierre = false;
-                this.$store.commit('dialogosnackbar', '✅ Cierre de caja completado (o registrado para reintento si hubo fallos).');
+                this.$store.commit('dialogosnackbar', 'Cierre de caja completado (o registrado para reintento si hubo fallos).');
+
+                if (typeof this.cargarFlujoMultiSede === 'function') {
+                    await this.cargarFlujoMultiSede();
+                }
 
             } catch (err) {
                 console.error('Error en cierraflujos:', err);
                 this.$store.commit("dialogoprogress", 0);
-                this.$store.commit('dialogosnackbar', '❌ Error al cerrar flujos: ' + (err.message || String(err)));
+                this.$store.commit('dialogosnackbar', 'Error al cerrar flujos: ' + (err.message || String(err)));
             }
+        },
+        buildIdemKeyCierre({ bd, payload = {} }) {
+            const day = moment().format('YYYY-MM-DD');
+            const bucket3min = Math.floor(moment().unix() / 180);
+            const flujos = Array.isArray(payload.flujos) ? payload.flujos : [];
+
+            const resumen = flujos
+                .map((f) => ({
+                    id: String(f.id || f.key || ''),
+                    op: String(f.operacion || ''),
+                    modo: String(f.modo || ''),
+                    total: Number(f.total || 0).toFixed(2),
+                    estado: String(f.estado || ''),
+                }))
+                .sort((a, b) => String(a.id).localeCompare(String(b.id)));
+
+            const base = {
+                day,
+                bucket: bucket3min,
+                obs: String(payload.observacion || ''),
+                copia: Boolean(payload.copia_saldos_caja),
+                ruc: String(payload.ruc_asociado || ''),
+                modopagos: (payload.modopagos || []).map(String).sort(),
+                flujos: resumen,
+            };
+
+            const raw = JSON.stringify(base);
+            const hash10 = CryptoJS.SHA256(raw).toString().substring(0, 10);
+            return `${bd}-cierre-${hash10}`;
         },
 
         async crear_flujo_tesoreria(data, key) {
@@ -940,7 +904,7 @@ export default {
                     id_flujo: key,
                     responsable
                 };
-               // await nuevoflujo_teso(flujoCredito);
+                // await nuevoflujo_teso(flujoCredito);
             }
 
             this.dialogo_apertura = false;
