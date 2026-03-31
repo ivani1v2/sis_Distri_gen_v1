@@ -692,6 +692,7 @@ export default {
         opciones_medida_bultos: ['CAJAS', 'BULTOS', 'SOBRE', 'PAQUETE', 'OTROS'],
         medida_bultos_personalizada: '',
         medida_bultos: 'CAJAS',
+        nro_bultos : '',
     }),
     watch: {
         'departamento_p'(depa) {

@@ -675,7 +675,8 @@ export default {
         pagado_por: 'Remitente',
         doc_relacionados: '',
         ruc_subcontrata: '',
-        razon_subcontrata: ''
+        razon_subcontrata: '',
+        nro_bultos : '',
     }),
     created() {
         if (store.state.array_guia) {
