@@ -1533,7 +1533,7 @@ async function impresionA4(array, qr, arraycabecera) {
       doc.addImage(qr, "png", 10, lineaqr, 28, 28);
     }
     if (arraycabe.tipocomprobante == "T") {
-      doc.addImage(qr, "png", 10, lineaqr, 28, 28);
+      doc.addImage(qr, "png", 10, lineaqr -8, 28, 28);
     }
     if (arraycabe.tipocomprobante != "T") {
       lineaqr = lineaqr + 18;
