@@ -222,6 +222,8 @@ async function impresion58(arraydatos, qr, cabecera) {
   var pdfInMM = 57; // width of A4 in mm
   var cabecera = store.state.configImpresora.cabecera;
   var piepagina = store.state.configImpresora.piepagina;
+  var mision = store.state.configImpresora.mision || "";
+  var vision = store.state.configImpresora.vision || ""; 
   var telefono = store.state.configImpresora.telefono;
   var pageCenter = pdfInMM / 2;
 
@@ -646,6 +648,34 @@ async function impresion58(arraydatos, qr, cabecera) {
     linea = finalY + 3;
   }
 
+  if (documento == "TICKET DE VENTA" && (mision != "" || vision != "")) {
+    linea = linea + 4;
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(7);
+    doc.text(separacion, pageCenter, linea, "center");
+    linea = linea + 3;
+    doc.setFont("Helvetica", "");
+    doc.setFontSize(6.5);
+
+    if (mision != "") {
+      var textoMision = doc.splitTextToSize(
+        "Mision: " + mision,
+        pdfInMM - lMargin - rMargin
+      );
+      doc.text(textoMision, pageCenter, linea, "center");
+      linea = linea + 3 * textoMision.length;
+    }
+
+    if (vision != "") {
+      var textoVision = doc.splitTextToSize(
+        "Vision: " + vision,
+        pdfInMM - lMargin - rMargin
+      );
+      doc.text(textoVision, pageCenter, linea, "center");
+      linea = linea + 3 * textoVision.length;
+    }
+  }
+
   if (piepagina != "") {
     linea = linea + 7;
     doc.setFont("Helvetica", "");
@@ -726,6 +756,8 @@ async function impresion80(arraydatos, qr, cabecera) {
   var pdfInMM = 75; // width of A4 in mm
   var cabecera = store.state.configImpresora.cabecera;
   var piepagina = store.state.configImpresora.piepagina;
+  var mision = store.state.configImpresora.mision || "";
+  var vision = store.state.configImpresora.vision || "";
   var telefono = store.state.configImpresora.telefono;
   var pageCenter = pdfInMM / 2;
   //console.log(arraycabe);
@@ -1142,6 +1174,34 @@ async function impresion80(arraydatos, qr, cabecera) {
     });
     let finalY = doc.previousAutoTable.finalY;
     linea = finalY + 3;
+  }
+
+  if (documento == "TICKET DE VENTA" && (mision != "" || vision != "")) {
+    linea = linea + 4;
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(7);
+    doc.text(separacion, pageCenter, linea, "center");
+    linea = linea + 3;
+    doc.setFont("Helvetica", "");
+    doc.setFontSize(6.5);
+
+    if (mision != "") {
+      var textoMision = doc.splitTextToSize(
+        "Mision: " + mision,
+        pdfInMM - lMargin - rMargin
+      );
+      doc.text(textoMision, pageCenter, linea, "center");
+      linea = linea + 3 * textoMision.length;
+    }
+
+    if (vision != "") {
+      var textoVision = doc.splitTextToSize(
+        "Vision: " + vision,
+        pdfInMM - lMargin - rMargin
+      );
+      doc.text(textoVision, pageCenter, linea, "center");
+      linea = linea + 3 * textoVision.length;
+    }
   }
 
   if (piepagina != "") {

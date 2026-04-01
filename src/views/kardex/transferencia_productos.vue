@@ -51,9 +51,9 @@
         <v-card outlined>
             <v-data-table :headers="headers" :items="movimientos" dense class="elevation-1 d-none d-md-block"
                 :items-per-page="10">
-                <template v-slot:item.fecha="{ item }">
+                <template v-slot:[`item.fecha`]="{ item }">
                     <span>
-                        {{ formatoFecha(item.fecha_unix) }}
+                        {{ formatoFechaHora(item.fecha_unix) }}
                         <v-chip v-if="item.estado === 'anulado'" color="red" text-color="white" x-small class="ml-2">
                             ANULADO
                         </v-chip>
@@ -63,23 +63,23 @@
                         </v-chip>
                     </span>
                 </template>
-                <template v-slot:item.sede_origen="{ item }">
+                <template v-slot:[`item.sede_origen`]="{ item }">
                     <v-chip color="blue lighten-4" text-color="blue darken-2" small>
                         {{ nombreSede(item.sede_origen) }}
                     </v-chip>
                 </template>
-                <template v-slot:item.sede_destino="{ item }">
+                <template v-slot:[`item.sede_destino`]="{ item }">
                     <v-chip color="green lighten-4" text-color="green darken-2" small>
                         {{ nombreSede(item.sede_destino) }}
                     </v-chip>
                 </template>
-                <template v-slot:item.productos="{ item }">
+                <template v-slot:[`item.productos`]="{ item }">
                     <v-chip small color="primary" text-color="white" @click="verDetalle(item)" style="cursor: pointer;">
                         <v-icon left x-small>mdi-package-variant</v-icon>
                         {{ item.productos.length }} productos
                     </v-chip>
                 </template>
-                <template v-slot:item.accion="{ item }">
+                <template v-slot:[`item.accion`]="{ item }">
                     <v-menu bottom left>
                         <template v-slot:activator="{ on, attrs }">
                             <v-btn icon v-bind="attrs" v-on="on">
@@ -151,9 +151,6 @@
                                     <span class="mr-3">
                                         <v-icon x-small class="mr-1">mdi-package-variant</v-icon>
                                         {{ item.productos.length }} producto(s)
-                                    </span>
-                                    <span class="font-weight-bold primary--text">
-                                        {{ moneda }} {{ Number(item.total || 0).toFixed(2) }}
                                     </span>
                                 </div>
                             </div>
@@ -363,7 +360,7 @@ export default {
                 { text: 'Origen', value: 'sede_origen' },
                 { text: 'Destino', value: 'sede_destino' },
                 { text: 'Productos', value: 'productos' },
-                { text: 'Total', value: 'usuario' },
+                { text: 'Usuario', value: 'usuario' },
                 { text: 'Acción', value: 'accion', sortable: false }
             ],
             mostrarDetalle: false,
@@ -413,6 +410,9 @@ export default {
         if (this._periodoRef) this._periodoRef.off('value', this.onPeriodoChange);
     },
     methods: {
+        formatoFechaHora(timestamp) {
+    return moment.unix(timestamp).format('DD/MM/YYYY HH:mm:ss');
+},
         inicializarSedeFiltro() {
             if (this.esAdmin) {
                 this.sede_destino = '*';

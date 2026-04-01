@@ -322,6 +322,19 @@
                     <v-list-item-content><v-list-item-title>Panel Admin</v-list-item-title></v-list-item-content>
                 </v-list-item>
 
+                <v-list-item v-if="puedeGestionarCobrarVendedor3">
+                    <v-list-item-icon><v-icon color="teal">mdi-account-cash</v-icon></v-list-item-icon>
+                    <v-list-item-content>
+                        <v-list-item-title class="font-weight-medium">Cobrar V03</v-list-item-title>
+                        <v-list-item-subtitle>Luis Hernandez</v-list-item-subtitle>
+                    </v-list-item-content>
+                    <v-list-item-action>
+                        <v-switch v-model="permisoCobrarVendedor3" inset hide-details dense
+                            :loading="loadingCobrarVendedor3" :disabled="loadingCobrarVendedor3 || !tokenVendedor3"
+                            @change="actualizaPermisoCobrarVendedor3" />
+                    </v-list-item-action>
+                </v-list-item>
+
                 <v-list-item v-if="$store.state.permisos.moduloempresa" link @click.prevent="router('miempresa')">
                     <v-list-item-icon><v-icon>mdi-cog-outline</v-icon></v-list-item-icon>
                     <v-list-item-content><v-list-item-title>Configuración</v-list-item-title></v-list-item-content>
@@ -499,7 +512,16 @@ export default {
             },],
             dialog_tiendas: false,
             array_sedes: [],
-            sede_acual: ''
+            sede_acual: '',
+            permisoCobrarVendedor3: false,
+            loadingCobrarVendedor3: false,
+            tokenVendedor3: '',
+            vendedor3Meta: {
+                correo: 'vende3_chiki@domotica.com',
+                codigo: 'V03',
+                bd: 'BD403',
+                nombre: 'Luis Hernandez',
+            },
         }
     },
     beforeCreate() {
@@ -546,6 +568,10 @@ export default {
         },
          isMobile() {
             return this.$vuetify && this.$vuetify.breakpoint.smAndDown;
+        },
+        puedeGestionarCobrarVendedor3() {
+            const p = this.$store.state.permisos || {}
+            return p.es_admin === true || p.es_supervisor === true
         },
     },
     created() {
@@ -594,6 +620,71 @@ export default {
                 })
 
                 this.obtenerCliente(this.bd)
+            }
+
+            this.cargarPermisoCobrarVendedor3()
+        },
+        async cargarPermisoCobrarVendedor3() {
+            this.loadingCobrarVendedor3 = true
+            this.tokenVendedor3 = ''
+            try {
+                const snap = await allUsuarios()
+                    .orderByChild('correo')
+                    .equalTo(this.vendedor3Meta.correo)
+                    .once('value')
+
+                if (!snap.exists()) {
+                    this.permisoCobrarVendedor3 = false
+                    return
+                }
+
+                let encontrado = null
+                snap.forEach((item) => {
+                    const data = item.val() || {}
+                    const okCodigo = String(data.codigo || '').trim().toUpperCase() === this.vendedor3Meta.codigo
+                    const okBd = String(data.bd || '').trim().toUpperCase() === this.vendedor3Meta.bd
+                    if (okCodigo && okBd) {
+                        encontrado = { token: item.key, data }
+                    }
+                })
+
+                if (!encontrado) {
+                    this.permisoCobrarVendedor3 = false
+                    return
+                }
+
+                this.tokenVendedor3 = encontrado.token
+                this.permisoCobrarVendedor3 = !!encontrado.data.modulocuentasxcobrar
+            } catch (e) {
+                console.log('Error cargando permiso vendedor 3:', e)
+            } finally {
+                this.loadingCobrarVendedor3 = false
+            }
+        },
+        async actualizaPermisoCobrarVendedor3() {
+            if (!this.tokenVendedor3) {
+                store.commit('dialogosnackbar', 'No se encontró usuario V03 para actualizar permiso')
+                this.permisoCobrarVendedor3 = false
+                return
+            }
+
+            this.loadingCobrarVendedor3 = true
+            try {
+                await nuevoCampoUsuario(
+                    this.tokenVendedor3,
+                    'modulocuentasxcobrar',
+                    !!this.permisoCobrarVendedor3
+                )
+                store.commit(
+                    'dialogosnackbar',
+                    `Permiso Cobrar actualizado para ${this.vendedor3Meta.nombre} (${this.vendedor3Meta.codigo})`
+                )
+            } catch (e) {
+                this.permisoCobrarVendedor3 = !this.permisoCobrarVendedor3
+                store.commit('dialogosnackbar', 'Error actualizando permiso CxC de vendedor 3')
+                console.log('Error actualizaPermisoCobrarVendedor3:', e)
+            } finally {
+                this.loadingCobrarVendedor3 = false
             }
         },
         async obtenerCliente(BD) {

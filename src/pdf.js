@@ -4,305 +4,224 @@ import store from "@/store/index";
 import moment from "moment";
 
 export const pdf_total_caja = (arraydatos) => {
-  console.log(arraydatos)
-  var linea = parseInt(store.state.configImpresora.msuperior);
-  var pdfInMM = 75; // width of A4 in mm
-  var lMargin = 3.5; //left margin in mm
-  var rMargin = 2; //right margin in mm
-  var separacion =
-    "-------------------------------------------------------------------------------------------------------------------";
-  var fechaImpresion = moment().format("DD/MM/YYYY hh:mm a");
-  var pageCenter = pdfInMM / 2;
+  const toNumber = (value) => {
+    const n = Number(value)
+    return Number.isFinite(n) ? n : 0
+  }
+
+  const money = (value) => toNumber(value).toFixed(2)
+
+  const normalizeMetodo = (value) =>
+    String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase()
+      .trim()
+
+  const configuredMetodos = Array.isArray(store?.state?.modopagos)
+    ? store.state.modopagos
+    : [];
+
+  const metodosBase = configuredMetodos
+    .map((m) => normalizeMetodo(m))
+    .filter(Boolean)
+    .filter((m, idx, arr) => arr.indexOf(m) === idx)
+
+  const metodoKey = (metodo) =>
+    normalizeMetodo(metodo)
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/\./g, "")
+
+  let metodos = Array.isArray(arraydatos.metodos)
+    ? arraydatos.metodos.map((m) => ({
+      metodo: normalizeMetodo(m.metodo),
+      ingreso: toNumber(m.ingreso),
+      egreso: toNumber(m.egreso),
+    }))
+    : metodosBase
+      .map((m) => {
+        const key = metodoKey(m)
+        const ingreso = toNumber(arraydatos[`i_${key}`])
+        const egreso = toNumber(arraydatos[`e_${key}`])
+        return { metodo: m, ingreso, egreso }
+      })
+      .filter((m) => m.ingreso !== 0 || m.egreso !== 0)
+
+  const acumularDesdeDetalles = (detalle, operacion) => {
+    if (!Array.isArray(detalle)) return
+    detalle.forEach((item) => {
+      const metodo = normalizeMetodo(item.modo)
+      if (!metodo) return
+      const monto = toNumber(item.total)
+      const idx = metodos.findIndex((m) => normalizeMetodo(m.metodo) === metodo)
+      if (idx === -1) {
+        metodos.push({
+          metodo,
+          ingreso: operacion === "ingreso" ? monto : 0,
+          egreso: operacion === "egreso" ? monto : 0,
+        })
+      } else if (operacion === "ingreso") {
+        metodos[idx].ingreso += monto
+      } else {
+        metodos[idx].egreso += monto
+      }
+    })
+  }
+
+  acumularDesdeDetalles(arraydatos.datos_ingreso, "ingreso")
+  acumularDesdeDetalles(arraydatos.datos, "egreso")
+
+  metodos = metodos
+    .map((m) => ({
+      metodo: m.metodo,
+      ingreso: toNumber(m.ingreso),
+      egreso: toNumber(m.egreso),
+    }))
+    .filter((m) => m.ingreso !== 0 || m.egreso !== 0)
+    .sort((a, b) => {
+      if (a.metodo === "EFECTIVO") return -1
+      if (b.metodo === "EFECTIVO") return 1
+      return a.metodo.localeCompare(b.metodo)
+    })
+
+  const ingresosTotales = toNumber(arraydatos.t_general) || metodos.reduce((acc, m) => acc + toNumber(m.ingreso), 0)
+  const egresosTotales = toNumber(arraydatos.t_egresos) || metodos.reduce((acc, m) => acc + toNumber(m.egreso), 0)
+  const netoTotal = ingresosTotales - egresosTotales
+
+  const efectivo = metodos.find((m) => m.metodo === "EFECTIVO")
+  const totalEfectivo =
+    toNumber(arraydatos.t_efectivo) ||
+    (efectivo ? toNumber(efectivo.ingreso) - toNumber(efectivo.egreso) : 0)
+
   const doc = new jspdf({
     orientation: "portrait",
     unit: "mm",
-    format: [1000, pdfInMM],
-  });
-  doc.setTextColor(10);
-  doc.text(".", 0, linea);
-  linea = linea + 3;
-  doc.setFontSize(11);
-  doc.setFont("Helvetica", "Bold");
-  var texto = doc.splitTextToSize(
-    "Reporte Total Caja",
-    pdfInMM - lMargin - rMargin
-  );
-  doc.text(texto, pageCenter, linea, "center"); //EMPRESA
-  linea = linea + 4;
-  /*var texto = doc.splitTextToSize(store.state.permisos.tienda, (pdfInMM - lMargin - rMargin));
-  doc.text(texto, pageCenter, linea, 'center'); //EMPRESA
-  linea = linea + 4*/
-  doc.setFontSize(9);
-  doc.setFont("Helvetica", "Bold");
-  var texto = doc.splitTextToSize(fechaImpresion, pdfInMM - lMargin - rMargin);
-  doc.text(texto, pageCenter, linea, "center"); //EMPRESA
-  linea = linea + 3;
-  doc.setFont("Helvetica", "bold");
-  doc.setFontSize(9);
-  doc.text(separacion, pageCenter, linea, "center");
-  linea = linea + 5;
+    format: "a4",
+  })
 
-  doc.setFontSize(9);
-  doc.setFont("Helvetica", "bold");
-  var texto = doc.splitTextToSize("INGRESOS", pdfInMM - lMargin - rMargin);
-  doc.text(texto, pageCenter, linea, "center"); //EMPRESA
-  linea = linea + 5;
+  const marginX = 12
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const centerX = pageWidth / 2
+  let cursorY = 14
 
-  doc.setFont("Helvetica", "");
+  doc.setFont("Helvetica", "bold")
+  doc.setFontSize(13)
+  doc.text("REPORTE TOTAL CAJA", centerX, cursorY, { align: "center" })
+  cursorY += 6
 
-  doc.text("EFECTIVO", lMargin, linea);
-  doc.text("S./" + arraydatos.i_efectivo.toFixed(2), 60, linea, "right");
-  linea = linea + 4;
-  if (arraydatos.i_tarjeta > 0) {
-    doc.text("TARJETA", lMargin, linea);
-    doc.text("S./" + arraydatos.i_tarjeta.toFixed(2), 60, linea, "right");
-    linea = linea + 4;
-  }
-  if (arraydatos.i_yape > 0) {
-    doc.text("YAPE", lMargin, linea);
-    doc.text("S./" + arraydatos.i_yape.toFixed(2), 60, linea, "right");
-    linea = linea + 4;
-  }
-  if (arraydatos.i_plin > 0) {
-    doc.text("PLIN", lMargin, linea);
-    doc.text("S./" + arraydatos.i_plin.toFixed(2), 60, linea, "right");
-    linea = linea + 4;
+  doc.setFont("Helvetica", "normal")
+  doc.setFontSize(9)
+  doc.text(store.state.baseDatos?.name || "", centerX, cursorY, { align: "center" })
+  cursorY += 4
+  doc.text(`Fecha impresión: ${moment().format("DD/MM/YYYY hh:mm a")}`, centerX, cursorY, {
+    align: "center",
+  })
+  cursorY += 6
+
+  if (arraydatos.observacion) {
+    const obs = doc.splitTextToSize(`Observación: ${arraydatos.observacion}`, pageWidth - marginX * 2)
+    doc.text(obs, marginX, cursorY)
+    cursorY += obs.length * 4 + 2
   }
 
-  if (arraydatos.i_transferencia > 0) {
-    doc.text("TRANSF", lMargin, linea);
-    doc.text("S./" + arraydatos.i_transferencia.toFixed(2), 60, linea, "right");
-    linea = linea + 4;
-  }
+  const resumenRows = metodos.map((m) => [
+    m.metodo,
+    money(m.ingreso),
+    money(m.egreso),
+    money(m.ingreso - m.egreso),
+  ])
 
-  if (arraydatos.i_debito > 0) {
-    doc.text("Debito", lMargin, linea);
-    doc.text("S./" + arraydatos.i_debito.toFixed(2), 60, linea, "right");
-    linea = linea + 4;
-  }
-  if (arraydatos.i_credito > 0) {
-    doc.text("Credito", lMargin, linea);
-    doc.text("S./" + arraydatos.i_credito.toFixed(2), 60, linea, "right");
-    linea = linea + 4;
-  }
-  if (arraydatos.i_rappy > 0) {
-    doc.text("Rappy", lMargin, linea);
-    doc.text("S./" + arraydatos.i_rappy.toFixed(2), 60, linea, "right");
-    linea = linea + 4;
-  }
-  if (arraydatos.i_pedidos > 0) {
-    doc.text("Pedidos Ya", lMargin, linea);
-    doc.text("S./" + arraydatos.i_pedidos.toFixed(2), 60, linea, "right");
-    linea = linea + 4;
-  }
-  if (arraydatos.i_posqr > 0) {
-    doc.text("Pos QR", lMargin, linea);
-    doc.text("S./" + arraydatos.i_posqr.toFixed(2), 60, linea, "right");
-    linea = linea + 4;
-  }
+  doc.autoTable({
+    startY: cursorY,
+    margin: { left: marginX, right: marginX },
+    head: [["Método", "Ingresos", "Egresos", "Saldo"]],
+    body: resumenRows,
+    styles: { fontSize: 9, cellPadding: 1.5 },
+    headStyles: { fillColor: [39, 93, 173] },
+    columnStyles: {
+      0: { halign: "left" },
+      1: { halign: "right" },
+      2: { halign: "right" },
+      3: { halign: "right" },
+    },
+    theme: "grid",
+  })
 
-  doc.setFont("Helvetica", "bold");
-  doc.setFontSize(9);
-  doc.text(separacion, pageCenter, linea, "center");
-  linea = linea + 5;
-  doc.text("T.Ingresos", lMargin, linea);
-  doc.text("S./" + arraydatos.t_general.toFixed(2), 60, linea, "right");
-  linea = linea + 4;
-  doc.setFont("Helvetica", "bold");
-  doc.setFontSize(9);
-  doc.text(separacion, pageCenter, linea, "center");
-  linea = linea + 5;
-  doc.setFontSize(9);
-  doc.setFont("Helvetica", "bold");
-  var texto = doc.splitTextToSize("EGRESOS", pdfInMM - lMargin - rMargin);
-  doc.text(texto, pageCenter, linea, "center"); //EMPRESA
-  linea = linea + 5;
+  cursorY = (doc.lastAutoTable?.finalY || cursorY) + 5
 
-  doc.setFont("Helvetica", "");
+  doc.setFont("Helvetica", "bold")
+  doc.setFontSize(10)
+  doc.text(`TOTAL INGRESOS: S/. ${money(ingresosTotales)}`, marginX, cursorY)
+  cursorY += 5
+  doc.text(`TOTAL EGRESOS: S/. ${money(egresosTotales)}`, marginX, cursorY)
+  cursorY += 5
+  doc.text(`TOTAL EFECTIVO: S/. ${money(totalEfectivo)}`, marginX, cursorY)
+  cursorY += 5
+  doc.text(`TOTAL GENERAL (NETO): S/. ${money(netoTotal)}`, marginX, cursorY)
+  cursorY += 6
 
-  doc.text("EFECTIVO", lMargin, linea);
-  doc.text("S./" + arraydatos.e_efectivo.toFixed(2), 60, linea, "right");
-  linea = linea + 4;
-  if (arraydatos.e_tarjeta > 0) {
-    doc.text("TARJETA", lMargin, linea);
-    doc.text("S./" + arraydatos.e_tarjeta.toFixed(2), 60, linea, "right");
-    linea = linea + 4;
-  }
-  console.log(arraydatos)
-  if (arraydatos.e_yape != 0) {
-    doc.text("YAPE", lMargin, linea);
-    doc.text("S./" + arraydatos.e_yape.toFixed(2), 60, linea, "right");
-    linea = linea + 4;
-  }
-  if (arraydatos.e_plin  != 0) {
-    doc.text("PLIN", lMargin, linea);
-    doc.text("S./" + arraydatos.e_plin.toFixed(2), 60, linea, "right");
-    linea = linea + 4;
-  }
-  if (arraydatos.e_transferencia != 0) {
-    doc.text("TRANSF", lMargin, linea);
-    doc.text("S./" + arraydatos.e_transferencia.toFixed(2), 60, linea, "right");
-    linea = linea + 4;
-  }
-  if (arraydatos.e_debito > 0) {
-    doc.text("Debito", lMargin, linea);
-    doc.text("S./" + arraydatos.e_debito.toFixed(2), 60, linea, "right");
-    linea = linea + 4;
-  }
-  if (arraydatos.e_creidto > 0) {
-    doc.text("Credito", lMargin, linea);
-    doc.text("S./" + arraydatos.e_creidto.toFixed(2), 60, linea, "right");
-    linea = linea + 4;
-  }
-  if (arraydatos.e_rappy > 0) {
-    doc.text("Rappy", lMargin, linea);
-    doc.text("S./" + arraydatos.e_rappy.toFixed(2), 60, linea, "right");
-    linea = linea + 4;
-  }
-  if (arraydatos.e_pedidos > 0) {
-    doc.text("Pedidos Ya", lMargin, linea);
-    doc.text("S./" + arraydatos.e_pedidos.toFixed(2), 60, linea, "right");
-    linea = linea + 4;
-  }
-  if (arraydatos.e_posqr > 0) {
-    doc.text("POS QR", lMargin, linea);
-    doc.text("S./" + arraydatos.e_posqr.toFixed(2), 60, linea, "right");
-    linea = linea + 4;
-  }
-  doc.setFont("Helvetica", "bold");
-  doc.setFontSize(9);
-  doc.text(separacion, pageCenter, linea, "center");
-  linea = linea + 5;
-  doc.text("T.Egresos", lMargin, linea);
-  doc.text("S./" + arraydatos.t_egresos.toFixed(2), 60, linea, "right");
-  linea = linea + 4;
-  doc.setFont("Helvetica", "bold");
-  doc.setFontSize(9);
-  doc.text(separacion, pageCenter, linea, "center");
-  linea = linea + 5;
-  doc.text("T.EFECTIVO", lMargin, linea);
-  doc.text(
-    "S./" + parseFloat(arraydatos.t_efectivo).toFixed(2),
-    60,
-    linea,
-    "right"
-  );
-  linea = linea + 5;
+  const mapDetalle = (items, isEgreso) =>
+    (Array.isArray(items) ? items : []).map((item) => [
+      moment.unix(toNumber(item.fecha)).format("DD/MM/YYYY HH:mm"),
+      normalizeMetodo(item.modo),
+      item.responsable || "",
+      item.observacion || "",
+      `${isEgreso ? "-" : ""}${money(item.total)}`,
+    ])
 
-  doc.text("T.GENERAL", lMargin, linea);
-  doc.text(
-    "S./" + parseFloat(arraydatos.t_general - arraydatos.t_egresos).toFixed(2),
-    60,
-    linea,
-    "right"
-  );
-  linea = linea + 5;
+  const ingresosDetalle = mapDetalle(arraydatos.datos_ingreso, false)
+  const egresosDetalle = mapDetalle(arraydatos.datos, true)
 
-  doc.setFont("Helvetica", "bold");
-  doc.setFontSize(9);
-  doc.text(separacion, pageCenter, linea, "center");
-  linea = linea + 5;
-
-  if (arraydatos.observacion != undefined) {
-    doc.setFont("Helvetica", "");
-    doc.setFontSize(9);
-    var texto = doc.splitTextToSize(
-      "Obs : " + arraydatos.observacion,
-      pdfInMM - lMargin - rMargin
-    );
-    doc.text(texto, lMargin, linea, "left");
-    linea = linea + 4 * texto.length;
-  }
-
-  if (arraydatos.datos_ingreso != "") {
-    doc.setFontSize(9);
-    doc.setFont("Helvetica", "bold");
-    var texto = doc.splitTextToSize(
-      "DETALLE INGRESOS ",
-      pdfInMM - lMargin - rMargin
-    );
-    doc.text(texto, pageCenter, linea, "center"); //EMPRESA
-    linea = linea + 5;
-
-    //-----------------productos-----------------------
-    var array = arraydatos.datos_ingreso;
-    var nuevoArrayS = new Array(array.length);
-    for (var i = 0; i < array.length; i++) {
-      nuevoArrayS[i] = new Array(3);
-      nuevoArrayS[i][0] = array[i].observacion;
-      nuevoArrayS[i][1] = Number(array[i].total).toFixed(2);
-    }
+  if (ingresosDetalle.length) {
+    doc.setFont("Helvetica", "bold")
+    doc.setFontSize(10)
+    doc.text("DETALLE INGRESOS", marginX, cursorY)
+    cursorY += 4
 
     doc.autoTable({
-      margin: { top: linea, left: 3 },
-      startY: linea,
-      styles: {
-        fontSize: 9,
-        cellPadding: 0.5,
-        valign: "middle",
-        halign: "center",
-        textColor: [0, 0, 0],
-      },
-      headStyles: { lineWidth: 0, minCellHeight: 9 },
+      startY: cursorY,
+      margin: { left: marginX, right: marginX },
+      head: [["Fecha - Hora", "Método", "Responsable", "Observación", "Total"]],
+      body: ingresosDetalle,
+      styles: { fontSize: 8, cellPadding: 1.3 },
+      headStyles: { fillColor: [16, 124, 16] },
       columnStyles: {
-        0: { columnWidth: 54, halign: "left" },
-        1: { columnWidth: 14, halign: "right" },
+        0: { cellWidth: 30 },
+        1: { cellWidth: 28 },
+        2: { cellWidth: 32 },
+        3: { cellWidth: 75 },
+        4: { halign: "right", cellWidth: 20 },
       },
-      theme: ["grid"],
-      body: nuevoArrayS,
-    });
-    let finalY = doc.previousAutoTable.finalY;
-    linea = finalY + 10;
+      theme: "grid",
+    })
+    cursorY = (doc.lastAutoTable?.finalY || cursorY) + 6
   }
 
-  if (arraydatos.datos != "") {
-    doc.setFontSize(9);
-    doc.setFont("Helvetica", "bold");
-    var texto = doc.splitTextToSize(
-      "DETALLE EGRESOS",
-      pdfInMM - lMargin - rMargin
-    );
-    doc.text(texto, pageCenter, linea, "center"); //EMPRESA
-    linea = linea + 5;
-    //-----------------productos-----------------------
-    var array = arraydatos.datos;
-    var nuevoArray = new Array(array.length);
-    for (var i = 0; i < array.length; i++) {
-      nuevoArray[i] = new Array(3);
-      nuevoArray[i][0] = array[i].observacion;
-      nuevoArray[i][1] = "-" + Number(array[i].total).toFixed(2);
-    }
-
+  if (egresosDetalle.length) {
     doc.autoTable({
-      margin: { top: linea, left: 3 },
-      startY: linea,
-      styles: {
-        fontSize: 9,
-        cellPadding: 0.5,
-        valign: "middle",
-        halign: "center",
-        textColor: [0, 0, 0],
-      },
-      headStyles: { lineWidth: 0, minCellHeight: 9 },
+      startY: cursorY,
+      margin: { left: marginX, right: marginX },
+      head: [["DETALLE EGRESOS", "Método", "Responsable", "Observación", "Total"]],
+      body: egresosDetalle,
+      styles: { fontSize: 8, cellPadding: 1.3 },
+      headStyles: { fillColor: [178, 34, 34] },
       columnStyles: {
-        0: { columnWidth: 54, halign: "left" },
-        1: { columnWidth: 14, halign: "right" },
+        0: { cellWidth: 30 },
+        1: { cellWidth: 28 },
+        2: { cellWidth: 32 },
+        3: { cellWidth: 75 },
+        4: { halign: "right", cellWidth: 20 },
       },
-      theme: ["grid"],
-      body: nuevoArray,
-    });
+      theme: "grid",
+    })
   }
 
-  let finalu = doc.previousAutoTable.finalY;
-
-  linea = finalu + 5;
-
-  doc.text("........", 1, linea);
-
+  const blobUrl = doc.output("bloburi")
   if (store.state.esmovil) {
-    window.open(doc.output("bloburi"));
+    window.open(blobUrl)
   } else {
-    abre_dialogo_impresion(doc.output("bloburi"));
+    abre_dialogo_impresion(blobUrl)
   }
 };
 export const pdfcierrecaja = (data, fecha) => {
