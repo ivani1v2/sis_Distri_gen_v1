@@ -121,7 +121,7 @@
       <v-card class="pa-4">
         <v-data-table dense :headers="headers" :items="itemsOrdenados" :search="busqueda" fixed-header
           :items-per-page="50" mobile-breakpoint="0" height="60vh" class="elevation-1">
-          <template v-slot:item.cantidad="{ item }">
+          <template v-slot:[`item.cantidad`]="{ item }">
             <span>{{ format0(item.cantidad) }}</span>
             <v-chip v-if="false" x-small class="ml-1" color="green" text-color="white" title="Unidades gravadas">
               {{ format0(item.cantidad_gravada) }} GRV
@@ -132,22 +132,22 @@
             </v-chip>
           </template>
 
-          <template v-slot:item.costo="{ item }">
+          <template v-slot:[`item.costo`]="{ item }">
             <span>{{ monedaSimbolo }} {{ format2(item.costo) }}</span>
           </template>
-          <template v-slot:item.costo_tot="{ item }">
+          <template v-slot:[`item.costo_tot`]="{ item }">
             <span>{{ monedaSimbolo }} {{ format2(item.costo_tot) }}</span>
           </template>
 
-          <template v-slot:item.precio_prom="{ item }">
+          <template v-slot:[`item.precio_prom`]="{ item }">
             <span>{{ monedaSimbolo }} {{ format2(item.precio_prom) }}</span>
           </template>
 
-          <template v-slot:item.total="{ item }">
+          <template v-slot:[`item.total`]="{ item }">
             <span>{{ monedaSimbolo }} {{ format2(item.total) }}</span>
           </template>
 
-          <template v-slot:item.utilidad="{ item }">
+          <template v-slot:[`item.utilidad`]="{ item }">
             <template v-if="item.costo === 0">
               <span class="grey--text text--darken-1 font-italic">
                 sin costo unitario

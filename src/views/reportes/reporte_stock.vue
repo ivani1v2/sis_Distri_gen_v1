@@ -1,26 +1,26 @@
 <template>
   <div class="mb-6 pa-3 mt-1">
     <v-row align="center" dense class="mb-4">
-      <v-col cols="12" sm="6" md="4">
+      <v-col cols="12" sm="2" md="2">
         <v-select v-model="sede_filtro" :items="sedesFiltro" item-text="nombre" item-value="base" outlined dense
           hide-details label="Sede" prepend-inner-icon="mdi-store" />
+      </v-col>     
+    
+      <v-col cols="12" md="2" class="mt-md-0">
+        <v-select v-model="filtro_categoria" :items="arraycategoria_f" outlined dense hide-details label="Categoría"
+          menu-props="auto" prepend-inner-icon="mdi-shape" />
       </v-col>
-
-      <v-col cols="12" sm="6" md="4" class="mt-n3 mb-n4">
-        <v-switch v-model="soloConStock" color="primary" label="Mostrar solo productos con stock" hide-details
-          dense></v-switch>
+      <v-col cols="12" md="2">
+        <v-select v-model="filtro_proveedor" :items="arrayproveedores_f" outlined dense hide-details label="Proveedor"
+          prepend-inner-icon="mdi-account-tie" />
       </v-col>
-    </v-row>
-
-    <v-row align="center" dense>
-      <v-col cols="12" md="6">
+      <v-col cols="12" md="4">
         <v-text-field v-model="buscar" outlined dense clearable append-icon="mdi-magnify"
           label="Buscar por nombre, categoría o ID" hide-details />
       </v-col>
-
-      <v-col cols="12" md="6" class="mt-md-0">
-        <v-select v-model="filtro_categoria" :items="arraycategoria_f" outlined dense hide-details label="Categoría"
-          menu-props="auto" prepend-inner-icon="mdi-shape" />
+      <v-col cols="12" sm="6" md="2" class="mt-n3 mb-n4 d-flex justify-end">
+        <v-switch v-model="soloConStock" color="primary" label="Solo productos con stock" hide-details
+          dense></v-switch>
       </v-col>
     </v-row>
 
@@ -79,7 +79,8 @@
         <template v-slot:item="{ item }">
           <tr>
             <td style="font-size:80%;">{{ item.id }}</td>
-            <td style="font-size:80%;">{{ item.categoria }}</td>
+            <td style="font-size:80%;">{{ item.categoria }}</td>            
+            <td style="font-size:80%;">{{ item.proveedor }}</td>
             <td style="font-size:80%;">{{ item.nombre }}</td>
             <td style="font-size:80%;">{{ item.medida }}</td>
             <td style="font-size:80%;">{{ monedaSimbolo }} {{ formatMoney(item.costo) }}</td>
@@ -135,6 +136,7 @@ export default {
     headers: [
       { text: 'ID', value: 'id', align: 'start' },
       { text: 'Categoría', value: 'categoria' },
+      { text: 'Proveedor', value: 'proveedor' },
       { text: 'Nombre', value: 'nombre' },
       { text: 'Medida', value: 'medida' },
       { text: 'Costo', value: 'costo' },
@@ -145,6 +147,8 @@ export default {
     ],
     filtro_categoria: 'TODOS',
     arraycategoria_f: ['TODOS'],
+    filtro_proveedor: 'TODOS',
+    arrayproveedores_f: ['TODOS'],
     buscar: '',
     sede_filtro: null,
     soloConStock: false,
@@ -185,6 +189,7 @@ export default {
       return [
         { text: 'ID', value: 'id', align: 'start' },
         { text: 'Categoría', value: 'categoria' },
+        { text: 'Proveedor', value: 'proveedor' },
         { text: 'Nombre', value: 'nombre' },
         { text: 'Medida', value: 'medida' },
         { text: `Costo (${simbolo})`, value: 'costo' },
@@ -206,16 +211,24 @@ export default {
     listafiltrada() {
       const texto = String(this.buscar || '').trim().toLowerCase()
       const cat = this.filtro_categoria
+      const prov = this.filtro_proveedor
 
       const filtrados = this.productosBase.filter(p => {
         const pasaCat = !cat || cat === 'TODOS'
           ? true
           : String(p.categoria || '').toLowerCase() === String(cat).toLowerCase()
         if (!pasaCat) return false
+
+        const pasaProv = !prov || prov === 'TODOS'
+          ? true
+          : String(p.proveedor || '').toLowerCase() === String(prov).toLowerCase()
+        if (!pasaProv) return false
+
         if (this.soloConStock) {
           const stock = this.toNumber(p.stock)
           if (stock < 1) return false
         }
+
         if (!texto) return true
         const id = String(p.id || '').toLowerCase()
         const nombre = String(p.nombre || '').toLowerCase()
@@ -281,6 +294,20 @@ export default {
     } catch (e) {
       console.error('Error cargando categorías', e)
     }
+    try {
+      const snapshot = await allCategorias('proveedor').once('value')
+      const setProv = new Set(['TODOS'])
+      snapshot.forEach((it) => {
+        const prov = it.val()
+        const nombre = prov?.nombre ? String(prov.nombre) : ''
+        const id = prov?.id ? String(prov.id) : ''
+        if (nombre) setProv.add(nombre)
+      })
+      this.arrayproveedores_f = Array.from(setProv)
+      console.log('Proveedores cargados:', this.arrayproveedores_f)
+    } catch (e) {
+      console.error('Error cargando proveedores', e)
+    }
   },
 
   methods: {
@@ -297,6 +324,7 @@ export default {
               ...prod,
               id: prod.id || item.key,
               categoria: prod.categoria || '',
+              proveedor: prod.proveedor || '',
               nombre: prod.nombre || '',
               costo: prod.costo || 0,
               stock: prod.stock || 0,
@@ -386,13 +414,14 @@ export default {
 
         const hoja = XLSX.utils.json_to_sheet(data, {
           header: [
-            'ID', 'Categoria', 'Nombre', 'Medida', 'Costo', 'Stock', 'PrecioVenta',
+            'ID', 'Categoria', 'Proveedor', 'Nombre', 'Medida', 'Costo', 'Stock', 'PrecioVenta',
             'TotalCosto', 'TotalVenta', 'Observacion', 'Sede'
           ]
         })
 
         hoja['!cols'] = [
           { wch: 8 },
+          { wch: 15 },
           { wch: 15 },
           { wch: 30 },
           { wch: 10 },
@@ -410,6 +439,9 @@ export default {
 
         if (this.filtro_categoria && this.filtro_categoria !== 'TODOS') {
           filtrosInfo.push(`Categoría: ${this.filtro_categoria}`)
+        }
+        if (this.filtro_proveedor && this.filtro_proveedor !== 'TODOS') {
+          filtrosInfo.push(`Proveedor: ${this.filtro_proveedor}`)
         }
 
         if (this.soloConStock) {
@@ -501,6 +533,9 @@ export default {
         if (this.filtro_categoria && this.filtro_categoria !== 'TODOS') {
           filtros.push(`Categoría: ${this.filtro_categoria}`)
         }
+        if (this.filtro_proveedor && this.filtro_proveedor !== 'TODOS') {
+          filtros.push(`Proveedor: ${this.filtro_proveedor}`)
+        }
         if (this.soloConStock) {
           filtros.push('Solo con stock')
         }
@@ -525,7 +560,7 @@ export default {
 
         const headers = isTicket
           ? [['ID', 'PRODUCTO', 'STOCK']]
-          : [['ID', 'CATEGORÍA', 'NOMBRE', 'MEDIDA', `COSTO (${this.monedaSimbolo})`, 'STOCK', `P. VENTA (${this.monedaSimbolo})`, `T. COSTO (${this.monedaSimbolo})`, `T. VENTA (${this.monedaSimbolo})`]]
+          : [['ID', 'CATEGORÍA', 'PROVEEDOR', 'NOMBRE', 'MEDIDA', `COSTO (${this.monedaSimbolo})`, 'STOCK', `P. VENTA (${this.monedaSimbolo})`, `T. COSTO (${this.monedaSimbolo})`, `T. VENTA (${this.monedaSimbolo})`]]
 
         const rows = this.listafiltrada.map(item => {
           if (isTicket) {
@@ -544,6 +579,8 @@ export default {
             return [
               item.id || '',
               item.categoria || '',
+              item.proveedor || '',
+
               item.nombre || '',
               item.medida || '',
               this.formatMoney(costoN),
@@ -563,14 +600,15 @@ export default {
           }
           : {
             0: { cellWidth: 20, fontSize: fontSizeSmall },
-            1: { cellWidth: 30, fontSize: fontSizeSmall },
-            2: { cellWidth: 50, fontSize: fontSizeSmall },
-            3: { cellWidth: 25, fontSize: fontSizeSmall },
-            4: { cellWidth: 25, fontSize: fontSizeSmall, halign: 'right' },
+            1: { cellWidth: 25, fontSize: fontSizeSmall },
+            2: { cellWidth: 25, fontSize: fontSizeSmall },
+            3: { cellWidth: 60, fontSize: fontSizeSmall },
+            4: { cellWidth: 25, fontSize: fontSizeSmall },
             5: { cellWidth: 25, fontSize: fontSizeSmall, halign: 'right' },
-            6: { cellWidth: 30, fontSize: fontSizeSmall, halign: 'right' },
-            7: { cellWidth: 30, fontSize: fontSizeSmall, halign: 'right' },
-            8: { cellWidth: 30, fontSize: fontSizeSmall, halign: 'right' }
+            6: { cellWidth: 18, fontSize: fontSizeSmall, halign: 'right' },
+            7: { cellWidth: 25, fontSize: fontSizeSmall, halign: 'right' },
+            8: { cellWidth: 25, fontSize: fontSizeSmall, halign: 'right' },
+            9: { cellWidth: 25, fontSize: fontSizeSmall, halign: 'right' }
           }
 
         const styles = isTicket
