@@ -2641,6 +2641,16 @@ function distri(val) {
         nombre_ubigeo: "La Peca",
         numero_hijos_ubigeo: "0",
       },
+      {
+    buscador_ubigeo: "bagua bagua",
+    codigo_ubigeo: "06",
+    etiqueta_ubigeo: "Bagua, Bagua",
+    id_padre_ubigeo: "2557",
+    id_ubigeo: "2563",
+    nivel_ubigeo: "3",
+    nombre_ubigeo: "Bagua",
+    numero_hijos_ubigeo: "0",
+  },
     ],
     "2563": [
       {
