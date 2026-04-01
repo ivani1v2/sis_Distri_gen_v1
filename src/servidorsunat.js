@@ -508,6 +508,7 @@ export const envioNCredito = (arrayCabecera, array) => {
     igv: arrayCabecera.igv,
     porcentaje_igv: arrayCabecera.porcentaje_igv,
     total_impuestos: arrayCabecera.igv,
+     total_op_gratuitas: parseFloat(arrayCabecera.total_op_gratuitas),
     total_op_exoneradas: arrayCabecera.total_op_exoneradas,
     total_antes_impuestos:
       parseFloat(arrayCabecera.total_op_gravadas) +

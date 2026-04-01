@@ -63,8 +63,9 @@
                                 <td>{{ item.cantidad }}</td>
                                 <td>{{ item.id }} - {{ item.nombre }}</td>
                                 <td>{{ item.medida }}</td>
-                                <td>{{ item.precioedita }}</td>
-                                <td>{{ redondear(item.precioedita * item.cantidad) }}</td>
+                                <td>{{ item.precio }}</td>
+                                <td v-if="item.operacion!='GRATUITA'">{{ redondear(item.precio * item.cantidad) }}</td>
+                                <td v-if="item.operacion=='GRATUITA'">0.00</td>
                             </tr>
                         </tbody>
                     </template>
@@ -166,7 +167,7 @@
         </v-dialog>
 
         <!-- DIALOG AGREGAR ITEMS DESDE DOCUMENTO -->
-        <v-dialog v-model="dialogoAgregar" max-width="700px">
+        <v-dialog v-model="dialogoAgregar" max-width="800px">
             <div>
                 <v-system-bar window dark>
                     <v-icon @click="dialogoAgregar = false">mdi-close</v-icon>
@@ -176,30 +177,53 @@
 
             <v-card class="pa-3">
                 <h3 class="mb-2">Agregar Items del Documento</h3>
-                <v-simple-table fixed-header height="40vh" dense>
+                <v-simple-table fixed-header height="50vh" dense>
                     <template v-slot:default>
                         <thead>
                             <tr>
                                 <th class="text-left">Descripcion</th>
                                 <th class="text-right">Cant. Doc</th>
-                                <th class="text-right">Cant. NC</th>
+                                <th class="text-right">Cajas</th>
+                                <th class="text-right">Unidades</th>
+                                <th class="text-right">Total Und</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="item in itemsAgregar" :key="item.id">
                                 <td>{{ item.id }} - {{ item.nombre }}</td>
-                                <td class="text-right">{{ item.maxCantidad }}</td>
+                                <td class="text-right">{{ item.maxCantidad }} {{ item.medida }}</td>
+                                <template v-if="item.factor === 1 && item.medida === 'UNIDAD'">
+                                    <td colspan="2" class="text-right">
+                                        <v-text-field dense type="number" hide-details
+                                            v-model.number="item.unidadesSimples" @change="validaUnidadesSimples(item)"
+                                            :min="0" :max="item.maxCantidad">
+                                        </v-text-field>
+                                    </td>
+                                </template>
+                                <template v-else>
+                                    <td class="text-right" style="width: 100px;">
+                                        <v-text-field dense type="number" hide-details v-model.number="item.cajas"
+                                            @change="validaCajas(item)" :min="0" :max="item.maxCantidad">
+                                        </v-text-field>
+                                    </td>
+                                    <td class="text-right" style="width: 100px;">
+                                        <v-text-field dense type="number" hide-details v-model.number="item.unidades"
+                                            @change="validaUnidades(item)" :min="0" :max="item.factor - 1">
+                                        </v-text-field>
+                                    </td>
+                                </template>
                                 <td class="text-right">
-                                    <v-text-field dense type="number" hide-details
-                                        style="max-width: 80px; margin-left:auto;"
-                                        v-model.number="item.cantidadSeleccionada" @change="validaCantidad(item)"
-                                        min="0" :max="item.maxCantidad"></v-text-field>
+                                    <strong v-if="item.factor === 1 && item.medida === 'UNIDAD'">
+                                        {{ item.unidadesSimples }} und
+                                    </strong>
+                                    <strong v-else>
+                                        {{ (item.cajas * item.factor) + item.unidades }} und
+                                    </strong>
                                 </td>
                             </tr>
                         </tbody>
                     </template>
                 </v-simple-table>
-
                 <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn text @click="dialogoAgregar = false">Cancelar</v-btn>
@@ -325,12 +349,27 @@ export default {
         abrirAgregarItems() {
             this.itemsAgregar = this.itemsOriginales.map(orig => {
                 const existente = this.listaproductos.find(p => p.id === orig.id)
-                const cantActual = existente ? Number(existente.cantidad) : 0
+                const factor = Number(orig.factor || 1)
+                const lineasExistentes = this.listaproductos.filter(p => p.id === orig.id)
+
+                let cajasExistentes = 0
+                let unidadesExistentes = 0
+
+                lineasExistentes.forEach(linea => {
+                    if (linea.medida !== 'UNIDAD') {
+                        cajasExistentes += Number(linea.cantidad)
+                    } else {
+                        unidadesExistentes += Number(linea.cantidad)
+                    }
+                })
 
                 return {
                     ...orig,
+                    factor: factor,
                     maxCantidad: Number(orig.cantidad),
-                    cantidadSeleccionada: cantActual
+                    cajas: cajasExistentes,
+                    unidades: unidadesExistentes,
+                    unidadesSimples: 0  // 👈 NUEVO: para productos unidad simple
                 }
             })
             this.dialogoAgregar = true
@@ -339,8 +378,10 @@ export default {
         // Valida que no se exceda la cantidad del documento
         validaCantidad(item) {
             let c = Number(item.cantidadSeleccionada || 0)
+            let max = item.devolverEnUnidades ? (item.maxCantidad * item.factor) : item.maxCantidad
+
             if (c < 0) c = 0
-            if (c > item.maxCantidad) c = item.maxCantidad
+            if (c > max) c = max
             item.cantidadSeleccionada = c
         },
 
@@ -349,16 +390,57 @@ export default {
             const nuevos = []
 
             this.itemsAgregar.forEach(item => {
-                const cant = Number(item.cantidadSeleccionada || 0)
-                if (cant > 0) {
-                    const copia = { ...item }
-                    copia.cantidad = cant
-                    nuevos.push(copia)
+                const esUnidadSimple = item.factor === 1 && item.medida === 'UNIDAD'
+
+                if (esUnidadSimple) {
+                    const cantidad = Number(item.unidadesSimples || 0)
+                    if (cantidad > 0) {
+                        const copia = { ...item }
+                        copia.cantidad = cantidad
+                        nuevos.push(copia)
+                    }
+                } else {
+                    const cajas = Number(item.cajas || 0)
+                    const unidades = Number(item.unidades || 0)
+
+                    if (cajas > 0) {
+                        const copiaCaja = { ...item }
+                        copiaCaja.cantidad = cajas
+                        nuevos.push(copiaCaja)
+                    }
+                    if (unidades > 0) {
+                        const copiaUnidad = { ...item }
+                        copiaUnidad.cantidad = unidades
+                        copiaUnidad.medida = 'UNIDAD'
+                        copiaUnidad.cod_medida = 'NIU'
+                        copiaUnidad.precio = Number((item.precio / item.factor).toFixed(4))
+                        copiaUnidad.precioedita = Number((item.precioedita / item.factor).toFixed(4))
+                        nuevos.push(copiaUnidad)
+                    }
                 }
             })
 
             this.listaproductos = nuevos
             this.dialogoAgregar = false
+        },
+        validaCajas(item) {
+            let c = Number(item.cajas || 0)
+            if (c < 0) c = 0
+            if (c > item.maxCantidad) c = item.maxCantidad
+            item.cajas = c
+        },
+
+        validaUnidades(item) {
+            let u = Number(item.unidades || 0)
+            if (u < 0) u = 0
+            if (u >= item.factor) u = item.factor - 1
+            item.unidades = u
+        },
+        validaUnidadesSimples(item) {
+            let u = Number(item.unidadesSimples || 0)
+            if (u < 0) u = 0
+            if (u > item.maxCantidad) u = item.maxCantidad
+            item.unidadesSimples = u
         },
 
         editaProducto(id) {
@@ -436,13 +518,18 @@ export default {
 
         sumaTotal() {
             let suma = 0
+
             for (let i = 0; i < this.listaproductos.length; i++) {
-                suma += this.listaproductos[i].cantidad * this.listaproductos[i].precioedita
+                const item = this.listaproductos[i]
+
+                if (item.operacion === 'GRATUITA') continue
+
+                suma += Number(item.cantidad || 0) * Number(item.precio || 0)
             }
+
             this.totalDocumento = suma.toFixed(2)
             return suma.toFixed(2)
         },
-
         sumaDescuentos() {
             let suma = 0
             for (let i = 0; i < this.listaproductos.length; i++) {
@@ -455,25 +542,26 @@ export default {
         obtencorrelativo() {
             this.completa_items(this.listaproductos).then(r => {
                 this.data_array = r
-                const a = obtenContador()
-                    .once('value')
-                    .then(snapshot => {
-                        if (snapshot.exists()) {
-                            if (this.info_comprobante.tipocomprobante === 'F') {
-                                this.tipo_comp_ref = '01'
-                                this.serienc = 'FN' + store.state.seriesdocumentos.notacredito
-                                this.ordenNcredito = snapshot.val().ordenncredito
-                            }
-                            if (this.info_comprobante.tipocomprobante === 'B') {
-                                this.tipo_comp_ref = '03'
-                                this.serienc = 'BN' + store.state.seriesdocumentos.notacredito
-                                this.ordenNcredito = snapshot.val().ordenncredito
-                            }
-                            this.dialogoanula = true
-                            return true
-                        }
-                    })
-                return a
+                console.log("RESIUL",r)
+                obtenContador().once('value').then(snapshot => {
+                    if (!snapshot.exists()) return
+
+                    const contadores = snapshot.val() || {}
+
+                    if (this.info_comprobante.tipocomprobante === 'F') {
+                        this.tipo_comp_ref = '01'
+                        this.serienc = 'FN' + store.state.seriesdocumentos.notacredito
+                        this.ordenNcredito = contadores.ordenncredito_f || '0001'
+                    }
+
+                    if (this.info_comprobante.tipocomprobante === 'B') {
+                        this.tipo_comp_ref = '03'
+                        this.serienc = 'BN' + store.state.seriesdocumentos.notacredito
+                        this.ordenNcredito = contadores.ordenncredito || '0001'
+                    }
+
+                    this.dialogoanula = true
+                })
             })
         },
 
@@ -490,12 +578,13 @@ export default {
             if (this.comparafecha()) {
                 store.commit('dialogoprogress', 1)
                 const fechahoy = this.verdate()
+                const totalNum = parseFloat(this.sumaTotal())
                 const arrayCabecera = {
                     moneda: this.moneda,
                     dni: this.info_comprobante.dni,
                     direccion: this.info_comprobante.direccion,
                     cliente: this.info_comprobante.cliente,
-                    total: this.sumaTotal(),
+                    total: totalNum,
                     numeracion: this.serienc + this.ordenNcredito,
                     descuentos: 0,
                     serie: this.serienc,
@@ -513,9 +602,13 @@ export default {
                     cod_motivo: this.obtencodigomotivo(this.motivo),
                     total_op_gravadas: data.totaloperaGravada,
                     total_op_exoneradas: data.totaloperaExonerada,
+                    total_op_gratuitas: data.total_op_gratuitas,
+                    total_igv: data.totalIGV,
                     total_cargo: data.total_cargo,
                     igv: data.totalIGV,
                     regresar_stock: this.regresar_stock,
+                    estado_aplicacion: 'pendiente',
+                    monto_aplicado: 0,
                 }
 
                 const items = data.item
@@ -660,7 +753,7 @@ export default {
                         precioedita: data.precio,
                         tipoproducto: data.tipoproducto,
                         operacion: data.operacion,
-                        factor : data.factor || 1,
+                        factor: data.factor || 1,
                         cargoxconsumo: false,
                         valor_unitario: valor_unitario.toFixed(5),
                         valor_total: valorTotal.toFixed(2),
@@ -688,10 +781,23 @@ export default {
         },
 
         async sumacontadores() {
+            let campo = ''
+
+            if (this.info_comprobante.tipocomprobante === 'F') {
+                campo = 'ordenncredito_f'
+            }
+
+            if (this.info_comprobante.tipocomprobante === 'B') {
+                campo = 'ordenncredito'
+            }
+
+            if (!campo) return false
+
             await sumaContador(
-                'ordenncredito',
-                (parseInt(this.ordenNcredito) + 1).toString().padStart(4, 0)
+                campo,
+                (parseInt(this.ordenNcredito) + 1).toString().padStart(4, '0')
             )
+
             return true
         },
 
