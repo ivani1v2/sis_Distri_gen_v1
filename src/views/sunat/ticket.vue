@@ -148,7 +148,7 @@
 
                 <v-row dense class="text-center">
 
-                    <v-col cols="6">
+                    <v-col cols="12">
                         <v-card @click.prevent="anulaticket()">
                             <v-container>
                                 <v-img class="mx-auto" height="30" width="30" src="/anular.png"></v-img>
@@ -157,7 +157,7 @@
                         </v-card>
                     </v-col>
 
-                    <v-col cols="6">
+                    <v-col cols="6" v-if="false">
                         <v-card @click.prevent="convertir()">
                             <v-container>
                                 <v-img class="mx-auto" height="30" width="30" src="/convertir.png"></v-img>
@@ -165,7 +165,7 @@
                             </v-container>
                         </v-card>
                     </v-col>
-                    <v-col cols="6">
+                    <v-col cols="6" v-if="false">
                         <v-card @click.prevent="genera_guia()">
                             <v-container>
                                 <v-img class="mx-auto" height="30" width="30" src="/camion.png"></v-img>

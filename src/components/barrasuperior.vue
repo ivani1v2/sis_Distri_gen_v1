@@ -262,19 +262,19 @@
                         <v-list-item-icon><v-icon small>mdi-file-edit-outline</v-icon></v-list-item-icon>
                         <v-list-item-title>Comprobantes</v-list-item-title>
                     </v-list-item>
-                    <v-list-item @click.prevent="router('boletaFactura')">
+                    <v-list-item v-if="$store.state.permisos.es_admin"  @click.prevent="router('boletaFactura')">
                         <v-list-item-icon><v-icon small>mdi-file-document-multiple-outline</v-icon></v-list-item-icon>
                         <v-list-item-title>Boletas, Facturas</v-list-item-title>
                     </v-list-item>
-                    <v-list-item @click.prevent="router('creditoDebito')">
+                    <v-list-item v-if="$store.state.permisos.es_admin" @click.prevent="router('creditoDebito')">
                         <v-list-item-icon><v-icon small>mdi-note-edit-outline</v-icon></v-list-item-icon>
                         <v-list-item-title>N. Crédito</v-list-item-title>
                     </v-list-item>
-                    <v-list-item @click.prevent="router('resumenbaja')">
+                    <v-list-item v-if="$store.state.permisos.es_admin" @click.prevent="router('resumenbaja')">
                         <v-list-item-icon><v-icon small>mdi-file-cancel-outline</v-icon></v-list-item-icon>
                         <v-list-item-title>Resumen Bajas</v-list-item-title>
                     </v-list-item>
-                    <v-list-item @click.prevent="router('ticket')">
+                    <v-list-item v-if="$store.state.permisos.es_admin || $store.state.permisos.es_supervisor" @click.prevent="router('ticket')">
                         <v-list-item-icon><v-icon small>mdi-web-box</v-icon></v-list-item-icon>
                         <v-list-item-title>Tickets</v-list-item-title>
                     </v-list-item>
