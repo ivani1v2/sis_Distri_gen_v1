@@ -210,8 +210,8 @@
                                                                 pedido.d_transporte?.usuario_id ? 'mdi-truck-check' :
                                                                     'mdi-truck' }}</v-icon>
                                                     </v-list-item-icon>
-                                                    <v-list-item-title>{{ pedido.d_transporte?.usuario_id ? 'Editar
-                                                        Transporte' : 'Asignar Transporte' }}</v-list-item-title>
+                                                    <v-list-item-title>{{ pedido.d_transporte?.usuario_id ? 
+                                                    'Editar Transporte' : 'Asignar Transporte' }}</v-list-item-title>
                                                 </v-list-item>
                                             </template>
                                         </v-list>

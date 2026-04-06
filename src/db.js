@@ -1980,6 +1980,6 @@ export const obtener_transporte_reparto = (grupo) => {
 
 // ======== USUARIOS TRANSPORTE ========
 export const allUsuariosTransporte = () => {
-  const rucAsociado = Number(store.state.baseDatos.ruc_asociado);
+  const rucAsociado = store.state.baseDatos.ruc_asociado;
   return db.database().ref("usuarios").orderByChild("ruc").equalTo(rucAsociado);
 };
