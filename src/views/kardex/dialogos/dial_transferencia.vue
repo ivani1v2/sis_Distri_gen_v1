@@ -4,8 +4,8 @@
             <v-system-bar class="" dense window dark height="40">
                 <v-icon large color="red" @click="cierra()">mdi-close</v-icon>
                 <v-spacer></v-spacer>
-                <h3>{{ modoEdicion ? 'Editar Transferencia' : (esOrigenVendedor ? 'Devolución de Productos' : 'Nueva
-                    Transferencia de Productos') }}</h3>
+                <h3>{{ modoEdicion ? 'Editar Transferencia' : (esOrigenVendedor ? 'Devolución de Productos' : 
+                'Nueva Transferencia de Productos') }}</h3>
                 <v-spacer></v-spacer>
                 <v-btn v-if="esOrigenVendedor && !modoEdicion" color="warning" dark small
                     @click="cargarProductosVendedor" :loading="cargandoProductosVendedor">
@@ -33,10 +33,6 @@
                     <v-col cols="12" sm="6" md="4" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
                         <v-text-field v-model="fecha_transferencia" type="datetime-local" dense outlined
                             label="Fecha y Hora" prepend-inner-icon="mdi-calendar-clock"></v-text-field>
-                    </v-col>
-                    <v-col cols="12" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : 'mt-n4'">
-                        <v-textarea v-model="observacion" label="Observación" outlined dense rows="1"
-                            prepend-inner-icon="mdi-note-text" hide-details auto-grow></v-textarea>
                     </v-col>
                     <v-col cols="12" v-if="periodoCerrado" class="mt-n2">
                         <v-alert type="warning" dense outlined class="mb-0 mt-2 caption">
@@ -70,11 +66,6 @@
                                 {{ item.nombre }} - Stock: {{ item.stock || 0 }}
                             </template>
                         </v-autocomplete>
-                    </v-col>
-                    <v-col cols="12" sm="4" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : ''">
-                        <v-text-field v-model="codigo_barra_busqueda" label="Escanear código de barra" outlined dense
-                            :disabled="!sede_origen" @keyup.enter="buscarPorCodigoBarra"
-                            prepend-inner-icon="mdi-barcode-scan" clearable ref="inputCodigoBarra"></v-text-field>
                     </v-col>
                     <v-col cols="12" sm="2" :class="$vuetify.breakpoint.smAndDown ? 'mt-n6' : 'mt-n6'">
                         <v-btn small block color="primary" :disabled="!sede_origen" @click="buscarPorCodigoBarra">
@@ -249,15 +240,6 @@
                         <v-col cols="6" class="pb-2 text-right">
                             <div class="text-caption grey--text text-uppercase">Unidades</div>
                             <div class="text-body-1 font-weight-bold">{{ totalUnidades }}</div>
-                        </v-col>
-
-                        <v-divider cols="12" class="my-1"></v-divider>
-
-                        <v-col cols="12" v-if="observacion" class="mt-2 pt-2 border-top">
-                            <div class="text-caption grey--text text-uppercase">Observación</div>
-                            <div class="text-body-2 font-italic grey--text text--darken-2 line-clamp-2">
-                                "{{ observacion }}"
-                            </div>
                         </v-col>
                     </v-row>
                 </v-card-text>

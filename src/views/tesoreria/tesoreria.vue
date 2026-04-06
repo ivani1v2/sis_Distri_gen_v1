@@ -862,87 +862,60 @@ export default {
             return uuid;
         },
         ejecuta_reporte_detallado() {
-            let movimientos = {
-                EFECTIVO: {
-                    ingreso: 0,
-                    egreso: 0
-                },
-                TARJETA: {
-                    ingreso: 0,
-                    egreso: 0
-                },
-                YAPE: {
-                    ingreso: 0,
-                    egreso: 0
-                },
-                PLIN: {
-                    ingreso: 0,
-                    egreso: 0
-                },
-                TRANSFERENCIA: {
-                    ingreso: 0,
-                    egreso: 0
-                },
-                "T.DEBITO": {
-                    ingreso: 0,
-                    egreso: 0
-                },
-                "T.CREDITO": {
-                    ingreso: 0,
-                    egreso: 0
-                },
-                RAPPY: {
-                    ingreso: 0,
-                    egreso: 0
-                },
-                "PEDIDOS YA": {
-                    ingreso: 0,
-                    egreso: 0
-                },
-                "POS QR": {
-                    ingreso: 0,
-                    egreso: 0
+            const movimientos = {}
+            let t_general = 0
+            let t_egresos = 0
+            const datos_egreso = []
+            const datos_ingreso = []
+
+            this.listafiltrada.forEach(item => {
+                if (item.estado === 'anulado') return
+
+                const monto = parseFloat(item.total || 0)
+                const operacion = String(item.operacion || '').toLowerCase()
+                const metodo = String(item.modo || '').toUpperCase().trim()
+
+                if (!movimientos[metodo]) {
+                    movimientos[metodo] = { ingreso: 0, egreso: 0 }
                 }
-            };
 
-            let t_general = 0;
-            let t_egresos = 0;
-            let datos_egreso = [],
-                datos_ingreso = [];
-
-            this.desserts.forEach(item => {
-                if (item.estado !== 'anulado') {
-                    let monto = parseFloat(item.total);
-                    let operacion = item.operacion;
-                    let metodo = item.modo;
-
-                    if (operacion === 'ingreso') {
-                        t_general += monto;
-                        movimientos[metodo]?.ingreso !== undefined ? movimientos[metodo].ingreso += monto : null;
-                        datos_ingreso.push(item);
-                    } else if (operacion === 'egreso') {
-                        t_egresos += monto;
-                        movimientos[metodo]?.egreso !== undefined ? movimientos[metodo].egreso -= monto : null;
-                        datos_egreso.push(item);
-                    }
+                if (operacion === 'ingreso') {
+                    t_general += monto
+                    movimientos[metodo].ingreso += monto
+                    datos_ingreso.push(item)
+                } else if (operacion === 'egreso') {
+                    t_egresos += monto
+                    movimientos[metodo].egreso += monto
+                    datos_egreso.push(item)
                 }
-            });
-            const redondear = (num) => parseFloat(num.toFixed(2));
-            let array = {
+            })
+
+            const metodos = Object.keys(movimientos)
+                .map(key => ({
+                    metodo: key,
+                    ingreso: parseFloat(movimientos[key].ingreso.toFixed(2)),
+                    egreso: parseFloat(movimientos[key].egreso.toFixed(2)),
+                }))
+                .filter(m => m.ingreso !== 0 || m.egreso !== 0)
+                .sort((a, b) => {
+                    if (a.metodo === 'EFECTIVO') return -1
+                    if (b.metodo === 'EFECTIVO') return 1
+                    return a.metodo.localeCompare(b.metodo)
+                })
+
+            const efectivo = metodos.find(m => m.metodo === 'EFECTIVO') || { ingreso: 0, egreso: 0 }
+
+            const array = {
                 observacion: this.observacion,
-                ...Object.keys(movimientos).reduce((acc, key) => ({
-                    ...acc,
-                    [`i_${key.toLowerCase().replace(/\s/g, '')}`]: redondear(movimientos[key].ingreso),
-                    [`e_${key.toLowerCase().replace(/\s/g, '')}`]: redondear(movimientos[key].egreso)
-                }), {}),
-                t_efectivo: movimientos.EFECTIVO.ingreso + movimientos.EFECTIVO.egreso,
+                metodos,
+                t_efectivo: parseFloat((efectivo.ingreso - efectivo.egreso).toFixed(2)),
                 datos: datos_egreso,
-                datos_ingreso: datos_ingreso,
-                t_general: t_general,
-                t_egresos: t_egresos
-            };
-            console.log(array)
-            pdf_total_caja(array);
+                datos_ingreso,
+                t_general: parseFloat(t_general.toFixed(2)),
+                t_egresos: parseFloat(t_egresos.toFixed(2))
+            }
+
+            pdf_total_caja(array)
         },
 
 

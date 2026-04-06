@@ -115,6 +115,16 @@
                                 <v-textarea dense outlined auto-grow rows="1" v-model="mensaje_final_proforma"
                                     label="Mensaje final proforma" />
                             </v-col>
+
+                            <v-col cols="12" class="mt-n6">
+                                <v-textarea dense outlined auto-grow rows="1" v-model="mision"
+                                    label="Misión (Ticket de venta)" />
+                            </v-col>
+
+                            <v-col cols="12" class="mt-n6">
+                                <v-textarea dense outlined auto-grow rows="1" v-model="vision"
+                                    label="Visión (Ticket de venta)" />
+                            </v-col>
                         </v-row>
 
                     </v-card-text>
@@ -157,6 +167,8 @@ export default {
             no_mostrar_logo_nota_pedido: false,
             mensaje_final_proforma: '',
             impresora_auto: false,
+            mision: '',
+            vision: '',
 
         }
     },
@@ -187,6 +199,8 @@ export default {
                     this.mostrar_logo_pedido = snapshot.val().mostrar_logo_pedido !== false
                     this.no_mostrar_logo_nota_pedido = snapshot.val().no_mostrar_logo_nota_pedido === true
                     this.impresora_auto = snapshot.val().impresora_auto || false
+                    this.mision = snapshot.val().mision || ''
+                    this.vision = snapshot.val().vision || ''
                 } else {
                     this.ip_cocina = "192.168.1.5"
                     this.guardadocumento = false
@@ -206,6 +220,8 @@ export default {
                     this.no_mostrar_logo_nota_pedido = false
                     this.impresora_auto = false
                     this.mensaje_final_proforma = ''
+                    this.mision = ''
+                    this.vision = ''
                 }
             })
         },
@@ -230,7 +246,9 @@ export default {
                 log_largo: this.log_largo || false,
                 mostrar_logo_pedido: this.mostrar_logo_pedido !== false,
                 no_mostrar_logo_nota_pedido: this.no_mostrar_logo_nota_pedido || false,
-                mensaje_final_proforma: this.mensaje_final_proforma || ''
+                mensaje_final_proforma: this.mensaje_final_proforma || '',
+                mision: this.mision || '',
+                vision: this.vision || ''
 
             }
             store.commit("configImpresora", array)
@@ -253,6 +271,8 @@ export default {
             actualizaImpresoras('no_mostrar_logo_nota_pedido', this.no_mostrar_logo_nota_pedido || false)
             actualizaImpresoras('mensaje_final_proforma', this.mensaje_final_proforma || '')
             actualizaImpresoras('impresora_auto', this.impresora_auto || false)
+            actualizaImpresoras('mision', this.mision || '')
+            actualizaImpresoras('vision', this.vision || '')
             store.commit("dialogoImpresora")
         }
 

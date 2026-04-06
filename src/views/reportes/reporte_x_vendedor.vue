@@ -9,8 +9,8 @@
                     <v-text-field class="mx-1" outlined dense type="date" v-model="date2" label="Fin" />
                 </v-col>
                 <v-col cols="12" sm="4">
-                    <v-select v-model="sede_actual" :items="$store.state.array_sedes" item-text="nombre"
-                        item-value="codigo" label="Vendedor" outlined dense clearable @change="cargar" />
+                    <v-select v-model="sede_actual" :items="vendedoresItems" item-text="text" item-value="value"
+                        label="Vendedor" outlined dense clearable @change="cargar" />
                 </v-col>
             </v-row>
 
@@ -27,10 +27,17 @@
                         <v-icon left small>mdi-account-group</v-icon>
                         {{ agrupado ? 'Ver detalle' : 'Agrupar por cliente' }}
                     </v-btn>
+
                 </v-col>
 
                 <v-col cols="12" sm="6" class="text-right">
-                    <v-chip v-if="!cargando" outlined>
+                    <v-chip class="ml-2" outlined color="success" v-if="!cargando">
+                        Contado: {{ monedaSimbolo }} {{ totalContado }}
+                    </v-chip>
+                    <v-chip class="ml-1"  outlined color="indigo" v-if="!cargando">
+                        Crédito: {{ monedaSimbolo }} {{ totalCredito }}
+                    </v-chip>
+                    <v-chip v-if="!cargando" outlined class="ml-1" >
                         Total General: <strong class="ml-1">{{ monedaSimbolo }} {{ totalGeneral }}</strong>
                     </v-chip>
                 </v-col>
@@ -58,7 +65,7 @@
 
                 <template v-if="!agrupado" v-slot:item.total="{ item }">
                     <span :class="item.esGratuita ? 'grey--text' : ''">
-                        {{ monedaSimbolo }}{{ n2(item.total) }}
+                        <strong>{{ monedaSimbolo }}{{ n2(item.total) }}</strong>
                     </span>
                 </template>
 
@@ -97,6 +104,10 @@ export default {
         cargando: false,
         filas: [],
         agrupado: false,
+        totalFormaPago: {
+            contado: 0,
+            credito: 0,
+        },
         headers: [
             { text: 'Fecha', value: 'fecha', sortable: true },
             { text: 'Hora', value: 'hora', sortable: true },
@@ -111,12 +122,33 @@ export default {
         ],
     }),
     computed: {
+        vendedoresItems() {
+            const base = Array.isArray(this.$store.state.array_sedes) ? this.$store.state.array_sedes : []
+            const items = base
+                .filter(s => s && s.codigo)
+                .map(s => {
+                    const codigo = String(s.codigo || '').trim()
+                    const nombre = String(s.nombre || '').trim()
+                    return {
+                        text: nombre ? `${codigo} - ${nombre}` : codigo,
+                        value: codigo,
+                    }
+                })
+                .sort((a, b) => a.text.localeCompare(b.text))
+            return [{ text: 'TODOS', value: 'TODOS' }, ...items]
+        },
         moneda() {
             return (store.state?.moneda?.[0]?.simbolo) || 'S/'
         },
         totalGeneral() {
             const s = this.filas.reduce((acc, r) => acc + Number(r.total || 0), 0)
             return this.n2(s)
+        },
+        totalContado() {
+            return this.n2(this.totalFormaPago.contado)
+        },
+        totalCredito() {
+            return this.n2(this.totalFormaPago.credito)
         },
         headersTabla() {
             if (!this.agrupado) return this.headers
@@ -251,11 +283,17 @@ export default {
         async cargar() {
             this.cargando = true
             this.filas = []
+            this.totalFormaPago = { contado: 0, credito: 0 }
 
             try {
                 const sede = (this.$store.state.array_sedes || []).find(
                     s => String(s.codigo) === String(this.sede_actual)
                 )
+
+                if (this.sede_actual === 'TODOS') {
+                    this.filas = []
+                    return
+                }
 
                 if (!sede || !sede.base) {
                     this.filas = []
@@ -277,12 +315,22 @@ export default {
                 }
 
                 const cabeceras = []
+                let contado = 0
+                let credito = 0
                 snap.forEach(child => {
                     const c = child.val()
                     console.log(c)
                     if (String(c.estado || "").toUpperCase() === "ANULADO") return
+
+                    const formaPago = String(c.forma_pago || '').toUpperCase().trim()
+                    const totalCabecera = Number(c.total || 0)
+                    if (formaPago === 'CONTADO') contado += totalCabecera
+                    if (formaPago === 'CREDITO') credito += totalCabecera
+
                     cabeceras.push(c)
                 })
+
+                this.totalFormaPago = { contado, credito }
 
                 const pack = await Promise.all(
                     cabeceras.map(async cab => {
