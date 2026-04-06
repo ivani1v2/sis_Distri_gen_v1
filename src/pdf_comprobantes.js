@@ -1506,7 +1506,7 @@ async function impresionA4(array, qr, arraycabecera) {
   if (arraycabe.forma_pago.toLowerCase() == "credito") {
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(8);
-    doc.text("DETALLE DE CRONOGRAMA", 10, lineaqr - 10);
+    doc.text("DETALLE DE CRONOGRAMA", 10, lineaqr - 8);
     lineaqr = lineaqr - 6;
     doc.autoTable({
       startY: lineaqr,
