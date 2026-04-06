@@ -292,6 +292,14 @@ async function impresion58(arraydatos, qr, cabecera) {
     doc.text(texto, lMargin, linea, "left");
     linea = linea + 4 * texto.length;
   }
+  if (arraycabe.tipocomprobante === "T" && store.state.configImpresora.mostrar_zona_nota_venta && arraycabe.cliente_zona) {
+    var texto = doc.splitTextToSize(
+      "Zona: " + arraycabe.cliente_zona ?? "",
+      pdfInMM - lMargin - rMargin,
+    );
+    doc.text(texto, lMargin, linea, "left");
+    linea = linea + 4 * texto.length;
+  }
   if (arraycabe.referencia != "") {
     var texto = doc.splitTextToSize(
       "Ref: " + arraycabe.referencia,
@@ -778,6 +786,14 @@ async function impresion80(arraydatos, qr, cabecera) {
   if (arraycabe.direccion != "") {
     var texto = doc.splitTextToSize(
       "Direccion: " + arraycabe.direccion,
+      pdfInMM - lMargin - rMargin,
+    );
+    doc.text(texto, lMargin, linea, "left");
+    linea = linea + 3.5 * texto.length;
+  }
+  if (arraycabe.tipocomprobante === "T" && store.state.configImpresora.mostrar_zona_nota_venta && arraycabe.cliente_zona) {
+    var texto = doc.splitTextToSize(
+      "Zona: " + arraycabe.cliente_zona ?? "",
       pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, lMargin, linea, "left");
@@ -1314,6 +1330,16 @@ async function impresionA4(array, qr, arraycabecera) {
   doc.text(texto, 36, linea, "left");
   linea = linea + 4 * texto.length;
 
+  if (arraycabe.tipocomprobante === "T" && store.state.configImpresora.mostrar_zona_nota_venta && arraycabe.cliente_zona) {
+    doc.setFont("Helvetica", "Bold");
+    doc.text("ZONA", 15, linea, "left");
+    doc.text(" : ", 32, linea, "left");
+    doc.setFont("Helvetica", "");
+    var textoZona = doc.splitTextToSize(arraycabe.cliente_zona ?? "", 85);
+    doc.text(textoZona, 36, linea, "left");
+    linea = linea + 4 * textoZona.length;
+  }
+
   linea = 45;
 
   doc.setFont("Helvetica", "Bold");
@@ -1381,6 +1407,11 @@ async function impresionA4(array, qr, arraycabecera) {
     100,
   );
   doc.text(texto, 10, lineaqr, "left");
+  
+  var texto = doc.splitTextToSize(
+    "Vendedor: " + arraycabe.vendedor,
+  );
+  doc.text(texto, 10, lineaqr + 4, "left");
   lineaqr = lineaqr + 6;
 
   let nextSection = 1;

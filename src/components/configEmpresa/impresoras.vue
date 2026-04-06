@@ -96,11 +96,14 @@
                             <v-col cols="6" class="mt-n6">
                                 <v-switch inset dense v-model="mostrar_logo_pedido" label="Logo en pedido A4" />
                             </v-col>
-                            <v-col cols="12" class="mt-n6">
-                                <v-switch inset dense v-model="no_mostrar_logo_nota_pedido" label="No Mostrar Logo en Nota de Venta" />
+                            <v-col cols="6" class="mt-n6">
+                                <v-switch inset dense v-model="no_mostrar_logo_nota_pedido" label="No Mostrar Logo en N. Venta" />
+                            </v-col>
+                            <v-col cols="6" class="mt-n6">
+                                <v-switch inset dense v-model="no_mostrar_ruc_nota_venta" label="No Mostrar RUC en N. Venta" />
                             </v-col>
                             <v-col cols="12" class="mt-n6">
-                                <v-switch inset dense v-model="no_mostrar_ruc_nota_venta" label="No Mostrar RUC en Nota de Venta" />
+                                <v-switch inset dense v-model="mostrar_zona_nota_venta" label="Mostrar Zona en N. Venta" />
                             </v-col>
                         </v-row>
 
@@ -159,6 +162,7 @@ export default {
             mostrar_logo_pedido: true,
             no_mostrar_logo_nota_pedido: false,
             no_mostrar_ruc_nota_venta: false,
+            mostrar_zona_nota_venta: false,
             mensaje_final_proforma: '',
             impresora_auto: false,
 
@@ -191,6 +195,7 @@ export default {
                     this.mostrar_logo_pedido = snapshot.val().mostrar_logo_pedido !== false
                     this.no_mostrar_logo_nota_pedido = snapshot.val().no_mostrar_logo_nota_pedido === true
                     this.no_mostrar_ruc_nota_venta = snapshot.val().no_mostrar_ruc_nota_venta === true
+                    this.mostrar_zona_nota_venta = snapshot.val().mostrar_zona_nota_venta === true
                     this.impresora_auto = snapshot.val().impresora_auto || false
                 } else {
                     this.ip_cocina = "192.168.1.5"
@@ -210,6 +215,7 @@ export default {
                     this.mostrar_logo_pedido = true
                     this.no_mostrar_logo_nota_pedido = false
                     this.no_mostrar_ruc_nota_venta = false
+                    this.mostrar_zona_nota_venta = false
                     this.impresora_auto = false
                     this.mensaje_final_proforma = ''
                 }
@@ -237,6 +243,7 @@ export default {
                 mostrar_logo_pedido: this.mostrar_logo_pedido !== false,
                 no_mostrar_logo_nota_pedido: this.no_mostrar_logo_nota_pedido || false,
                 no_mostrar_ruc_nota_venta: this.no_mostrar_ruc_nota_venta || false,
+                mostrar_zona_nota_venta: this.mostrar_zona_nota_venta || false,
                 mensaje_final_proforma: this.mensaje_final_proforma || ''
 
             }
@@ -259,6 +266,7 @@ export default {
             actualizaImpresoras('mostrar_logo_pedido', this.mostrar_logo_pedido !== false)
             actualizaImpresoras('no_mostrar_logo_nota_pedido', this.no_mostrar_logo_nota_pedido || false)
             actualizaImpresoras('no_mostrar_ruc_nota_venta', this.no_mostrar_ruc_nota_venta || false)
+            actualizaImpresoras('mostrar_zona_nota_venta', this.mostrar_zona_nota_venta || false)
             actualizaImpresoras('mensaje_final_proforma', this.mensaje_final_proforma || '')
             actualizaImpresoras('impresora_auto', this.impresora_auto || false)
             store.commit("dialogoImpresora")
