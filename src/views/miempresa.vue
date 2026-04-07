@@ -123,6 +123,15 @@
                     </v-container>
                 </v-card>
             </v-col>
+            <v-col cols="6" class="pa-3" md="3" xs="6">
+                <v-card @click="$store.commit('dialogoConfiguracionGPS')">
+                    <v-container>
+                        <v-img class="mx-auto" height="70" width="70" src="/maps.png"></v-img>
+                        <h4 block class="text-center pa-1">Config GPS</h4>
+                    </v-container>
+                </v-card>
+            </v-col>
+
         </v-row>
 
         <contadores />
@@ -136,6 +145,7 @@
         <impresorahost v-if="dial_host_impresoras" @cierra="dial_host_impresoras = false" />
         <moneda v-if="dial_tipo_cambio" @cierra="dial_tipo_cambio = false" />
         <configcatalogo />
+        <ConfiguracionGPS />
     </div>
 </template>
 
@@ -151,6 +161,7 @@ import cuentasbancos from '@/components/configEmpresa/cuentasbancos'
 import impresorahost from '@/components/configEmpresa/impresorahost'
 import moneda from '@/components/configEmpresa/moneda_ext'
 import configcatalogo from '@/components/configEmpresa/config_catalogo'
+import ConfiguracionGPS from '@/components/configEmpresa/ConfiguracionGPS'
 
 export default {
     name: 'empresa',
@@ -166,7 +177,8 @@ export default {
         cuentasbancos,
         impresorahost,
         moneda,
-        configcatalogo
+        configcatalogo,
+        ConfiguracionGPS
     },
 
     data() {

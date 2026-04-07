@@ -47,6 +47,7 @@ export default new Vuex.Store({
     dialogoClientesnuevos: null,
     dialogo_moneda: null,
     dialogo_configcatalogo: null,
+    dialogoConfiguracionGPS: null,
     dialogo_guia: null,
     dialogoentrada: null,
     dialogosalidas: null,
@@ -607,6 +608,16 @@ export default new Vuex.Store({
     },
     dialogo_configcatalogo(state) {
       state.dialogo_configcatalogo = !state.dialogo_configcatalogo;
+    },
+    dialogoConfiguracionGPS(state) {
+      state.dialogoConfiguracionGPS = !state.dialogoConfiguracionGPS;
+    },
+    setConfiguracionGPS(state, payload) {
+      if (state.configuracion) {
+        state.configuracion.movimiento_minimo_metros = payload.movimiento_minimo_metros;
+        state.configuracion.distancia_visita = payload.distancia_visita;
+        state.configuracion.precision_gps_maxima = payload.precision_gps_maxima;
+      }
     },
     dialogo_guia(state) {
       state.dialogo_guia = !state.dialogo_guia;

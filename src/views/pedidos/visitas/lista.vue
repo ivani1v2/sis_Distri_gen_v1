@@ -430,7 +430,7 @@ export default {
             const base = Array.isArray(this.$store.state.zonas) ? this.$store.state.zonas : [];
 
             return [{ nombre: 'TODAS' }, ...base];
-        },
+        },        
     },
     async created() {
         if (!this.$store.state.permisos?.moduloempresa) {
@@ -811,7 +811,7 @@ export default {
                     const dist = this.distanciaMetros(latUser, lngUser, latCli, lngCli);
 
                     if (dist > RADIO_PERMITIDO_M) {
-                        store.commit('dialogosnackbar', 'No está en el punto de visita (distancia > 15 m).');
+                        store.commit('dialogosnackbar', `No está en el punto de visita (distancia > ${RADIO_PERMITIDO_M} m).`);
                         return;
                     }
                 }
