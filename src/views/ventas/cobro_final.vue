@@ -522,8 +522,8 @@ export default {
                 store.commit("dialogoprogress")
                 return
             }
-            let snapshot = await obtenContador().once("value")
-            var contadores = snapshot.val()
+            //         let snapshot = await obtenContador().once("value")
+            //        var contadores = snapshot.val()
             var auto = ""
             if (this.documento == "DNI") {
                 var doccliente = "1" // 6 ruc --4 carnet --7 pasaporte -- 1 DNI
@@ -540,17 +540,17 @@ export default {
             if (this.tipocomprobante == "B") { //Catálogo No. 01: Código de Tipo de documento
                 var cod_comprobante = '03' //01-factura -- 03-boleta -- 07-notaCred -- 08-notadebit -- 
                 var serie = store.state.seriesdocumentos.boleta
-                var correlativo = contadores.ordenboleta
+                //      var correlativo = contadores.ordenboleta
             }
             if (this.tipocomprobante == "F") { //Catálogo No. 01: Código de Tipo de documento 
                 var cod_comprobante = '01' //01-factura -- 03-boleta -- 07-notaCred -- 08-notadebit -- 
                 var serie = store.state.seriesdocumentos.factura
-                var correlativo = contadores.ordenfactura
+                //     var correlativo = contadores.ordenfactura
             }
             if (this.tipocomprobante == "T") {
                 var cod_comprobante = '00'
                 var serie = store.state.seriesdocumentos.ticket
-                var correlativo = contadores.ordenticket
+                //     var correlativo = contadores.ordenticket
                 this.cabecera.estado = 'aprobado'
                 auto = "NO"
             }
@@ -590,8 +590,8 @@ export default {
 
             this.cabecera.detraccion = detra
             this.cabecera.serie = serie
-            this.cabecera.correlativoDocEmitido = correlativo
-            this.cabecera.numeracion = serie + '-' + correlativo
+            //    this.cabecera.correlativoDocEmitido = correlativo
+            //   this.cabecera.numeracion = serie + '-' + correlativo
             this.cabecera.tipoDocumento = this.documento
             this.cabecera.cod_tipoDocumento = doccliente
             this.cabecera.dni = this.numero
@@ -629,12 +629,15 @@ export default {
             console.log(array)
             //await cobrar_js(arrayCabecera, array_item)
             array.genera_guia = this.genera_guia || false
-            const r = await this.api_rest(array, 'cobrar_js');
+            const r = await this.api_rest(array, 'cobrar_js_v2');
             if (!r) {
                 // ya mostraste el diálogo de stock insuficiente
                 store.commit("dialogoprogress");
                 return;
             }
+            console.log(r)
+            arrayCabecera.correlativoDocEmitido = r.correlativoDocEmitido
+            arrayCabecera.numeracion = r.numeracion
             if (arrayCabecera.tipocomprobante != 'T') {
                 enviaDocumentoApiSunat(arrayCabecera, array_item)
             }
@@ -647,7 +650,7 @@ export default {
                      url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
                     //url: 'http://localhost:5000/sis-distribucion/southamerica-east1/api_distribucion',
                     headers: {
-                        'X-Idempotency-Key': data.arrayCabecera.numeracion,
+                        'X-Idempotency-Key': `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
                     },
                     data: {
                         bd: store.state.baseDatos.bd,
@@ -656,7 +659,7 @@ export default {
                     }
                 });
 
-                return resp.data;
+                return resp.data?.data || null;
 
             } catch (err) {
                 const status = err?.response?.status;
@@ -833,13 +836,13 @@ export default {
             }
             const usarDefecto = store.state.configuracion.usar_comprobante_defecto === true
 
-          /*  if (usarDefecto) {
-                this.tipocomprobante = store.state.configuracion.defecto || 'T'
-            } else {
-                this.tipocomprobante = (data.tipocomprobante || data.tipo_comprobante)
-                    ? (data.tipocomprobante || data.tipo_comprobante)
-                    : 'T'
-            }*/
+            /*  if (usarDefecto) {
+                  this.tipocomprobante = store.state.configuracion.defecto || 'T'
+              } else {
+                  this.tipocomprobante = (data.tipocomprobante || data.tipo_comprobante)
+                      ? (data.tipocomprobante || data.tipo_comprobante)
+                      : 'T'
+              }*/
 
             this.dial_cliente = false;
         },
