@@ -863,7 +863,10 @@ async function impresion80(arraydatos, qr, cabecera) {
     }
     nuevoArray[i] = new Array(4);
     nuevoArray[i][0] = array[i].cantidad;
-    nuevoArray[i][1] = array[i].nombre + "\n" + "-" + array[i].medida + tg;
+    const medidaMostrar = store.state.configImpresora.mostrar_medida_general 
+      ? obtenerCodigoSunat(array[i].medida) 
+      : array[i].medida;
+    nuevoArray[i][1] = array[i].nombre + "\n" + "-" + medidaMostrar + tg;
     nuevoArray[i][2] = Number(array[i].precio).toFixed(2);
     nuevoArray[i][3] = totals + obs;
   }
@@ -1922,7 +1925,10 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
     nuevoArray[i] = new Array(5);
     nuevoArray[i][0] = array[i].cantidad || 0;
     nuevoArray[i][1] = (array[i].nombre || "") + tg;
-    nuevoArray[i][2] = array[i].medida || "";
+    const medidaMostrar = store.state.configImpresora.mostrar_medida_general 
+      ? obtenerCodigoSunat(array[i].medida) 
+      : (array[i].medida || "");
+    nuevoArray[i][2] = medidaMostrar;
     nuevoArray[i][3] =
       array[i].precioedita ||
       array[i].precio ||
@@ -2449,11 +2455,15 @@ function tabla_A4(array, linea) {
     }
 
     // Estructura según exista o no descuento
+    const medidaMostrar = store.state.configImpresora.mostrar_medida_general 
+      ? obtenerCodigoSunat(item.medida) 
+      : item.medida;
+      
     if (!existeDescuento) {
       // SIN DESCUENTOS
       nuevoArray.push([
         item.cantidad,
-        item.medida,
+        medidaMostrar,
         item.id + " - " + item.nombre + tg,
         precioBase.toFixed(2),
         totalLinea.toFixed(2) + obs,
@@ -2462,7 +2472,7 @@ function tabla_A4(array, linea) {
       // CON DESCUENTOS
       nuevoArray.push([
         item.cantidad,
-        item.medida,
+        medidaMostrar,
         item.id + " - " + item.nombre + tg,
         precioBase.toFixed(2),
         textoDescuento,
@@ -2537,4 +2547,30 @@ function formatMoney(num) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+function obtenerCodigoSunat(medida) {
+  const medidasSunat = store.state.medidassunat || [];
+  const medidaUpper = (medida || "").toUpperCase().trim();
+  const medidaLimpia = medidaUpper.replace(/X\d+$/, '').trim();
+
+  let encontrado = medidasSunat.find(m =>
+    (m.nombre || "").toUpperCase() === medidaUpper
+  );
+
+  if (!encontrado) {
+    encontrado = medidasSunat.find(m =>
+      medidaLimpia.includes((m.nombre || "").toUpperCase()) ||
+      (m.nombre || "").toUpperCase().includes(medidaLimpia)
+    );
+  }
+
+  if (!encontrado) {
+    encontrado = medidasSunat.find(m =>
+      (m.general || "").toUpperCase() === medidaUpper ||
+      (m.general || "").toUpperCase() === medidaLimpia
+    );
+  }
+
+  return encontrado ? encontrado.general : "NIU";
 }

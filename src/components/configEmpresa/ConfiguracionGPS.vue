@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="dialogVisible" max-width="350px" persistent>
+  <v-dialog v-model="dialogVisible" max-width="420px" persistent>
     <v-card :loading="loading">
       <v-toolbar color="primary" dark dense flat>
         <v-icon left>mdi-map-marker-radius</v-icon>
@@ -14,10 +14,60 @@
 
       <v-card-text class="pa-4">
         <v-form ref="form" v-model="formValido">
-          <v-row dense>
-            <v-col cols="12" v-for="field in campos" :key="field.key">
-              <v-text-field v-model.number="config[field.key]" :label="field.label" :suffix="field.suffix" type="number"
-                outlined dense hide-details="auto" class="mb-3" :rules="rules.rango">
+          <v-card class="mb-4" flat outlined>
+            <v-card-text class="py-3">
+              <v-row align="center" no-gutters>
+                <v-col cols="5" class="text-right pr-3">
+                  <div class="text-subtitle-2 font-weight-bold" :class="modoMaximo ? 'red--text' : ''">
+                    Máximo
+                  </div>
+                  <div class="text-caption" :class="modoMaximo ? 'red--text' : 'grey--text'">
+                    Mayor batería
+                  </div>
+                </v-col>
+                <v-col cols="2" class="text-center">
+                  <v-switch v-model="modoMaximo" hide-details :color="modoMaximo ? 'red' : 'green'" inset
+                    @change="toggleModo"></v-switch>
+                </v-col>
+                <v-col cols="5" class="text-left pl-3">
+                  <div class="text-subtitle-2 font-weight-bold" :class="!modoMaximo ? 'green--text' : ''">
+                    Medio
+                  </div>
+                  <div class="text-caption" :class="!modoMaximo ? 'green--text' : 'grey--text'">
+                    Menos batería
+                  </div>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
+
+          <v-divider class="my-2"></v-divider>
+
+          <v-simple-table dense>
+            <template v-slot:default>
+              <thead>
+                <tr>
+                  <th class="text-left">Parámetro</th>
+                  <th class="text-right">Actual</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Movimiento mínimo</td>
+                  <td class="text-right font-weight-bold">{{ config.movimiento_minimo_metros }} m</td>
+                </tr>
+                <tr>
+                  <td>Precisión máxima</td>
+                  <td class="text-right font-weight-bold">{{ config.precision_gps_maxima }} m</td>
+                </tr>
+              </tbody>
+            </template>
+          </v-simple-table>
+
+          <v-row dense class="mt-4">
+            <v-col cols="12">
+              <v-text-field v-model.number="config.distancia_visita" label="Radio de Visita (m)" type="number" outlined
+                dense hide-details="auto" :rules="rules.rango">
                 <template v-slot:append>
                   <v-tooltip bottom max-width="250">
                     <template v-slot:activator="{ on, attrs }">
@@ -25,7 +75,7 @@
                         mdi-help-circle
                       </v-icon>
                     </template>
-                    <span>{{ field.hint }}</span>
+                    <span>Radio máximo en metros para marcar visita.</span>
                   </v-tooltip>
                 </template>
               </v-text-field>
@@ -56,31 +106,12 @@ export default {
   data: () => ({
     loading: false,
     formValido: false,
+    modoMaximo: false,
     config: {
-      movimiento_minimo_metros: 30,
+      movimiento_minimo_metros: 15,
       distancia_visita: 15,
-      precision_gps_maxima: 40,
+      precision_gps_maxima: 100,
     },
-    campos: [
-      {
-        key: 'movimiento_minimo_metros',
-        label: 'Movimiento Mínimo',
-        suffix: 'm',
-        hint: 'El sistema ignorará cambios de ubicación menores a este valor. Útil para evitar micro-movimientos cuando el usuario está detenido.'
-      },
-      {
-        key: 'distancia_visita',
-        label: 'Radio de Visita Mínima',
-        suffix: 'm',
-        hint: 'Radio máximo en metros para considerar que el usuario está en el punto. Si la distancia es menor, la visita será válida.'
-      },
-      {
-        key: 'precision_gps_maxima',
-        label: 'Precisión Máxima',
-        suffix: 'm',
-        hint: 'Margen de error aceptable del GPS. El sistema ignorará lecturas con un error superior al configurado.'
-      }
-    ],
     rules: {
       rango: [
         v => (v !== null && v !== '') || 'Requerido',
@@ -92,7 +123,7 @@ export default {
   computed: {
     dialogVisible: {
       get() { return this.$store.state.dialogoConfiguracionGPS; },
-      set(val) { 
+      set(val) {
         if (!val && !this.loading) {
           this.$store.commit('dialogoConfiguracionGPS');
         }
@@ -107,6 +138,16 @@ export default {
   },
 
   methods: {
+    toggleModo() {
+      if (this.modoMaximo) {
+        this.config.movimiento_minimo_metros = 5;
+        this.config.precision_gps_maxima = 150;
+      } else {
+        this.config.movimiento_minimo_metros = 15;
+        this.config.precision_gps_maxima = 100;
+      }
+    },
+
     async cargarConfiguracion() {
       this.$store.commit("dialogoprogress");
       this.loading = true;
@@ -118,6 +159,13 @@ export default {
             if (data[key] !== undefined) this.config[key] = data[key];
           });
         }
+
+        if (this.config.movimiento_minimo_metros === 5 && this.config.precision_gps_maxima === 150) {
+          this.modoMaximo = true;
+        } else {
+          this.modoMaximo = false;
+        }
+
       } catch (error) {
         this.notificar("Error al cargar configuración");
       } finally {
@@ -128,10 +176,10 @@ export default {
 
     async guardar() {
       if (!this.$refs.form.validate()) return;
-      
+
       this.$store.commit("dialogoprogress");
       this.loading = true;
-      
+
       try {
         const promesas = Object.keys(this.config).map(key =>
           grabaConfigura(key, this.config[key])
@@ -140,10 +188,8 @@ export default {
 
         this.$store.commit('setConfiguracionGPS', { ...this.config });
         this.notificar("Configuración guardada");
-        
-        // Cerrar el diálogo después de guardar
         this.$store.commit('dialogoConfiguracionGPS');
-        
+
       } catch (error) {
         this.notificar("Error al guardar");
       } finally {

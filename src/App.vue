@@ -46,10 +46,10 @@ export default {
     },
     computed: {
         minMeters() {
-            return this.$store.state.configuracion?.movimiento_minimo_metros || 30;
+            return this.$store.state.configuracion?.movimiento_minimo_metros || 15;
         },
         maxGpsAccuracy() {
-            return this.$store.state.configuracion?.precision_gps_maxima || 40;
+            return this.$store.state.configuracion?.precision_gps_maxima || 100;
         }
     },
     created() {
@@ -116,7 +116,7 @@ export default {
                 if (err.code === 3) {
                     setTimeout(() => {
                         this._startWatch({
-                            enableHighAccuracy: false,
+                            enableHighAccuracy: true,
                             timeout: 25000,
                             maximumAge: 30000,
                         });
