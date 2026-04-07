@@ -7,6 +7,7 @@
                     <v-select v-model="sede_actual" :items="$store.state.array_sedes" item-text="nombre"
                         item-value="codigo" label="Vendedor" outlined dense :disabled="bloqueo_filtro || cargando" />
                 </v-col>
+
                 <v-col cols="6" sm="6" md="3">
                     <v-select :items="arra_estado" label="Estado" dense outlined v-model="estado"
                         :disabled="cargando" />
@@ -83,6 +84,12 @@
                     </v-btn>
                 </v-col>
             </v-row>
+            <div v-if="isMobile" class="text-right mt-1">
+                <v-chip x-small outlined color="success">
+                    <v-icon x-small left>mdi-format-list-bulleted</v-icon>
+                    Clientes: {{ listafiltrada.length }}
+                </v-chip>
+            </div>
 
             <v-progress-linear v-if="cargando" indeterminate height="2" class="mt-1" />
 
@@ -416,13 +423,13 @@ export default {
                     return coincide
                 })
             }
-    // Orden alfabético por nombre
-    lista = [...lista].sort((a, b) =>
-        String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es', {
-            sensitivity: 'base',
-            numeric: true
-        })
-    )
+            // Orden alfabético por nombre
+            lista = [...lista].sort((a, b) =>
+                String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es', {
+                    sensitivity: 'base',
+                    numeric: true
+                })
+            )
             return lista;
         },
 
@@ -430,7 +437,7 @@ export default {
             const base = Array.isArray(this.$store.state.zonas) ? this.$store.state.zonas : [];
 
             return [{ nombre: 'TODAS' }, ...base];
-        },        
+        },
     },
     async created() {
         if (!this.$store.state.permisos?.moduloempresa) {
@@ -811,7 +818,7 @@ export default {
                     const dist = this.distanciaMetros(latUser, lngUser, latCli, lngCli);
 
                     if (dist > RADIO_PERMITIDO_M) {
-                        store.commit('dialogosnackbar', `No está en el punto de visita (distancia > ${RADIO_PERMITIDO_M} m).`);
+                        store.commit('dialogosnackbar', 'No está en el punto de visita (distancia > 15 m).');
                         return;
                     }
                 }
