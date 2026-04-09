@@ -15,23 +15,34 @@
         <v-card class="elevation-2 rounded-lg mb-4">
             <v-card-text class="pb-2">
                 <v-row dense align="center">
-                    <v-col cols="12" sm="2" md="1">
+                    <v-col cols="12" sm="6" md="2">
+                        <v-select v-model="filtros.mes" :items="mesesSelect" label="Mes" outlined dense hide-details
+                            prepend-inner-icon="mdi-calendar-month" />
+                    </v-col>
+
+                    <v-col cols="12" sm="6" md="2">
+                        <v-select v-model="filtros.anio" :items="years" label="Año" outlined dense hide-details
+                            prepend-inner-icon="mdi-calendar" />
+                    </v-col>
+
+                    <v-col cols="12" sm="6" md="2">
                         <v-btn color="primary" @click="cargarTodo" :loading="cargando" block class="font-weight-bold">
                             <v-icon left small>mdi-magnify</v-icon>
                             Cargar
                         </v-btn>
                     </v-col>
 
-                    <v-col cols="12" sm="5" md="4">
-                        <v-text-field v-model="filtros.busqueda" label="Buscar producto (ID o nombre)" outlined dense
-                            hide-details prepend-inner-icon="mdi-magnify" clearable
-                            placeholder="Ej: 1090 o CERA PASTA..." />
+                    <v-col cols="12" sm="6" md="2">
+                        <v-text-field v-model="filtros.busqueda" label="Buscar producto" outlined dense hide-details
+                            prepend-inner-icon="mdi-magnify" clearable placeholder="Ej: 1090 o CERA PASTA..." />
                     </v-col>
-                    <v-col cols="12" sm="5" md="3">
-                        <v-select v-model="filtros.estado" :items="opcionesEstado" label="Estado de consistencia"
-                            outlined dense hide-details prepend-inner-icon="mdi-alert-circle" />
+
+                    <v-col cols="12" sm="6" md="2">
+                        <v-select v-model="filtros.estado" :items="opcionesEstado" label="Estado" outlined dense
+                            hide-details prepend-inner-icon="mdi-alert-circle" />
                     </v-col>
-                    <v-col cols="12" sm="2" md="2">
+
+                    <v-col cols="12" sm="6" md="2">
                         <v-btn color="error" @click="corregirStockErrores" :loading="cargando" block
                             class="font-weight-bold">
                             <v-icon left small>mdi-database-sync</v-icon>
@@ -105,7 +116,7 @@
                 <template v-slot:[`item.stock_periodo`]="{ item }">
                     <span :class="!item.consistente ? 'font-weight-bold' : ''">{{ formatStock(item.stock_periodo,
                         item.factor)
-                    }}</span>
+                        }}</span>
                 </template>
                 <template v-slot:[`item.stock_prevenda`]="{ item }">
                     <span>{{ formatStock(item.stock_prevenda, item.factor) }}</span>
@@ -124,7 +135,7 @@
                         <template v-slot:activator="{ on, attrs }">
                             <v-chip small :color="item.consistente ? 'success' : 'error'" dark v-bind="attrs" v-on="on">
                                 <v-icon left small>{{ item.consistente ? 'mdi-check-circle' : 'mdi-alert-circle'
-                                }}</v-icon>
+                                    }}</v-icon>
                                 {{ item.consistente ? 'OK' : 'ERROR' }}
                             </v-chip>
                         </template>
@@ -409,12 +420,13 @@ export default {
             }
         },
 
-        generarYears() {
-            const currentYear = new Date().getFullYear()
-            for (let year = 2022; year <= currentYear; year++) {
-                this.years.push(year)
-            }
-        },
+      generarYears() {
+    const currentYear = new Date().getFullYear()
+    this.years = []
+    for (let year = currentYear; year >= 2022; year--) {
+        this.years.push(year)
+    }
+},
 
         async cargarTodo() {
             this.cargando = true
