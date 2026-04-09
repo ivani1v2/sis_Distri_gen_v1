@@ -698,7 +698,7 @@ export default {
             var a = axios({
                 method: 'POST',
                 url: 'https://api-distribucion-6sfc6tum4a-rj.a.run.app',
-                //url:'http://127.0.0.1:5001/distri-365/us-central1/api_distribucion',
+                //url:'http://localhost:5001/sis-distribucion/southamerica-east1/api_distribucion',
                 headers: {
                     'X-Idempotency-Key': idem,
                 },

@@ -50,6 +50,7 @@ function impresion58(arrays) {
   var piepagina = store.state.configImpresora.piepagina;
   var telefono = store.state.configImpresora.telefono;
   var pageCenter = pdfInMM / 2;
+  const qrRegistroPago58 = obtieneQrPagoRegistro();
   var serie = "P001-" + arrays.id;
   var moneda = arrays.moneda || "S/";
   const doc = new jspdf({
@@ -171,17 +172,17 @@ function impresion58(arrays) {
     (it) =>
       (Number(it.desc_1) > 0 || Number(it.desc_2) > 0 || Number(it.desc_3) > 0)
   );
-  
+
   var operacionexonerada = 0;
   var operaciongravada = 0;
   var nuevoArray = [];
-  
+
   for (var i = 0; i < array.length; i++) {
     var descuento = parseFloat(array[i].preciodescuento || 0);
     var textoDescuento = existeDescuento
       ? `${array[i].desc_1 || 0} / ${array[i].desc_2 || 0} / ${array[i].desc_3 || 0}`
       : null;
-    
+
     if (!existeDescuento) {
       nuevoArray.push([
         array[i].cantidad,
@@ -196,7 +197,7 @@ function impresion58(arrays) {
         parseFloat(array[i].precioedita * array[i].cantidad).toFixed(store.state.configuracion.decimal)
       ]);
     }
-    
+
     if (array[i].operacion == "EXONERADA") {
       operacionexonerada =
         parseFloat(operacionexonerada) +
@@ -210,17 +211,17 @@ function impresion58(arrays) {
         descuento;
     }
   }
-  
+
   // Cabeceras y estilos según si hay descuentos
   const headSinDesc = [["Cant", "Descripcion", "P.T"]];
   const headConDesc = [["Cant", "Descripcion", "%Desc", "P.T"]];
-  
+
   const columnStylesSinDesc = {
     0: { columnWidth: 8, halign: "center" },
     1: { columnWidth: 30, halign: "left" },
     2: { columnWidth: 11, halign: "right" },
   };
-  
+
   const columnStylesConDesc = {
     0: { columnWidth: 7, halign: "center" },
     1: { columnWidth: 23, halign: "left" },
@@ -292,6 +293,18 @@ function impresion58(arrays) {
   doc.setFont("Helvetica", "");
   doc.setFontSize(7);
 
+  if (qrRegistroPago58 && qrRegistroPago58.serial) {
+    linea = dibujaQrPagoTermicoProforma(
+      doc,
+      qrRegistroPago58,
+      pdfInMM,
+      linea,
+      18,
+      pdfInMM - lMargin - rMargin,
+      7,
+    );
+  }
+
   linea = linea + parseFloat(store.state.configImpresora.minferiorgeneral);
   // console.log("aqui"+store.state.configImpresora.minferiorgeneral)
   doc.text(".", 0, linea);
@@ -326,6 +339,7 @@ function impresion80(arrays) {
   var piepagina = store.state.configImpresora.piepagina;
   var telefono = store.state.configImpresora.telefono;
   var pageCenter = pdfInMM / 2;
+  const qrRegistroPago80 = obtieneQrPagoRegistro();
   var serie = "P001-" + arrays.id;
   var moneda = arrays.moneda || "S/";
   const doc = new jspdf({
@@ -447,11 +461,11 @@ function impresion80(arrays) {
     (it) =>
       (Number(it.desc_1) > 0 || Number(it.desc_2) > 0 || Number(it.desc_3) > 0)
   );
-  
+
   var operacionexonerada = 0;
   var operaciongravada = 0;
   var nuevoArray = [];
-  
+
   for (var i = 0; i < array.length; i++) {
     var tg = "";
     var obs = "";
@@ -461,11 +475,11 @@ function impresion80(arrays) {
       array[i].precioedita = "0.00";
     }
     var descuento = parseFloat(array[i].preciodescuento || 0);
-    
+
     var textoDescuento = existeDescuento
       ? `${array[i].desc_1 || 0} / ${array[i].desc_2 || 0} / ${array[i].desc_3 || 0}`
       : null;
-    
+
     if (!existeDescuento) {
       nuevoArray.push([
         array[i].cantidad,
@@ -482,7 +496,7 @@ function impresion80(arrays) {
         parseFloat(array[i].precioedita * array[i].cantidad).toFixed(store.state.configuracion.decimal)
       ]);
     }
-    
+
     if (array[i].operacion == "EXONERADA") {
       operacionexonerada =
         parseFloat(operacionexonerada) +
@@ -496,18 +510,18 @@ function impresion80(arrays) {
         descuento;
     }
   }
-  
+
   // Cabeceras y estilos según si hay descuentos
   const headSinDesc = [["Cant", "Descripcion", "P.U", "P.T"]];
   const headConDesc = [["Cant", "Descripcion", "P.U", "%Desc", "P.T"]];
-  
+
   const columnStylesSinDesc = {
     0: { columnWidth: 8, halign: "center" },
     1: { columnWidth: 35, halign: "left" },
     2: { columnWidth: 12, halign: "right" },
     3: { columnWidth: 12, halign: "right" },
   };
-  
+
   const columnStylesConDesc = {
     0: { columnWidth: 8, halign: "center" },
     1: { columnWidth: 27, halign: "left" },
@@ -577,6 +591,18 @@ function impresion80(arrays) {
   doc.text(separacion, pageCenter, linea, "center");
   linea = linea + 3;
   doc.setFont("Helvetica", "");
+
+  if (qrRegistroPago80 && qrRegistroPago80.serial) {
+    linea = dibujaQrPagoTermicoProforma(
+      doc,
+      qrRegistroPago80,
+      pdfInMM,
+      linea,
+      24,
+      pdfInMM - lMargin - rMargin,
+      8,
+    );
+  }
 
   if (store.state.configImpresora.mensaje_final_proforma != "") {
     linea = linea + 7;
@@ -814,21 +840,21 @@ function impresionA4(arrays) {
     (it) =>
       (Number(it.desc_1) > 0 || Number(it.desc_2) > 0 || Number(it.desc_3) > 0)
   );
-  
+
   var operacionexonerada = 0;
   var operaciongravada = 0;
   var nuevoArray = [];
-  
+
   for (var i = 0; i < array.length; i++) {
     if (array[i].operacion == "GRATUITA") {
       array[i].precioedita = "0.00";
     }
     var descuento = parseFloat(array[i].preciodescuento || 0);
-    
+
     var textoDescuento = existeDescuento
       ? `${array[i].desc_1 || 0} / ${array[i].desc_2 || 0} / ${array[i].desc_3 || 0}`
       : null;
-    
+
     if (!existeDescuento) {
       nuevoArray.push([
         array[i].cantidad,
@@ -847,7 +873,7 @@ function impresionA4(arrays) {
         parseFloat(array[i].precioedita * array[i].cantidad).toFixed(2)
       ]);
     }
-    
+
     if (array[i].operacion == "EXONERADA") {
       operacionexonerada =
         parseFloat(operacionexonerada) +
@@ -861,10 +887,10 @@ function impresionA4(arrays) {
         descuento;
     }
   }
-  
+
   const headSinDesc = [["Cantidad", "Descripcion", "Medida", "P.Unitario", "P.Total"]];
   const headConDesc = [["Cant", "Descripcion", "Medida", "P.Unitario", "%Desc", "P.Total"]];
-  
+
   const columnStylesSinDesc = {
     0: { columnWidth: 20, halign: "center", fontStyle: "bold" },
     1: { columnWidth: 110, halign: "left" },
@@ -872,7 +898,7 @@ function impresionA4(arrays) {
     3: { columnWidth: 20, halign: "center" },
     4: { columnWidth: 20, halign: "center", fontStyle: "bold" },
   };
-  
+
   const columnStylesConDesc = {
     0: { columnWidth: 15, halign: "center", fontStyle: "bold" },
     1: { columnWidth: 90, halign: "left" },
@@ -983,27 +1009,88 @@ function impresionA4(arrays) {
     linea = linea + 4;
   }
   if (bancos != "") {
-    doc.autoTable({
-      margin: { top: 10, left: 10 },
-      styles: {
-        fontSize: 8,
-        cellPadding: 1.5,
-        valign: "middle",
-        halign: "center",
-        lineWidth: 0.2,
-        lineColor: 1,
-      },
-      headStyles: { lineWidth: 0.2, lineColor: 1 },
-      columnStyles: {
-        0: { columnWidth: 25, halign: "center", fontStyle: "bold" },
-        1: { columnWidth: 25, halign: "center" },
-        2: { columnWidth: 30, halign: "center" },
-        3: { columnWidth: 30, halign: "center" },
-      },
-      theme: ["plain"],
-      head: [["BANCO", "MONEDA", "CUENTA", "CCI"]],
-      body: arraybancos(bancos),
-    });
+    const bancosLista = (bancos || []).filter(
+      (item) => item && item.banco && item.tipo !== "qr",
+    );
+    const qrRegistro = (bancos || []).find(
+      (item) => item && (item.tipo === "qr" || item.serial),
+    );
+
+    if (bancosLista.length > 0) {
+      lineaqr = lineaqr + 23;
+      doc.setFont("Helvetica", "");
+      doc.setFontSize(9);
+
+      var texto = doc.splitTextToSize("Cuenta Empresa : ", 200);
+      doc.text(texto, 10, lineaqr + 4, "left");
+      lineaqr = lineaqr + 3;
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const tableWidth = pageWidth - 20;
+      const colBanco = tableWidth * 0.18;
+      const colTitular = tableWidth * 0.22;
+      const colMoneda = tableWidth * 0.12;
+      const colCuenta = tableWidth * 0.24;
+      const colCci = tableWidth * 0.24;
+
+      doc.autoTable({
+        startY: lineaqr + 4,
+        margin: { top: 10, left: 10, right: 10 },
+        styles: {
+          fontSize: 7,
+          cellPadding: 0.5,
+          valign: "middle",
+          halign: "center",
+          lineWidth: 0.1,
+          lineColor: 1,
+        },
+        headStyles: {
+          lineWidth: 0.1,
+          lineColor: 1,
+          fontStyle: "bold",
+          fontSize: 7,
+        },
+        columnStyles: {
+          0: { columnWidth: colBanco, halign: "center", fontStyle: "bold" },
+          1: { columnWidth: colTitular, halign: "center" },
+          2: { columnWidth: colMoneda, halign: "center" },
+          3: { columnWidth: colCuenta, halign: "center" },
+          4: { columnWidth: colCci, halign: "center" },
+        },
+        theme: "plain",
+        head: [["BANCO", "TITULAR", "MONEDA", "CUENTA", "CCI"]],
+        body: arraybancos(bancosLista),
+      });
+      let finalY = doc.previousAutoTable.finalY;
+      lineaqr = finalY + 5;
+    }
+
+    if (qrRegistro && qrRegistro.serial) {
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const centerX = pageWidth / 2;
+      const qrSize = 40;
+      const qrX = centerX - (qrSize / 2);
+
+      doc.setFont("Helvetica", "");
+      doc.setFontSize(10);
+      doc.text("Pago por QR", centerX, lineaqr, { align: "center" });
+      lineaqr = lineaqr + 1;
+
+      const qrPago = QR.drawImg(qrRegistro.serial, {
+        typeNumber: 4,
+        errorCorrectLevel: "M",
+        size: 500,
+      });
+      doc.addImage(qrPago, "PNG", qrX, lineaqr, qrSize, qrSize);
+      const detalleQr = [qrRegistro.descripcion || "", qrRegistro.titular || ""]
+        .filter(Boolean)
+        .join("\n");
+      const textoQr = doc.splitTextToSize(detalleQr, 120);
+      doc.setFontSize(9);
+      doc.text(textoQr, centerX, lineaqr + qrSize + 4, { align: "center" });
+
+      lineaqr = lineaqr + qrSize + 4 + (textoQr.length * 4);
+    }
   }
 
   linea = linea + 15;
@@ -1013,14 +1100,59 @@ function impresionA4(arrays) {
   abre_dialogo_impresion(doc.output("bloburi"));
 }
 
+function obtieneQrPagoRegistro() {
+  const bancos = Array.isArray(store?.state?.bancos) ? store.state.bancos : [];
+  return bancos.find(
+    (item) => item && (item.tipo === "qr" || Boolean(item.serial)),
+  );
+}
+
+function dibujaQrPagoTermicoProforma(
+  doc,
+  qrRegistro,
+  pdfInMM,
+  linea,
+  size = 20,
+  anchoTexto = 60,
+  fontSize = 8,
+) {
+  if (!qrRegistro || !qrRegistro.serial) return linea;
+
+  const centerX = pdfInMM / 2;
+  doc.setFont("Helvetica", "");
+  doc.setFontSize(fontSize);
+  doc.text("Pago por QR", centerX, linea, "center");
+  linea = linea + 2;
+
+  const qrPago = QR.drawImg(qrRegistro.serial, {
+    typeNumber: 4,
+    errorCorrectLevel: "M",
+    size: 500,
+  });
+  doc.addImage(qrPago, "PNG", centerX - size / 2, linea, size, size);
+  linea = linea + size + 2;
+
+  const detalleQr = [qrRegistro.descripcion || "", qrRegistro.titular || ""]
+    .filter(Boolean)
+    .join("\n");
+  if (detalleQr) {
+    const texto = doc.splitTextToSize(detalleQr, anchoTexto);
+    doc.text(texto, centerX, linea, "center");
+    linea = linea + 3.5 * texto.length;
+  }
+
+  return linea + 1;
+}
+
 function arraybancos(array) {
   var nuevoArray = new Array(array.length);
   for (var i = 0; i < array.length; i++) {
     nuevoArray[i] = new Array(4);
     nuevoArray[i][0] = array[i].banco;
-    nuevoArray[i][1] = array[i].moneda;
-    nuevoArray[i][2] = array[i].cuenta;
-    nuevoArray[i][3] = array[i].cci;
+    nuevoArray[i][1] = array[i].titular;
+    nuevoArray[i][2] = array[i].moneda;
+    nuevoArray[i][3] = array[i].cuenta;
+    nuevoArray[i][4] = array[i].cci;
   }
   return nuevoArray;
 }

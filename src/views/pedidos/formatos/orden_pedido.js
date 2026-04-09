@@ -362,7 +362,8 @@ async function impresionA4_ordenPedido(cabecera, items = [], modo = 'abre', docI
   }
 
   if (cabecera?.cod_vendedor) {
-    doc.text(`Atiende: ${cabecera.cod_vendedor}`, lMargin, y);
+    const vendedor = obtieneNombreVendedor(cabecera.cod_vendedor);
+    doc.text(`Atiende: ${vendedor}`, lMargin, y);
     y += 6;
   }
 
@@ -761,8 +762,9 @@ async function impresion80_ordenPedido(cabecera, items = [], modo = 'abre', docI
   }
 
   if (cabecera?.cod_vendedor) {
+    const vendedor = obtieneNombreVendedor(cabecera.cod_vendedor);
     texto = doc.splitTextToSize(
-      "Atiende: " + cabecera.cod_vendedor,
+      "Atiende: " + vendedor,
       pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, lMargin, linea, "left");
@@ -1177,8 +1179,9 @@ async function impresion58_ordenPedido(cabecera, items = [], modo = 'abre', docI
   }
 
   if (cabecera?.cod_vendedor) {
+    const vendedor = obtieneNombreVendedor(cabecera.cod_vendedor);
     texto = doc.splitTextToSize(
-      "Atiende: " + cabecera.cod_vendedor,
+      "Atiende: " + vendedor,
       pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, lMargin, linea, "left");
@@ -1497,4 +1500,19 @@ function obtenerCodigoSunat(medida) {
   }
 
   return encontrado ? encontrado.general : "NIU";
+}
+
+function obtieneNombreVendedor(vendedorRaw) {
+  const codigo = String(vendedorRaw || "").trim();
+  if (!codigo) return "";
+
+  const sedes = Array.isArray(store?.state?.array_sedes)
+    ? store.state.array_sedes.filter((e) => e?.tipo === "sede")
+    : [];
+
+  const sede = sedes.find(
+    (s) => String(s?.codigo || "").trim().toUpperCase() === codigo.toUpperCase()
+  );
+
+  return sede?.nombre ? `${codigo} - ${sede.nombre}` : codigo;
 }

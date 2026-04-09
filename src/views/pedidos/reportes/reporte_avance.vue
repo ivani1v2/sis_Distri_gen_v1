@@ -34,7 +34,9 @@
                         <div class="caption grey--text">
                             Unidades: <strong>{{ fmtInt(kpi.unidades) }}</strong> &nbsp;·&nbsp;
                             Total: <strong>S/{{ n2(kpi.totalSoles) }}</strong> &nbsp;·&nbsp;
-                            Utilidad: <strong>S/{{ n2(kpi.utilidadTotal) }}</strong>
+                            Utilidad: <strong>S/{{ n2(kpi.utilidadTotal) }}</strong>&nbsp;·&nbsp;
+                            Margen: <strong :class="margenPorcGeneral >= 0 ? 'green--text' : 'red--text'">
+                            {{ n2(margenPorcGeneral) }}% </strong>
                         </div>
                     </v-card-title>
                     <div v-if="isMobile" class="px-3 pb-2">
@@ -305,7 +307,11 @@ export default {
 
             return arr;
         },
-
+        margenPorcGeneral() {
+            if(this.kpi.totalSoles === 0) return 0;
+            return (this.kpi.utilidadTotal / this.kpi.totalSoles) * 100;
+        }
+ 
     },
     methods: {
         cerrar() { this.$emit('cerrar'); this.dial = false; },

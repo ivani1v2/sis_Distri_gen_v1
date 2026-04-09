@@ -147,6 +147,7 @@ async function impresion58(arraydatos, qr, cabecera) {
   var piepagina = store.state.configImpresora.piepagina;
   var telefono = store.state.configImpresora.telefono;
   var pageCenter = pdfInMM / 2;
+  const qrRegistroPago58 = obtieneQrPagoRegistro();
 
   switch (arraycabe.tipocomprobante) {
     case "T":
@@ -500,10 +501,11 @@ async function impresion58(arraydatos, qr, cabecera) {
   linea = linea + 3;
   doc.setFont("Helvetica", "");
   doc.setFontSize(9);
-  if (arraycabe.nomempleado != "" && arraycabe.nomempleado != undefined) {
+  const vendedor58 = obtieneNombreVendedor(arraycabe.vendedor);
+  if (vendedor58 != "" && vendedor58 != undefined) {
     doc.setFont("Helvetica", "");
     var texto = doc.splitTextToSize(
-      "Vendedor: " + arraycabe.nomempleado,
+      "Vendedor: " + vendedor58,
       pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, pageCenter, linea, "center");
@@ -525,8 +527,8 @@ async function impresion58(arraydatos, qr, cabecera) {
     doc.setFontSize(9);
     var texto = doc.splitTextToSize(
       "Representación Impresa de la " +
-        documento +
-        " Consultar su validez en https://domo.pe/buscardocumentos",
+      documento +
+      " Consultar su validez en https://domo.pe/buscardocumentos",
       pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, pageCenter, linea, "center");
@@ -538,17 +540,36 @@ async function impresion58(arraydatos, qr, cabecera) {
         arraycabe.tipocomprobante == "B"
       ) {
         doc.addImage(qr, "png", pdfInMM / 2 - 10, linea, 18, 18);
-        linea = linea + 14;
+        linea = linea + 23;
       }
+    }
+
+    if (qrRegistroPago58 && qrRegistroPago58.serial) {
+      linea = dibujaQrPagoTermico(
+        doc,
+        qrRegistroPago58,
+        pdfInMM,
+        linea,
+        30,
+        pdfInMM - lMargin - rMargin,
+        8,
+      );
     }
   }
 
-  if (arraycabe.tipocomprobante == "T" && qr != "") {
+  if (arraycabe.tipocomprobante == "T" && qrRegistroPago58 && qrRegistroPago58.serial) {
     doc.setFontSize(8);
     doc.text(separacion, pageCenter, linea, "center");
     linea = linea + 3;
-    doc.addImage(qr, "png", pdfInMM / 2 - 10, linea, 18, 18);
-    linea = linea + 20;
+    linea = dibujaQrPagoTermico(
+      doc,
+      qrRegistroPago58,
+      pdfInMM,
+      linea,
+      30,
+      pdfInMM - lMargin - rMargin,
+      8,
+    );
   }
 
   if (arraycabe.forma_pago == "Credito") {
@@ -608,16 +629,16 @@ async function impresion58(arraydatos, qr, cabecera) {
               text: "Selecciona una app para compartir o imprimir",
               files: [file],
             });
-          } catch (err) {}
+          } catch (err) { }
         } else {
           const url = URL.createObjectURL(blob);
           window.open(url, "_blank");
         }
       } else {
         //  await abre_dialogo_impresion(doc, copias_genera);
-         if (!permite_impresion_host()) {
-           abre_dialogo_impresion_original(doc);
-           return true
+        if (!permite_impresion_host()) {
+          abre_dialogo_impresion_original(doc);
+          return true
         } else {
           var blob = doc.output("arraybuffer");
           return blob;
@@ -666,6 +687,7 @@ async function impresion80(arraydatos, qr, cabecera) {
   var piepagina = store.state.configImpresora.piepagina;
   var telefono = store.state.configImpresora.telefono;
   var pageCenter = pdfInMM / 2;
+  const qrRegistroPago80 = obtieneQrPagoRegistro();
   //console.log(arraycabe);
   switch (arraycabe.tipocomprobante) {
     case "T":
@@ -863,8 +885,8 @@ async function impresion80(arraydatos, qr, cabecera) {
     }
     nuevoArray[i] = new Array(4);
     nuevoArray[i][0] = array[i].cantidad;
-    const medidaMostrar = store.state.configImpresora.mostrar_medida_general 
-      ? obtenerCodigoSunat(array[i].medida) 
+    const medidaMostrar = store.state.configImpresora.mostrar_medida_general
+      ? obtenerCodigoSunat(array[i].medida)
       : array[i].medida;
     nuevoArray[i][1] = array[i].nombre + "\n" + "-" + medidaMostrar + tg;
     nuevoArray[i][2] = Number(array[i].precio).toFixed(2);
@@ -992,12 +1014,12 @@ async function impresion80(arraydatos, qr, cabecera) {
     doc.setFont("Helvetica", "");
     var texto = doc.splitTextToSize(
       "DETRACCION: " +
-        arraycabe.detraccion.porcentaje +
-        "%  : " +
-        moneda +
-        arraycabe.detraccion.monto +
-        "\nCTA. BANCO DE LA NACION: " +
-        arraycabe.detraccion.cuenta,
+      arraycabe.detraccion.porcentaje +
+      "%  : " +
+      moneda +
+      arraycabe.detraccion.monto +
+      "\nCTA. BANCO DE LA NACION: " +
+      arraycabe.detraccion.cuenta,
       80,
     );
     doc.text(texto, pageCenter, linea, "center");
@@ -1009,12 +1031,12 @@ async function impresion80(arraydatos, qr, cabecera) {
   var texto = doc.splitTextToSize('Vendedor : ' + arraycabe.vendedor, (pdfInMM - lMargin - rMargin));
   doc.text(texto, pageCenter, linea, 'center');
   linea = linea + (3.5 * texto.length)*/
-  const vendedor = arraycabe.cod_vendedor ?? arraycabe.vendedor;
-  if (vendedor) {
-    linea = linea + 1 * texto.length;
+  const vendedor80 = obtieneNombreVendedor(arraycabe.vendedor);
+  if (vendedor80) {
+    linea = linea + 1;
     doc.setFont("Helvetica", "");
     var texto = doc.splitTextToSize(
-      "Vendedor: " + vendedor,
+      "Vendedor: " + vendedor80,
       pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, pageCenter, linea, "center");
@@ -1035,8 +1057,8 @@ async function impresion80(arraydatos, qr, cabecera) {
     doc.setFontSize(8);
     var texto = doc.splitTextToSize(
       "Representación Impresa de la " +
-        documento +
-        " Consultar su validez en https://domo.pe/buscardocumentos",
+      documento +
+      " Consultar su validez en https://domo.pe/buscardocumentos",
       pdfInMM - lMargin - rMargin,
     );
     doc.text(texto, pageCenter, linea, "center");
@@ -1048,17 +1070,36 @@ async function impresion80(arraydatos, qr, cabecera) {
         arraycabe.tipocomprobante == "B"
       ) {
         doc.addImage(qr, "png", pdfInMM / 2 - 12, linea, 24, 24);
-        linea = linea + 20;
+        linea = linea + 27;
       }
+    }
+
+    if (qrRegistroPago80 && qrRegistroPago80.serial) {
+      linea = dibujaQrPagoTermico(
+        doc,
+        qrRegistroPago80,
+        pdfInMM,
+        linea,
+        27,
+        pdfInMM - lMargin - rMargin,
+        8,
+      );
     }
   }
 
-  if (arraycabe.tipocomprobante == "T" && qr != "") {
+  if (arraycabe.tipocomprobante == "T" && qrRegistroPago80 && qrRegistroPago80.serial) {
     doc.setFontSize(8);
     doc.text(separacion, pageCenter, linea, "center");
     linea = linea + 3;
-    doc.addImage(qr, "png", pdfInMM / 2 - 12, linea, 24, 24);
-    linea = linea + 26;
+    linea = dibujaQrPagoTermico(
+      doc,
+      qrRegistroPago80,
+      pdfInMM,
+      linea,
+      27,
+      pdfInMM - lMargin - rMargin,
+      8,
+    );
   }
 
   if (arraycabe.forma_pago == "Credito") {
@@ -1119,7 +1160,7 @@ async function impresion80(arraydatos, qr, cabecera) {
               text: "Selecciona una app para compartir o imprimir",
               files: [file],
             });
-          } catch (err) {}
+          } catch (err) { }
         } else {
           const url = URL.createObjectURL(blob);
           window.open(url, "_blank");
@@ -1127,8 +1168,8 @@ async function impresion80(arraydatos, qr, cabecera) {
       } else {
         //  await abre_dialogo_impresion(doc, copias_genera);
         if (!permite_impresion_host()) {
-           abre_dialogo_impresion_original(doc);
-           return true
+          abre_dialogo_impresion_original(doc);
+          return true
         } else {
           var blob = doc.output("arraybuffer");
           return blob;
@@ -1410,12 +1451,24 @@ async function impresionA4(array, qr, arraycabecera) {
     100,
   );
   doc.text(texto, 10, lineaqr, "left");
-  
+
+  const vendedorA4 = obtieneNombreVendedor(arraycabe.vendedor);
   var texto = doc.splitTextToSize(
-    "Vendedor: " + arraycabe.vendedor,
+    "Vendedor: " + vendedorA4,
   );
   doc.text(texto, 10, lineaqr + 4, "left");
   lineaqr = lineaqr + 6;
+
+  if (arraycabe.observacion && arraycabe.observacion.trim() !== "") {
+    doc.setFont("Helvetica", "");
+    doc.setFontSize(8);
+    var textoObs = doc.splitTextToSize(
+      "Observación: " + arraycabe.observacion,
+      180,
+    );
+    doc.text(textoObs, 10, lineaqr + 4, "left");
+    lineaqr = lineaqr + 4 * textoObs.length;
+  }
 
   let nextSection = 1;
   let currentSection;
@@ -1551,12 +1604,12 @@ async function impresionA4(array, qr, arraycabecera) {
     doc.setFont("Helvetica", "bold");
     var texto = doc.splitTextToSize(
       "DETRACCION: " +
-        arraycabe.detraccion.porcentaje +
-        "%  : " +
-        moneda +
-        arraycabe.detraccion.monto +
-        "\nCTA. BANCO DE LA NACION: " +
-        arraycabe.detraccion.cuenta,
+      arraycabe.detraccion.porcentaje +
+      "%  : " +
+      moneda +
+      arraycabe.detraccion.monto +
+      "\nCTA. BANCO DE LA NACION: " +
+      arraycabe.detraccion.cuenta,
       80,
     );
     doc.text(texto, 35, lineaqr2, "left");
@@ -1567,7 +1620,7 @@ async function impresionA4(array, qr, arraycabecera) {
       doc.addImage(qr, "png", 10, lineaqr, 28, 28);
     }
     if (arraycabe.tipocomprobante == "T") {
-      doc.addImage(qr, "png", 10, lineaqr -8, 28, 28);
+      doc.addImage(qr, "png", 10, lineaqr - 6, 28, 28);
     }
     if (arraycabe.tipocomprobante != "T") {
       lineaqr = lineaqr + 18;
@@ -1575,8 +1628,8 @@ async function impresionA4(array, qr, arraycabecera) {
       doc.setFontSize(9);
       var texto = doc.splitTextToSize(
         "Representación Impresa de la " +
-          documento +
-          " Consultar su validez en https://domo.pe/buscardocumentos",
+        documento +
+        " Consultar su validez en https://domo.pe/buscardocumentos",
         90,
       );
       doc.text(texto, 40, lineaqr, "left");
@@ -1605,37 +1658,76 @@ async function impresionA4(array, qr, arraycabecera) {
     }
   }
   if (bancos != "") {
-    lineaqr = lineaqr + 23;
-    doc.setFont("Helvetica", "");
-    doc.setFontSize(9);
+    const bancosLista = (bancos || []).filter(
+      (item) => item && item.banco && item.tipo !== "qr",
+    );
+    const qrRegistro = (bancos || []).find(
+      (item) => item && (item.tipo === "qr" || item.serial),
+    );
 
-    var texto = doc.splitTextToSize("Cuenta Empresa : ", 200);
-    doc.text(texto, 10, lineaqr, "left");
-    lineaqr = lineaqr + 3;
-    doc.autoTable({
-      startY: lineaqr,
-      margin: { top: 10, left: 10 },
-      styles: {
-        fontSize: 8,
-        cellPadding: 0.5,
-        valign: "middle",
-        halign: "center",
-        lineWidth: 0.2,
-        lineColor: 1,
-      },
-      headStyles: { lineWidth: 0.2, lineColor: 1 },
-      columnStyles: {
-        0: { columnWidth: 50, halign: "center", fontStyle: "bold" },
-        1: { columnWidth: 25, halign: "center" },
-        2: { columnWidth: 50, halign: "center" },
-        3: { columnWidth: 50, halign: "center" },
-      },
-      theme: ["plain"],
-      head: [["BANCO", "MONEDA", "CUENTA", "CCI"]],
-      body: arraybancos(bancos),
-    });
-    let finalY = doc.previousAutoTable.finalY;
-    lineaqr = finalY + 3;
+    if (bancosLista.length > 0) {
+      lineaqr = lineaqr + 23;
+      doc.setFont("Helvetica", "");
+      doc.setFontSize(9);
+
+      var texto = doc.splitTextToSize("Cuenta Empresa : ", 200);
+      doc.text(texto, 10, lineaqr + 4, "left");
+      lineaqr = lineaqr + 3;
+      doc.autoTable({
+        startY: lineaqr + 4,
+        margin: { top: 10, left: 10 },
+        styles: {
+          fontSize: 8,
+          cellPadding: 0.5,
+          valign: "middle",
+          halign: "center",
+          lineWidth: 0.2,
+          lineColor: 1,
+        },
+        headStyles: { lineWidth: 0.2, lineColor: 1 },
+        columnStyles: {
+          0: { columnWidth: 50, halign: "center", fontStyle: "bold" },
+          1: { columnWidth: 36, halign: "center" },
+          2: { columnWidth: 20, halign: "center" },
+          3: { columnWidth: 42, halign: "center" },
+          4: { columnWidth: 42, halign: "center" },
+        },
+        theme: ["plain"],
+        head: [["BANCO", "TITULAR", "MONEDA", "CUENTA", "CCI"]],
+        body: arraybancos(bancosLista),
+      });
+      let finalY = doc.previousAutoTable.finalY;
+      lineaqr = finalY + 5;
+    }
+
+    if (qrRegistro && qrRegistro.serial) {
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const centerX = pageWidth / 2;
+      const qrSize = 40;
+      const qrX = centerX - (qrSize / 2);
+
+      doc.setFont("Helvetica", "");
+      doc.setFontSize(10);
+      doc.text("Pago por QR", centerX, lineaqr, { align: "center" });
+      lineaqr = lineaqr +1;
+
+      const qrPago = QR.drawImg(qrRegistro.serial, {
+        typeNumber: 4,
+        errorCorrectLevel: "M",
+        size: 500,
+      });
+      doc.addImage(qrPago, "PNG", qrX, lineaqr, qrSize, qrSize);
+      const detalleQr = [qrRegistro.descripcion || "", qrRegistro.titular || ""]
+        .filter(Boolean)
+        .join("\n");
+      const textoQr = doc.splitTextToSize(
+        detalleQr,
+      );
+      doc.setFontSize(9);
+      doc.text(textoQr, centerX, lineaqr + qrSize + 4, { align: "center" });
+
+      lineaqr = lineaqr + qrSize + 4 + (textoQr.length * 4);
+    }
   }
   //console.log(store.state.configImpresora.piepagina);
   if (store.state.configImpresora.piepagina != "") {
@@ -1654,9 +1746,9 @@ async function impresionA4(array, qr, arraycabecera) {
         window.open(doc.output("bloburi"));
       } else {
         //  await abre_dialogo_impresion(doc, copias_genera);
-         if (!permite_impresion_host()) {
-           abre_dialogo_impresion_original(doc);
-           return true
+        if (!permite_impresion_host()) {
+          abre_dialogo_impresion_original(doc);
+          return true
         } else {
           var blob = doc.output("arraybuffer");
           return blob;
@@ -1925,8 +2017,8 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
     nuevoArray[i] = new Array(5);
     nuevoArray[i][0] = array[i].cantidad || 0;
     nuevoArray[i][1] = (array[i].nombre || "") + tg;
-    const medidaMostrar = store.state.configImpresora.mostrar_medida_general 
-      ? obtenerCodigoSunat(array[i].medida) 
+    const medidaMostrar = store.state.configImpresora.mostrar_medida_general
+      ? obtenerCodigoSunat(array[i].medida)
       : (array[i].medida || "");
     nuevoArray[i][2] = medidaMostrar;
     nuevoArray[i][3] =
@@ -1938,9 +2030,9 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
       (
         parseFloat(
           array[i].precioedita ||
-            array[i].precio ||
-            array[i].precioVentaUnitario ||
-            0,
+          array[i].precio ||
+          array[i].precioVentaUnitario ||
+          0,
         ) * (array[i].cantidad || 0)
       ).toFixed(2) + obs;
   }
@@ -2159,12 +2251,12 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
     doc.setFont("Helvetica", "bold");
     texto = doc.splitTextToSize(
       "DETRACCION: " +
-        arraycabe.detraccion.porcentaje +
-        "%  : " +
-        moneda +
-        arraycabe.detraccion.monto +
-        "\nCTA. BANCO DE LA NACION: " +
-        arraycabe.detraccion.cuenta,
+      arraycabe.detraccion.porcentaje +
+      "%  : " +
+      moneda +
+      arraycabe.detraccion.monto +
+      "\nCTA. BANCO DE LA NACION: " +
+      arraycabe.detraccion.cuenta,
       110,
     );
     doc.text(texto, margin + 25, lineaqr2, "left");
@@ -2241,8 +2333,8 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
       } else {
         //  await abre_dialogo_impresion(doc, copias_genera);
         if (!permite_impresion_host()) {
-           abre_dialogo_impresion_original(doc);
-           return true
+          abre_dialogo_impresion_original(doc);
+          return true
         } else {
           var blob = doc.output("arraybuffer");
           return blob;
@@ -2254,9 +2346,9 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
     case "descarga":
       doc.save(
         (arraycabe.serie || "") +
-          "-" +
-          (arraycabe.correlativoDocEmitido || "") +
-          ".pdf",
+        "-" +
+        (arraycabe.correlativoDocEmitido || "") +
+        ".pdf",
       );
       break;
   }
@@ -2267,23 +2359,23 @@ export const generaQR = (cabecera) => {
   var fecha = moment.unix(cabecera.fecha).format("DD/MM/YYYY");
   var imgData = QR.drawImg(
     ruc +
-      "|" +
-      cabecera.cod_comprobante +
-      "|" +
-      cabecera.serie +
-      "|" +
-      cabecera.correlativoDocEmitido +
-      "|" +
-      cabecera.igv +
-      "|" +
-      cabecera.total +
-      "|" +
-      fecha +
-      "|" +
-      cabecera.cod_tipoDocumento +
-      "|" +
-      cabecera.dni +
-      "|",
+    "|" +
+    cabecera.cod_comprobante +
+    "|" +
+    cabecera.serie +
+    "|" +
+    cabecera.correlativoDocEmitido +
+    "|" +
+    cabecera.igv +
+    "|" +
+    cabecera.total +
+    "|" +
+    fecha +
+    "|" +
+    cabecera.cod_tipoDocumento +
+    "|" +
+    cabecera.dni +
+    "|",
     {
       typeNumber: 4,
       errorCorrectLevel: "M",
@@ -2292,14 +2384,60 @@ export const generaQR = (cabecera) => {
   );
   return imgData;
 };
+
+function obtieneQrPagoRegistro() {
+  const bancos = Array.isArray(store?.state?.bancos) ? store.state.bancos : [];
+  return bancos.find(
+    (item) => item && (item.tipo === "qr" || Boolean(item.serial)),
+  );
+}
+
+function dibujaQrPagoTermico(
+  doc,
+  qrRegistro,
+  pdfInMM,
+  linea,
+  size = 20,
+  anchoTexto = 60,
+  fontSize = 8,
+) {
+  if (!qrRegistro || !qrRegistro.serial) return linea;
+
+  const centerX = pdfInMM / 2;
+  doc.setFont("Helvetica", "");
+  doc.setFontSize(fontSize);
+  doc.text("Pago por QR", centerX, linea, "center");
+  linea = linea + 2;
+
+  const qrPago = QR.drawImg(qrRegistro.serial, {
+    typeNumber: 4,
+    errorCorrectLevel: "M",
+    size: 500,
+  });
+  doc.addImage(qrPago, "PNG", centerX - size / 2, linea, size, size);
+  linea = linea + size + 2;
+
+  if (qrRegistro.descripcion || qrRegistro.titular) {
+    const detalleQr = [qrRegistro.descripcion || "", qrRegistro.titular || ""]
+      .filter(Boolean)
+      .join("\n");
+    const texto = doc.splitTextToSize(detalleQr, anchoTexto);
+    doc.text(texto, centerX, linea, "center");
+    linea = linea + 3.5 * texto.length;
+  }
+
+  return linea + 1;
+}
+
 function arraybancos(array) {
   var nuevoArray = new Array(array.length);
   for (var i = 0; i < array.length; i++) {
-    nuevoArray[i] = new Array(4);
+    nuevoArray[i] = new Array(5);
     nuevoArray[i][0] = array[i].banco;
-    nuevoArray[i][1] = array[i].moneda;
-    nuevoArray[i][2] = array[i].cuenta;
-    nuevoArray[i][3] = array[i].cci;
+    nuevoArray[i][1] = array[i].titular;
+    nuevoArray[i][2] = array[i].moneda;
+    nuevoArray[i][3] = array[i].cuenta;
+    nuevoArray[i][4] = array[i].cci;
   }
   return nuevoArray;
 }
@@ -2408,11 +2546,11 @@ function isElectronEnv() {
   const p = typeof process !== "undefined" ? process : undefined;
   return Boolean(
     (p && p.versions && p.versions.electron) || // main / preload
-      (w && w.process && w.process.type === "renderer") || // renderer
-      (w &&
-        w.navigator &&
-        w.navigator.userAgent &&
-        w.navigator.userAgent.includes("Electron")),
+    (w && w.process && w.process.type === "renderer") || // renderer
+    (w &&
+      w.navigator &&
+      w.navigator.userAgent &&
+      w.navigator.userAgent.includes("Electron")),
   );
 }
 
@@ -2438,9 +2576,8 @@ function tabla_A4(array, linea) {
 
     // Texto descuentos combinados en una sola celda
     const textoDescuento = existeDescuento
-      ? `${descuentos.desc_1 || 0} / ${descuentos.desc_2 || 0} / ${
-          descuentos.desc_3 || 0
-        }`
+      ? `${descuentos.desc_1 || 0} / ${descuentos.desc_2 || 0} / ${descuentos.desc_3 || 0
+      }`
       : null;
 
     let obs = "";
@@ -2455,10 +2592,10 @@ function tabla_A4(array, linea) {
     }
 
     // Estructura según exista o no descuento
-    const medidaMostrar = store.state.configImpresora.mostrar_medida_general 
-      ? obtenerCodigoSunat(item.medida) 
+    const medidaMostrar = store.state.configImpresora.mostrar_medida_general
+      ? obtenerCodigoSunat(item.medida)
       : item.medida;
-      
+
     if (!existeDescuento) {
       // SIN DESCUENTOS
       nuevoArray.push([
@@ -2573,4 +2710,19 @@ function obtenerCodigoSunat(medida) {
   }
 
   return encontrado ? encontrado.general : "NIU";
+}
+
+function obtieneNombreVendedor(vendedorRaw) {
+  const codigo = String(vendedorRaw || "").trim();
+  if (!codigo) return "";
+
+  const sedes = Array.isArray(store?.state?.array_sedes)
+    ? store.state.array_sedes.filter((e) => e?.tipo === "sede")
+    : [];
+
+  const sede = sedes.find(
+    (s) => String(s?.codigo || "").trim().toUpperCase() === codigo.toUpperCase()
+  );
+
+  return sede?.nombre ? `${codigo} - ${sede.nombre}` : codigo;
 }
