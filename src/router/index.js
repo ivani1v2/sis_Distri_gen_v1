@@ -1200,6 +1200,12 @@ const routes = [
       }
     },
   },
+  {
+    path: '/comisiones',
+    name: 'comisiones',
+    component: () => import('@/views/comisiones/reporte_comisiones.vue'),
+    meta: { requiresAuth: true }
+  },
 ];
 
 const router = new VueRouter({

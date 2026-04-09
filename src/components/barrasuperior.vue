@@ -308,6 +308,12 @@
                             <v-icon small>mdi-calculator-variant-outline</v-icon></v-list-item-icon>
                         <v-list-item-title>Reg. Contable</v-list-item-title>
                     </v-list-item>
+                    <v-list-item @click.prevent="router('comisiones')">
+                        <v-list-item-icon>
+                            <v-icon small>mdi-percent</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>Comisiones</v-list-item-title>
+                    </v-list-item>
                     <v-list-item @click.prevent="router('exportar_data')">
                         <v-list-item-icon>
                             <v-icon color="green" small>mdi-file-excel</v-icon></v-list-item-icon>

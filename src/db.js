@@ -1983,3 +1983,31 @@ export const allUsuariosTransporte = () => {
   const rucAsociado = store.state.baseDatos.ruc_asociado;
   return db.database().ref("usuarios").orderByChild("ruc").equalTo(rucAsociado);
 };
+
+// Comisiones
+export const allComisiones = () => {
+  return db.database().ref(store.state.baseDatos.bd).child("comisiones");
+};
+
+export const consultaComision = (periodo,vendedor) => {
+  return db.database().ref(store.state.baseDatos.bd).child("comisiones").child(vendedor).child(periodo);
+};
+
+export const nuevaComision = (periodo, vendedor,data) => {
+  return db.database().ref(store.state.baseDatos.bd).child("comisiones").child(vendedor).child(periodo).set(data);
+};
+
+export const eliminaComision = (periodo,vendedor) => {
+  return db.database().ref(store.state.baseDatos.bd).child("comisiones").child(vendedor).child(periodo).remove();
+};
+
+export const actualizaComision = (periodo,vendedor, data) => {
+  return db.database().ref(store.state.baseDatos.bd).child("comisiones").child(vendedor).child(periodo).set(data);
+};
+
+export const allProveedor_ = () => {
+  return db
+    .database()
+    .ref(store.state.baseDatos.bd)
+    .child("proveedor");
+};
