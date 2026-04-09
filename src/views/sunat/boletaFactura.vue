@@ -621,8 +621,8 @@ export default {
             for (var i = 0; i < this.desserts.length; i++) {
                 console.log(this.desserts[i].numeracion)
                 grabaDatoC(this.desserts[i].numeracion, "automata", '')
-                grabaDatoC(this.desserts[i].numeracion, "fecha", 1769727425)
-                grabaDatoC(this.desserts[i].numeracion, "vencimientoDoc", 1769727425)
+                grabaDatoC(this.desserts[i].numeracion, "fecha", 1775538000)
+                grabaDatoC(this.desserts[i].numeracion, "vencimientoDoc", 1775538000)
                 // if (this.desserts[i].estado == 'RECHAZADO') {
                 //console.log("rechazado")
                 // if (this.desserts[i].tipocomprobante == 'F') {

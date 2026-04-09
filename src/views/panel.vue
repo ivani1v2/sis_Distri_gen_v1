@@ -121,7 +121,7 @@
                     </v-container>
                 </v-card>
             </v-col>
-            <v-col v-if="$store.state.permisos.reportes_comision" cols="6" class="pa-1 mx-auto " md="4" sm="4" xs="6">
+            <v-col v-if="false" cols="6" class="pa-1 mx-auto " md="4" sm="4" xs="6">
                 <v-card @click.prevent="router('comisiones')">
                     <v-container class="text-center">
                         <v-icon size="70" color="green darken-2">mdi-calculator</v-icon>
