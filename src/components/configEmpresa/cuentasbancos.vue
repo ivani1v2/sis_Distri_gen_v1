@@ -104,11 +104,11 @@
                   <v-text-field v-model="qrItem.descripcion" label="Descripción" outlined dense
                     hide-details></v-text-field>
                 </v-col>
-                <v-col cols="12" sm="5">
+                <v-col cols="12" sm="7">
                   <v-text-field v-model="qrItem.titular" label="Titular" outlined dense
                     hide-details></v-text-field>
                 </v-col>
-                <v-col cols="12" sm="5">
+                <v-col cols="12" sm="10">
                   <v-text-field v-model="qrItem.serial" label="Serial" outlined dense hide-details
                     prepend-inner-icon="mdi-link-variant"></v-text-field>
                 </v-col>
@@ -131,7 +131,7 @@
 
                 <v-col cols="12" v-if="qrPreview" class="d-flex justify-center mt-4">
                   <v-card outlined class="pa-2 bg-white">
-                    <v-img :src="qrPreview" width="160" height="160" contain></v-img>
+                    <v-img :src="qrPreview" width="160" height="160" contain class="ml-8"></v-img>
                     <div class="caption text-center mt-1 grey--text font-italic">{{ qrItem.descripcion }}</div>
                     <div class="caption text-center mt-1 grey--text font-italic" v-if="qrItem.titular">{{ qrItem.titular }}</div>
                   </v-card>

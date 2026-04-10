@@ -459,21 +459,28 @@
                     </v-row>
 
                     <v-row dense>
-                        <v-col cols="12" md="4">
+                        <v-col cols="12" md="3">
                             <v-card outlined class="pa-3 text-center hover-card"
                                 @click.prevent="imprime_comprobante('A4')">
                                 <v-icon size="35" color="red">mdi-file-pdf-box</v-icon>
-                                <h5 class="text-caption mt-1">PDF A4</h5>
+                                <h5 class="text-caption mt-1">A4</h5>
                             </v-card>
                         </v-col>
-                        <v-col cols="12" md="4">
+                        <v-col cols="12" md="3">
+                            <v-card outlined class="pa-3 text-center hover-card"
+                                @click.prevent="imprime_comprobante('A5V')">
+                                <v-icon size="35" color="red">mdi-file-pdf-box</v-icon>
+                                <h5 class="text-caption mt-1">A5 Vertical</h5>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="12" md="3">
                             <v-card outlined class="pa-3 text-center hover-card"
                                 @click.prevent="imprime_comprobante('80')">
                                 <v-icon size="35" color="red">mdi-printer-pos</v-icon>
                                 <h5 class="text-caption mt-1">Ticket 80mm</h5>
                             </v-card>
                         </v-col>
-                        <v-col cols="12" md="4">
+                        <v-col cols="12" md="3">
                             <v-card outlined class="pa-3 text-center hover-card"
                                 @click.prevent="imprime_comprobante('58')">
                                 <v-icon size="35" color="red">mdi-printer-pos</v-icon>

@@ -1506,13 +1506,20 @@ function obtieneNombreVendedor(vendedorRaw) {
   const codigo = String(vendedorRaw || "").trim();
   if (!codigo) return "";
 
-  const sedes = Array.isArray(store?.state?.array_sedes)
-    ? store.state.array_sedes.filter((e) => e?.tipo === "sede")
+  const items = Array.isArray(store?.state?.array_sedes)
+    ? store.state.array_sedes
     : [];
 
-  const sede = sedes.find(
-    (s) => String(s?.codigo || "").trim().toUpperCase() === codigo.toUpperCase()
+  const encontrado = items.find(
+    (item) => String(item?.codigo || "").trim().toUpperCase() === codigo.toUpperCase()
   );
 
-  return sede?.nombre ? `${codigo} - ${sede.nombre}` : codigo;
+  if (!encontrado) {
+    const porNombre = items.find(
+      (item) => String(item?.nombre || "").trim().toUpperCase() === codigo.toUpperCase()
+    );
+    return porNombre?.nombre ? `${codigo} - ${porNombre.nombre}` : codigo;
+  }
+
+  return encontrado?.nombre ? `${codigo} - ${encontrado.nombre}` : codigo;
 }

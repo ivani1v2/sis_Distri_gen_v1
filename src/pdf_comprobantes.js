@@ -101,7 +101,12 @@ export const pdfGenera = async (
       return resp;
 
     case "A5":
-      //impresionA5_vertical(arraydatos, qrs, cabecera);
+      var resp = await impresionA5_vertical(arraydatos, qrs, cabecera);
+      return resp;
+    case "A5V":
+      var resp = await impresionA5_vertical(arraydatos, qrs, cabecera);
+      return resp;
+    case "A5H":
       var resp = await impresionA5_horizontal(arraydatos, qrs, cabecera);
       return resp;
     case "80":
@@ -1187,7 +1192,7 @@ async function impresion80(arraydatos, qr, cabecera) {
 }
 async function impresionA4(array, qr, arraycabecera) {
   var arraycabe = arraycabecera;
-  var linea = parseInt(store.state.configImpresora.msuperior);
+  var linea = parseInt(store.state.configImpresora.msuperior) -2;
   var nombreEmpresa = store.state.baseDatos.name;
   var imagen = store.state.logoempresa;
   var Direccion =
@@ -1700,34 +1705,7 @@ async function impresionA4(array, qr, arraycabecera) {
       lineaqr = finalY + 5;
     }
 
-    if (qrRegistro && qrRegistro.serial) {
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const centerX = pageWidth / 2;
-      const qrSize = 40;
-      const qrX = centerX - (qrSize / 2);
-
-      doc.setFont("Helvetica", "");
-      doc.setFontSize(10);
-      doc.text("Pago por QR", centerX, lineaqr, { align: "center" });
-      lineaqr = lineaqr +1;
-
-      const qrPago = QR.drawImg(qrRegistro.serial, {
-        typeNumber: 4,
-        errorCorrectLevel: "M",
-        size: 500,
-      });
-      doc.addImage(qrPago, "PNG", qrX, lineaqr, qrSize, qrSize);
-      const detalleQr = [qrRegistro.descripcion || "", qrRegistro.titular || ""]
-        .filter(Boolean)
-        .join("\n");
-      const textoQr = doc.splitTextToSize(
-        detalleQr,
-      );
-      doc.setFontSize(9);
-      doc.text(textoQr, centerX, lineaqr + qrSize + 4, { align: "center" });
-
-      lineaqr = lineaqr + qrSize + 4 + (textoQr.length * 4);
-    }
+    lineaqr = dibujarQrPagoUniversal(doc, qrRegistro, lineaqr, "A4");
   }
   //console.log(store.state.configImpresora.piepagina);
   if (store.state.configImpresora.piepagina != "") {
@@ -1735,6 +1713,553 @@ async function impresionA4(array, qr, arraycabecera) {
     lineaqr = lineaqr + 15;
     doc.setFont("Helvetica", "bold");
     doc.text(store.state.configImpresora.piepagina, 100, lineaqr, "center");
+  }
+
+  linea = linea + 15;
+  doc.text(".", 0, linea);
+
+  switch (modo_genera) {
+    case "abre":
+      if (store.state.esmovil) {
+        window.open(doc.output("bloburi"));
+      } else {
+        //  await abre_dialogo_impresion(doc, copias_genera);
+        if (!permite_impresion_host()) {
+          abre_dialogo_impresion_original(doc);
+          return true
+        } else {
+          var blob = doc.output("arraybuffer");
+          return blob;
+        }
+      }
+      break;
+    case "host":
+      break;
+    case "descarga":
+      doc.save(
+        arraycabe.serie + "-" + arraycabe.correlativoDocEmitido + ".pdf",
+      );
+      break;
+  }
+}
+async function impresionA5_vertical(array, qr, arraycabecera) {
+  var arraycabe = arraycabecera;
+  var linea = parseInt(store.state.configImpresora.msuperior) - 8;
+  var nombreEmpresa = store.state.baseDatos.name;
+  var imagen = store.state.logoempresa;
+  var Direccion =
+    store.state.baseDatos.direccion +
+    " - " +
+    store.state.baseDatos.distrito +
+    " - " +
+    store.state.baseDatos.provincia +
+    " - " +
+    store.state.baseDatos.departamento;
+  var fechaImpresion = moment.unix(arraycabe.fecha).format("DD/MM/YYYY");
+  var fecha_vencimiento = moment
+    .unix(arraycabe.vencimientoDoc)
+    .format("DD/MM/YYYY");
+  var total = (
+    parseFloat(arraycabe.total_op_exoneradas) +
+    parseFloat(arraycabe.total_op_gravadas) +
+    parseFloat(arraycabe.total_op_inafectas || 0) +
+    parseFloat(arraycabe.igv)
+  ).toFixed(2);
+  //formato de pagina de PF
+  var guardadocumento = store.state.configImpresora.guardadocumento;
+  var pdfInMM = 148; // width of A5 vertical
+  var cabecera = store.state.configImpresora.cabecera;
+  var telefono = store.state.configImpresora.telefono;
+  var bancos = store.state.bancos;
+  if (arraycabe.total_op_gratuitas == undefined) {
+    arraycabe.total_op_gratuitas = 0;
+  }
+  switch (arraycabe.tipocomprobante) {
+    case "T":
+      var documento = "TICKET DE VENTA";
+      if (store.state.seriesdocumentos.notaventa) {
+        documento = "NOTA DE VENTA";
+      }
+      break;
+    case "B":
+      var documento = "BOLETA DE VENTA ELECTRONICA";
+      break;
+    case "F":
+      var documento = "FACTURA ELECTRONICA";
+      break;
+  }
+
+  const doc = new jspdf({
+    orientation: "portrait",
+    unit: "mm",
+    format: [210, pdfInMM],
+  });
+
+  doc.text(".", -1, linea);
+  linea = linea + 3;
+
+  const esNotaVentaA5V = arraycabe.tipocomprobante === "T";
+  const ocultarLogoA5V =
+    esNotaVentaA5V && store.state.configImpresora.no_mostrar_logo_nota_pedido;
+  const ocultarRucA5V =
+    esNotaVentaA5V && store.state.configImpresora.no_mostrar_ruc_nota_venta;
+  if (imagen != "" && !ocultarLogoA5V) {
+    if (store.state.configImpresora.log_largo) {
+      doc.addImage("data:image/png;base64," + imagen, "png", 10, 9, 78, 28);
+    } else {
+      doc.rect(10, 10, 24, 24);
+      doc.addImage("data:image/png;base64," + imagen, "png", 11.5, 11.5, 21, 21);
+    }
+
+    if (cabecera != "") {
+      linea = linea + 8;
+    } else {
+      linea = linea + 18;
+    }
+    doc.setFont("Helvetica", "Bold");
+    doc.setFontSize(8);
+    if (!store.state.configImpresora.log_largo) {
+      var texto = doc.splitTextToSize(nombreEmpresa, 60);
+      doc.text(texto, 38, linea, "left"); //EMPRESA
+
+      linea = linea + 4 * texto.length;
+
+      if (cabecera != "") {
+        doc.setFont("Helvetica", "");
+        doc.setFontSize(7.5);
+        var texto = doc.splitTextToSize(cabecera, 52);
+        doc.text(texto, 38, linea, "left"); //CABECERA
+        linea = linea + 3.5 * texto.length;
+      }
+
+      doc.setFont("Helvetica", "");
+      doc.setFontSize(7);
+      var texto = doc.splitTextToSize(Direccion, 52);
+      doc.text(texto, 38, linea, "left"); //direccion
+
+      linea = linea + 4 * texto.length;
+    }
+    if (telefono != "") {
+      doc.setFont("Helvetica", "");
+      doc.setFontSize(6.5);
+      var texto = doc.splitTextToSize("TELEFONO: " + telefono, 48);
+      doc.text(texto, 38, linea, "left"); //TELEFONO EMPRESA
+    }
+  } else {
+    linea = linea + 15;
+    doc.setFont("Helvetica", "Bold");
+    doc.setFontSize(11);
+    var texto = doc.splitTextToSize(nombreEmpresa, 68);
+    doc.text(texto, 10, linea, "left"); //EMPRESA
+
+    linea = linea + 5 * texto.length;
+
+    if (cabecera != "") {
+      doc.setFont("Helvetica", "");
+      doc.setFontSize(8.5);
+      var texto = doc.splitTextToSize(cabecera, 68);
+      doc.text(texto, 10, linea, "left"); //CABECERA
+      linea = linea + 4 * texto.length;
+    }
+
+    doc.setFont("Helvetica", "");
+    doc.setFontSize(8);
+    var texto = doc.splitTextToSize(Direccion, 68);
+    doc.text(texto, 10, linea, "left"); //direccion
+
+    linea = linea + 4 * texto.length;
+
+    if (telefono != "") {
+      doc.setFont("Helvetica", "");
+      doc.setFontSize(8);
+      var texto = doc.splitTextToSize("TELEFONO: " + telefono, 48);
+      doc.text(texto, 10, linea, "left"); //TELEFONO EMPRESA
+    }
+  }
+  doc.setLineWidth(0.7);
+  doc.rect(100, 10, 38, 25);
+
+  let yDocA5V = 22;
+  let ySerieA5V = 26;
+  if (!ocultarRucA5V) {
+    doc.setFontSize(9);
+    doc.setFont("Helvetica", "Bold");
+    var texto = doc.splitTextToSize("Ruc: " + store.state.baseDatos.ruc, 36);
+    doc.text(texto, 119, 18, "center");
+  } else {
+    yDocA5V = 19;
+    ySerieA5V = 24;
+  }
+  doc.setFontSize(7);
+  var texto = doc.splitTextToSize(documento, 36);
+  doc.text(texto, 119, yDocA5V, "center");
+  doc.setFontSize(9);
+  var texto = doc.splitTextToSize(
+    arraycabe.serie + "-" + arraycabe.correlativoDocEmitido,
+    36,
+  );
+  doc.text(texto, 119, ySerieA5V + 2, "center");
+
+  doc.setFontSize(8);
+  doc.setLineWidth(0.3);
+  doc.rect(10, 40, 128, 20);
+  linea = 45;
+
+  doc.setFont("Helvetica", "Bold");
+  doc.text("SEÑORES", 12, linea, "left");
+  doc.text(" : ", 27.5, linea, "left");
+  doc.setFont("Helvetica", "");
+  var texto = doc.splitTextToSize(arraycabe.cliente, 56);
+  doc.text(texto, 30, linea, "left");
+  linea = linea + 4 * texto.length;
+  doc.setFont("Helvetica", "Bold");
+  doc.text(arraycabe.tipoDocumento, 12, linea, "left");
+  doc.text(" : ", 27.5, linea, "left");
+  doc.setFont("Helvetica", "");
+  doc.text(arraycabe.dni, 30, linea, "left");
+  linea = linea + 4;
+
+  doc.setFont("Helvetica", "Bold");
+  doc.text("DIRECCION", 12, linea, "left");
+  doc.text(" : ", 27.5, linea, "left");
+  doc.setFont("Helvetica", "");
+  var texto = doc.splitTextToSize(arraycabe.direccion, 56);
+  doc.text(texto, 30, linea, "left");
+  linea = linea + 4 * texto.length;
+
+  if (arraycabe.tipocomprobante === "T" && store.state.configImpresora.mostrar_zona_nota_venta && arraycabe.cliente_zona) {
+    doc.setFont("Helvetica", "Bold");
+    doc.text("ZONA", 12, linea, "left");
+    doc.text(" : ", 27.5, linea, "left");
+    doc.setFont("Helvetica", "");
+    var textoZona = doc.splitTextToSize(arraycabe.cliente_zona ?? "", 56);
+    doc.text(textoZona, 30, linea, "left");
+    linea = linea + 4 * textoZona.length;
+  }
+
+  linea = 45;
+
+  doc.setFont("Helvetica", "Bold");
+  doc.text("FECHA EMISION", 86, linea, "left");
+  doc.text(" : ", 109, linea, "left");
+  doc.setFont("Helvetica", "");
+  doc.text(fechaImpresion, 112, linea, "left");
+  linea = linea + 4;
+
+  if (arraycabe.vencimientoDoc.toString().length == 10) {
+    doc.setFont("Helvetica", "Bold");
+    doc.text("FECHA VENC.", 86, linea, "left");
+    doc.text(" : ", 109, linea, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(fecha_vencimiento, 112, linea, "left");
+    linea = linea + 4;
+  }
+  if (arraycabe.telefono != "" && arraycabe.telefono != undefined) {
+    doc.setFont("Helvetica", "Bold");
+    doc.text("TELEFONO", 86, linea, "left");
+    doc.text(" : ", 109, linea, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(arraycabe.telefono, 112, linea, "left");
+    linea = linea + 4;
+  }
+
+  doc.setFont("Helvetica", "Bold");
+  doc.text("CONDICIONES", 86, linea, "left");
+  doc.text(" : ", 109, linea, "left");
+  doc.setFont("Helvetica", "");
+  doc.text(arraycabecera.forma_pago, 112, linea, "left");
+
+  linea = 65;
+
+  //-----------------productos-----------------------
+  var respuesta = tabla_A5_vertical(array, linea);
+
+  arraycabe.total_op_gratuitas = respuesta.ope_grat.toFixed(2);
+  if (!store.state.configuracion.mostrar_ope_gratuitas) {
+    arraycabe.total_op_gratuitas = "0.00";
+  }
+
+  doc.autoTable(respuesta.table);
+
+  let finalY = doc.previousAutoTable.finalY;
+  linea = finalY + 4;
+  var lineaqr = linea;
+
+  if (arraycabe.total_op_gratuitas > 0) {
+    doc.setFont("Helvetica", "");
+    doc.setFontSize(7.5);
+    var texto = doc.splitTextToSize(
+      "* Transferencia Gratuita y/o Servicio Prestado Gratuitamente",
+      70,
+    );
+    doc.text(texto, 10, lineaqr, "left");
+    lineaqr = lineaqr + 5;
+  }
+
+  doc.setFont("Helvetica", "");
+  doc.setFontSize(7.5);
+  var texto = doc.splitTextToSize(
+    "Son: " + NumerosALetras(parseFloat(total).toFixed(2), moneda),
+    80,
+  );
+  doc.text(texto, 10, lineaqr, "left");
+
+  const vendedorA5V = obtieneNombreVendedor(arraycabe.vendedor);
+  var texto = doc.splitTextToSize(
+    "Vendedor: " + vendedorA5V,
+    70,
+  );
+  doc.text(texto, 10, lineaqr + 4, "left");
+  lineaqr = lineaqr + 6;
+
+  if (arraycabe.observacion && arraycabe.observacion.trim() !== "") {
+    doc.setFont("Helvetica", "");
+    doc.setFontSize(7.5);
+    var textoObs = doc.splitTextToSize(
+      "Observación: " + arraycabe.observacion,
+      120,
+    );
+    doc.text(textoObs, 10, lineaqr + 4, "left");
+    lineaqr = lineaqr + 4 * textoObs.length;
+  }
+
+  let nextSection = 1;
+  let currentSection;
+  const remainingVSpace = doc.internal.pageSize.height - lineaqr;
+  if (remainingVSpace > 48) {
+    nextSection = currentSection;
+    linea = lineaqr + 4;
+    lineaqr = lineaqr + 10;
+  } else {
+    linea = 10;
+    lineaqr = 10;
+    if (nextSection == 1) doc.addPage();
+  }
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.3);
+  doc.rect(90, linea, 48, 25);
+
+  linea = linea + 4;
+  doc.setFontSize(7.5);
+  doc.setFont("Helvetica", "Bold");
+  if (arraycabe.descuentos != 0) {
+    doc.text("DESCUENTOS", 93, linea, "left");
+    doc.text(" : ", 116, linea, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(moneda + arraycabe.descuentos, 136, linea, "right");
+    linea = linea + 4;
+  }
+  doc.setFontSize(7.5);
+  doc.setFont("Helvetica", "Bold");
+  doc.text("OP. GRAVADA", 93, linea, "left");
+  doc.text(" : ", 116, linea, "left");
+  doc.setFont("Helvetica", "");
+  doc.text(moneda + arraycabe.total_op_gravadas, 136, linea, "right");
+  linea = linea + 4;
+  if (arraycabe.total_op_inafectas > 0) {
+    doc.setFontSize(7.5);
+    doc.setFont("Helvetica", "Bold");
+    doc.text("OP. INAFECTA", 93, linea, "left");
+    doc.text(" : ", 116, linea, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(
+      moneda + arraycabe.total_op_inafectas.toString(),
+      136,
+      linea,
+      "right",
+    );
+    linea = linea + 4;
+  }
+  doc.setFontSize(7.5);
+  doc.setFont("Helvetica", "Bold");
+  doc.text("OP. EXONERADA", 93, linea, "left");
+  doc.text(" : ", 116, linea, "left");
+  doc.setFont("Helvetica", "");
+  doc.text(
+    moneda + arraycabe.total_op_exoneradas.toString(),
+    136,
+    linea,
+    "right",
+  );
+  linea = linea + 4;
+
+  doc.setFontSize(7.5);
+  doc.setFont("Helvetica", "Bold");
+  doc.text("OP. GRATUITAS", 93, linea, "left");
+  doc.text(" : ", 116, linea, "left");
+  doc.setFont("Helvetica", "");
+  doc.text(
+    moneda + arraycabe.total_op_gratuitas.toString(),
+    136,
+    linea,
+    "right",
+  );
+  linea = linea + 4;
+
+  doc.setFontSize(7.5);
+  doc.setFont("Helvetica", "Bold");
+  doc.text("IGV " + arraycabe.porcentaje_igv + "%", 93, linea, "left");
+  doc.text(" : ", 116, linea, "left");
+  doc.setFont("Helvetica", "");
+  doc.text(moneda + arraycabe.igv, 136, linea, "right");
+  linea = linea + 4;
+
+  doc.setFontSize(8);
+  doc.setFont("Helvetica", "Bold");
+  doc.text("Total", 93, linea, "left");
+  doc.text(" : ", 116, linea, "left");
+  doc.setFont("Helvetica", "");
+  doc.text(moneda + total.toString(), 136, linea, "right");
+  linea = linea + 2;
+
+  if (arraycabe.forma_pago.toLowerCase() == "credito") {
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.text("DETALLE DE CRONOGRAMA", 10, lineaqr - 8);
+    lineaqr = lineaqr - 6;
+    doc.autoTable({
+      startY: lineaqr,
+      margin: { top: 10, left: 10 },
+      styles: {
+        fontSize: 7.5,
+        cellPadding: 1,
+        valign: "middle",
+        halign: "center",
+        lineWidth: 0.2,
+        lineColor: 1,
+      },
+      headStyles: {
+        lineWidth: 0.2,
+        lineColor: 1,
+        fillColor: [220, 220, 220],
+        textColor: [0, 0, 0],
+        fontStyle: "bold",
+      },
+      columnStyles: {
+        0: { columnWidth: 25, halign: "center", fontStyle: "bold" },
+        1: { columnWidth: 22, halign: "center" },
+        2: { columnWidth: 26, halign: "center" },
+      },
+      theme: ["plain"],
+      head: [["CUOTA", "IMPORTE", "VENCE"]],
+      body: cuotascredito(arraycabe.cuotas),
+    });
+    let finalY = doc.previousAutoTable.finalY;
+    lineaqr = finalY + 8;
+  }
+  if (
+    arraycabe.detraccion &&
+    Object.keys(arraycabe.detraccion).length > 0 &&
+    arraycabe.detraccion !== ""
+  ) {
+    var lineaqr2 = lineaqr + 8;
+    doc.setFontSize(8);
+    doc.setFont("Helvetica", "bold");
+    var texto = doc.splitTextToSize(
+      "DETRACCION: " +
+      arraycabe.detraccion.porcentaje +
+      "%  : " +
+      moneda +
+      arraycabe.detraccion.monto +
+      "\nCTA. BANCO DE LA NACION: " +
+      arraycabe.detraccion.cuenta,
+      52,
+    );
+    doc.text(texto, 36, lineaqr2, "left");
+  }
+
+  if (qr != "") {
+    if (arraycabe.tipocomprobante == "F" || arraycabe.tipocomprobante == "B") {
+      doc.addImage(qr, "png", 10, lineaqr, 22, 22);
+    }
+    if (arraycabe.tipocomprobante == "T") {
+      doc.addImage(qr, "png", 10, lineaqr - 6, 22, 22);
+    }
+    if (arraycabe.tipocomprobante != "T") {
+      lineaqr = lineaqr + 14;
+      doc.setFont("Helvetica", "");
+      doc.setFontSize(7.5);
+      var texto = doc.splitTextToSize(
+        "Representación Impresa de la " +
+        documento +
+        " Consultar su validez en https://domo.pe/buscardocumentos",
+        54,
+      );
+      doc.text(texto, 35, lineaqr, "left");
+    }
+  }
+  if (arraycabecera.forma_pago.toLowerCase() != "credito") {
+    linea = linea + 3.5;
+    var array_pago = arraycabe.modopago;
+    linea = linea - 18;
+    doc.text("MODO DE PAGO : ", 52, linea);
+    linea = linea + 3.5;
+    for (var i = 0; i < array_pago.length; i++) {
+      var data = array_pago[i];
+      if (Boolean(data.monto)) {
+        doc.setFont("Helvetica", "");
+        doc.setFontSize(7.5);
+        doc.text(data.nombre, 52, linea);
+        doc.text(
+          moneda + String(parseFloat(data.monto).toFixed(2)),
+          82,
+          linea,
+          "right",
+        );
+        linea = linea + 3;
+      }
+    }
+  }
+  if (bancos != "") {
+    const bancosLista = (bancos || []).filter(
+      (item) => item && item.banco && item.tipo !== "qr",
+    );
+    const qrRegistro = (bancos || []).find(
+      (item) => item && (item.tipo === "qr" || item.serial),
+    );
+
+    if (bancosLista.length > 0) {
+      lineaqr = lineaqr + 18;
+      doc.setFont("Helvetica", "");
+      doc.setFontSize(8);
+
+      var texto = doc.splitTextToSize("Cuenta Empresa : ", 120);
+      doc.text(texto, 10, lineaqr + 4, "left");
+      lineaqr = lineaqr + 3;
+      doc.autoTable({
+        startY: lineaqr + 4,
+        margin: { top: 10, left: 10 },
+        styles: {
+          fontSize: 6.5,
+          cellPadding: 0.5,
+          valign: "middle",
+          halign: "center",
+          lineWidth: 0.2,
+          lineColor: 1,
+        },
+        headStyles: { lineWidth: 0.2, lineColor: 1 },
+        columnStyles: {
+          0: { columnWidth: 30, halign: "center", fontStyle: "bold" },
+          1: { columnWidth: 27, halign: "center" },
+          2: { columnWidth: 12, halign: "center" },
+          3: { columnWidth: 27, halign: "center" },
+          4: { columnWidth: 32, halign: "center" },
+        },
+        theme: ["plain"],
+        head: [["BANCO", "TITULAR", "MONEDA", "CUENTA", "CCI"]],
+        body: arraybancos(bancosLista),
+      });
+      let finalY = doc.previousAutoTable.finalY;
+      lineaqr = finalY + 5;
+    }
+
+    lineaqr = dibujarQrPagoUniversal(doc, qrRegistro, lineaqr, "A5V");
+  }
+  if (store.state.configImpresora.piepagina != "") {
+    doc.setFontSize(9);
+    lineaqr = lineaqr + 12;
+    doc.setFont("Helvetica", "bold");
+    doc.text(store.state.configImpresora.piepagina, 74, lineaqr, "center");
   }
 
   linea = linea + 15;
@@ -2676,6 +3201,123 @@ function tabla_A4(array, linea) {
   return { table, ope_grat };
 }
 
+function tabla_A5_vertical(array, linea) {
+  const existeDescuento = array.some(
+    (it) =>
+      it.descuentos &&
+      (Number(it.descuentos.desc_1) > 0 ||
+        Number(it.descuentos.desc_2) > 0 ||
+        Number(it.descuentos.desc_3) > 0),
+  );
+
+  let ope_grat = 0;
+  const nuevoArray = [];
+
+  for (let item of array) {
+    let tg = "";
+    let obs = "";
+
+    if (item.operacion === "GRATUITA") {
+      obs = "*";
+      tg = " / TG: " + moneda + (item.valor_total || 0);
+      item.precioedita = "0.00";
+      ope_grat += Number(item.valor_total || 0);
+    }
+
+    const precioUnitario = Number(
+      item.precioedita || item.precio || item.precioVentaUnitario || 0,
+    );
+    const cantidad = Number(item.cantidad || 0);
+    const totalLinea = (precioUnitario * cantidad).toFixed(2) + obs;
+
+    const medidaMostrar = store.state.configImpresora.mostrar_medida_general
+      ? obtenerCodigoSunat(item.medida)
+      : item.medida || "";
+
+    if (existeDescuento) {
+      const d = item.descuentos || {};
+      const p1 = Number(d.desc_1 || 0);
+      const p2 = Number(d.desc_2 || 0);
+      const p3 = Number(d.desc_3 || 0);
+      const porcentaje = p1 + p2 + p3;
+
+      const base = Number(item.precio || item.precioVentaUnitario || 0);
+      const pNeto = (base - Number(item.preciodescuento || 0)).toFixed(2);
+
+      nuevoArray.push([
+        cantidad,
+        medidaMostrar,
+        (item.nombre || "") + tg,
+        base.toFixed(2),
+        porcentaje.toFixed(2) + "%",
+        pNeto,
+        totalLinea,
+      ]);
+    } else {
+      nuevoArray.push([
+        cantidad,
+        medidaMostrar,
+        (item.nombre || "") + tg,
+        precioUnitario.toFixed(2),
+        totalLinea,
+      ]);
+    }
+  }
+
+  const headSinDescuento = [
+    ["Cantidad", "Medida", "Descripcion", "P.Unitario", "P.Total"],
+  ];
+
+  const headConDescuento = [
+    [
+      "Cant",
+      "Medida",
+      "Descripcion",
+      "P.Unitario",
+      "%Desc",
+      "P.Neto",
+      "P.Total",
+    ],
+  ];
+
+  const columnStylesSinDesc = {
+    0: { columnWidth: 14 },
+    1: { columnWidth: 17 },
+    2: { columnWidth: 65, halign: "left" },
+    3: { columnWidth: 16 },
+    4: { columnWidth: 16 },
+  };
+
+  const columnStylesConDesc = {
+    0: { columnWidth: 10 },
+    1: { columnWidth: 10 },
+    2: { columnWidth: 42, halign: "left" },
+    3: { columnWidth: 12 },
+    4: { columnWidth: 12 },
+    5: { columnWidth: 12 },
+    6: { columnWidth: 12 },
+  };
+
+  const table = {
+    margin: { top: linea, left: 10 },
+    styles: {
+      fontSize: 7,
+      cellPadding: 0.8,
+      valign: "middle",
+      halign: "center",
+      lineWidth: 0.2,
+      lineColor: 1,
+    },
+    headStyles: { lineWidth: 0.2, lineColor: 1 },
+    theme: ["plain"],
+    head: existeDescuento ? headConDescuento : headSinDescuento,
+    columnStyles: existeDescuento ? columnStylesConDesc : columnStylesSinDesc,
+    body: nuevoArray,
+  };
+
+  return { table, ope_grat };
+}
+
 function formatMoney(num) {
   const n = Number(num || 0);
 
@@ -2716,13 +3358,72 @@ function obtieneNombreVendedor(vendedorRaw) {
   const codigo = String(vendedorRaw || "").trim();
   if (!codigo) return "";
 
-  const sedes = Array.isArray(store?.state?.array_sedes)
-    ? store.state.array_sedes.filter((e) => e?.tipo === "sede")
+  const items = Array.isArray(store?.state?.array_sedes)
+    ? store.state.array_sedes
     : [];
 
-  const sede = sedes.find(
-    (s) => String(s?.codigo || "").trim().toUpperCase() === codigo.toUpperCase()
+  const encontrado = items.find(
+    (item) => String(item?.codigo || "").trim().toUpperCase() === codigo.toUpperCase()
   );
 
-  return sede?.nombre ? `${codigo} - ${sede.nombre}` : codigo;
+  if (!encontrado) {
+    const porNombre = items.find(
+      (item) => String(item?.nombre || "").trim().toUpperCase() === codigo.toUpperCase()
+    );
+    return porNombre?.nombre ? `${codigo} - ${porNombre.nombre}` : codigo;
+  }
+
+  return encontrado?.nombre ? `${codigo} - ${encontrado.nombre}` : codigo;
+}
+
+function dibujarQrPagoUniversal(doc, qrRegistro, posY, tipo = "A4") {
+  if (!qrRegistro || !qrRegistro.serial) return posY;
+
+  let qrSize = 40;
+  let fontSize = 10;
+
+  if (tipo === "A5V") {
+    qrSize = 27;
+    fontSize = 8;
+  } else if (tipo === "A5H") {
+    qrSize = 27;
+    fontSize = 9;
+  }
+
+  const textoDetalle = [qrRegistro.descripcion || "", qrRegistro.titular || ""]
+    .filter(Boolean)
+    .join("\n");
+  const lineasTexto = doc.splitTextToSize(textoDetalle, qrSize + 30);
+  const alturaTexto = lineasTexto.length * 4;
+
+  const espacioRestante = doc.internal.pageSize.height - posY;
+  if (espacioRestante < qrSize + 5) {
+    doc.addPage();
+    posY = 10;
+  }
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const centerX = pageWidth / 2;
+
+  doc.setFont("Helvetica", "bold");
+  doc.setFontSize(fontSize);
+  doc.text("PAGO POR QR", centerX, posY, { align: "center" });
+  posY += 1;
+
+  const qrPago = QR.drawImg(qrRegistro.serial, {
+    typeNumber: 4,
+    errorCorrectLevel: "M",
+    size: 500,
+  });
+  doc.addImage(qrPago, "PNG", centerX - qrSize / 2, posY, qrSize, qrSize);
+  posY += qrSize + 3;
+
+  if (textoDetalle) {
+    doc.setFont("Helvetica", "");
+    doc.setFontSize(fontSize - 1);
+    doc.text(lineasTexto, centerX, posY, { align: "center" });
+    posY += alturaTexto + 2;
+  }
+
+  return posY;
 }
