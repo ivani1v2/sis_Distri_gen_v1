@@ -1192,7 +1192,7 @@ async function impresion80(arraydatos, qr, cabecera) {
 }
 async function impresionA4(array, qr, arraycabecera) {
   var arraycabe = arraycabecera;
-  var linea = parseInt(store.state.configImpresora.msuperior) -2;
+  var linea = parseInt(store.state.configImpresora.msuperior) - 2;
   var nombreEmpresa = store.state.baseDatos.name;
   var imagen = store.state.logoempresa;
   var Direccion =
@@ -1746,6 +1746,7 @@ async function impresionA5_vertical(array, qr, arraycabecera) {
   var arraycabe = arraycabecera;
   var linea = parseInt(store.state.configImpresora.msuperior) - 8;
   var nombreEmpresa = store.state.baseDatos.name;
+  var totalPaginas = 0;
   var imagen = store.state.logoempresa;
   var Direccion =
     store.state.baseDatos.direccion +
@@ -1799,6 +1800,8 @@ async function impresionA5_vertical(array, qr, arraycabecera) {
   linea = linea + 3;
 
   const esNotaVentaA5V = arraycabe.tipocomprobante === "T";
+  const ocultarTotalizadosA5V =
+    esNotaVentaA5V && store.state.configImpresora.ocultar_totalizados_a5;
   const ocultarLogoA5V =
     esNotaVentaA5V && store.state.configImpresora.no_mostrar_logo_nota_pedido;
   const ocultarRucA5V =
@@ -1900,7 +1903,7 @@ async function impresionA5_vertical(array, qr, arraycabecera) {
   );
   doc.text(texto, 119, ySerieA5V + 2, "center");
 
-  doc.setFontSize(8);
+  doc.setFontSize(6.5);
   doc.setLineWidth(0.3);
   doc.rect(10, 40, 128, 20);
   linea = 45;
@@ -1971,7 +1974,6 @@ async function impresionA5_vertical(array, qr, arraycabecera) {
 
   linea = 65;
 
-  //-----------------productos-----------------------
   var respuesta = tabla_A5_vertical(array, linea);
 
   arraycabe.total_op_gratuitas = respuesta.ope_grat.toFixed(2);
@@ -1979,38 +1981,49 @@ async function impresionA5_vertical(array, qr, arraycabecera) {
     arraycabe.total_op_gratuitas = "0.00";
   }
 
-  doc.autoTable(respuesta.table);
+  doc.autoTable({
+    ...respuesta.table,
+    startY: linea,
+    margin: { top: 10, left: 10, right: 10, bottom: 10 },
+    pageBreak: 'auto'
+  });
 
   let finalY = doc.previousAutoTable.finalY;
+
   linea = finalY + 4;
   var lineaqr = linea;
 
-  if (arraycabe.total_op_gratuitas > 0) {
+  if (ocultarTotalizadosA5V) {
+    doc.setFontSize(6.5);
+    doc.setFont("Helvetica", "Bold");
+    doc.text("Total", 110, lineaqr + 3, "left");
+    doc.text(" : ", 116, lineaqr + 3, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(moneda + total.toString(), 136, lineaqr + 3, "right");
+    const vendedorA5V = obtieneNombreVendedor(arraycabe.vendedor);
+    var textoVendedor = doc.splitTextToSize(
+      "Vendedor: " + vendedorA5V,
+      70,
+    );
+    doc.text(textoVendedor, 10, lineaqr + 3, "left");
+
+    lineaqr = lineaqr + 8;
+  } else {
     doc.setFont("Helvetica", "");
     doc.setFontSize(7.5);
     var texto = doc.splitTextToSize(
-      "* Transferencia Gratuita y/o Servicio Prestado Gratuitamente",
-      84,
+      "Son: " + NumerosALetras(parseFloat(total).toFixed(2), moneda),
+      80,
     );
     doc.text(texto, 10, lineaqr, "left");
-    lineaqr = lineaqr + 5;
+    const vendedorA5V = obtieneNombreVendedor(arraycabe.vendedor);
+    var textoVendedor = doc.splitTextToSize(
+      "Vendedor: " + vendedorA5V,
+      70,
+    );
+    doc.text(textoVendedor, 10, lineaqr + 4, "left");
+    lineaqr = lineaqr + 6;
   }
-
-  doc.setFont("Helvetica", "");
-  doc.setFontSize(7.5);
-  var texto = doc.splitTextToSize(
-    "Son: " + NumerosALetras(parseFloat(total).toFixed(2), moneda),
-    80,
-  );
-  doc.text(texto, 10, lineaqr, "left");
-
-  const vendedorA5V = obtieneNombreVendedor(arraycabe.vendedor);
-  var texto = doc.splitTextToSize(
-    "Vendedor: " + vendedorA5V,
-    70,
-  );
-  doc.text(texto, 10, lineaqr + 4, "left");
-  lineaqr = lineaqr + 6;
 
   if (arraycabe.observacion && arraycabe.observacion.trim() !== "") {
     doc.setFont("Helvetica", "");
@@ -2023,96 +2036,98 @@ async function impresionA5_vertical(array, qr, arraycabecera) {
     lineaqr = lineaqr + 4 * textoObs.length;
   }
 
-  let nextSection = 1;
-  let currentSection;
-  const remainingVSpace = doc.internal.pageSize.height - lineaqr;
-  if (remainingVSpace > 48) {
-    nextSection = currentSection;
-    linea = lineaqr + 4;
-    lineaqr = lineaqr + 10;
-  } else {
-    linea = 10;
-    lineaqr = 10;
-    if (nextSection == 1) doc.addPage();
-  }
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.3);
-  doc.rect(90, linea, 48, 25);
+  if (!ocultarTotalizadosA5V) {
+    let nextSection = 1;
+    let currentSection;
+    const remainingVSpace = doc.internal.pageSize.height - lineaqr;
+    if (remainingVSpace > 48) {
+      nextSection = currentSection;
+      linea = lineaqr + 4;
+      lineaqr = lineaqr + 10;
+    } else {
+      linea = 10;
+      lineaqr = 10;
+      if (nextSection == 1) doc.addPage();
+    }
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.3);
+    doc.rect(90, linea, 48, 25);
 
-  linea = linea + 4;
-  doc.setFontSize(7.5);
-  doc.setFont("Helvetica", "Bold");
-  if (arraycabe.descuentos != 0) {
-    doc.text("DESCUENTOS", 93, linea, "left");
-    doc.text(" : ", 116, linea, "left");
-    doc.setFont("Helvetica", "");
-    doc.text(moneda + arraycabe.descuentos, 136, linea, "right");
     linea = linea + 4;
-  }
-  doc.setFontSize(7.5);
-  doc.setFont("Helvetica", "Bold");
-  doc.text("OP. GRAVADA", 93, linea, "left");
-  doc.text(" : ", 116, linea, "left");
-  doc.setFont("Helvetica", "");
-  doc.text(moneda + arraycabe.total_op_gravadas, 136, linea, "right");
-  linea = linea + 4;
-  if (arraycabe.total_op_inafectas > 0) {
     doc.setFontSize(7.5);
     doc.setFont("Helvetica", "Bold");
-    doc.text("OP. INAFECTA", 93, linea, "left");
+    if (arraycabe.descuentos != 0) {
+      doc.text("DESCUENTOS", 93, linea, "left");
+      doc.text(" : ", 116, linea, "left");
+      doc.setFont("Helvetica", "");
+      doc.text(moneda + arraycabe.descuentos, 136, linea, "right");
+      linea = linea + 4;
+    }
+    doc.setFontSize(7.5);
+    doc.setFont("Helvetica", "Bold");
+    doc.text("OP. GRAVADA", 93, linea, "left");
+    doc.text(" : ", 116, linea, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(moneda + arraycabe.total_op_gravadas, 136, linea, "right");
+    linea = linea + 4;
+    if (arraycabe.total_op_inafectas > 0) {
+      doc.setFontSize(7.5);
+      doc.setFont("Helvetica", "Bold");
+      doc.text("OP. INAFECTA", 93, linea, "left");
+      doc.text(" : ", 116, linea, "left");
+      doc.setFont("Helvetica", "");
+      doc.text(
+        moneda + arraycabe.total_op_inafectas.toString(),
+        136,
+        linea,
+        "right",
+      );
+      linea = linea + 4;
+    }
+    doc.setFontSize(7.5);
+    doc.setFont("Helvetica", "Bold");
+    doc.text("OP. EXONERADA", 93, linea, "left");
     doc.text(" : ", 116, linea, "left");
     doc.setFont("Helvetica", "");
     doc.text(
-      moneda + arraycabe.total_op_inafectas.toString(),
+      moneda + arraycabe.total_op_exoneradas.toString(),
       136,
       linea,
       "right",
     );
     linea = linea + 4;
+
+    doc.setFontSize(7.5);
+    doc.setFont("Helvetica", "Bold");
+    doc.text("OP. GRATUITAS", 93, linea, "left");
+    doc.text(" : ", 116, linea, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(
+      moneda + arraycabe.total_op_gratuitas.toString(),
+      136,
+      linea,
+      "right",
+    );
+    linea = linea + 4;
+
+    doc.setFontSize(7.5);
+    doc.setFont("Helvetica", "Bold");
+    doc.text("IGV " + arraycabe.porcentaje_igv + "%", 93, linea, "left");
+    doc.text(" : ", 116, linea, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(moneda + arraycabe.igv, 136, linea, "right");
+    linea = linea + 4;
+
+    doc.setFontSize(8);
+    doc.setFont("Helvetica", "Bold");
+    doc.text("Total", 93, linea, "left");
+    doc.text(" : ", 116, linea, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(moneda + total.toString(), 136, linea, "right");
+    linea = linea + 2;
   }
-  doc.setFontSize(7.5);
-  doc.setFont("Helvetica", "Bold");
-  doc.text("OP. EXONERADA", 93, linea, "left");
-  doc.text(" : ", 116, linea, "left");
-  doc.setFont("Helvetica", "");
-  doc.text(
-    moneda + arraycabe.total_op_exoneradas.toString(),
-    136,
-    linea,
-    "right",
-  );
-  linea = linea + 4;
 
-  doc.setFontSize(7.5);
-  doc.setFont("Helvetica", "Bold");
-  doc.text("OP. GRATUITAS", 93, linea, "left");
-  doc.text(" : ", 116, linea, "left");
-  doc.setFont("Helvetica", "");
-  doc.text(
-    moneda + arraycabe.total_op_gratuitas.toString(),
-    136,
-    linea,
-    "right",
-  );
-  linea = linea + 4;
-
-  doc.setFontSize(7.5);
-  doc.setFont("Helvetica", "Bold");
-  doc.text("IGV " + arraycabe.porcentaje_igv + "%", 93, linea, "left");
-  doc.text(" : ", 116, linea, "left");
-  doc.setFont("Helvetica", "");
-  doc.text(moneda + arraycabe.igv, 136, linea, "right");
-  linea = linea + 4;
-
-  doc.setFontSize(8);
-  doc.setFont("Helvetica", "Bold");
-  doc.text("Total", 93, linea, "left");
-  doc.text(" : ", 116, linea, "left");
-  doc.setFont("Helvetica", "");
-  doc.text(moneda + total.toString(), 136, linea, "right");
-  linea = linea + 2;
-
-  if (arraycabe.forma_pago.toLowerCase() == "credito") {
+  if (arraycabe.forma_pago.toLowerCase() == "credito" && !ocultarTotalizadosA5V) {
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(7.5);
     doc.text("DETALLE DE CRONOGRAMA", 10, lineaqr - 8);
@@ -2172,7 +2187,7 @@ async function impresionA5_vertical(array, qr, arraycabecera) {
     if (arraycabe.tipocomprobante == "F" || arraycabe.tipocomprobante == "B") {
       doc.addImage(qr, "png", 10, lineaqr, 22, 22);
     }
-    if (arraycabe.tipocomprobante == "T") {
+    if (arraycabe.tipocomprobante == "T" && !ocultarTotalizadosA5V) {
       doc.addImage(qr, "png", 10, lineaqr - 6, 22, 22);
     }
     if (arraycabe.tipocomprobante != "T") {
@@ -2188,10 +2203,10 @@ async function impresionA5_vertical(array, qr, arraycabecera) {
       doc.text(texto, 35, lineaqr, "left");
     }
   }
-  if (arraycabecera.forma_pago.toLowerCase() != "credito") {
+  if (arraycabecera.forma_pago.toLowerCase() != "credito" && !ocultarTotalizadosA5V) {
     linea = linea + 3.5;
     var array_pago = arraycabe.modopago;
-    linea = linea - 18;
+    linea = linea;
     doc.text("MODO DE PAGO : ", 52, linea);
     linea = linea + 3.5;
     for (var i = 0; i < array_pago.length; i++) {
@@ -2219,7 +2234,11 @@ async function impresionA5_vertical(array, qr, arraycabecera) {
     );
 
     if (bancosLista.length > 0) {
-      lineaqr = lineaqr + 18;
+      if (ocultarTotalizadosA5V) {
+        lineaqr = lineaqr;
+      } else {
+        lineaqr = lineaqr + 18;
+      }
       doc.setFont("Helvetica", "");
       doc.setFontSize(8);
 
@@ -2264,6 +2283,15 @@ async function impresionA5_vertical(array, qr, arraycabecera) {
 
   linea = linea + 15;
   doc.text(".", 0, linea);
+
+  totalPaginas = doc.getNumberOfPages();
+  for (var i = 1; i <= totalPaginas; i++) {
+    doc.setPage(i);
+    doc.setFont("Helvetica", "");
+    doc.setFontSize(7);
+    doc.text(i + "/" + totalPaginas, doc.internal.pageSize.getWidth() - 10, doc.internal.pageSize.getHeight() - 5, "right");
+  }
+  doc.setPage(totalPaginas);
 
   switch (modo_genera) {
     case "abre":

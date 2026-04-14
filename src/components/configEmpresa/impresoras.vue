@@ -97,16 +97,19 @@
                                 <v-switch inset dense v-model="mostrar_logo_pedido" label="Logo en pedido A4" />
                             </v-col>
                             <v-col cols="6" class="mt-n6">
-                                <v-switch inset dense v-model="no_mostrar_logo_nota_pedido" label="No Mostrar Logo en N. Venta" />
+                                <v-switch inset dense v-model="no_mostrar_logo_nota_pedido" label="Ocultar Logo en N. Venta" />
                             </v-col>
                             <v-col cols="6" class="mt-n6">
-                                <v-switch inset dense v-model="no_mostrar_ruc_nota_venta" label="No Mostrar RUC en N. Venta" />
+                                <v-switch inset dense v-model="no_mostrar_ruc_nota_venta" label="Ocultar RUC en N. Venta" />
                             </v-col>
                             <v-col cols="6" class="mt-n6">
                                 <v-switch inset dense v-model="mostrar_zona_nota_venta" label="Mostrar Zona en N. Venta" />
                             </v-col>
                             <v-col cols="6" class="mt-n6">
                                 <v-switch inset dense v-model="mostrar_medida_general" label="Mostrar Med. General en Comprobantes" />
+                            </v-col>
+                            <v-col cols="6" class="mt-n6">
+                                <v-switch inset dense v-model="ocultar_totalizados_a5" label="Ocultar Totalizados A5" />
                             </v-col>
                         </v-row>
 
@@ -167,6 +170,7 @@ export default {
             no_mostrar_ruc_nota_venta: false,
             mostrar_zona_nota_venta: false,
             mostrar_medida_general: false,
+            ocultar_totalizados_a5: false,
             mensaje_final_proforma: '',
             impresora_auto: false,
 
@@ -201,6 +205,7 @@ export default {
                     this.no_mostrar_ruc_nota_venta = snapshot.val().no_mostrar_ruc_nota_venta === true
                     this.mostrar_zona_nota_venta = snapshot.val().mostrar_zona_nota_venta === true
                     this.mostrar_medida_general = snapshot.val().mostrar_medida_general === true
+                    this.ocultar_totalizados_a5 = snapshot.val().ocultar_totalizados_a5 === true
                     this.impresora_auto = snapshot.val().impresora_auto || false
                 } else {
                     this.ip_cocina = "192.168.1.5"
@@ -222,6 +227,7 @@ export default {
                     this.no_mostrar_ruc_nota_venta = false
                     this.mostrar_zona_nota_venta = false
                     this.mostrar_medida_general = false
+                    this.ocultar_totalizados_a5 = false
                     this.impresora_auto = false
                     this.mensaje_final_proforma = ''
                 }
@@ -251,6 +257,7 @@ export default {
                 no_mostrar_ruc_nota_venta: this.no_mostrar_ruc_nota_venta || false,
                 mostrar_zona_nota_venta: this.mostrar_zona_nota_venta || false,
                 mostrar_medida_general: this.mostrar_medida_general || false,
+                ocultar_totalizados_a5: this.ocultar_totalizados_a5 || false,
                 mensaje_final_proforma: this.mensaje_final_proforma || ''
 
             }
@@ -275,6 +282,7 @@ export default {
             actualizaImpresoras('no_mostrar_ruc_nota_venta', this.no_mostrar_ruc_nota_venta || false)
             actualizaImpresoras('mostrar_zona_nota_venta', this.mostrar_zona_nota_venta || false)
             actualizaImpresoras('mostrar_medida_general', this.mostrar_medida_general || false)
+            actualizaImpresoras('ocultar_totalizados_a5', this.ocultar_totalizados_a5 || false)
             actualizaImpresoras('mensaje_final_proforma', this.mensaje_final_proforma || '')
             actualizaImpresoras('impresora_auto', this.impresora_auto || false)
             store.commit("dialogoImpresora")
