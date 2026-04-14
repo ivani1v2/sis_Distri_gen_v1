@@ -1792,7 +1792,7 @@ async function impresionA5_vertical(array, qr, arraycabecera) {
   const doc = new jspdf({
     orientation: "portrait",
     unit: "mm",
-    format: [210, pdfInMM],
+    format: [pdfInMM, 210],
   });
 
   doc.text(".", -1, linea);
@@ -1990,7 +1990,7 @@ async function impresionA5_vertical(array, qr, arraycabecera) {
     doc.setFontSize(7.5);
     var texto = doc.splitTextToSize(
       "* Transferencia Gratuita y/o Servicio Prestado Gratuitamente",
-      70,
+      84,
     );
     doc.text(texto, 10, lineaqr, "left");
     lineaqr = lineaqr + 5;

@@ -10,7 +10,9 @@
             <template v-slot:item="{ item }">
                 <v-list-item-content class="pa-0"> <v-list-item-title class="text-wrap custom-line-height">
                         <span class="text-caption grey--text text--darken-2">
-                            {{ (item.categoria || '').slice(0, 4).toUpperCase() }}
+                            {{ ($store.state.configuracion.mostrar_medida_cat)
+                                ? (item.medida || '')
+                                : (item.categoria || '').slice(0, 4).toUpperCase() }}
                         </span>
                         — {{ item.nombre }}
                         <small v-if="$store.state.configuracion && $store.state.configuracion.mostrar_codigo"
@@ -96,6 +98,7 @@
                         <thead>
                             <tr>
                                 <th class="text-left">Nombre</th>
+                                <th class="text-left" v-if="$store.state.configuracion.mostrar_medida_cat">Medida</th>
                                 <th class="text-left">Stock</th>
                                 <th class="text-left">Precio</th>
                             </tr>
@@ -104,6 +107,7 @@
                             <tr v-for="item in listafiltrada" :key="item.id" @click="prod_selecto2(item)">
                                 <td style="font-size:75%;"><span v-if="$store.state.configuracion.mostrar_codigo">{{
                                     item.id }}-</span> {{ item.nombre }}</td>
+                                <td style="font-size:75%;" v-if="$store.state.configuracion.mostrar_medida_cat">{{ item.medida }}</td>
                                 <td style="font-size:75%;">{{ convierte_stock(item.stock, item.factor) }}</td>
                                 <td style="font-size:75%;">{{ item.precio }}</td>
                             </tr>
