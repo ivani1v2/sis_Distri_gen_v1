@@ -267,6 +267,55 @@
                             prepend-inner-icon="mdi-note-text" />
                     </v-col>
                 </v-row>
+                <v-row dense class="mt-n5 mb-8">
+                    <v-col cols="12" v-if="tienePagoAdelanto">
+                        <v-card outlined class="pa-3"
+                            style="border-left: 4px solid #1976D2; border-radius: 8px;">
+                            <v-row no-gutters align="center">
+
+                                <v-col cols="5" style="border-right: 1px solid #E0E0E0;" class="pr-3">
+                                    <div class="caption grey--text text--darken-1 text-uppercase font-weight-bold">Pago
+                                        Adelantado</div>
+                                    <div class="text-h6 primary--text font-weight-black line-height-1">
+                                        {{ monedaAdelantoLabel }} {{ redondear(montoAdelantoNum) }}
+                                    </div>
+                                    <div class="caption red--text text--darken-2 mt-1 font-weight-medium">
+                                        Saldo: {{ moneda }} {{ redondear(saldoDespuesAdelanto) }}
+                                    </div>
+                                </v-col>
+
+                                <v-col cols="7" class="pl-4">
+                                    <div class="d-flex flex-column">
+                                        <div class="caption d-flex align-center mb-1">
+                                            <v-icon x-small class="mr-1">mdi-calendar-range</v-icon>
+                                            <span class="grey--text text--darken-2">{{ fechaAdelantoTexto }}</span>
+                                            <span class="mx-2" style="height: 12px;"></span>
+                                            
+                                        </div>
+                                        <div>
+                                            <v-icon x-small class="mr-1">mdi-tag-outline</v-icon>
+                                            <span class="font-weight-medium caption">{{ pagoAdelanto.tipo_op }}</span>
+                                        </div>
+
+                                        <div class="caption d-flex align-center"
+                                            v-if="pagoAdelanto.n_operacion || pagoAdelanto.banco">
+                                            <v-icon x-small class="mr-1" color="blue-grey lighten-1">mdi-bank</v-icon>
+                                            <span v-if="pagoAdelanto.banco" class="mr-2">{{ pagoAdelanto.banco }}</span>
+
+                                            <template v-if="pagoAdelanto.n_operacion">
+                                                <v-chip x-small outlined label color="blue-grey lighten-1"
+                                                    class="font-weight-bold">
+                                                    Nro OP: {{ pagoAdelanto.n_operacion }}
+                                                </v-chip>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </v-col>
+
+                            </v-row>
+                        </v-card>
+                    </v-col>
+                </v-row>
                 <v-row class="mt-n6" dense>
                     <v-col cols="6">
                         <v-switch v-model="imprime_orden" dense inset color="indigo" :label="`Imprime Orden Pedido`"
@@ -287,6 +336,10 @@
                 <v-divider></v-divider>
 
                 <v-card-actions class="pa-3">
+                    <v-btn text color="indigo" @click="abrirPagoAdelantoDialog">
+                        <v-icon left >mdi-cash-plus</v-icon>
+                        {{ tienePagoAdelanto ? 'Editar adelanto' : 'Agregar adelanto' }}
+                    </v-btn>
                     <v-spacer></v-spacer>
                     <v-btn text color="grey darken-1" @click="dial_guardar = false">
                         Cancelar
@@ -298,6 +351,10 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <dial_pago_adelanto v-model="dial_pago_adelanto" :adelanto="pagoAdelanto"
+            :tipos-operacion="$store.state.modopagos || []" :monedas-opciones="monedasOpciones" :moneda-base="moneda"
+            :total-documento="totalDetalle" :saldo-referencial="saldoDespuesAdelanto" @save="onSavePagoAdelanto" />
 
 
         <!-- Dialog de progreso -->
@@ -331,6 +388,7 @@ import { aplicaPreciosYBonos, agregarLista, analizaPreciosParcial, analizaGrupos
 import dialog_direcciones_cliente from '@/views/clientes/dialogos/dial_direcciones'
 import cronograma from '../ventas/dialogos/cronograma_creditos.vue'
 import dial_edita_prod from '../ventas/edita_producto.vue'
+import dial_pago_adelanto from '../pedidos/dialogos/dial_pago_adelanto.vue'
 import axios from "axios"
 import CryptoJS from "crypto-js";
 import { allcuentaxcobrar } from '@/db'
@@ -345,6 +403,7 @@ export default {
         dial_mapas,
         cronograma,
         dial_edita_prod,
+        dial_pago_adelanto,
         dialog_direcciones_cliente,
         dial_stock
     },
@@ -384,6 +443,8 @@ export default {
             sinStock: [],
             modoOrdenProductos: "push",
             tablaOscura: false,
+            dial_pago_adelanto: false,
+            pagoAdelanto: {},
         }
     },
     created() {
@@ -477,6 +538,33 @@ export default {
         opcionesFormaPago() {
 
             return ['CONTADO', 'CREDITO'];
+        },
+        monedasOpciones() {
+            const arr = this.$store.state.moneda || [];
+            return arr.map(m => ({
+                ...m,
+                label: `${m.simbolo} - ${m.moneda}`,
+            }));
+        },
+        montoAdelantoNum() {
+            const n = Number(this.pagoAdelanto && this.pagoAdelanto.monto);
+            return Number.isFinite(n) ? n : 0;
+        },
+        saldoDespuesAdelanto() {
+            return Number((this.totalDetalle - this.montoAdelantoNum).toFixed(2));
+        },
+        tienePagoAdelanto() {
+            return this.montoAdelantoNum > 0;
+        },
+        monedaAdelantoLabel() {
+            return (this.pagoAdelanto && this.pagoAdelanto.moneda) || this.moneda;
+        },
+        fechaAdelantoTexto() {
+            const f = this.pagoAdelanto && this.pagoAdelanto.fecha;
+            if (typeof f === 'number' && Number.isFinite(f)) {
+                return moment.unix(f).format('YYYY-MM-DD');
+            }
+            return '-';
         }
     },
     watch: {
@@ -641,6 +729,13 @@ export default {
             }
             this.dial_guardar = true;
         },
+        abrirPagoAdelantoDialog() {
+            this.dial_pago_adelanto = true;
+        },
+        onSavePagoAdelanto(payload) {
+            this.pagoAdelanto = payload || {};
+            this.dial_pago_adelanto = false;
+        },
         async confirmarGuardado() {
             // Validaciones mínimas
             if (!this.numero) {
@@ -697,6 +792,8 @@ export default {
 
                     }
                 }
+                const pagoAdelantoCabecera = this.tienePagoAdelanto ? this.pagoAdelanto : null;
+
                 // Cabecera (ya lo tienes armado)
                 const cabecera = {
                     tipo_comprobante: this.tipocomprobante,
@@ -724,6 +821,7 @@ export default {
                     },
                     ubicacion_pedido: store.state.ubicacion_actual,
                     peso_total: this.listaproductos.reduce((acc, item) => acc + (Number(item.peso) || 0), 0),
+                    ...(pagoAdelantoCabecera ? { pago_adelanto: pagoAdelantoCabecera } : {}),
                 };
                 console.log('⏺️ Cabecera lista para enviar:', cabecera);
                 const detalle = this.listaproductos;
@@ -782,6 +880,7 @@ export default {
             this.listaproductos = [];
             this.formaPago = "CONTADO";
             this.fechaVencimiento = "";
+            this.pagoAdelanto = {};
         },
         async api_rest(data, metodo) {
             try {

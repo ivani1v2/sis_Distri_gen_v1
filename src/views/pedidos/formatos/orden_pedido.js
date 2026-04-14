@@ -296,6 +296,21 @@ async function impresionA4_ordenPedido(cabecera, items = []) {
   doc.text(enLetrasTxt, lMargin, y);
   y += 6 + (enLetrasTxt.length - 1) * 5;
 
+  const adelantoA4 = obtenerTextoAdelanto(cabecera, total, moneda);
+  if (adelantoA4) {
+    doc.setFont("Helvetica", "bold");
+    doc.text(adelantoA4.linea1Label, lMargin, y);
+    doc.setFont("Helvetica", "normal");
+    doc.text(adelantoA4.linea1Value, lMargin + doc.getTextWidth(adelantoA4.linea1Label), y);
+    y += 6;
+
+    doc.setFont("Helvetica", "bold");
+    doc.text(adelantoA4.linea2Label, lMargin, y);
+    doc.setFont("Helvetica", "normal");
+    doc.text(adelantoA4.linea2Value, lMargin + doc.getTextWidth(adelantoA4.linea2Label), y);
+    y += 6;
+  }
+
   const cuotasData = Array.isArray(cabecera?.cronograma)
     ? cabecera.cronograma
     : cabecera?.cronograma?.cuotas || [];
@@ -706,6 +721,27 @@ async function impresion80_ordenPedido(cabecera, items = []) {
   );
   doc.text(texto, pageCenter, linea, "center");
   linea += 4 * texto.length;
+
+  const adelanto80 = obtenerTextoAdelanto(cabecera, total, moneda);
+  if (adelanto80) {
+    doc.setFontSize(8);
+    doc.setFont("Helvetica", "");
+    const linea1Wrap = doc.splitTextToSize(
+      `${adelanto80.linea1Label}${adelanto80.linea1Value}`,
+      pdfInMM - lMargin - rMargin,
+    );
+    doc.text(linea1Wrap, pageCenter, linea, "center");
+    linea += 3.2 * linea1Wrap.length;
+
+    const linea2Wrap = doc.splitTextToSize(
+      `${adelanto80.linea2Label}${adelanto80.linea2Value}`,
+      pdfInMM - lMargin - rMargin,
+    );
+    doc.text(linea2Wrap, pageCenter, linea, "center");
+    linea += 3.2 * linea2Wrap.length;
+
+    doc.setFontSize(8.4);
+  }
 
   const cuotasData80 = Array.isArray(cabecera?.cronograma)
     ? cabecera.cronograma
@@ -1129,6 +1165,27 @@ async function impresion58_ordenPedido(cabecera, items = []) {
   doc.text(texto, pageCenter, linea, "center");
   linea += 3.4 * texto.length;
 
+  const adelanto58 = obtenerTextoAdelanto(cabecera, total, moneda);
+  if (adelanto58) {
+    doc.setFontSize(7.2);
+    doc.setFont("Helvetica", "");
+    const linea1Wrap = doc.splitTextToSize(
+      `${adelanto58.linea1Label}${adelanto58.linea1Value}`,
+      pdfInMM - lMargin - rMargin,
+    );
+    doc.text(linea1Wrap, pageCenter, linea, "center");
+    linea += 3 * linea1Wrap.length;
+
+    const linea2Wrap = doc.splitTextToSize(
+      `${adelanto58.linea2Label}${adelanto58.linea2Value}`,
+      pdfInMM - lMargin - rMargin,
+    );
+    doc.text(linea2Wrap, pageCenter, linea, "center");
+    linea += 3 * linea2Wrap.length;
+
+    doc.setFontSize(8.4);
+  }
+
   const cuotasData58 = Array.isArray(cabecera?.cronograma)
     ? cabecera.cronograma
     : cabecera?.cronograma?.cuotas || [];
@@ -1404,6 +1461,34 @@ function cuotascredito(cuotas) {
     }
     return [numCuota, importe, vence];
   });
+}
+
+function obtenerTextoAdelanto(cabecera, totalDoc, monedaDoc) {
+  const ad = cabecera && cabecera.pago_adelanto;
+  const monto = Number(ad && ad.monto);
+  if (!Number.isFinite(monto) || monto <= 0) return null;
+
+  const tipo = String((ad && ad.tipo_op) || "-").trim();
+  const nro = String((ad && ad.n_operacion) || "-").trim() || "-";
+  const banco = String((ad && ad.banco) || "-").trim() || "-";
+  const monAdelanto = String((ad && ad.moneda) || "").trim();
+  const fechaAdelanto = ad && ad.fecha;
+  let fechaTexto = "-";
+  if (typeof fechaAdelanto === "number" && Number.isFinite(fechaAdelanto)) {
+    fechaTexto = moment.unix(fechaAdelanto).format("DD/MM/YYYY");
+  } else if (typeof fechaAdelanto === "string" && fechaAdelanto.trim()) {
+    fechaTexto = moment(fechaAdelanto).isValid()
+      ? moment(fechaAdelanto).format("DD/MM/YYYY")
+      : fechaAdelanto;
+  }
+  const saldo = Math.max(0, Number(totalDoc || 0) - monto);
+
+  return {
+    linea1Label: "PAGO ADELANTO: ",
+    linea1Value: `${tipo} - OP.${nro} | ${banco}: ${monAdelanto} ${formatMoney(monto)} | FECHA: ${fechaTexto}`,
+    linea2Label: "SALDO: ",
+    linea2Value: `${monedaDoc || ""} ${formatMoney(saldo)}`,
+  };
 }
 
 function formatMoney(num) {

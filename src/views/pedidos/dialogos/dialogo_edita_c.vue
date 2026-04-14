@@ -32,6 +32,53 @@
                     <h5>Pendiente de Pago : <span class="red--text">S/.{{ info_cabecera.pendiente_pago }}</span></h5>
                 </v-col>
             </v-row>
+            <v-row v-if="tienePagoAdelanto" class="px-1 pb-2">
+                <v-col cols="12">
+                    <v-card outlined class="pa-3"
+                        style="border-left: 4px solid #1976D2; border-radius: 8px;">
+                        <v-row no-gutters align="center">
+
+                            <v-col cols="5" style="border-right: 1px solid #E0E0E0;" class="pr-3">
+                                <div class="caption grey--text text--darken-1 text-uppercase font-weight-bold">Pago
+                                    Adelantado</div>
+                                <div class="text-h6 primary--text font-weight-black line-height-1">
+                                    {{ monedaAdelantoLabel }} {{ redondear(montoAdelantoNum) }}
+                                </div>
+                                <div class="caption red--text text--darken-2 mt-1 font-weight-bold">
+                                    Saldo: {{ monedaSimbolo }} {{ redondear(saldoConAdelanto) }}
+                                </div>
+                            </v-col>
+
+                            <v-col cols="7" class="pl-4">
+                                <div class="d-flex flex-column">
+                                    <div class="caption d-flex align-center mb-1">
+                                        <v-icon x-small class="mr-1">mdi-calendar-range</v-icon>
+                                        <span class="grey--text text--darken-2">{{ fechaAdelantoTexto }}</span>
+                                        <v-divider vertical class="mx-2" style="height: 12px;"></v-divider>
+                                        <v-icon x-small class="mr-1">mdi-tag-outline</v-icon>
+                                        <span class="font-weight-medium text-uppercase">{{ pagoAdelantoData.tipo_op ||
+                                            '-' }}</span>
+                                    </div>
+
+                                    <div class="caption d-flex align-center">
+                                        <v-icon x-small class="mr-1" color="blue-grey lighten-1">mdi-bank</v-icon>
+                                        <span class="mr-2">{{ pagoAdelantoData.banco || '-' }}</span>
+
+                                        <template v-if="pagoAdelantoData.n_operacion">
+                                            <v-chip x-small outlined label color="blue-grey lighten-1"
+                                                class="font-weight-bold">
+                                                Nro Op: {{ pagoAdelantoData.n_operacion }}
+                                            </v-chip>
+                                        </template>
+                                        <span v-else class="grey--text">-</span>
+                                    </div>
+                                </div>
+                            </v-col>
+
+                        </v-row>
+                    </v-card>
+                </v-col>
+            </v-row>
             <v-simple-table dense dark fixed-header height="50vh">
                 <template v-slot:default>
                     <thead>
@@ -124,7 +171,7 @@
                             <span v-if="descEdita.precioFinal && descEdita.precioFinal !== Number(precioedita)">
                                 <strong class="green--text">Precio Final: {{ monedaSimbolo }}{{
                                     redondear(descEdita.precioFinal)
-                                }}</strong>
+                                    }}</strong>
                             </span>
                             <span v-else class="caption grey--text">Sin descuentos aplicados</span>
                         </div>
@@ -342,6 +389,31 @@ export default {
     computed: {
         monedaSimbolo() {
             return this.$store.state.moneda.find(m => m.codigo === this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/';
+        },
+        pagoAdelantoData() {
+            const p = this.info_cabecera?.pago_adelanto;
+            if (p && Number(p.monto) > 0) return p;
+            return null;
+        },
+        montoAdelantoNum() {
+            const n = Number(this.pagoAdelantoData?.monto);
+            return Number.isFinite(n) ? n : 0;
+        },
+        tienePagoAdelanto() {
+            return this.montoAdelantoNum > 0;
+        },
+        monedaAdelantoLabel() {
+            return this.pagoAdelantoData?.moneda || this.monedaSimbolo;
+        },
+        fechaAdelantoTexto() {
+            const f = this.pagoAdelantoData?.fecha;
+            if (typeof f === 'number' && Number.isFinite(f)) return moment.unix(f).format('YYYY-MM-DD');
+            return '-';
+        },
+        saldoConAdelanto() {
+            const total = Number(this.info_cabecera?.total || 0);
+            const saldo = total - this.montoAdelantoNum;
+            return saldo > 0 ? saldo : 0;
         },
         lista_productos() {
             return this.listaproductos

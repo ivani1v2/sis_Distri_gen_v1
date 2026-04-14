@@ -17,7 +17,7 @@
                     <div class="d-flex justify-space-between flex-wrap caption">
                         <span>Línea Crédito: <strong>{{ moneda }} {{ lineaCreditoCliente.toFixed(2) }}</strong></span>
                         <span>Deuda: <strong class="red--text">{{ moneda }} {{ deudaCliente.toFixed(2)
-                                }}</strong></span>
+                        }}</strong></span>
                         <span>Disponible: <strong class="red--text">
                                 {{ moneda }} {{ saldoDisponible.toFixed(2) }}
                             </strong></span>
@@ -77,17 +77,68 @@
 
             <v-card-text class="mt-n3">
                 <v-row class="" dense>
-                    <v-col cols="8">
+                    <v-col cols="12" sm="8">
                         <cat_fijo ref="catFijo" @agrega_lista="agregar_lista($event)" :muestra_tabla="false"
                             :x_categoria="true">
                         </cat_fijo>
                     </v-col>
-                    <v-col cols="4">
-                        <v-btn small elevation="3" rounded color="success" @click="dial_catalogo = !dial_catalogo">
+                    <v-col cols="12" sm="4" class="d-flex flex-nowrap align-center">
+                        <v-btn small elevation="3" rounded color="success" class="mr-2" @click="dial_catalogo = !dial_catalogo">
                             Catalogo
                             <v-icon color="white" class="mx-auto text--center" small>mdi-archive-arrow-down</v-icon>
 
                         </v-btn>
+                        <v-btn small elevation="0" rounded color="indigo" dark
+                            @click="abrirDialPagoAdelanto">
+                            <v-icon left>mdi-cash-plus</v-icon>
+                            {{ tienePagoAdelanto ? 'Editar adelanto' : 'Adelanto' }}
+                        </v-btn>
+                    </v-col>
+                    <v-col cols="12" class="mt-n2 mb-4" v-if="tienePagoAdelanto">
+                        <v-card outlined class="pa-3"
+                            style="border-left: 4px solid #1976D2; border-radius: 8px;">
+                            <v-row no-gutters align="center">
+
+                                <v-col cols="5" style="border-right: 1px solid #E0E0E0;" class="pr-3">
+                                    <div class="caption grey--text text--darken-1 text-uppercase font-weight-bold">Pago
+                                        Adelantado
+                                    </div>
+                                    <div class="text-h6 primary--text font-weight-black line-height-1">
+                                        {{ monedaAdelantoLabel }} {{ number2(montoAdelantoNum) }}
+                                    </div>
+                                    <div class="caption red--text text--darken-2 mt-1 font-weight-medium">
+                                        Saldo: {{ moneda }} {{ number2(saldoConAdelanto) }}
+                                    </div>
+                                </v-col>
+
+                                <v-col cols="7" class="pl-4">
+                                    <div class="d-flex flex-column">
+                                        <div class="caption d-flex align-center mb-1">
+                                            <v-icon x-small class="mr-1">mdi-calendar-range</v-icon>
+                                            <span class="grey--text text--darken-2">{{ fechaAdelantoTexto }}</span>
+                                        </div>
+                                        <div>
+                                            <v-icon x-small class="mr-1">mdi-tag-outline</v-icon>
+                                            <span class="font-weight-medium caption">{{ pagoAdelanto.tipo_op }}</span>
+                                        </div>
+
+                                        <div class="caption d-flex align-center"
+                                            v-if="pagoAdelanto.n_operacion || pagoAdelanto.banco">
+                                            <v-icon x-small class="mr-1" color="blue-grey lighten-1">mdi-bank</v-icon>
+                                            <span v-if="pagoAdelanto.banco" class="mr-2">{{ pagoAdelanto.banco }}</span>
+
+                                            <template v-if="pagoAdelanto.n_operacion">
+                                                <v-chip x-small outlined label color="blue-grey lighten-1"
+                                                    class="font-weight-bold">
+                                                    Nro OP: {{ pagoAdelanto.n_operacion }}
+                                                </v-chip>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </v-col>
+
+                            </v-row>
+                        </v-card>
                     </v-col>
                     <v-col cols="12" class="mt-n5">
                         <v-expansion-panels v-model="expansionObservacion">
@@ -150,7 +201,7 @@
                                                     style="max-width: 70vw;">
                                                     <span class="font-weight-bold red--text">{{
                                                         Number(item.cantidad)
-                                                        }}×</span>
+                                                    }}×</span>
                                                     {{ item.nombre }}
                                                 </div>
                                             </div>
@@ -270,6 +321,10 @@
         </v-dialog>
         <dial_stock v-model="dialStock" :items="sinStock" @close="dialStock = false" />
 
+        <dial_pago_adelanto v-model="dial_pago_adelanto" :adelanto="pagoAdelanto"
+            :tipos-operacion="$store.state.modopagos || []" :monedas-opciones="monedasOpciones" :moneda-base="moneda"
+            :total-documento="totalDetalle" :saldo-referencial="saldoConAdelanto" @save="onSavePagoAdelanto" />
+
         <cronograma v-if="dialogoCronograma" :totalCredito="Number(totalDetalle)" @cierra="dialogoCronograma = false"
             @emite_cronograma="guarda_cronograma($event)" :pagoInicial="0" :moneda="moneda"
             :planExistente="planExistenteFormateado" />
@@ -287,13 +342,15 @@ import { colClientes } from '../../../db_firestore'
 import { allcuentaxcobrar } from '../../../db'
 import { aplicaPreciosYBonos, agregarLista, analizaPreciosParcial, analizaGruposParcial } from '@/views/funciones/calculo_bonos'
 import dial_stock from '../../ventas/dialogos/dial_stock_insuficiente.vue'
+import dial_pago_adelanto from '../dialogos/dial_pago_adelanto.vue'
 export default {
     name: 'EditorDetallePedido',
     components: {
         cat_fijo,
         edita_producto,
         cronograma,
-        dial_stock
+        dial_stock,
+        dial_pago_adelanto
     },
     props: {
         value: { type: Boolean, default: false },
@@ -343,6 +400,8 @@ export default {
             recalculandoBonos: false,
             dialStock: false,
             sinStock: [],
+            dial_pago_adelanto: false,
+            pagoAdelanto: {},
         }
     },
     watch: {
@@ -354,6 +413,7 @@ export default {
                 }
                 this._cargarDesdeProps()
                 this.cargarDatosCredito()
+                this.sincronizarPagoAdelantoDesdeCabecera()
             }
         },
         internalOpen(v) {
@@ -424,6 +484,33 @@ export default {
                 return [{ text: 'Contado', value: 'CONTADO' }]
             }
             return this.condicionesItems
+        },
+        monedasOpciones() {
+            const arr = this.$store.state.moneda || [];
+            return arr.map(m => ({
+                ...m,
+                label: `${m.simbolo} - ${m.moneda}`,
+            }));
+        },
+        montoAdelantoNum() {
+            const n = Number(this.pagoAdelanto && this.pagoAdelanto.monto);
+            return Number.isFinite(n) ? n : 0;
+        },
+        saldoConAdelanto() {
+            return Number((this.totalDetalle - this.montoAdelantoNum).toFixed(2));
+        },
+        tienePagoAdelanto() {
+            return this.montoAdelantoNum > 0;
+        },
+        monedaAdelantoLabel() {
+            return (this.pagoAdelanto && this.pagoAdelanto.moneda) || this.moneda;
+        },
+        fechaAdelantoTexto() {
+            const f = this.pagoAdelanto && this.pagoAdelanto.fecha;
+            if (typeof f === 'number' && Number.isFinite(f)) {
+                return moment.unix(f).format('YYYY-MM-DD');
+            }
+            return '-';
         }
     },
     created() {
@@ -439,9 +526,25 @@ export default {
         } else {
             this.fechaVencimiento = moment().add(7, 'days').format('YYYY-MM-DD')
         }
+        this.sincronizarPagoAdelantoDesdeCabecera()
         this.cargarDatosCredito()
     },
     methods: {
+        sincronizarPagoAdelantoDesdeCabecera() {
+            const actual = this.cabecera && this.cabecera.pago_adelanto;
+            if (actual && Number(actual.monto) > 0) {
+                this.pagoAdelanto = { ...actual };
+                return;
+            }
+            this.pagoAdelanto = {};
+        },
+        abrirDialPagoAdelanto() {
+            this.dial_pago_adelanto = true;
+        },
+        onSavePagoAdelanto(payload) {
+            this.pagoAdelanto = payload || {};
+            this.dial_pago_adelanto = false;
+        },
         recalcularSiPermiteBonos() {
             this.$nextTick(() => this.recalculoCompleto());
         },
@@ -832,6 +935,7 @@ export default {
                         }];
                     }
                 }
+                const pagoAdelantoCabecera = this.tienePagoAdelanto ? this.pagoAdelanto : null;
                 const cabeceraFull = {
                     ...this.cabecera,
                     subtotal: this.fix2(subtotal),
@@ -843,6 +947,11 @@ export default {
                     cronograma: cronogramaCabecera,
                     fecha_vencimiento: this.cabecera.condicion_pago === 'CREDITO' ? this.fechaVencimiento : null,
                 };
+                if (pagoAdelantoCabecera) {
+                    cabeceraFull.pago_adelanto = pagoAdelantoCabecera;
+                } else if ('pago_adelanto' in cabeceraFull) {
+                    delete cabeceraFull.pago_adelanto;
+                }
                 const payload = {
                     cabecera: cabeceraFull,
                     detalle: detalleNorm,

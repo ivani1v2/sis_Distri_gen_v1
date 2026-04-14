@@ -476,6 +476,27 @@ async function impresion58(arraydatos, qr, cabecera) {
   doc.text(texto, pageCenter, linea, "center");
   linea = linea + 3.5 * texto.length;
 
+  const adelanto80 = obtenerTextoAdelanto(arraycabe, total, moneda);
+  if (adelanto80) {
+    doc.setFontSize(8);
+    doc.setFont("Helvetica", "");
+    const linea1Wrap = doc.splitTextToSize(
+      `${adelanto80.linea1Label}${adelanto80.linea1Value}`,
+      pdfInMM - lMargin - rMargin
+    );
+    doc.text(linea1Wrap, pageCenter, linea, "center");
+    linea = linea + 3.2 * linea1Wrap.length;
+
+    const linea2Wrap = doc.splitTextToSize(
+      `${adelanto80.linea2Label}${adelanto80.linea2Value}`,
+      pdfInMM - lMargin - rMargin
+    );
+    doc.text(linea2Wrap, pageCenter, linea, "center");
+    linea = linea + 3.2 * linea2Wrap.length;
+
+    doc.setFontSize(9);
+  }
+
   if (arraycabe.tipocomprobante != "T") {
     doc.setFontSize(9);
     var texto = doc.splitTextToSize(
@@ -1027,6 +1048,27 @@ async function impresion80(arraydatos, qr, cabecera) {
   doc.text(texto, pageCenter, linea, "center");
   linea = linea + 3.5 * texto.length;
 
+  const adelanto58 = obtenerTextoAdelanto(arraycabe, total, moneda);
+  if (adelanto58) {
+    doc.setFontSize(7.2);
+    doc.setFont("Helvetica", "");
+    const linea1Wrap = doc.splitTextToSize(
+      `${adelanto58.linea1Label}${adelanto58.linea1Value}`,
+      pdfInMM - lMargin - rMargin
+    );
+    doc.text(linea1Wrap, pageCenter, linea, "center");
+    linea = linea + 3 * linea1Wrap.length;
+
+    const linea2Wrap = doc.splitTextToSize(
+      `${adelanto58.linea2Label}${adelanto58.linea2Value}`,
+      pdfInMM - lMargin - rMargin
+    );
+    doc.text(linea2Wrap, pageCenter, linea, "center");
+    linea = linea + 3 * linea2Wrap.length;
+
+    doc.setFontSize(8);
+  }
+
   if (arraycabe.tipocomprobante != "T") {
     doc.setFontSize(8);
     var texto = doc.splitTextToSize(
@@ -1403,6 +1445,21 @@ function impresionA4(array, qr, arraycabecera) {
   doc.text(texto, 10, lineaqr, "left");
   lineaqr = lineaqr + 6;
 
+  const adelantoA4 = obtenerTextoAdelanto(arraycabe, total, moneda);
+  if (adelantoA4) {
+    doc.setFont("Helvetica", "bold");
+    doc.text(adelantoA4.linea1Label, 10, lineaqr, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(adelantoA4.linea1Value, 10 + doc.getTextWidth(adelantoA4.linea1Label), lineaqr, "left");
+    lineaqr = lineaqr + 5;
+
+    doc.setFont("Helvetica", "bold");
+    doc.text(adelantoA4.linea2Label, 10, lineaqr, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(adelantoA4.linea2Value, 10 + doc.getTextWidth(adelantoA4.linea2Label), lineaqr, "left");
+    lineaqr = lineaqr + 5;
+  }
+
   let nextSection = 1;
   let currentSection;
   const remainingVSpace = doc.internal.pageSize.height - lineaqr;
@@ -1586,13 +1643,13 @@ function impresionA4(array, qr, arraycabecera) {
     }
   }
   if (bancos != "") {
-    lineaqr = lineaqr + 23;
+    lineaqr = lineaqr + 20;
     doc.setFont("Helvetica", "");
     doc.setFontSize(9);
 
     var texto = doc.splitTextToSize("Cuenta Empresa : ", 200);
     doc.text(texto, 10, lineaqr, "left");
-    lineaqr = lineaqr + 3;
+    lineaqr = lineaqr;
     doc.autoTable({
       startY: lineaqr,
       margin: { top: 10, left: 10 },
@@ -1991,6 +2048,21 @@ function impresionA5_horizontal(array, qr, arraycabecera) {
   );
   doc.text(texto, margin, lineaqr, "left");
   lineaqr += 3;
+
+  const adelantoA5 = obtenerTextoAdelanto(arraycabe, total, moneda);
+  if (adelantoA5) {
+    doc.setFont("Helvetica", "bold");
+    doc.text(adelantoA5.linea1Label, margin, lineaqr, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(adelantoA5.linea1Value, margin + doc.getTextWidth(adelantoA5.linea1Label), lineaqr, "left");
+    lineaqr += 3;
+
+    doc.setFont("Helvetica", "bold");
+    doc.text(adelantoA5.linea2Label, margin, lineaqr, "left");
+    doc.setFont("Helvetica", "");
+    doc.text(adelantoA5.linea2Value, margin + doc.getTextWidth(adelantoA5.linea2Label), lineaqr, "left");
+    lineaqr += 3;
+  }
 
   if (arraycabe.observacion && arraycabe.observacion.length >= 100) {
     linea += 4;
@@ -2536,6 +2608,35 @@ function formatMoney(num) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+function obtenerTextoAdelanto(cabecera, totalDoc, monedaDoc) {
+  const ad = cabecera && cabecera.pago_adelanto;
+  const monto = Number(ad && ad.monto);
+  if (!Number.isFinite(monto) || monto <= 0) return null;
+
+  const tipo = String((ad && ad.tipo_op) || "-").trim();
+  const nro = String((ad && ad.n_operacion) || "-").trim() || "-";
+  const banco = String((ad && ad.banco) || "-").trim() || "-";
+  const monAdelanto = String((ad && ad.moneda) || monedaDoc || "").trim();
+  const fechaAdelanto = ad && ad.fecha;
+  let fechaTexto = "-";
+  if (typeof fechaAdelanto === "number" && Number.isFinite(fechaAdelanto)) {
+    fechaTexto = moment.unix(fechaAdelanto).format("DD/MM/YYYY");
+  } else if (typeof fechaAdelanto === "string" && fechaAdelanto.trim()) {
+    fechaTexto = moment(fechaAdelanto).isValid()
+      ? moment(fechaAdelanto).format("DD/MM/YYYY")
+      : fechaAdelanto;
+  }
+  const totalNum = Number(totalDoc || 0);
+  const saldo = Math.max(0, totalNum - monto);
+
+  return {
+    linea1Label: "PAGO ADELANTO: ",
+    linea1Value: ` ${tipo} - Nro OP: ${nro} | ${banco}: ${monAdelanto} ${formatMoney(monto)} | ${fechaTexto}`,
+    linea2Label: "SALDO: ",
+    linea2Value: ` ${monedaDoc || monAdelanto} ${formatMoney(saldo)}`,
+  };
 }
 
 function obtenerPrecioUnitarioParaMostrar(item) {

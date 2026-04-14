@@ -389,9 +389,15 @@ export default {
                 const dentroCategoria = !store.state.configuracion.ordencategorias ||
                     (item.categoria || '').toLowerCase().includes(this.categoriaselecta.toLowerCase());
 
-                // Buscamos coincidencia de todas las palabras en el nombre del producto
+                // Permite buscar por nombre, id y codigo interno
                 const nombre = (item.nombre || '').toLowerCase();
-                const coincidePalabras = palabras.every(palabra => nombre.includes(palabra));
+                const idProducto = String(item.id || '').toLowerCase();
+                const codigoInterno = String(item.cod_interno || '').toLowerCase();
+                const coincidePalabras = palabras.every(palabra =>
+                    nombre.includes(palabra) ||
+                    idProducto.includes(palabra) ||
+                    codigoInterno.includes(palabra)
+                );
 
                 return dentroCategoria && coincidePalabras;
             });
