@@ -1505,9 +1505,11 @@ export default {
             }
 
         },
-        sumacontador() {
-            sumaContador("ordenproducto", parseInt(this.id) + 1)
-        },
+    sumacontador() {
+    const n = Number(this.id)
+    if (!Number.isFinite(n)) return
+    sumaContador("ordenproducto", n + 1)
+},
         subirXLS() {
             this.$router.push({
                 name: "ImportaExporta"
