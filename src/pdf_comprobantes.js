@@ -2453,12 +2453,12 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
   );
   doc.text(texto, boxX + boxW / 2, ySerieA5, "center");
 
-  const yHeaderBottom = Math.max(linea, boxY + boxH);
+  const yHeaderBottom = Math.max(linea, boxY + boxH) +4;
 
   // --- Marco de datos de cliente ---
   doc.setFontSize(7.5);
   doc.setLineWidth(0.3);
-  doc.rect(margin, yHeaderBottom - 1, usable, 20);
+  doc.rect(margin, yHeaderBottom - 1, usable, 20.5);
   linea = yHeaderBottom + 3;
 
   // Izquierda
@@ -2556,7 +2556,7 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
   doc.text(arraycabecera.forma_pago || "", valueX2, lineaDer, "left");
 
   // --- Tabla de productos ---
-  linea = yHeaderBottom + 18;
+  linea = yHeaderBottom + 22;
 
   const nuevoArray = new Array(array.length);
   for (let i = 0; i < array.length; i++) {
