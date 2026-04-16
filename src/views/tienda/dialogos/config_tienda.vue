@@ -1,5 +1,5 @@
 <template>
-   <v-dialog v-model="dial" class="mx-auto" max-width="550" persistent>
+    <v-dialog v-model="dial" class="mx-auto" max-width="550" persistent>
         <div>
             <v-system-bar window dark>
                 <v-icon large @click="cierre()" color="red">mdi-close</v-icon>
@@ -7,26 +7,27 @@
 
             </v-system-bar>
         </div>
-    <v-card outlined class="rounded-lg">
-        <v-card-title class="font-weight-bold">
-            ⚙️ Configuración de pedidos
-        </v-card-title>
+        <v-card outlined class="rounded-lg">
+            <v-card-title class="font-weight-bold">
+                ⚙️ Configuración de pedidos
+            </v-card-title>
 
-        <v-divider />
+            <v-divider />
 
-        <v-card-text class="mt-6">
-            <v-text-field v-model.number="pedidoMinimo" label="Monto mínimo de pedido" prefix="S/ " type="number"
-                outlined dense min="0" hint="El pedido no podrá registrarse si no supera este monto" persistent-hint />
-        </v-card-text>
+            <v-card-text class="mt-6">
+                <v-text-field v-model.number="pedidoMinimo" label="Monto mínimo de pedido" prefix="S/ " type="number"
+                    outlined dense min="0" hint="El pedido no podrá registrarse si no supera este monto"
+                    persistent-hint />
+            </v-card-text>
 
-        <v-card-actions>
-            <v-spacer />
-            <v-btn color="primary" :loading="guardando" @click="guardar">
-                Guardar cambios
-            </v-btn>
-        </v-card-actions>
-    </v-card>
-   </v-dialog>
+            <v-card-actions>
+                <v-spacer />
+                <v-btn color="primary" :loading="guardando" @click="guardar">
+                    Guardar cambios
+                </v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
 </template>
 
 <script>
@@ -39,12 +40,12 @@ export default {
 
     data() {
         return {
-            dial:false,
+            dial: false,
             pedidoMinimo: 0,
             guardando: false,
         }
     },
-    created(){
+    created() {
         this.dial = true
     },
     mounted() {
@@ -69,20 +70,20 @@ export default {
         async guardar() {
             try {
                 this.guardando = true
-                        store.commit("dialogoprogress")
+                store.commit("dialogoprogress")
                 await this.refConfig().update({
                     pedido_minimo: Number(this.pedidoMinimo) || 0,
                     updatedAt: Date.now(),
                 })
-                     store.commit("dialogoprogress")
-                     this.cierre()
+                store.commit("dialogoprogress")
+                this.cierre()
             } catch (e) {
                 console.error("Error guardando configuración", e)
             } finally {
                 this.guardando = false
             }
         },
-        cierre(){
+        cierre() {
             this.$emit("cerrar")
             this.dial = false
 
