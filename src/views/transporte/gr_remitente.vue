@@ -813,6 +813,10 @@ export default {
             this.ruc_destinatario = cabecera.dni
             this.documento_dest = cabecera.tipoDocumento
             this.razonsocial_destinatario = cabecera.cliente
+            const pesoPedido = cabecera?.peso_total ?? 0
+            if (pesoPedido !== null && String(pesoPedido).trim() !== '') {
+                this.peso = pesoPedido
+            }
 
             this.id_grupo_pedido = cabecera.id_grupo || ''
             this.numeracion_pedido = cabecera.numeracion || ''

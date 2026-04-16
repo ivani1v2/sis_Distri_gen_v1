@@ -200,8 +200,8 @@
                     <v-col cols="12">
                         <v-radio-group v-model="tipocomprobante" row dense>
                             <v-radio label="Nota" value="T"></v-radio>
-                            <v-radio v-if="$store.state.permisos.es_admin" label="Boleta" value="B"></v-radio>
-                            <v-radio v-if="$store.state.permisos.es_admin" label="Factura" value="F"></v-radio>
+                            <v-radio label="Boleta" value="B"></v-radio>
+                            <v-radio label="Factura" value="F"></v-radio>
                         </v-radio-group>
                     </v-col>
                 </v-row>
