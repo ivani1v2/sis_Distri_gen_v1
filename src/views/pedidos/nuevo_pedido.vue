@@ -412,7 +412,7 @@ export default {
         return {
             dialogoCronograma: false,
             loadingGuardar: false,
-            tipocomprobante: 'T',
+            tipocomprobante: '',
             documentos: ['SIN DOCUMENTO', 'DNI', 'RUC', 'Pasaporte', 'Carnet de Extranjeria'],
             documento: 'DNI',
             numero: '',
@@ -469,11 +469,7 @@ export default {
             this.nombreCompleto = data.nombre || '';
             this.telfcliente = data.telefono || '';
             const usarDefecto = store.state.configuracion.usar_comprobante_defecto === true
-            if (usarDefecto) {
-                this.tipocomprobante = store.state.configuracion.defecto || 'T';
-            } else {
-                this.tipocomprobante = data.tipocomprobante || 'T';
-            }
+    
 
             // OPCIONAL: si tu componente tiene estas props/campos, completa coords
             if ('latitud' in this) this.latitud = (data.latitud ?? dirPri?.latitud ?? null);
@@ -483,7 +479,7 @@ export default {
                 this.cargarDatosCredito(data.documento);
             }
         } else {
-            this.tipocomprobante = store.state.configuracion.defecto || 'T';
+           
         }
         if ((!this.listaproductos || this.listaproductos.length === 0) &&
             Array.isArray(store.state.lista_productos) &&
@@ -724,9 +720,8 @@ export default {
             if (store.state.permisos.permite_editar_bono) {
                 this.recalculoCompleto()
             }
-            if (!store.state.permisos.es_admin) {
-                this.tipocomprobante = 'T';
-            }
+          
+            
             this.dial_guardar = true;
         },
         abrirPagoAdelantoDialog() {
@@ -741,6 +736,11 @@ export default {
             if (!this.numero) {
                 store.commit("dialogosnackbar", "Ingrese el número de documento");
                 return;
+            }
+            console.log(this.tipocomprobante)
+            if(this.tipocomprobante==''){
+                alert('seleccione comprobante a emitir')
+                return
             }
             const docStr = String(this.numero || '').trim();
 
