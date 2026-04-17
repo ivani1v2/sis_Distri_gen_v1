@@ -60,6 +60,9 @@
                                 <div class="text-caption font-weight-bold text-truncate black--text">
                                     {{ item.nombre }}
                                 </div>
+                                <div class="text-caption grey--text text-truncate">
+                                    {{ item.categoria || 'Sin categoria' }}
+                                </div>
                             </v-card-text>
 
                             <input :ref="'file_' + item.id" type="file" accept="image/*" style="display:none"
@@ -70,8 +73,12 @@
             </v-card>
         </template>
 
-        <v-autocomplete v-else :value="localValue.nombre" :items="items" label="Marca" outlined rounded dense
-            clearable hide-details @input="actualizarNombre" />
+        <div v-else>
+            <v-autocomplete :value="localValue.nombre" :items="items" label="Marca" outlined rounded dense clearable
+                hide-details @input="actualizarNombre" />
+            <v-autocomplete class="mt-3" :value="localValue.categoria" :items="categorias" label="Categoria relacionada"
+                outlined rounded dense clearable hide-details @input="actualizarCategoria" />
+        </div>
     </div>
 </template>
 
@@ -98,6 +105,10 @@ export default {
             type: String,
             default: "",
         },
+        categorias: {
+            type: Array,
+            default: () => [],
+        },
     },
     data() {
         return {
@@ -108,6 +119,7 @@ export default {
         localValue() {
             return {
                 nombre: this.value?.nombre || "",
+                categoria: this.value?.categoria || "",
             }
         },
     },
@@ -122,7 +134,10 @@ export default {
     },
     methods: {
         actualizarNombre(nombre) {
-            this.$emit("input", { nombre: nombre || "" })
+            this.$emit("input", { ...this.localValue, nombre: nombre || "" })
+        },
+        actualizarCategoria(categoria) {
+            this.$emit("input", { ...this.localValue, categoria: categoria || "" })
         },
         abrirSelector(id) {
             const input = this.$refs[`file_${id}`]

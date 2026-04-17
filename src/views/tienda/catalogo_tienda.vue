@@ -37,6 +37,9 @@
             <v-btn color="primary" rounded depressed @click="dial_config = !dial_config">
                 <v-icon left>mdi-cog</v-icon> Configura
             </v-btn>
+               <v-btn color="primary" rounded depressed @click="sincronizar">
+                <v-icon left>mdi-cog</v-icon> sincroniza
+            </v-btn>
         </v-card>
         <v-card elevation="2" class="rounded-lg">
             <v-tabs v-model="tab" background-color="white" color="primary" grow class="rounded-t-lg">
@@ -319,7 +322,8 @@
                             @change="seleccionarFotoDialogo" />
                     </div>
 
-                    <dialogo-marca v-if="tipoDialogo === 'marca'" v-model="formMarca" :items="array_marca" />
+                    <dialogo-marca v-if="tipoDialogo === 'marca'" v-model="formMarca" :items="array_marca"
+                        :categorias="arraycategoria" />
 
                     <dialogo-categorias v-if="tipoDialogo === 'categoria'" v-model="formCategoria"
                         :items="arraycategoria" />
@@ -474,6 +478,8 @@ import dial_crop from "./dialogos/dial_foto.vue"
 import DialogoMarca from "./dialogos/marca.vue"
 import DialogoCategorias from "./dialogos/categorias.vue"
 import DialogoProductos from "./dialogos/productos.vue"
+import axios from "axios";
+
 export default {
     name: "caja",
     props: { dial_activo: "" },
@@ -493,7 +499,7 @@ export default {
             dlgAdd: false,
             tipoDialogo: "",
 
-            formMarca: { nombre: "" },
+            formMarca: { nombre: "", categoria: "" },
             formCategoria: { nombre: "" },
             formProducto: {
                 nombre: "",
@@ -563,7 +569,7 @@ export default {
         },
 
         deshabilitarGuardar() {
-            if (this.tipoDialogo === "marca") return !this.formMarca.nombre.trim()
+            if (this.tipoDialogo === "marca") return !this.formMarca.nombre.trim() || !this.formMarca.categoria
             if (this.tipoDialogo === "categoria") return !this.formCategoria.nombre.trim()
             if (this.tipoDialogo === "producto")
                 return (
@@ -594,30 +600,66 @@ export default {
 
     },
     methods: {
+        async sincronizar() {
+            const bd = this.bd || store.state.baseDatos.bd
+            const productosJson = (this.productos || []).map((item) => ({
+                id: item.id || "",
+                nombre: item.nombre || "",
+                precio: Number(item.precio || 0),
+                marca: item.marca || "",
+                categoria: item.categoria || "",
+                medida: item.medida || "UNIDAD",
+                precio_may1: Number(item.precio_may1 || 0),
+                precio_may2: Number(item.precio_may2 || 0),
+                escala_may1: Number(item.escala_may1 || 0),
+                escala_may2: Number(item.escala_may2 || 0),
+                activo: !!item.activo,
+                controstock: !!item.controstock,
+                nuevo_ingreso: !!item.nuevo_ingreso,
+                fotoUrl: item.fotoUrl || "",
+                thumbB64: item.thumbB64 || "",
+            }))
+
+            if (!bd || !productosJson.length) return
+
+            try {
+                store.commit("dialogoprogress")
+
+                const response = await axios.post(
+                    "http://localhost:5001/domo-tienda/us-central1/back_tienda",
+                    {
+                        bd: String(bd),
+                        metodo: "sincroniza_productos",
+                        data: productosJson,
+                    },
+                    {
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                    }
+                )
+
+                console.log("Productos sincronizados:", response.data)
+            } catch (error) {
+                console.error("Error sincronizando productos:", error?.response?.data || error.message || error)
+            } finally {
+                store.commit("dialogoprogress")
+            }
+        },
         crearFormProductoBase() {
             return {
                 nombre: "",
                 precio: 0,
                 marca: "",
                 categoria: "",
-                codbarra: "",
-                costo: 0,
-                stock: 0,
-                peso: 0,
-                factor: 1,
                 medida: "UNIDAD",
-                operacion: "EXONERADA",
-                tipoproducto: "BIEN",
                 activo: true,
                 controstock: true,
-                icbper: false,
-                tiene_bono: false,
-                margen: 0,
+                nuevo_ingreso: false,
                 precio_may1: 0,
                 precio_may2: 0,
                 escala_may1: 0,
                 escala_may2: 0,
-                editado: 0,
                 idCatalogo: "",
             }
         },
@@ -631,26 +673,38 @@ export default {
                 precio: Number(producto.precio || base.precio),
                 marca: typeof producto.marca === "string" ? producto.marca : base.marca,
                 categoria: producto.categoria || base.categoria,
-                codbarra: producto.codbarra || base.codbarra,
-                costo: Number(producto.costo || base.costo),
-                stock: Number(producto.stock || base.stock),
-                peso: Number(producto.peso || base.peso),
-                factor: Number(producto.factor || base.factor),
                 medida: producto.medida || base.medida,
-                operacion: producto.operacion || base.operacion,
-                tipoproducto: producto.tipoproducto || base.tipoproducto,
                 activo: producto.activo !== undefined ? !!producto.activo : base.activo,
                 controstock: producto.controstock !== undefined ? !!producto.controstock : base.controstock,
                 nuevo_ingreso: producto.nuevo_ingreso !== undefined ? !!producto.nuevo_ingreso : base.nuevo_ingreso,
-                icbper: producto.icbper !== undefined ? !!producto.icbper : base.icbper,
-                tiene_bono: producto.tiene_bono !== undefined ? !!producto.tiene_bono : base.tiene_bono,
-                margen: Number(producto.margen || base.margen),
                 precio_may1: Number(producto.precio_may1 || base.precio_may1),
                 precio_may2: Number(producto.precio_may2 || base.precio_may2),
                 escala_may1: Number(producto.escala_may1 || base.escala_may1),
                 escala_may2: Number(producto.escala_may2 || base.escala_may2),
-                editado: Number(producto.editado || base.editado),
-                idCatalogo: producto.idCatalogo || producto.id || base.idCatalogo,
+                idCatalogo: producto.idCatalogo || base.idCatalogo,
+            }
+        },
+
+        construirItemProducto({ id, nombre, orden, actual = {} }) {
+            return {
+                id,
+                nombre,
+                orden,
+                updatedAt: Date.now(),
+                fotoUrl: actual.fotoUrl || "",
+                thumbB64: actual.thumbB64 || "",
+                rutaStorage: actual.rutaStorage || "",
+                precio: Number(this.formProducto.precio || 0),
+                marca: this.formProducto.marca || "",
+                categoria: this.formProducto.categoria || "",
+                medida: this.formProducto.medida || "UNIDAD",
+                precio_may1: Number(this.formProducto.precio_may1 || 0),
+                precio_may2: Number(this.formProducto.precio_may2 || 0),
+                escala_may1: Number(this.formProducto.escala_may1 || 0),
+                escala_may2: Number(this.formProducto.escala_may2 || 0),
+                activo: !!this.formProducto.activo,
+                controstock: !!this.formProducto.controstock,
+                nuevo_ingreso: !!this.formProducto.nuevo_ingreso,
             }
         },
 
@@ -821,7 +875,7 @@ export default {
             this.tipoDialogo = "marca"
             this.editMode = true
             this.editId = item.id
-            this.formMarca = { nombre: item.nombre || "" }
+            this.formMarca = { nombre: item.nombre || "", categoria: item.categoria || "" }
             this.previewDialogo = item.fotoUrl || item.thumbB64 || ""
             this.archivoDialogo = null
             this.dlgAdd = true
@@ -901,7 +955,7 @@ export default {
             this.editId = ""
             this.productoSelId = null
 
-            if (tipo === "marca") this.formMarca = { nombre: "" }
+            if (tipo === "marca") this.formMarca = { nombre: "", categoria: "" }
             if (tipo === "categoria") this.formCategoria = { nombre: "" }
             if (tipo === "producto") this.formProducto = this.crearFormProductoBase()
 
@@ -933,6 +987,13 @@ export default {
         generarId() {
             return "id_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
         },
+        obtenerIdProductoDesdeStore() {
+            const idBuscado = this.formProducto.idCatalogo || this.productoSelId
+            if (!idBuscado) return ""
+
+            const productoStore = (this.arrayProductos || []).find(x => String(x.id) === String(idBuscado))
+            return productoStore?.id || idBuscado || ""
+        },
         async guardarItem() {
             if (this.deshabilitarGuardar) return
             store.commit("dialogoprogress")
@@ -946,13 +1007,20 @@ export default {
                 if (!tabla) return
 
                 // si es edición, no generes id nuevo
-                const id = this.editMode ? this.editId : this.generarId()
+                const id = this.editMode
+                    ? this.editId
+                    : esProducto
+                        ? this.obtenerIdProductoDesdeStore()
+                        : this.generarId()
+
+                if (esProducto && !id) return
 
                 const nombre = esMarca
                     ? this.formMarca.nombre.trim()
                     : esCategoria
                         ? this.formCategoria.nombre.trim()
                         : this.formProducto.nombre.trim()
+                const categoriaMarca = esMarca ? (this.formMarca.categoria || "") : ""
 
                 // orden:
                 // - si edita: respeta el orden actual del producto
@@ -995,38 +1063,16 @@ export default {
                     if (esProducto) actual = (this.productos || []).find(x => x.id === id) || {}
                     nombreAnterior = actual.nombre || ""
 
-                    item = {
-                        ...actual,
-                        id,
-                        nombre,
-                        orden,
-                        updatedAt: Date.now(),
-                        ...(esProducto ? {
-                            precio: Number(this.formProducto.precio || 0),
-                            marca: this.formProducto.marca || "",
-                            categoria: this.formProducto.categoria || "",
-                            codbarra: this.formProducto.codbarra || "",
-                            costo: Number(this.formProducto.costo || 0),
-                            stock: Number(this.formProducto.stock || 0),
-                            peso: Number(this.formProducto.peso || 0),
-                            factor: Number(this.formProducto.factor || 1),
-                            medida: this.formProducto.medida || "UNIDAD",
-                            operacion: this.formProducto.operacion || "EXONERADA",
-                            tipoproducto: this.formProducto.tipoproducto || "BIEN",
-                            activo: !!this.formProducto.activo,
-                            controstock: !!this.formProducto.controstock,
-                            nuevo_ingreso: !!this.formProducto.nuevo_ingreso,
-                            icbper: !!this.formProducto.icbper,
-                            tiene_bono: !!this.formProducto.tiene_bono,
-                            margen: Number(this.formProducto.margen || 0),
-                            precio_may1: Number(this.formProducto.precio_may1 || 0),
-                            precio_may2: Number(this.formProducto.precio_may2 || 0),
-                            escala_may1: Number(this.formProducto.escala_may1 || 0),
-                            escala_may2: Number(this.formProducto.escala_may2 || 0),
-                            editado: Number(this.formProducto.editado || 0),
-                            idCatalogo: this.formProducto.idCatalogo || "",
-                        } : {}),
-                    }
+                    item = esProducto
+                        ? this.construirItemProducto({ id, nombre, orden, actual })
+                        : {
+                            ...actual,
+                            id,
+                            nombre,
+                            ...(esMarca ? { categoria: categoriaMarca } : {}),
+                            orden,
+                            updatedAt: Date.now(),
+                        }
 
                     // 2) SOLO si cambió foto, actualizas thumb/fotoUrl/rutaStorage
                     if (this.archivoDialogo) {
@@ -1048,41 +1094,17 @@ export default {
 
                 } else {
                     // CREAR NUEVO (marca/categoria/producto)
-                    item = {
-                        id,
-                        nombre,
-                        orden,
-                        thumbB64: "",
-                        fotoUrl: "",
-                        updatedAt: Date.now(),
-                    }
-
-                    if (esProducto) {
-                        item.precio = Number(this.formProducto.precio || 0)
-                        item.marca = this.formProducto.marca || ""
-                        item.categoria = this.formProducto.categoria || ""
-                        item.codbarra = this.formProducto.codbarra || ""
-                        item.costo = Number(this.formProducto.costo || 0)
-                        item.stock = Number(this.formProducto.stock || 0)
-                        item.peso = Number(this.formProducto.peso || 0)
-                        item.factor = Number(this.formProducto.factor || 1)
-                        item.medida = this.formProducto.medida || "UNIDAD"
-                        item.operacion = this.formProducto.operacion || "EXONERADA"
-                        item.tipoproducto = this.formProducto.tipoproducto || "BIEN"
-                        item.activo = !!this.formProducto.activo
-                        item.controstock = !!this.formProducto.controstock
-                        item.nuevo_ingreso = !!this.formProducto.nuevo_ingreso
-                        item.icbper = !!this.formProducto.icbper
-                        item.tiene_bono = !!this.formProducto.tiene_bono
-                        item.margen = Number(this.formProducto.margen || 0)
-                        item.precio_may1 = Number(this.formProducto.precio_may1 || 0)
-                        item.precio_may2 = Number(this.formProducto.precio_may2 || 0)
-                        item.escala_may1 = Number(this.formProducto.escala_may1 || 0)
-                        item.escala_may2 = Number(this.formProducto.escala_may2 || 0)
-                        item.editado = Number(this.formProducto.editado || 0)
-                        item.idCatalogo = this.formProducto.idCatalogo || ""
-
-                    }
+                    item = esProducto
+                        ? this.construirItemProducto({ id, nombre, orden })
+                        : {
+                            id,
+                            nombre,
+                            ...(esMarca ? { categoria: categoriaMarca } : {}),
+                            orden,
+                            thumbB64: "",
+                            fotoUrl: "",
+                            updatedAt: Date.now(),
+                        }
 
                     if (this.archivoDialogo) {
                         item.thumbB64 = await generarMiniaturaBase64(this.archivoDialogo, 220, 0.65)
