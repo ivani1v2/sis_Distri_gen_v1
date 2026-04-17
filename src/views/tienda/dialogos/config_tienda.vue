@@ -2,26 +2,44 @@
     <v-dialog v-model="dial" class="mx-auto" max-width="550" persistent>
         <div>
             <v-system-bar window dark>
-                <v-icon large @click="cierre()" color="red">mdi-close</v-icon>
+                <v-icon large color="red" @click="cierre">mdi-close</v-icon>
                 <v-spacer></v-spacer>
-
             </v-system-bar>
         </div>
+
         <v-card outlined class="rounded-lg">
             <v-card-title class="font-weight-bold">
-                ⚙️ Configuración de pedidos
+                Configuracion de pedidos
             </v-card-title>
 
             <v-divider />
 
             <v-card-text class="mt-6">
-                <v-text-field v-model.number="pedidoMinimo" label="Monto mínimo de pedido" prefix="S/ " type="number"
-                    outlined dense min="0" hint="El pedido no podrá registrarse si no supera este monto"
+                <v-text-field v-model.number="pedidoMinimo" label="Monto minimo de pedido" prefix="S/ " type="number"
+                    outlined dense min="0" hint="El pedido no podra registrarse si no supera este monto"
                     persistent-hint />
+
+                <v-text-field v-model="ultimaSincronizacion" class="mt-4" label="Ultima sincronizacion"
+                    type="datetime-local" prepend-inner-icon="mdi-clock-outline" outlined dense
+                    hint="Solo se enviaran registros modificados despues de esta fecha. Si lo dejas vacio, se enviara todo."
+                    persistent-hint />
+
+                <v-text-field v-model="telefonoWhatsapp" class="mt-4" label="Telefono de WhatsApp" type="tel"
+                    prepend-inner-icon="mdi-whatsapp" outlined dense
+                    hint="Numero al que se dirigiran los clientes cuando tengan dudas" persistent-hint />
+
+                <v-autocomplete v-model="comprobantesPermitidos" class="mt-4" :items="itemsComprobantes"
+                    item-text="label" item-value="value" label="Comprobantes permitidos" multiple chips
+                    deletable-chips outlined dense
+                    hint="Selecciona que tipos de comprobante aceptara la tienda" persistent-hint />
             </v-card-text>
 
             <v-card-actions>
                 <v-spacer />
+                <v-btn class="mr-2" color="secondary" outlined :loading="guardandoSincronizando"
+                    @click="guardarYSincronizarTodo">
+                    Sincronizar todo
+                </v-btn>
                 <v-btn color="primary" :loading="guardando" @click="guardar">
                     Guardar cambios
                 </v-btn>
@@ -42,7 +60,16 @@ export default {
         return {
             dial: false,
             pedidoMinimo: 0,
+            ultimaSincronizacion: "",
+            telefonoWhatsapp: "",
+            comprobantesPermitidos: ["B", "F", "T"],
+            itemsComprobantes: [
+                { label: "Boleta (B)", value: "B" },
+                { label: "Factura (F)", value: "F" },
+                { label: "Nota de venta (T)", value: "T" },
+            ],
             guardando: false,
+            guardandoSincronizando: false,
         }
     },
     created() {
@@ -65,29 +92,73 @@ export default {
             const snap = await this.refConfig().once("value")
             const data = snap.val() || {}
             this.pedidoMinimo = data.pedido_minimo || 0
+            this.ultimaSincronizacion = this.formatearDatetimeLocal(data.ultima_sincronizacion)
+            this.telefonoWhatsapp = data.telefono_whatsapp || ""
+            this.comprobantesPermitidos = Array.isArray(data.comprobantes_permitidos) && data.comprobantes_permitidos.length
+                ? data.comprobantes_permitidos
+                : ["B", "F", "T"]
         },
 
+        async guardarConfiguracion() {
+            await this.refConfig().update({
+                pedido_minimo: Number(this.pedidoMinimo) || 0,
+                ultima_sincronizacion: this.parsearDatetimeLocal(this.ultimaSincronizacion),
+                telefono_whatsapp: String(this.telefonoWhatsapp || "").trim(),
+                comprobantes_permitidos: Array.isArray(this.comprobantesPermitidos)
+                    ? this.comprobantesPermitidos.filter(Boolean)
+                    : [],
+                updatedAt: Date.now(),
+            })
+        },
         async guardar() {
             try {
                 this.guardando = true
                 store.commit("dialogoprogress")
-                await this.refConfig().update({
-                    pedido_minimo: Number(this.pedidoMinimo) || 0,
-                    updatedAt: Date.now(),
-                })
+                await this.guardarConfiguracion()
+                this.$emit("guardado")
                 store.commit("dialogoprogress")
                 this.cierre()
             } catch (e) {
-                console.error("Error guardando configuración", e)
+                console.error("Error guardando configuracion", e)
             } finally {
                 this.guardando = false
             }
         },
+        async guardarYSincronizarTodo() {
+            try {
+                this.guardandoSincronizando = true
+                store.commit("dialogoprogress")
+                await this.guardarConfiguracion()
+                this.$emit("guardado")
+                this.$emit("sincronizar-todo")
+                store.commit("dialogoprogress")
+                this.cierre()
+            } catch (e) {
+                console.error("Error guardando y sincronizando todo", e)
+            } finally {
+                this.guardandoSincronizando = false
+            }
+        },
+        formatearDatetimeLocal(valor) {
+            const ts = Number(valor || 0)
+            if (!ts) return ""
+
+            const fecha = new Date(ts)
+            if (Number.isNaN(fecha.getTime())) return ""
+
+            const pad = (n) => String(n).padStart(2, "0")
+            return `${fecha.getFullYear()}-${pad(fecha.getMonth() + 1)}-${pad(fecha.getDate())}T${pad(fecha.getHours())}:${pad(fecha.getMinutes())}`
+        },
+        parsearDatetimeLocal(valor) {
+            if (!valor) return 0
+            const fecha = new Date(valor)
+            const ts = fecha.getTime()
+            return Number.isNaN(ts) ? 0 : ts
+        },
         cierre() {
             this.$emit("cerrar")
             this.dial = false
-
-        }
+        },
     },
 }
 </script>

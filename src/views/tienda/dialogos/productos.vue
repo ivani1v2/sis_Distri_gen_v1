@@ -10,18 +10,25 @@
                     </v-btn>
                 </v-card-title>
 
+                <v-text-field v-model="busqueda" class="mb-4" label="Buscar por nombre o codigo"
+                    prepend-inner-icon="mdi-magnify" clearable outlined dense hide-details="auto" />
+
                 <v-alert v-if="!localItems.length" type="info" dense text>
                     No hay productos registrados.
                 </v-alert>
 
-                <draggable v-model="localItems" :animation="200" handle=".drag-handle" @end="emitirReorden" tag="div"
-                    class="d-flex flex-wrap">
+                <v-alert v-else-if="busqueda && !itemsFiltrados.length" type="info" dense text>
+                    No se encontraron productos con esa coincidencia.
+                </v-alert>
+
+                <draggable v-else-if="!busqueda" v-model="localItems" :animation="200" handle=".drag-handle"
+                    @end="emitirReorden" tag="div" class="d-flex flex-wrap">
                     <div v-for="(item, index) in localItems" :key="item.id" class="pa-2" style="width: 220px;">
                         <v-card class="rounded-xl overflow-hidden" outlined>
                             <v-hover v-slot="{ hover }">
                                 <div style="position: relative;">
-                                    <v-img :src="item.fotoUrl || placeholderImg"
-                                        :lazy-src="item.thumbB64 || placeholderImg" height="180"
+                                    <v-img :src="principalFoto(item)"
+                                        :lazy-src="principalThumb(item)" height="180"
                                         class="grey lighten-4" />
 
                                     <v-fade-transition>
@@ -73,6 +80,60 @@
                         </v-card>
                     </div>
                 </draggable>
+
+                <div v-else class="d-flex flex-wrap">
+                    <div v-for="(item, index) in itemsFiltrados" :key="item.id" class="pa-2" style="width: 220px;">
+                        <v-card class="rounded-xl overflow-hidden" outlined>
+                            <v-hover v-slot="{ hover }">
+                                <div style="position: relative;">
+                                    <v-img :src="principalFoto(item)" :lazy-src="principalThumb(item)" height="180"
+                                        class="grey lighten-4" />
+
+                                    <v-fade-transition>
+                                        <div v-if="hover" class="d-flex align-center justify-center"
+                                            style="position:absolute; inset:0; background: rgba(0,0,0,0.4); z-index: 2;">
+                                            <v-btn fab x-small color="white" class="ma-1"
+                                                @click="abrirSelector(item.id)">
+                                                <v-icon color="primary" small>mdi-camera</v-icon>
+                                            </v-btn>
+
+                                            <v-btn fab x-small color="white" class="ma-1"
+                                                @click="$emit('editar', item)">
+                                                <v-icon color="warning" small>mdi-pencil</v-icon>
+                                            </v-btn>
+
+                                            <v-btn fab x-small color="white" class="ma-1"
+                                                @click="$emit('eliminar', item.id)">
+                                                <v-icon color="red" small>mdi-delete</v-icon>
+                                            </v-btn>
+                                        </div>
+                                    </v-fade-transition>
+
+                                    <div class="pa-2" style="position:absolute; left:0; top:0; z-index: 1;">
+                                        <v-chip x-small color="rgba(0,0,0,0.5)" dark>
+                                            #{{ item.orden || (index + 1) }}
+                                        </v-chip>
+                                    </div>
+                                </div>
+                            </v-hover>
+
+                            <v-card-text class="pa-2 text-center">
+                                <div class="text-caption font-weight-bold text-truncate black--text">
+                                    {{ item.nombre }}
+                                </div>
+                                <div class="text-caption grey--text">
+                                    S/ {{ Number(item.precio || 0).toFixed(2) }}
+                                </div>
+                                <div class="text-caption grey--text text-truncate">
+                                    {{ item.marca || 'Sin marca' }} ï¿½ {{ item.categoria || 'Sin categoria' }}
+                                </div>
+                            </v-card-text>
+
+                            <input :ref="'file_' + item.id" type="file" accept="image/*" style="display:none"
+                                @change="seleccionarFoto($event, item.id)" />
+                        </v-card>
+                    </div>
+                </div>
             </v-card>
         </template>
 
@@ -239,11 +300,18 @@ export default {
     data() {
         return {
             localItems: [],
+            busqueda: "",
         }
     },
     computed: {
         localValue() {
             return this.value || {}
+        },
+        itemsFiltrados() {
+            const termino = String(this.busqueda || "").trim().toLowerCase()
+            if (!termino) return this.localItems
+
+            return (this.localItems || []).filter(item => this.coincideBusqueda(item, termino))
         },
     },
     watch: {
@@ -280,6 +348,34 @@ export default {
             const file = event.target.files?.[0]
             if (file) this.$emit("select-image", { file, id })
             event.target.value = ""
+        },
+        normalizarImagenes(item) {
+            if (Array.isArray(item?.imagenes) && item.imagenes.length) return item.imagenes
+            if (item?.fotoUrl || item?.thumbB64 || item?.rutaStorage) {
+                return [{
+                    fotoUrl: item.fotoUrl || "",
+                    thumbB64: item.thumbB64 || "",
+                    rutaStorage: item.rutaStorage || "",
+                }]
+            }
+            return []
+        },
+        principalFoto(item) {
+            return this.normalizarImagenes(item)[0]?.fotoUrl || this.placeholderImg
+        },
+        principalThumb(item) {
+            return this.normalizarImagenes(item)[0]?.thumbB64 || this.principalFoto(item)
+        },
+        coincideBusqueda(item, termino) {
+            const campos = [
+                item?.nombre,
+                item?.id,
+                item?.idCatalogo,
+                item?.codbarra,
+                item?.codigo,
+            ]
+
+            return campos.some(valor => String(valor || "").toLowerCase().includes(termino))
         },
         emitirReorden() {
             this.$emit("reordenar", [...this.localItems])
