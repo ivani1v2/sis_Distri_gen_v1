@@ -97,10 +97,13 @@
                         cols="6">
                         <v-text-field type="date" outlined dense v-model="date_vence"
                             label="Vencimiento(30 dias)"></v-text-field> </v-col> <v-col cols="4" class="mt-n5">
+                        <v-select outlined dense v-model="documento" :items="documentos" label="Tipo Doc"
+                            hide-details prepend-inner-icon="mdi-card-account-details-outline" />
+                    </v-col> <v-col cols="8" class="mt-n5">
                         <v-text-field style="font-family:verdana;font-size:75%;" type="number" outlined dense
                             v-model="num_cliente" label="N°Doc" append-icon="mdi-magnify"
                             @click:append="BuscarDocumento()" @keyup.enter="BuscarDocumento()"></v-text-field> </v-col>
-                    <v-col cols="8" class="mt-n5">
+                    <v-col cols="12" class="mt-n5">
                         <v-text-field style="font-family:verdana;font-size:75%;" outlined dense v-model="nom_cliente"
                             label="Nombre Cliente"></v-text-field> </v-col> <v-col cols="12" class="mt-n5">
                         <v-text-field style="font-family:verdana;font-size:75%;" outlined dense v-model="dir_cliente"
@@ -253,6 +256,8 @@ export default {
             date: moment(String(new Date)).format('YYYY-MM-DD'),
             date_vence: moment(String(new Date)).add(30, 'd').format('YYYY-MM-DD'),
             listaproductos: [],
+            documentos: ['SIN DOCUMENTO', 'DNI', 'RUC', 'Pasaporte', 'Carnet de Extranjeria'],
+            documento: 'DNI',
             num_cliente: '',
             nom_cliente: '',
             dir_cliente: '',
@@ -356,6 +361,7 @@ export default {
         if (this.data != '') {
             console.log('editando')
             this.num_cliente = this.data.num_cliente
+            this.documento = this.data.doc_tipo || (String(this.data.num_cliente || '').length === 11 ? 'RUC' : 'DNI')
             this.nom_cliente = this.data.nom_cliente
             this.dir_cliente = this.data.dir_cliente
             this.observacion = this.data.observacion
@@ -484,6 +490,7 @@ export default {
                 id,
                 fecha_emision,
                 fecha_vencimiento,
+                doc_tipo: this.documento,
                 num_cliente: this.num_cliente,
                 nom_cliente: this.nom_cliente,
                 dir_cliente: this.dir_cliente,

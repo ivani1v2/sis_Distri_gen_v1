@@ -419,13 +419,19 @@ export default {
             }
         },
         doc(data) {
-            store.commit("emision", this.selecto)
+            const docTipo = this.selecto?.doc_tipo || ''
+            const emisionData = {
+                ...this.selecto,
+                doc_tipo: docTipo,
+                tipodoc: docTipo,
+            }
+            store.commit("emision", emisionData)
             if (data == 'FACTURA') {
                 this.$router.push({
                     name: 'caja2'
                 })
             } else {
-                store.commit("array_guia", this.selecto)
+                store.commit("array_guia", emisionData)
 
                 this.$router.push({
                     name: 'gr_remitente'
@@ -491,8 +497,11 @@ export default {
         continuarAPreventa(payload) {
             this.dial_deudas_cliente = false
             const proforma = this.selecto
+            const docTipo = proforma?.doc_tipo || ''
             const clienteData = {
                 documento: proforma.num_cliente || '',
+                tipodoc: docTipo,
+                doc_tipo: docTipo,
                 nombre: proforma.nom_cliente || '',
                 direccion: proforma.dir_cliente || '',
                 telefono: proforma.telefono || ''
