@@ -25,7 +25,11 @@ export const allEmpresas = () => {
 export const nuevaEmpresa = (id, array) => {
   return empresas.child(id).set(array);
 };
-
+export const nuevoflujo_front = (bd, array) => {
+  const id = db.database().ref(`${bd}/flujocaja`).push().key
+  array.id = id
+  return db.database().ref(`${bd}/flujocaja/${id}`).set(array)
+}
 export const eliminaEmpresa = (id) => {
   return empresas.child(id).remove();
 };

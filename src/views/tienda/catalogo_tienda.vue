@@ -1,5 +1,26 @@
 <template>
     <div class="tienda-page">
+         <v-row v-if="mostrarAlertaSincronizada && tiendaSincronizada" dense class="mb-1 ">
+            <v-col cols="12">
+                <v-card class="sync-status-card rounded-xl" flat>
+                    <v-card-text class="d-flex align-center py-3 px-4">
+                        <div class="sync-status-icon mr-3">
+                            <v-icon color="#15803d">mdi-check-decagram</v-icon>
+                        </div>
+                        <div>
+                            <div class="sync-status-title">Toda la tienda esta sincronizada</div>
+                            <div class="sync-status-copy">
+                                No hay categorias, marcas, productos, promociones, grupos de precio ni configuracion pendientes de envio.
+                            </div>
+                        </div>
+                        <v-spacer />
+                        <v-btn icon small color="#15803d" @click="cerrarAlertaSincronizada">
+                            <v-icon small>mdi-close</v-icon>
+                        </v-btn>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+        </v-row>
         <v-row dense class="mb-1">
             <v-col cols="12">
                 <v-card class="tienda-hero-compact rounded-xl overflow-hidden" flat>
@@ -46,27 +67,7 @@
             </v-col>
         </v-row>
 
-        <v-row v-if="mostrarAlertaSincronizada && tiendaSincronizada" dense class="mb-3">
-            <v-col cols="12">
-                <v-card class="sync-status-card rounded-xl" flat>
-                    <v-card-text class="d-flex align-center py-3 px-4">
-                        <div class="sync-status-icon mr-3">
-                            <v-icon color="#15803d">mdi-check-decagram</v-icon>
-                        </div>
-                        <div>
-                            <div class="sync-status-title">Toda la tienda esta sincronizada</div>
-                            <div class="sync-status-copy">
-                                No hay categorias, marcas, productos, promociones, grupos de precio ni configuracion pendientes de envio.
-                            </div>
-                        </div>
-                        <v-spacer />
-                        <v-btn icon small color="#15803d" @click="cerrarAlertaSincronizada">
-                            <v-icon small>mdi-close</v-icon>
-                        </v-btn>
-                    </v-card-text>
-                </v-card>
-            </v-col>
-        </v-row>
+       
 
         <!-- ====================== ACCESO A TIENDA (PRO) ====================== -->
         <v-card v-if="false" class="mb-3 rounded-lg tienda-banner" outlined>
@@ -933,7 +934,8 @@ export default {
                 store.commit("dialogoprogress")
 
                 const response = await axios.post(
-                    "http://localhost:5001/domo-tienda/us-central1/back_tienda",
+                    "https://us-central1-domo-tienda.cloudfunctions.net/back_tienda",
+                    //"http://localhost:5001/domo-tienda/us-central1/back_tienda",
                     {
                         bd: String(bd),
                         metodo: "sincroniza_productos",

@@ -1,6 +1,16 @@
 <template>
     <div class="mb-6 mt-3 pa-4">
         <v-btn v-if="false" @click="detalle">mostrar</v-btn>
+          <v-btn
+          v-if="false"
+            color="primary"
+            dark
+            class="mr-2"
+            :disabled="!listafiltrada.length"
+            @click="reconstruirFlujoCajaListado"
+        >
+            reconstruir flujo caja
+        </v-btn>
         <v-card class="pa-2">
             <v-row dense>
                 <v-col cols="6" sm="4">
@@ -133,7 +143,8 @@ import {
     allCabecera,
     consultaDetalle,
     grabaDatoC,
-    consulta_Cabecera
+    consulta_Cabecera,
+          nuevoflujo_front
 } from '../db'
 import store from '@/store/index'
 import imprime from '@/components/dialogos/dialog_imprime'
@@ -172,7 +183,113 @@ export default {
         this.busca()
     },
     methods: {
+async reconstruirFlujoCajaListado() {
+    const toNum = (v) => {
+        const n = parseFloat(String(v ?? '').replace(',', '.'))
+        return Number.isFinite(n) ? n : 0
+    }
 
+    try {
+        if (!this.listafiltrada.length) {
+            store.commit('dialogosnackbar', 'No hay documentos listados para reconstruir')
+            return
+        }
+
+        store.commit("dialogoprogress")
+
+        const bd = store.state.baseDatos.bd
+        let procesados = 0
+
+        for (const cabecera of this.listafiltrada) {
+            const totalNeto = Math.max(0, toNum(cabecera.total) - toNum(cabecera.descuentos || 0))
+            const esCredito = String(cabecera.forma_pago || '').toLowerCase() === 'credito'
+
+            if (esCredito) {
+                const cuotas = Array.isArray(cabecera.cuotas) ? cabecera.cuotas : []
+                let montoCredito = cuotas.reduce((acc, c) => acc + toNum(c.importe), 0)
+                if (montoCredito > totalNeto) montoCredito = totalNeto
+
+                const metodosInicial = Array.isArray(cabecera.metodo_pago_credito)
+                    ? cabecera.metodo_pago_credito.filter(p => toNum(p.monto) > 0)
+                    : []
+
+                const montoInicial = metodosInicial.reduce((acc, m) => acc + toNum(m.monto), 0)
+                const restante = Math.max(0, totalNeto - montoCredito - montoInicial)
+
+                if (montoCredito > 0) {
+                    await nuevoflujo_front(bd, {
+                        numeracion_doc: cabecera.numeracion,
+                        fecha: cabecera.fecha,
+                        total: montoCredito,
+                        estado: 'activo',
+                        responsable: '',
+                        sujeto: '',
+                        operacion: 'credito',
+                        observacion: 'VENTA CREDITO - ' + cabecera.numeracion,
+                        modo: 'credito',
+                    })
+                }
+
+                for (const pago of metodosInicial) {
+                    const monto = toNum(pago.monto)
+                    if (!monto) continue
+
+                    await nuevoflujo_front(bd, {
+                        numeracion_doc: cabecera.numeracion,
+                        fecha: cabecera.fecha,
+                        total: monto,
+                        estado: 'activo',
+                        responsable: '',
+                        sujeto: '',
+                        operacion: 'ingreso',
+                        observacion: 'PAGO INICIAL - ' + cabecera.numeracion,
+                        modo: pago.nombre || 'EFECTIVO',
+                    })
+                }
+
+                if (restante > 0) {
+                    await nuevoflujo_front(bd, {
+                        numeracion_doc: cabecera.numeracion,
+                        fecha: cabecera.fecha,
+                        total: restante,
+                        estado: 'activo',
+                        responsable: '',
+                        sujeto: '',
+                        operacion: 'ingreso',
+                        observacion: 'VENTA - ' + cabecera.numeracion,
+                        modo: 'EFECTIVO',
+                    })
+                }
+            } else {
+                for (const pago of (cabecera.modopago || [])) {
+                    const monto = toNum(pago.monto)
+                    if (!monto) continue
+
+                    await nuevoflujo_front(bd, {
+                        numeracion_doc: cabecera.numeracion,
+                        fecha: cabecera.fecha,
+                        total: monto,
+                        estado: 'activo',
+                        responsable: '',
+                        sujeto: '',
+                        operacion: 'ingreso',
+                        observacion: 'VENTA - ' + cabecera.numeracion,
+                        modo: pago.nombre || 'EFECTIVO',
+                    })
+                }
+            }
+
+            procesados++
+        }
+
+        store.commit('dialogosnackbar', `Flujo reconstruido correctamente. Documentos: ${procesados}`)
+    } catch (error) {
+        console.error(error)
+        store.commit('dialogosnackbar', error.message || 'Error al reconstruir flujo de caja')
+    } finally {
+        store.commit("dialogoprogress")
+    }
+},
         selecciona_item(item) {
 
             this.seleccionado = item
