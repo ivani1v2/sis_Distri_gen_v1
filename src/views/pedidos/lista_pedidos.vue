@@ -129,6 +129,9 @@
                 </template>
                 <template v-slot:[`item.observacion`]="{ item }">
                     <span style="font-size:75%;">{{ item.observacion }}</span>
+                    <v-icon v-if="item.pedido_aplicativo" small color="primary" class="ml-2">
+                        mdi-cellphone
+                    </v-icon>
                 </template>
                 <template v-slot:[`item.fecha`]="{ item }">
                     <span style="font-size:75%;">{{ item.fecha }}</span>
@@ -168,15 +171,16 @@
                                         </v-list-item-icon>
                                         <v-list-item-title>Descargar</v-list-item-title>
                                     </v-list-item>
-                                <v-list-item v-if="puedeEditar(item)" @click="editar(item)">
-                                    <v-list-item-icon><v-icon color="success"
-                                            small>mdi-pencil</v-icon></v-list-item-icon>
-                                    <v-list-item-title>Editar</v-list-item-title>
-                                </v-list-item>
-                                <v-list-item v-if="puedeEditar(item)" @click="anular(item)">
-                                    <v-list-item-icon><v-icon color="error" small>mdi-delete</v-icon></v-list-item-icon>
-                                    <v-list-item-title>Anular</v-list-item-title>
-                                </v-list-item>
+                                    <v-list-item v-if="puedeEditar(item)" @click="editar(item)">
+                                        <v-list-item-icon><v-icon color="success"
+                                                small>mdi-pencil</v-icon></v-list-item-icon>
+                                        <v-list-item-title>Editar</v-list-item-title>
+                                    </v-list-item>
+                                    <v-list-item v-if="puedeEditar(item)" @click="anular(item)">
+                                        <v-list-item-icon><v-icon color="error"
+                                                small>mdi-delete</v-icon></v-list-item-icon>
+                                        <v-list-item-title>Anular</v-list-item-title>
+                                    </v-list-item>
                                 </v-list>
                             </v-menu>
                         </v-col>
@@ -614,7 +618,7 @@ export default {
     },
 
     methods: {
-             puedeEditar(item) {
+        puedeEditar(item) {
             const estadosBloqueados = ['anulado', 'atendido', 'procesado'];
             const estadoNorm = String(item?.estado || '').toLowerCase().trim();
             return !estadosBloqueados.includes(estadoNorm);
@@ -686,7 +690,7 @@ export default {
                 // Trae en paralelo el detalle de cada pedido
                 const resultados = await Promise.all(
                     pedidos.map(async (cab) => {
-                      
+
                         const snap = await detalle_pedido(cab.id).once("value");
                         return {
                             cabecera: cab,
@@ -694,7 +698,7 @@ export default {
                         };
                     })
                 );
-                console.log('resutlados',resultados)
+                console.log('resutlados', resultados)
                 this.result = resultados
                 store.commit("dialogoprogress")
                 this.dial_avance = true
@@ -1138,7 +1142,7 @@ export default {
             const { cliente, accion } = payload;
             store.commit("cliente_selecto", cliente);
             store.commit("setOrigenPedido", "lista_pedidos");
-            
+
             if (accion === 'vender') {
                 this.$router.push({
                     name: 'caja2'
