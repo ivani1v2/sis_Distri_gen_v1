@@ -839,6 +839,7 @@ export default {
                 ruc: clean(cabecera?.dni),                // RUC/DNI del emisor del doc relacionado
                 tipo: clean(cabecera?.cod_comprobante),   // 03/01/07/08/etc
                 id: clean(cabecera?.numeracion || cabecera?.serie + '-' + cabecera?.correlativoDocEmitido),
+                tipoDocumento: clean(cabecera?.tipoDocumento) || "DNI"
             };
 
             // evita duplicados
@@ -868,7 +869,7 @@ export default {
                 const tipo = d.tipo ?? d.documento_tipo ?? d.doc_tipo ?? '';
                 const id = d.id ?? d.documento ?? d.doc_id ?? '';
                 const ruc = d.ruc ?? d.ruc_emisor ?? '';
-                return `${tipo}:${id}${ruc ? ' (RUC ' + ruc + ')' : ''}`;
+                return `${tipo}:${id}${ruc ? ' (' + d.tipoDocumento + ': ' + ruc + ')' : ''}`;
             }).join(' · ');
         },
 
