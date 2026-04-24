@@ -92,13 +92,17 @@
                                                 text-color="white" label>
                                                 Gratuita
                                             </v-chip>
+                                            
                                         </div>
 
                                         <div class="mt-1 text-subtitle-2 text-truncate" style="max-width:70vw;">
                                             <span class="font-weight-bold red--text">{{ Number(it.cantidad_rechazo ||
                                                 it.cantidad) }}×</span>
-                                            <span class="caption grey--text">[{{ it.codigo || it.id }}]</span>
+                                            <span class="caption font-weight-bold"> {{ it.codigo || it.id }} -</span>
                                             {{ it.nombre }}
+                                            <div v-if="it.motivo_rechazo" class="caption red--text mt-1">
+    Motivo: {{ it.motivo_rechazo }}
+</div>
                                         </div>
                                     </div>
 
@@ -149,6 +153,7 @@
                                         class="ml-1" color="pink" text-color="white" label>
                                         Gratuita
                                     </v-chip>
+                                    
                                 </div>
 
                                 <div class="text-right">
@@ -193,6 +198,9 @@
                             v-model.number="qtyRechazo" type="number" outlined dense hide-details :min="1"
                             :max="Number(seleccionActual.cantidad)" :label="labelCantidadRechazo"
                             @focus="$event.target.select()" />
+
+                        <v-select v-model="motivoRechazoSeleccionado" :items="motivosRechazo"
+                            label="Motivo de rechazo (opcional)" outlined dense clearable class="mt-2" />
 
                         <!-- Modo parcial: rechazar unidades del factor -->
                         <div v-if="modoRechazo === 'parcial' && permiteRechazoParcial">
@@ -314,7 +322,7 @@
                         </div>
                         <div :class="$vuetify.breakpoint.smAndDown ? 'mt-1' : 'text-right'">
                             <span class="font-weight-bold primary--text">{{ moneda }} {{ redondear(item_selecto.total)
-                            }}</span>
+                                }}</span>
                         </div>
                     </div>
 
@@ -341,7 +349,7 @@
                             <div class="d-flex justify-space-between">
                                 <span class="font-weight-bold">TOTAL</span>
                                 <span class="font-weight-bold primary--text">{{ moneda }} {{ detallePedidoTotal
-                                }}</span>
+                                    }}</span>
                             </div>
                         </v-card>
                     </div>
@@ -420,7 +428,14 @@ export default {
             dialogoDetalle: false,
             detallePedido: "",
             detallePedidoItems: [],
-            detallePedidoTotal: 0
+            detallePedidoTotal: 0,
+            motivosRechazo: [
+                "No hubo",
+                "No quiso, producto en malas condiciones",
+                "No quiso, error del vendedor",
+                "No quiso, error del cliente"
+            ],
+            motivoRechazoSeleccionado: "",
         };
     },
     async created() {
@@ -610,7 +625,8 @@ export default {
                 es_rechazo_parcial: esParcial,
                 factor: factor,
                 medida_original: this.seleccionActual.medida,
-                cantidad_original: Number(this.seleccionActual.cantidad)
+                cantidad_original: Number(this.seleccionActual.cantidad),
+                motivo_rechazo: this.motivoRechazoSeleccionado || null
             };
 
             this.rechazados.push(it);
@@ -620,6 +636,7 @@ export default {
             this.qtyRechazo = 1;
             this.qtyRechazoParcial = 1;
             this.modoRechazo = 'completo';
+            this.motivoRechazoSeleccionado = ""; 
         },
         quitarRechazo(it) {
             const id = it.uuid || it.id;
@@ -699,7 +716,8 @@ export default {
                     operacion: it.operacion || "",
                     factor: factor,
                     es_rechazo_parcial: it.es_rechazo_parcial || false,
-                    cantidad_original: Number(it.cantidad_original || it.cantidad || 0)
+                    cantidad_original: Number(it.cantidad_original || it.cantidad || 0),
+                    motivo_rechazo: it.motivo_rechazo || null
                 };
             });
 
