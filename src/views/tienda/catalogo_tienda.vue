@@ -576,8 +576,8 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
-        <dial_config v-if="dial_config" @cerrar="dial_config = false" @guardado="escucharTodo"
-            @sincronizar-todo="sincronizar(true)" />
+        <dial_config v-if="dial_config" @cerrar="dial_config = false" @guardado="onConfigGuardado"
+            @sincronizar-todo="onConfigSincronizarTodo" />
 
         <dial_crop ref="dlgCrop" @confirmado="onCropConfirmado" @cerrar="onCropCerrado" />
 
@@ -621,6 +621,8 @@ export default {
                 pedido_minimo: 0,
                 telefono_whatsapp: "",
                 comprobantes_permitidos: ["B", "F", "T"],
+                serie: "APP",
+                moneda: "",
                 ultima_sincronizacion: 0,
                 updatedAt: 0,
             },
@@ -841,6 +843,11 @@ export default {
         this.arrayProductos = store.state.productos
     },
     methods: {
+        obtenerMonedaTiendaFallback() {
+            return this.$store.state.moneda.find(
+                m => m.codigo == this.$store.state.configuracion.moneda_defecto
+            )?.simbolo || "S/ "
+        },
         async sincronizar(forzarTodo = false) {
             const enviarTodo = typeof forzarTodo === "boolean" ? forzarTodo : false
             const bd = this.bd || store.state.baseDatos.bd
@@ -863,7 +870,9 @@ export default {
                     marca: item.marca || "",
                     categoria: item.categoria || "",
                     medida: item.medida || "UNIDAD",
-                    factor: Number(productoStore.factor || 0),
+                    factor: Number(productoStore.factor || item.factor || 0),
+                    operacion: String(item.operacion || productoStore.operacion || "GRAVADA"),
+                    peso: Number(item.peso || productoStore.peso || 0),
                     precio_may1: Number(item.precio_may1 || 0),
                     precio_may2: Number(item.precio_may2 || 0),
                     escala_may1: Number(item.escala_may1 || 0),
@@ -920,6 +929,8 @@ export default {
                         ? this.configTienda.comprobantes_permitidos.filter(Boolean)
                         : [],
                     updatedAt: Number(this.configTienda?.updatedAt || 0),
+                    serie: String(this.configTienda?.serie || "APP").trim(),
+                    moneda: String(this.configTienda?.moneda || this.obtenerMonedaTiendaFallback()).trim(),
                 }
                 : null
 
@@ -938,6 +949,15 @@ export default {
 
             try {
                 store.commit("dialogoprogress")
+                console.log("Payload sincronizacion tienda", {
+                    configuracion: configuracionJson,
+                    productos: productosJson.map(item => ({
+                        id: item.id,
+                        operacion: item.operacion,
+                        peso: item.peso,
+                        factor: item.factor,
+                    })),
+                })
 
                 const response = await axios.post(
                     "https://us-central1-domo-tienda.cloudfunctions.net/back_tienda",
@@ -979,6 +999,20 @@ export default {
             } finally {
                 store.commit("dialogoprogress")
             }
+        },
+        async onConfigGuardado(payload = null) {
+            if (payload && typeof payload === "object") {
+                this.configTienda = {
+                    ...this.configTienda,
+                    ...payload,
+                    moneda: String(payload.moneda || this.obtenerMonedaTiendaFallback()).trim(),
+                }
+            }
+            await this.escucharTodo()
+        },
+        async onConfigSincronizarTodo(payload = null) {
+            await this.onConfigGuardado(payload)
+            await this.sincronizar(true)
         },
         crearFormProductoBase() {
             return {
@@ -1536,6 +1570,8 @@ export default {
                 comprobantes_permitidos: Array.isArray(valConfig.comprobantes_permitidos) && valConfig.comprobantes_permitidos.length
                     ? valConfig.comprobantes_permitidos
                     : ["B", "F", "T"],
+                serie: String(valConfig.serie || "APP").trim(),
+                moneda: String(valConfig.moneda || this.obtenerMonedaTiendaFallback()).trim(),
                 ultima_sincronizacion: Number(valConfig.ultima_sincronizacion || 0),
                 updatedAt: Number(valConfig.updatedAt || 0),
             }

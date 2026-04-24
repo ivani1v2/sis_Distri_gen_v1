@@ -38,7 +38,7 @@
                             outlined dense hint="Número de serie para pedidos" persistent-hint />
                     </v-col>
                     <v-col cols="6">
-                        <v-text-field v-model="monedaSimbolo" label="Moneda" type="text" :disabled="true"
+                        <v-text-field :value="moneda" label="Moneda" type="text" :disabled="true"
                             prepend-inner-icon="mdi-check" outlined dense
                             persistent-hint />
                     </v-col>
@@ -75,7 +75,7 @@ export default {
             telefonoWhatsapp: "",
             comprobantesPermitidos: ["B", "F", "T"],
             serie: "APP",
-            moneda: this.monedaSimbolo,
+            moneda: "",
             itemsComprobantes: [
                 { label: "Boleta (B)", value: "B" },
                 { label: "Factura (F)", value: "F" },
@@ -89,6 +89,7 @@ export default {
         this.dial = true
     },
     mounted() {
+        this.moneda = this.monedaSimbolo
         this.cargarConfiguracion()
     },
     computed: {
@@ -97,6 +98,19 @@ export default {
         },
     },
     methods: {
+        obtenerPayloadConfiguracion() {
+            return {
+                pedido_minimo: Number(this.pedidoMinimo) || 0,
+                ultima_sincronizacion: this.parsearDatetimeLocal(this.ultimaSincronizacion),
+                telefono_whatsapp: String(this.telefonoWhatsapp || "").trim(),
+                comprobantes_permitidos: Array.isArray(this.comprobantesPermitidos)
+                    ? this.comprobantesPermitidos.filter(Boolean)
+                    : [],
+                serie: String(this.serie || "APP").trim(),
+                moneda: String(this.moneda || this.monedaSimbolo).trim(),
+                updatedAt: Date.now(),
+            }
+        },
         refConfig() {
             return firebase
                 .database()
@@ -119,24 +133,16 @@ export default {
         },
 
         async guardarConfiguracion() {
-            await this.refConfig().update({
-                pedido_minimo: Number(this.pedidoMinimo) || 0,
-                ultima_sincronizacion: this.parsearDatetimeLocal(this.ultimaSincronizacion),
-                telefono_whatsapp: String(this.telefonoWhatsapp || "").trim(),
-                comprobantes_permitidos: Array.isArray(this.comprobantesPermitidos)
-                    ? this.comprobantesPermitidos.filter(Boolean)
-                    : [],
-                serie: String(this.serie || "APP").trim(),
-                moneda: String(this.moneda || this.monedaSimbolo).trim(),
-                updatedAt: Date.now(),
-            })
+            const payload = this.obtenerPayloadConfiguracion()
+            await this.refConfig().update(payload)
+            return payload
         },
         async guardar() {
             try {
                 this.guardando = true
                 store.commit("dialogoprogress")
-                await this.guardarConfiguracion()
-                this.$emit("guardado")
+                const payload = await this.guardarConfiguracion()
+                this.$emit("guardado", payload)
                 store.commit("dialogoprogress")
                 this.cierre()
             } catch (e) {
@@ -149,9 +155,9 @@ export default {
             try {
                 this.guardandoSincronizando = true
                 store.commit("dialogoprogress")
-                await this.guardarConfiguracion()
-                this.$emit("guardado")
-                this.$emit("sincronizar-todo")
+                const payload = await this.guardarConfiguracion()
+                this.$emit("guardado", payload)
+                this.$emit("sincronizar-todo", payload)
                 store.commit("dialogoprogress")
                 this.cierre()
             } catch (e) {
