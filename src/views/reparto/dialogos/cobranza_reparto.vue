@@ -139,7 +139,7 @@
             </v-row>
         </v-card>
 
-        <v-dialog v-model="dialog" max-width="750">
+        <v-dialog v-model="dialog" max-width="850">
             <v-card class="rounded-lg">
                 <v-card-title class="font-weight-bold primary white--text py-3">
                     <v-icon left>mdi-package-variant-remove</v-icon>
@@ -205,6 +205,11 @@
                                 'red--text': item.operacion !== 'GRATUITA'
                             }">
                                 {{ item.total_linea?.toFixed(2) }}
+                            </span>
+                        </template>
+                        <template v-slot:[`item.motivo_rechazo`]="{ item }">
+                            <span :class="item.motivo_rechazo ? 'caption red--text' : 'grey--text text--lighten-1'">
+                                {{ item.motivo_rechazo || '—' }}
                             </span>
                         </template>
                     </v-data-table>
@@ -332,8 +337,8 @@
             </v-card>
         </v-dialog>
 
-        <observacion_entrega_dialog v-model="dialObservacion" :grupo="grupo"
-            :observacion-actual="observacionEntrega" @guardado="onObservacionGuardada" />
+        <observacion_entrega_dialog v-model="dialObservacion" :grupo="grupo" :observacion-actual="observacionEntrega"
+            @guardado="onObservacionGuardada" />
     </v-dialog>
 </template>
 <script>
@@ -377,7 +382,8 @@ export default {
                 { text: "Cantidad", value: "cantidad", align: "center", width: "80px" },
                 { text: "Tipo", value: "tipo_rechazo", align: "center", width: "70px" },
                 { text: "P. Unit (S/)", value: "precio_unit", align: "right" },
-                { text: "Total (S/)", value: "total_linea", align: "right" }
+                { text: "Total (S/)", value: "total_linea", align: "right" },
+                { text: "Motivo", value: "motivo_rechazo", align: "left" }
             ]
         };
     },
@@ -574,17 +580,22 @@ export default {
                     r.cantidad || 0,
                     r.tipo_rechazo || '',
                     `${this.monedaSimbolo}${Number(r.precio_unit || 0).toFixed(2)}`,
-                    esGratuito ? `${this.monedaSimbolo}0.00` : `${this.monedaSimbolo}${Number(r.total_linea || 0).toFixed(2)}`
+                    esGratuito ? `${this.monedaSimbolo}0.00` : `${this.monedaSimbolo}${Number(r.total_linea || 0).toFixed(2)}`,
+                    r.motivo_rechazo || '—'
                 ];
             });
 
             doc.autoTable({
                 startY: 38,
-                head: [['Doc', 'Código', 'Producto', 'Medida', 'Cant', 'Tipo', 'P. Unit', 'Total']],
+                head: [['Doc', 'Código', 'Producto', 'Medida', 'Cant', 'Tipo', 'P. Unit', 'Total', 'Motivo']],
                 body: body,
                 theme: 'grid',
-                styles: { fontSize: 8 },
+                styles: { fontSize: 7 },
                 headStyles: { fillColor: [192, 57, 43] },
+                columnStyles: {
+                    2: { cellWidth: 40 }, 
+                    8: { cellWidth: 30 }
+                }
             });
 
             doc.save(`rechazos_reparto_${this.grupo}_${Date.now()}.pdf`);
@@ -604,7 +615,8 @@ export default {
                     'Cantidad': r.cantidad || 0,
                     'Tipo': r.tipo_rechazo || '',
                     'Precio Unit': Number(r.precio_unit || 0),
-                    'Total': esGratuito ? 0 : Number(r.total_linea || 0)
+                    'Total': esGratuito ? 0 : Number(r.total_linea || 0),
+                    'Motivo': r.motivo_rechazo || ''
                 };
             });
 

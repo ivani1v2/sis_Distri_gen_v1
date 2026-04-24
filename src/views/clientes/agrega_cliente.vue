@@ -414,6 +414,33 @@
                                 </v-list>
                             </v-card>
                         </v-col>
+                        <v-col cols="12" :md="esListaPreciosActivo ? 6 : 12">
+                            <v-card outlined class="rounded-lg elevation-1 fill-height">
+                                <v-card-title class="text-subtitle-1 font-weight-bold">
+                                    <v-icon left color="green">mdi-cellphone-check</v-icon>
+                                    Pedido por Aplicativo
+                                </v-card-title>
+                                <v-divider></v-divider>
+                                <v-card-text class="pt-4">
+                                    <v-switch v-model="pedidoAplicativo" :disabled="permiso_edita"
+                                        label="Permitir pedidos desde aplicativo móvil" inset color="success">
+                                        <template v-slot:label>
+                                            <div>
+                                                <span>{{ pedidoAplicativo ? 'Habilitado' : 'Deshabilitado' }}</span>
+                                                <v-tooltip bottom>
+                                                    <template v-slot:activator="{ on, attrs }">
+                                                        <v-icon small color="grey" v-bind="attrs" v-on="on"
+                                                            class="ml-1">mdi-help-circle</v-icon>
+                                                    </template>
+                                                    <span>Habilita esta opción para que el cliente pueda realizar
+                                                        pedidos desde Aplicativo (Tienda Virtual)</span>
+                                                </v-tooltip>
+                                            </div>
+                                        </template>
+                                    </v-switch>
+                                </v-card-text>
+                            </v-card>
+                        </v-col>
                     </v-row>
                 </v-card-text>
 
@@ -483,6 +510,7 @@ export default {
 
             indicePrincipal: 0, // radio de dirección principal
             mensajePrecio: '',
+            pedidoAplicativo: false,
 
             clienteForm: {
                 activo: true,
@@ -506,6 +534,7 @@ export default {
                 linea_credito: 0,
                 dias_credito: 0,
                 listas_precios: [],
+                pedido_aplicativo: false,
             }
         }
     },
@@ -594,6 +623,12 @@ export default {
         // 🔽 si desactivan crédito, resetea línea
         'clienteForm.permite_credito'(nv) {
             if (!nv) this.clienteForm.linea_credito = 0;
+        },
+        'clienteForm.pedido_aplicativo'(nv) {
+            this.pedidoAplicativo = nv || false;
+        },
+        pedidoAplicativo(nv) {
+            this.clienteForm.pedido_aplicativo = nv;
         },
     },
     methods: {
@@ -870,6 +905,7 @@ export default {
                 linea_credito: Number.isFinite(Number(c.linea_credito)) ? Number(c.linea_credito) : this.clienteForm.linea_credito || 0,
                 listas_precios: Array.isArray(c.listas_precios) ? [...c.listas_precios] : (this.clienteForm.listas_precios || []),
                 dias_credito: Number.isFinite(Number(c.dias_credito)) ? Number(c.dias_credito) : this.clienteForm.dias_credito || 0,
+                pedido_aplicativo: c.pedido_aplicativo === true,
             };
 
             // 2) Si viene formato antiguo (campos sueltos), migrar a direcciones[]
@@ -934,6 +970,7 @@ export default {
                     this.indicePrincipal = idx >= 0 ? idx : 0;
                 }
             }
+            this.pedidoAplicativo = this.clienteForm.pedido_aplicativo;
 
             // Asegura coherencia de principal
             this.onChangePrincipal();
