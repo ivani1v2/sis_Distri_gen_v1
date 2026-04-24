@@ -29,9 +29,20 @@
                     hint="Numero al que se dirigiran los clientes cuando tengan dudas" persistent-hint />
 
                 <v-autocomplete v-model="comprobantesPermitidos" class="mt-4" :items="itemsComprobantes"
-                    item-text="label" item-value="value" label="Comprobantes permitidos" multiple chips
-                    deletable-chips outlined dense
-                    hint="Selecciona que tipos de comprobante aceptara la tienda" persistent-hint />
+                    item-text="label" item-value="value" label="Comprobantes permitidos" multiple chips deletable-chips
+                    outlined dense hint="Selecciona que tipos de comprobante aceptara la tienda" persistent-hint />
+
+                <v-row class="mt-4">
+                    <v-col cols="6">
+                        <v-text-field v-model="serie" label="Serie" type="text" prepend-inner-icon="mdi-counter"
+                            outlined dense hint="Número de serie para pedidos" persistent-hint />
+                    </v-col>
+                    <v-col cols="6">
+                        <v-text-field v-model="monedaSimbolo" label="Moneda" type="text" :disabled="true"
+                            prepend-inner-icon="mdi-check" outlined dense
+                            persistent-hint />
+                    </v-col>
+                </v-row>
             </v-card-text>
 
             <v-card-actions>
@@ -63,6 +74,8 @@ export default {
             ultimaSincronizacion: "",
             telefonoWhatsapp: "",
             comprobantesPermitidos: ["B", "F", "T"],
+            serie: "APP",
+            moneda: this.monedaSimbolo,
             itemsComprobantes: [
                 { label: "Boleta (B)", value: "B" },
                 { label: "Factura (F)", value: "F" },
@@ -78,7 +91,11 @@ export default {
     mounted() {
         this.cargarConfiguracion()
     },
-
+    computed: {
+        monedaSimbolo() {
+            return this.$store.state.moneda.find(m => m.codigo == this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/ ';
+        },
+    },
     methods: {
         refConfig() {
             return firebase
@@ -97,6 +114,8 @@ export default {
             this.comprobantesPermitidos = Array.isArray(data.comprobantes_permitidos) && data.comprobantes_permitidos.length
                 ? data.comprobantes_permitidos
                 : ["B", "F", "T"]
+            this.serie = data.serie || "APP"
+            this.moneda = data.moneda || this.monedaSimbolo
         },
 
         async guardarConfiguracion() {
@@ -107,6 +126,8 @@ export default {
                 comprobantes_permitidos: Array.isArray(this.comprobantesPermitidos)
                     ? this.comprobantesPermitidos.filter(Boolean)
                     : [],
+                serie: String(this.serie || "APP").trim(),
+                moneda: String(this.moneda || this.monedaSimbolo).trim(),
                 updatedAt: Date.now(),
             })
         },

@@ -1,6 +1,6 @@
 <template>
     <div class="tienda-page">
-         <v-row v-if="mostrarAlertaSincronizada && tiendaSincronizada" dense class="mb-1 ">
+        <v-row v-if="mostrarAlertaSincronizada && tiendaSincronizada" dense class="mb-1 ">
             <v-col cols="12">
                 <v-card class="sync-status-card rounded-xl" flat>
                     <v-card-text class="d-flex align-center py-3 px-4">
@@ -10,7 +10,8 @@
                         <div>
                             <div class="sync-status-title">Toda la tienda esta sincronizada</div>
                             <div class="sync-status-copy">
-                                No hay categorias, marcas, productos, promociones, grupos de precio ni configuracion pendientes de envio.
+                                No hay categorias, marcas, productos, promociones, grupos de precio ni configuracion
+                                pendientes de envio.
                             </div>
                         </div>
                         <v-spacer />
@@ -67,7 +68,7 @@
             </v-col>
         </v-row>
 
-       
+
 
         <!-- ====================== ACCESO A TIENDA (PRO) ====================== -->
         <v-card v-if="false" class="mb-3 rounded-lg tienda-banner" outlined>
@@ -426,7 +427,8 @@
                             </div>
                         </div>
                         <div class="mt-2 text-caption grey--text">
-                            {{ ['producto', 'promocion'].includes(tipoDialogo) ? 'Sube una o varias fotos' : 'Sube una foto clara' }}
+                            {{ ['producto', 'promocion'].includes(tipoDialogo) ? 'Sube una o varias fotos' :
+                                'Sube una foto clara' }}
                         </div>
                         <input ref="fileCreate" type="file" accept="image/*" style="display:none"
                             :multiple="['producto', 'promocion'].includes(tipoDialogo)"
@@ -434,10 +436,10 @@
                     </div>
 
                     <dialogo-marca v-if="tipoDialogo === 'marca'" v-model="formMarca" :items="array_marca"
-                        :categorias="arraycategoria" />
+                        :categorias="categoriasAll" />
 
                     <dialogo-categorias v-if="tipoDialogo === 'categoria'" v-model="formCategoria"
-                        :items="arraycategoria" />
+                        :items="categoriasAll" />
 
                     <dialogo-productos v-if="tipoDialogo === 'producto'" v-model="formProducto"
                         :array-productos="arrayProductos" :array-marca="array_marca" :array-categoria="arraycategoria"
@@ -614,6 +616,7 @@ export default {
             productos: [],
             promociones: [],
             gruposPrecio: [],
+            categoriasAll: [],
             configTienda: {
                 pedido_minimo: 0,
                 telefono_whatsapp: "",
@@ -824,15 +827,18 @@ export default {
     },
     async created() {
         var snapshot = await allCategorias("categorias").once("value")
+        this.categoriasAll = []
         snapshot.forEach((item) => {
-            this.arraycategoria.push(item.val().nombre)
+            this.categoriasAll.push(item.val().nombre)
         })
-        var snapshot = await allCategorias("marcas").once("value")
-        snapshot.forEach((item) => {
+
+        var snapshotMarcas = await allCategorias("marcas").once("value")
+        this.array_marca = []
+        snapshotMarcas.forEach((item) => {
             this.array_marca.push(item.val().nombre)
         })
-        this.arrayProductos = store.state.productos
 
+        this.arrayProductos = store.state.productos
     },
     methods: {
         async sincronizar(forzarTodo = false) {
@@ -981,6 +987,9 @@ export default {
                 marca: "",
                 categoria: "",
                 medida: "UNIDAD",
+                operacion: "GRAVADA",
+                peso: 0,
+                factor: 1,
                 activo: true,
                 controstock: true,
                 nuevo_ingreso: false,
@@ -1044,6 +1053,9 @@ export default {
                 marca: typeof producto.marca === "string" ? producto.marca : base.marca,
                 categoria: producto.categoria || base.categoria,
                 medida: producto.medida || base.medida,
+                operacion: producto.operacion || base.operacion,
+                peso: Number(producto.peso || base.peso),
+                factor: Number(producto.factor || base.factor),
                 activo: producto.activo !== undefined ? !!producto.activo : base.activo,
                 controstock: producto.controstock !== undefined ? !!producto.controstock : base.controstock,
                 nuevo_ingreso: producto.nuevo_ingreso !== undefined ? !!producto.nuevo_ingreso : base.nuevo_ingreso,
@@ -1224,6 +1236,9 @@ export default {
                 marca: this.formProducto.marca || "",
                 categoria: this.formProducto.categoria || "",
                 medida: this.formProducto.medida || "UNIDAD",
+                operacion: this.formProducto.operacion || "GRAVADA",
+                peso: Number(this.formProducto.peso || 0),
+                factor: Number(this.formProducto.factor || 1),
                 precio_may1: Number(this.formProducto.precio_may1 || 0),
                 precio_may2: Number(this.formProducto.precio_may2 || 0),
                 escala_may1: Number(this.formProducto.escala_may1 || 0),
@@ -1328,8 +1343,8 @@ export default {
                     await this.eliminarEnStoragePorRuta(actual.rutaStorage)
                 }
 
-            const thumbB64 = await generarMiniaturaBase64(file, 260, 0.6)
-            const { url, rutaStorage } = await this.subirImagenStorage(file, tipo, id)
+                const thumbB64 = await generarMiniaturaBase64(file, 260, 0.6)
+                const { url, rutaStorage } = await this.subirImagenStorage(file, tipo, id)
 
                 nuevoRegistro = {
                     ...actual,

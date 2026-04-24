@@ -27,8 +27,7 @@
                         <v-card class="rounded-xl overflow-hidden" outlined>
                             <v-hover v-slot="{ hover }">
                                 <div style="position: relative;">
-                                    <v-img :src="principalFoto(item)"
-                                        :lazy-src="principalThumb(item)" height="180"
+                                    <v-img :src="principalFoto(item)" :lazy-src="principalThumb(item)" height="180"
                                         class="grey lighten-4" />
 
                                     <v-fade-transition>
@@ -68,10 +67,10 @@
                                     {{ item.nombre }}
                                 </div>
                                 <div class="text-caption grey--text">
-                                    S/ {{ Number(item.precio || 0).toFixed(2) }}
+                                    {{ monedaSimbolo }} {{ Number(item.precio || 0).toFixed(2) }}
                                 </div>
                                 <div class="text-caption grey--text text-truncate">
-                                    {{ item.marca || 'Sin marca' }} � {{ item.categoria || 'Sin categoria' }}
+                                    {{ item.marca || 'Sin marca' }} • {{ item.categoria || 'Sin categoria' }}
                                 </div>
                             </v-card-text>
 
@@ -122,10 +121,10 @@
                                     {{ item.nombre }}
                                 </div>
                                 <div class="text-caption grey--text">
-                                    S/ {{ Number(item.precio || 0).toFixed(2) }}
+                                    {{ monedaSimbolo }} {{ Number(item.precio || 0).toFixed(2) }}
                                 </div>
                                 <div class="text-caption grey--text text-truncate">
-                                    {{ item.marca || 'Sin marca' }} ï¿½ {{ item.categoria || 'Sin categoria' }}
+                                    {{ item.marca || 'Sin marca' }} • {{ item.categoria || 'Sin categoria' }}
                                 </div>
                             </v-card-text>
 
@@ -161,7 +160,7 @@
                                 @input="actualizarCampo('nombre', $event)" />
                         </v-col>
                         <v-col cols="12" md="4">
-                            <v-text-field label="Precio Venta" :value="localValue.precio" type="number" prefix="S/"
+                            <v-text-field label="Precio Venta" :value="localValue.precio" type="number" :prefix="monedaSimbolo"
                                 prepend-inner-icon="mdi-cash-register" outlined dense hide-details="auto"
                                 class="font-weight-bold" @input="actualizarNumero('precio', $event)" />
                         </v-col>
@@ -182,13 +181,30 @@
                         </v-col>
                     </v-row>
 
+                    <v-row dense class="mt-2">
+                        <v-col cols="12" md="4">
+                            <v-autocomplete label="Operación" :value="localValue.operacion" :items="arrayOperacion"
+                                outlined dense hide-details="auto" @input="actualizarCampo('operacion', $event)" />
+                        </v-col>
+                        <v-col cols="12" md="4">
+                            <v-text-field label="Peso (kg)" :value="localValue.peso" type="number" step="0.01"
+                                prepend-inner-icon="mdi-weight-kilogram" outlined dense hide-details="auto"
+                                @input="actualizarNumero('peso', $event)" />
+                        </v-col>
+                        <v-col cols="12" md="4">
+                            <v-text-field label="Factor" :value="localValue.factor" type="number" step="0.01"
+                                prepend-inner-icon="mdi-multiplication" outlined dense hide-details="auto"
+                                @input="actualizarNumero('factor', $event)" />
+                        </v-col>
+                    </v-row>
+
                     <v-row dense class="mt-4">
                         <v-col cols="12" md="6">
                             <v-card outlined class="pa-2">
                                 <div class="text-caption mb-1">Mayoreo Nivel 1</div>
                                 <v-row dense>
                                     <v-col>
-                                        <v-text-field label="Precio" :value="localValue.precio_may1" type="number"
+                                        <v-text-field label="Precio" :value="localValue.precio_may1" type="number" :prefix="monedaSimbolo"
                                             outlined dense hide-details
                                             @input="actualizarNumero('precio_may1', $event)" />
                                     </v-col>
@@ -205,7 +221,7 @@
                                 <div class="text-caption mb-1">Mayoreo Nivel 2</div>
                                 <v-row dense>
                                     <v-col>
-                                        <v-text-field label="Precio" :value="localValue.precio_may2" type="number"
+                                        <v-text-field label="Precio" :value="localValue.precio_may2" type="number" :prefix="monedaSimbolo"
                                             outlined dense hide-details
                                             @input="actualizarNumero('precio_may2', $event)" />
                                     </v-col>
@@ -312,6 +328,9 @@ export default {
             if (!termino) return this.localItems
 
             return (this.localItems || []).filter(item => this.coincideBusqueda(item, termino))
+        },
+        monedaSimbolo() {
+            return this.$store.state.moneda.find(m => m.codigo == this.$store.state.configuracion.moneda_defecto)?.simbolo || 'S/ ';
         },
     },
     watch: {
