@@ -997,6 +997,7 @@ export const reporte_clientes_transporte = (data) => {
     rows.push([
       item.numeracion || '',
       `${item.dni || ''} - ${item.cliente || ''}`,
+      item.cliente_zona || '-',
       item.vendedor || '',
       parseFloat(item.peso_total || 0).toFixed(2),
       item.forma_pago || '',
@@ -1010,7 +1011,7 @@ export const reporte_clientes_transporte = (data) => {
     startY: 29,
     margin: { top: 30, left: lMargin, right: rMargin },
     styles: {
-      fontSize: 8,
+      fontSize: 7,
       cellPadding: 1.5,
       valign: 'middle',
       halign: 'center',
@@ -1027,14 +1028,15 @@ export const reporte_clientes_transporte = (data) => {
     },
     columnStyles: {
       0: { columnWidth: 25, halign: 'center' },
-      1: { columnWidth: 70, halign: 'left' },
-      2: { columnWidth: 18, halign: 'center' },
-      3: { columnWidth: 18, halign: 'center' },
-      4: { columnWidth: 22, halign: 'center' },
-      5: { columnWidth: 20, halign: 'right' },
-      6: { columnWidth: 20, halign: 'right' },
+      1: { columnWidth: 66, halign: 'left' },
+      2: { columnWidth: 25, halign: 'center' },
+      3: { columnWidth: 12, halign: 'center' },
+      4: { columnWidth: 16, halign: 'center' },
+      5: { columnWidth: 17, halign: 'center' },
+      6: { columnWidth: 16, halign: 'right' },
+      7: { columnWidth: 16, halign: 'right' },
     },
-    head: [['Correlativo', 'Documento - Cliente', 'Vendedor', 'Peso (KG)', 'Modo', 'M. Crédito', 'Total']],
+    head: [['Correlativo', 'Documento - Cliente', 'Zona', 'Vend.', 'Peso(KG)', 'Modo', 'M. Créd.', 'Total']],
     body: rows,
     didParseCell: function (data) {
       if (data.row.section === 'body') {
