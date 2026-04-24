@@ -442,7 +442,7 @@
                         :items="categoriasAll" />
 
                     <dialogo-productos v-if="tipoDialogo === 'producto'" v-model="formProducto"
-                        :array-productos="arrayProductos" :array-marca="array_marca" :array-categoria="arraycategoria"
+                        :array-productos="arrayProductos" :array-marca="array_marca" :array-categoria="categoriasAll"
                         :items-medidas-nombre="itemsMedidasNombre" :arraytipo-producto="arraytipoProducto"
                         :array-operacion="arrayOperacion" :producto-sel-id="productoSelId" :mostrar-catalogo="!editMode"
                         @select-catalogo="onSelectProductoCatalogo" />
