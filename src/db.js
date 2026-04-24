@@ -1850,7 +1850,7 @@ export const graba_observacion_entrega = (grupo, observacion) => {
 export const obten_datos_tienda = (tabla) => {
   return db
     .database()
-    .ref('BD97')
+    .ref(store.state.baseDatos.bd)
     .child("tienda")
     .child(tabla)
 };

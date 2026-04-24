@@ -42,7 +42,7 @@
 <script>
 import Cropper from "cropperjs"
 import "cropperjs/dist/cropper.css"
-import { convertirADataUrl } from "../helpers"
+import { convertirADataUrl, extensionDesdeMime, obtenerMimeOptimizado, obtenerPresetImagen } from "../helpers"
 
 export default {
     name: "dlgCrop",
@@ -121,23 +121,34 @@ export default {
         async confirmarCrop() {
             if (!this._cropper) return
 
+            const meta = this.cropMeta || {}
+            const cropPreset = obtenerPresetImagen(meta.tipo || "general", "crop")
+            const mimeType = obtenerMimeOptimizado()
+            const outputSize = Number(cropPreset.size || 1200)
+            const outputQuality = Number(cropPreset.quality || 0.88)
+
             // canvas final cuadrado con fondo blanco
             const canvas = this._cropper.getCroppedCanvas({
-                width: 800,
-                height: 800,
+                width: outputSize,
+                height: outputSize,
                 fillColor: "#ffffff",
                 imageSmoothingEnabled: true,
                 imageSmoothingQuality: "high",
             })
 
             // preview inmediato
-            const dataUrl = canvas.toDataURL("image/jpeg", 0.92)
+            const dataUrl = canvas.toDataURL(mimeType, outputQuality)
 
             // convertir a File (para que tu flujo actual siga igual)
-            const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92))
-            const outFile = new File([blob], `foto_${Date.now()}.jpg`, { type: "image/jpeg" })
+            const blob = await new Promise((resolve, reject) => {
+                canvas.toBlob((result) => {
+                    if (result) resolve(result)
+                    else reject(new Error("No se pudo generar la imagen recortada"))
+                }, mimeType, outputQuality)
+            })
+            const extension = extensionDesdeMime(mimeType)
+            const outFile = new File([blob], `foto_${Date.now()}.${extension}`, { type: mimeType })
 
-            const meta = this.cropMeta || {}
             this.$emit("confirmado", { file: outFile, preview: dataUrl, meta })
             this.cerrarCrop()
 

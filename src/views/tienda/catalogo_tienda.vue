@@ -587,7 +587,7 @@ import firebase from "firebase/app"
 import "firebase/database"
 import "firebase/storage"
 import { obten_datos_tienda, guarda_datos_tienda, elimina_datos_tienda, allCategorias } from "../../db"
-import { generarMiniaturaBase64, convertirADataUrl } from "./helpers"
+import { generarMiniaturaBase64, convertirADataUrl, optimizarImagenParaStorage } from "./helpers"
 import store from "@/store"
 import draggable from "vuedraggable"
 import dial_config from "./dialogos/config_tienda.vue"
@@ -1162,7 +1162,7 @@ export default {
 
             for (const imagen of this.imagenesDialogo || []) {
                 if (imagen?.esNueva && imagen.file) {
-                    const thumbB64 = await generarMiniaturaBase64(imagen.file, 220, 0.65)
+                    const thumbB64 = await generarMiniaturaBase64(imagen.file, 260, 0.6)
                     const { url, rutaStorage } = await this.subirImagenStorage(imagen.file, tipoStorage, id)
 
                     imagenes.push({
@@ -1300,7 +1300,7 @@ export default {
             let nuevoRegistro
 
             if (["productos", "promociones"].includes(tabla)) {
-                const thumbB64 = await generarMiniaturaBase64(file, 220, 0.65)
+                const thumbB64 = await generarMiniaturaBase64(file, 260, 0.6)
                 const { fotoUrl: _fotoUrl, thumbB64: _thumbB64, rutaStorage: _rutaStorage, ...resto } = actual
                 const { url, rutaStorage } = await this.subirImagenStorage(file, tipo, id)
                 const imagenesActuales = tabla === "promociones"
@@ -1328,8 +1328,8 @@ export default {
                     await this.eliminarEnStoragePorRuta(actual.rutaStorage)
                 }
 
-                const thumbB64 = await generarMiniaturaBase64(file, 220, 0.65)
-                const { url, rutaStorage } = await this.subirImagenStorage(file, tipo, id)
+            const thumbB64 = await generarMiniaturaBase64(file, 260, 0.6)
+            const { url, rutaStorage } = await this.subirImagenStorage(file, tipo, id)
 
                 nuevoRegistro = {
                     ...actual,
@@ -1701,7 +1701,7 @@ export default {
                         }
 
                         // 2) subir nueva
-                        item.thumbB64 = await generarMiniaturaBase64(this.archivoDialogo, 220, 0.65)
+                        item.thumbB64 = await generarMiniaturaBase64(this.archivoDialogo, 260, 0.6)
                         const tipoStorage = esMarca ? "marca" : esCategoria ? "categoria" : "producto"
                         const { url, rutaStorage } = await this.subirImagenStorage(this.archivoDialogo, tipoStorage, id)
 
@@ -1726,7 +1726,7 @@ export default {
                         }
 
                     if (this.archivoDialogo) {
-                        item.thumbB64 = await generarMiniaturaBase64(this.archivoDialogo, 220, 0.65)
+                        item.thumbB64 = await generarMiniaturaBase64(this.archivoDialogo, 260, 0.6)
                         const tipoStorage = esMarca ? "marca" : esCategoria ? "categoria" : "producto"
                         const { url, rutaStorage } = await this.subirImagenStorage(this.archivoDialogo, tipoStorage, id)
                         item.fotoUrl = url
@@ -1885,13 +1885,25 @@ export default {
 
 
         async subirImagenStorage(file, tipo, id) {
-            const extension = (file.name.split(".").pop() || "jpg").toLowerCase()
+            const optimizada = await optimizarImagenParaStorage(file, tipo)
+            const archivoSubida = optimizada.file
+            const extension = optimizada.extension || (archivoSubida.name.split(".").pop() || "jpg").toLowerCase()
             const nombreArchivo = `${Date.now()}_${id}.${extension}`
             const rutaStorage = `tienda/${this.bd}/${tipo}/${id}/${nombreArchivo}`
 
             const refStorage = firebase.storage().ref(rutaStorage)
-            await refStorage.put(file, { contentType: file.type || "image/jpeg" })
+            await refStorage.put(archivoSubida, {
+                contentType: optimizada.mimeType || archivoSubida.type || "image/jpeg"
+            })
             const url = await refStorage.getDownloadURL()
+            console.log("Imagen optimizada", {
+                tipo,
+                originalKB: Math.round((Number(optimizada.originalSize || file.size || 0) / 1024) * 10) / 10,
+                optimizadaKB: Math.round((Number(optimizada.size || archivoSubida.size || 0) / 1024) * 10) / 10,
+                width: optimizada.width,
+                height: optimizada.height,
+                mimeType: optimizada.mimeType,
+            })
             return { url, rutaStorage }
         },
         editarProducto(item) {
@@ -1945,6 +1957,7 @@ export default {
             } else {
                 this.procesarArchivoSeleccionado(files[0], {
                     modo: "dialogo",
+                    tipo: this.tipoDialogo || "general",
                 })
             }
 
@@ -2051,7 +2064,7 @@ export default {
                             await this.eliminarEnStoragePorRuta(item.rutaStorage)
                         }
 
-                        item.thumbB64 = await generarMiniaturaBase64(this.archivoDialogo, 220, 0.65)
+                        item.thumbB64 = await generarMiniaturaBase64(this.archivoDialogo, 260, 0.6)
                         const tipoStorage = esMarca ? "marca" : "categoria"
                         const { url, rutaStorage } = await this.subirImagenStorage(this.archivoDialogo, tipoStorage, id)
 
@@ -2085,7 +2098,7 @@ export default {
                     } else if (esGrupoPrecio) {
                         item.updatedAt = Date.now()
                     } else if (this.archivoDialogo) {
-                        item.thumbB64 = await generarMiniaturaBase64(this.archivoDialogo, 220, 0.65)
+                        item.thumbB64 = await generarMiniaturaBase64(this.archivoDialogo, 260, 0.6)
                         const tipoStorage = esMarca ? "marca" : "categoria"
                         const { url, rutaStorage } = await this.subirImagenStorage(this.archivoDialogo, tipoStorage, id)
                         item.fotoUrl = url
