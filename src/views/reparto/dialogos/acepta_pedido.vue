@@ -92,7 +92,7 @@
                                                 text-color="white" label>
                                                 Gratuita
                                             </v-chip>
-                                            
+
                                         </div>
 
                                         <div class="mt-1 text-subtitle-2 text-truncate" style="max-width:70vw;">
@@ -101,8 +101,8 @@
                                             <span class="caption font-weight-bold"> {{ it.codigo || it.id }} -</span>
                                             {{ it.nombre }}
                                             <div v-if="it.motivo_rechazo" class="caption red--text mt-1">
-    Motivo: {{ it.motivo_rechazo }}
-</div>
+                                                Motivo: {{ it.motivo_rechazo }}
+                                            </div>
                                         </div>
                                     </div>
 
@@ -153,7 +153,7 @@
                                         class="ml-1" color="pink" text-color="white" label>
                                         Gratuita
                                     </v-chip>
-                                    
+
                                 </div>
 
                                 <div class="text-right">
@@ -248,53 +248,52 @@
                 </div>
 
                 <!-- MÉTODOS DE PAGO -->
-                <v-row dense v-for="p in pagosEntrega" :key="p.nombre" class="align-center">
-                    <v-col cols="12">
-                        <v-text-field :label="p.nombre.toUpperCase()" :prefix="moneda" :value="p.monto"
-                            @input="val => { p.monto = val; onMontoInput(p) }"
-                            :type="$store.state.esmovil ? 'tel' : 'number'" inputmode="decimal" step="0.01" outlined
-                            dense hide-details class="mpago-field" :class="{ 'mpago-activo': parseFloat(p.monto) > 0 }"
-                            @focus="$event.target.select()">
-                            <template v-slot:prepend-inner>
-                                <v-avatar size="28" class="mr-2" tile>
-                                    <v-img :src="busca_ico(p.nombre)" @click.stop="cambia_modo_pago(p)" />
-                                </v-avatar>
-                            </template>
+                <template v-if="!esCredito">
+                    <v-row dense v-for="p in pagosEntrega" :key="p.nombre" class="align-center">
+                        <v-col cols="12">
+                            <v-text-field :label="p.nombre.toUpperCase()" :prefix="moneda" :value="p.monto"
+                                @input="val => { p.monto = val; onMontoInput(p) }"
+                                :type="$store.state.esmovil ? 'tel' : 'number'" inputmode="decimal" step="0.01" outlined
+                                dense hide-details class="mpago-field"
+                                :class="{ 'mpago-activo': parseFloat(p.monto) > 0 }" @focus="$event.target.select()">
+                                <template v-slot:prepend-inner>
+                                    <v-avatar size="28" class="mr-2" tile>
+                                        <v-img :src="busca_ico(p.nombre)" @click.stop="cambia_modo_pago(p)" />
+                                    </v-avatar>
+                                </template>
+                                <template v-slot:append>
+                                    <v-btn icon x-small @click.stop="cambia_modo_pago(p)">
+                                        <v-icon small>mdi-arrow-collapse-down</v-icon>
+                                    </v-btn>
+                                </template>
+                            </v-text-field>
+                        </v-col>
+                    </v-row>
 
-                            <template v-slot:append>
-                                <v-btn icon x-small @click.stop="cambia_modo_pago(p)">
-                                    <v-icon small>mdi-arrow-collapse-down</v-icon>
-                                </v-btn>
-                            </template>
-                        </v-text-field>
-                    </v-col>
-                </v-row>
-
-                <div class="mt-n2 mb-3 caption grey--text" v-if="diferenciaTotal !== 0">
-                    Falta/Exceso: {{ moneda }} {{ redondear(diferenciaTotal) }}
-                </div>
-
-                <!-- BOTÓN PARA MOSTRAR CRÉDITO -->
-                <v-btn v-if="!esCredito" small block color="indigo" dark class="mb-2" @click="toggleCredito">
-                    <v-icon left small>mdi-calendar-clock</v-icon>
-                    Generar crédito
-                </v-btn>
-                <v-expand-transition v-if="!esCredito">
-                    <div v-if="mostrarCredito" class="pa-2 mb-3 grey lighten-4 rounded">
-                        <v-text-field v-model="montoCredito" label="Monto del crédito" :prefix="moneda" type="number"
-                            inputmode="decimal" step="0.01" dense outlined hide-details class="mb-2"
-                            @input="onCreditoInput" />
-
-                        <v-text-field v-model="fechaVenceCredito" label="Fecha de vencimiento" type="date" dense
-                            outlined hide-details class="mb-2" readonly />
-
-                        <!-- 🔴 SIN botón de guardar aquí: el crédito se genera en Cobrar y finalizar -->
+                    <div class="mt-n2 mb-3 caption grey--text" v-if="diferenciaTotal !== 0">
+                        Falta/Exceso: {{ moneda }} {{ redondear(diferenciaTotal) }}
                     </div>
-                </v-expand-transition>
 
-                <v-btn class="mt-2" block color="success" :disabled="!pagosValidos" @click="finalizarEntrega">
+                    <v-btn v-if="!esCredito" small block color="indigo" dark class="mb-2" @click="toggleCredito">
+                        <v-icon left small>mdi-calendar-clock</v-icon>
+                        Generar crédito
+                    </v-btn>
+
+                    <v-expand-transition v-if="!esCredito">
+                        <div v-if="mostrarCredito" class="pa-2 mb-3 grey lighten-4 rounded">
+                            <v-text-field v-model="montoCredito" label="Monto del crédito" :prefix="moneda"
+                                type="number" inputmode="decimal" step="0.01" dense outlined hide-details class="mb-2"
+                                @input="onCreditoInput" />
+                            <v-text-field v-model="fechaVenceCredito" label="Fecha de vencimiento" type="date" dense
+                                outlined hide-details class="mb-2" readonly />
+                        </div>
+                    </v-expand-transition>
+                </template>
+
+                <v-btn class="mt-2" block color="success" :disabled="!esCredito && !pagosValidos"
+                    @click="finalizarEntrega">
                     <v-icon left>mdi-cash-check</v-icon>
-                    Cobrar y finalizar
+                    {{ esCredito ? 'Confirmar pedido a crédito' : 'Cobrar y finalizar' }}
                 </v-btn>
             </v-card>
         </v-dialog>
@@ -322,7 +321,7 @@
                         </div>
                         <div :class="$vuetify.breakpoint.smAndDown ? 'mt-1' : 'text-right'">
                             <span class="font-weight-bold primary--text">{{ moneda }} {{ redondear(item_selecto.total)
-                                }}</span>
+                            }}</span>
                         </div>
                     </div>
 
@@ -349,7 +348,7 @@
                             <div class="d-flex justify-space-between">
                                 <span class="font-weight-bold">TOTAL</span>
                                 <span class="font-weight-bold primary--text">{{ moneda }} {{ detallePedidoTotal
-                                    }}</span>
+                                }}</span>
                             </div>
                         </v-card>
                     </div>
@@ -636,7 +635,7 @@ export default {
             this.qtyRechazo = 1;
             this.qtyRechazoParcial = 1;
             this.modoRechazo = 'completo';
-            this.motivoRechazoSeleccionado = ""; 
+            this.motivoRechazoSeleccionado = "";
         },
         quitarRechazo(it) {
             const id = it.uuid || it.id;
@@ -675,6 +674,10 @@ export default {
         },
 
         abrirPagos() {
+            if (this.esCredito) {
+                this.dialPagos = true;
+                return;
+            }
             const restante = Number(this.totalACobrar.toFixed(2));
             this.pagosEntrega = (this.$store?.state?.modopagos || []).map((n, idx) => ({
                 nombre: n,
