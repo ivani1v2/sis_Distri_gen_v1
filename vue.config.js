@@ -9,11 +9,11 @@ module.exports = {
 
     // Rutas de íconos (ajústalas a tu estructura /img/icons)
     iconPaths: {
-      favicon32: "img/icons/ic_launcher.png",
-      favicon16: "img/icons/ic_launcher.png",
-      appleTouchIcon: "img/icons/apple-touch-icon-152x152.png",
+      favicon32: "favicon.png",
+      favicon16: "favicon.png",
+      appleTouchIcon: "favicon.png",
       maskIcon: "img/icons/safari-pinned-tab.svg",
-      msTileImage: "img/icons/ic_launcher.png",
+      msTileImage: "favicon.png",
     },
 
     // Manifest (puedes ampliar más tamaños si quieres)
@@ -23,8 +23,8 @@ module.exports = {
       display: "standalone",
       background_color: "#ffffff",
       icons: [
-        { src: "/img/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
-        { src: "/img/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
+        { src: "/favicon.png", sizes: "192x192", type: "image/png" },
+        { src: "/favicon.png", sizes: "512x512", type: "image/png" },
       ],
       screenshots: [
         { src: "/img/screenshots/screenshot1.png", sizes: "640x480", type: "image/png", form_factor: "wide" },

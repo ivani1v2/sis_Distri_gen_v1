@@ -72,7 +72,7 @@
                                         color="orange darken-2">mdi-account-cash</v-icon></v-list-item-icon>
                                 <v-list-item-title>Por Cobrar</v-list-item-title>
                             </v-list-item>
-                            <v-list-item @click="ver_detalle_masivo()">
+                            <v-list-item @click="ver_detalle_masivo()" v-if="false">
                                 <v-list-item-icon><v-icon
                                         color="purple darken-2">mdi-file-eye</v-icon></v-list-item-icon>
                                 <v-list-item-title>Ver Detalle (Consol.)</v-list-item-title>
@@ -118,6 +118,12 @@
                                 <v-list-item-icon><v-icon color="red">mdi-cancel</v-icon></v-list-item-icon>
                                 <v-list-item-title>Anular Masivo</v-list-item-title>
                             </v-list-item>
+                            <v-list-item @click="revertirSeleccionadosPendiente()" v-if="true">
+                                <v-list-item-icon>
+                                    <v-icon color="orange">mdi-restore</v-icon>
+                                </v-list-item-icon>
+                                <v-list-item-title>Revertir seleccionados a PENDIENTE</v-list-item-title>
+                            </v-list-item>
                         </v-list>
                     </v-menu>
                 </div>
@@ -133,7 +139,7 @@
                     <v-col cols="12" sm="4">
                         <h4 class="text-subtitle-1">
                             FECHA TRASLADO: <span class="primary--text">{{ conviertefecha(cabecera_total.fecha_traslado)
-                                }}</span>
+                            }}</span>
                         </h4>
                         <!-- Chip de transporte asignado -->
                         <div v-if="cabecera_total.d_transporte?.usuario_nombre" class="mt-1">
@@ -158,7 +164,7 @@
                             TOTAL VENTA: <span class="green--text text--darken-2">{{ moneda }} {{ t_general }}</span>
                         </h4>
                         <span class="caption">Contado: {{ moneda }} {{ t_contado }} | Crédito: {{ moneda }} {{ t_credito
-                        }}</span>
+                            }}</span>
                     </v-col>
                 </v-row>
             </v-card-text>
@@ -214,7 +220,7 @@
                                 </v-chip>
                             </td>
                             <td class="text-right caption red--text">{{ item.moneda }}{{ redondear(item.pendiente_pago)
-                                }}</td>
+                            }}</td>
                             <td class="text-right caption font-weight-bold">{{ item.moneda }}{{ redondear(item.total) }}
                             </td>
                             <td class="text-center">
@@ -297,7 +303,7 @@
                                     S/.{{ d.precio }}
                                     <strong v-if="d.preciodescuento != 0" class="red--text ml-1">(-S/.{{
                                         d.preciodescuento
-                                        }})</strong>
+                                    }})</strong>
                                 </td>
                                 <td class="text-right caption font-weight-bold">S/.{{
                                     redondear((Number(d.total_antes_impuestos)
@@ -320,7 +326,7 @@
                 <v-card-text class="pt-4">
                     <div class="mb-3 text-subtitle-2 grey--text text--darken-1">
                         Anulando comprobante: <strong class="error--text">{{ comp_anular ? comp_anular.numeracion : ''
-                            }}</strong>
+                        }}</strong>
                     </div>
 
                     <v-select dense outlined clearable :items="motivos_predeterminados"
@@ -496,7 +502,7 @@
                 <v-toolbar class="text-caption"
                     :color="guia_individual_tipo === 'transporte' ? 'purple darken-1' : 'cyan darken-1'" dense dark>
                     <v-toolbar-title>{{ guia_individual_tipo === 'transporte' ? 'Guía Transporte' : 'Guía Remisión'
-                        }}</v-toolbar-title>
+                    }}</v-toolbar-title>
                     <v-spacer></v-spacer>
                     <v-btn icon @click="dialogo_guia_individual = false">
                         <v-icon>mdi-close</v-icon>
@@ -884,6 +890,49 @@ export default {
         }
     },
     methods: {
+        async revertirSeleccionadosPendiente() {
+  const seleccionados = this.desserts.filter(d =>
+    d.consolida === true && d.estado === "ANULADO"
+  );
+
+  if (!seleccionados.length) {
+    this.$store.commit("dialogosnackbar", "Seleccione comprobantes ANULADOS para revertir.");
+    return;
+  }
+
+  if (!confirm(`¿Seguro que desea revertir ${seleccionados.length} comprobante(s) ANULADO(s) a PENDIENTE?`)) return;
+
+  try {
+    store.commit("dialogoprogress", true);
+
+    const updates = {};
+
+    seleccionados.forEach(item => {
+      updates[`${item.numeracion}/estado`] = "PENDIENTE";
+      updates[`${item.numeracion}/motivo_anulacion`] = null;
+      updates[`${item.numeracion}/fecha_anulacion`] = null;
+      updates[`${item.numeracion}/usuario_anulacion`] = null;
+
+      item.estado = "PENDIENTE";
+      item.consolida = false;
+    });
+
+    await all_Cabecera_p(this.router_grupo).update(updates);
+
+    await this.recalcula_cabecera();
+    await this.actualizaEstadoReparto();
+
+    this.consolida_t = false;
+    this.filtrarLista();
+
+    this.$store.commit("dialogosnackbar", "Comprobantes revertidos a PENDIENTE correctamente.");
+  } catch (error) {
+    console.error(error);
+    this.$store.commit("dialogosnackbar", "Error al revertir comprobantes.");
+  } finally {
+    store.commit("dialogoprogress", false);
+  }
+},
         abrirDialTransporte() {
             this.dial_transporte_show = true;
         },
