@@ -98,12 +98,12 @@
                                     <v-icon left color="success">mdi-file-excel</v-icon> exportar Excel
                                 </v-list-item-title>
                             </v-list-item>
-                            <v-list-item @click="revertirAnuladosPendiente">
-  <v-list-item-title>
-    <v-icon color="orange" left>mdi-restore</v-icon>
-    Revertir anulados a pendiente
-  </v-list-item-title>
-</v-list-item>
+                            <v-list-item @click="revertirAnuladosPendiente" v-if="false">
+                                <v-list-item-title>
+                                    <v-icon color="orange" left>mdi-restore</v-icon>
+                                    Revertir anulados a pendiente
+                                </v-list-item-title>
+                            </v-list-item>
                         </v-list>
                     </v-menu>
                 </v-col>
@@ -625,41 +625,41 @@ export default {
 
     methods: {
         async revertirAnuladosPendiente() {
-  const anulados = (this.pedidosFiltrados || []).filter(p =>
-    String(p.estado || '').toUpperCase() === 'ANULADO'
-  );
+            const anulados = (this.pedidosFiltrados || []).filter(p =>
+                String(p.estado || '').toUpperCase() === 'ANULADO'
+            );
 
-  if (!anulados.length) {
-    this.$toast?.info?.("No hay pedidos anulados en este filtro.") || alert("No hay pedidos anulados en este filtro.");
-    return;
-  }
+            if (!anulados.length) {
+                this.$toast?.info?.("No hay pedidos anulados en este filtro.") || alert("No hay pedidos anulados en este filtro.");
+                return;
+            }
 
-  if (!confirm(`Se revertirán ${anulados.length} pedido(s) ANULADO(s) a PENDIENTE. ¿Continuar?`)) return;
+            if (!confirm(`Se revertirán ${anulados.length} pedido(s) ANULADO(s) a PENDIENTE. ¿Continuar?`)) return;
 
-  try {
-    store.commit("dialogoprogress");
+            try {
+                store.commit("dialogoprogress");
 
-    const updates = {};
+                const updates = {};
 
-    anulados.forEach(p => {
-      updates[`${p.id}/estado`] = "pendiente";
-      updates[`${p.id}/motivo_anulacion`] = null;
-      updates[`${p.id}/fecha_anulacion`] = null;
-      updates[`${p.id}/usuario_anulacion`] = null;
-    });
+                anulados.forEach(p => {
+                    updates[`${p.id}/estado`] = "pendiente";
+                    updates[`${p.id}/motivo_anulacion`] = null;
+                    updates[`${p.id}/fecha_anulacion`] = null;
+                    updates[`${p.id}/usuario_anulacion`] = null;
+                });
 
-    await all_pedidos().update(updates);
+                await all_pedidos().update(updates);
 
-    this.$toast?.success?.("Pedidos revertidos a pendiente correctamente.") || alert("Pedidos revertidos correctamente.");
-    this.filtrar();
+                this.$toast?.success?.("Pedidos revertidos a pendiente correctamente.") || alert("Pedidos revertidos correctamente.");
+                this.filtrar();
 
-  } catch (error) {
-    console.error(error);
-    this.$toast?.error?.("Error al revertir pedidos.") || alert("Error al revertir pedidos.");
-  } finally {
-    store.commit("dialogoprogress");
-  }
-},
+            } catch (error) {
+                console.error(error);
+                this.$toast?.error?.("Error al revertir pedidos.") || alert("Error al revertir pedidos.");
+            } finally {
+                store.commit("dialogoprogress");
+            }
+        },
         puedeEditar(item) {
             const estadosBloqueados = ['anulado', 'atendido', 'procesado'];
             const estadoNorm = String(item?.estado || '').toLowerCase().trim();

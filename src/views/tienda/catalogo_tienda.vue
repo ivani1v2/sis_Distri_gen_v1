@@ -623,6 +623,10 @@ export default {
                 comprobantes_permitidos: ["B", "F", "T"],
                 serie: "APP",
                 moneda: "",
+                icono180: "",
+                icono192: "",
+                icono512: "",
+                icono512maskable: "",
                 ultima_sincronizacion: 0,
                 updatedAt: 0,
             },
@@ -931,6 +935,10 @@ export default {
                     updatedAt: Number(this.configTienda?.updatedAt || 0),
                     serie: String(this.configTienda?.serie || "APP").trim(),
                     moneda: String(this.configTienda?.moneda || this.obtenerMonedaTiendaFallback()).trim(),
+                    icono180: String(this.configTienda?.icono180 || "").trim(),
+                    icono192: String(this.configTienda?.icono192 || "").trim(),
+                    icono512: String(this.configTienda?.icono512 || "").trim(),
+                    icono512maskable: String(this.configTienda?.icono512maskable || "").trim(),
                 }
                 : null
 
@@ -1572,6 +1580,10 @@ export default {
                     : ["B", "F", "T"],
                 serie: String(valConfig.serie || "APP").trim(),
                 moneda: String(valConfig.moneda || this.obtenerMonedaTiendaFallback()).trim(),
+                icono180: String(valConfig.icono180 || "").trim(),
+                icono192: String(valConfig.icono192 || "").trim(),
+                icono512: String(valConfig.icono512 || "").trim(),
+                icono512maskable: String(valConfig.icono512maskable || "").trim(),
                 ultima_sincronizacion: Number(valConfig.ultima_sincronizacion || 0),
                 updatedAt: Number(valConfig.updatedAt || 0),
             }
