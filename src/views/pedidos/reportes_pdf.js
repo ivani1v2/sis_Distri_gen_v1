@@ -164,45 +164,45 @@ export const reporte_almacen_consolidado = async (cabecera, peso, arraydatos, to
     }
   }
 
-doc.autoTable({
-  margin: { top: topMargin, left: 5 },
-  styles: {
-    fontSize: 8,
-    cellPadding: 1,
-    valign: 'middle',
-    halign: 'center',
-    lineWidth: 0.2,
-    lineColor: 1
-  },
-  headStyles: {
-    lineWidth: 0.2,
-    lineColor: 1,
-    fillColor: [0, 0, 0],
-    textColor: [255, 255, 255]
-  },
-  columnStyles: columnStyles,
-  head: head,
-  body: bodyRows,
-  didParseCell: (data) => {
-    if (
-      data.row.section === 'body' &&
-      bodyRows[data.row.index] &&
-      bodyRows[data.row.index][0]?.startsWith('===')
-    ) {
-      if (data.column.index === 0) {
-        data.cell.colSpan = data.table.columns.length
-      }
+  doc.autoTable({
+    margin: { top: topMargin, left: 5 },
+    styles: {
+      fontSize: 8,
+      cellPadding: 1,
+      valign: 'middle',
+      halign: 'center',
+      lineWidth: 0.2,
+      lineColor: 1
+    },
+    headStyles: {
+      lineWidth: 0.2,
+      lineColor: 1,
+      fillColor: [0, 0, 0],
+      textColor: [255, 255, 255]
+    },
+    columnStyles: columnStyles,
+    head: head,
+    body: bodyRows,
+    didParseCell: (data) => {
+      if (
+        data.row.section === 'body' &&
+        bodyRows[data.row.index] &&
+        bodyRows[data.row.index][0]?.startsWith('===')
+      ) {
+        if (data.column.index === 0) {
+          data.cell.colSpan = data.table.columns.length
+        }
 
-      data.cell.styles.fillColor = [255, 255, 255]
-      data.cell.styles.fontStyle = 'bold'
-      data.cell.styles.fontSize = 8
-      data.cell.styles.halign = 'center'
-      data.cell.styles.lineWidth = 0.4
-      data.cell.styles.lineColor = [80, 80, 80]
-      data.cell.styles.textColor = [0, 0, 0]
+        data.cell.styles.fillColor = [255, 255, 255]
+        data.cell.styles.fontStyle = 'bold'
+        data.cell.styles.fontSize = 8
+        data.cell.styles.halign = 'center'
+        data.cell.styles.lineWidth = 0.4
+        data.cell.styles.lineColor = [80, 80, 80]
+        data.cell.styles.textColor = [0, 0, 0]
+      }
     }
-  }
-})
+  })
 
   const pageCount = doc.internal.getNumberOfPages()
   for (let i = 1; i <= pageCount; i++) {
@@ -988,10 +988,9 @@ export const reporte_clientes_transporte = (data) => {
     format: [210, 297]
   })
 
-  // Crear array de filas para la tabla
   const rows = []
   for (let i = 0; i < data.length; i++) {
-    const item = data[i][1] // Cabecera del pedido
+    const item = data[i][1]
     const montoCredito = item.forma_pago === 'CREDITO' ? parseFloat(item.total || 0).toFixed(2) : '0.00'
 
     rows.push([
@@ -1006,10 +1005,9 @@ export const reporte_clientes_transporte = (data) => {
     ])
   }
 
-  // Configuración de la tabla
   doc.autoTable({
     startY: 29,
-    margin: { top: 30, left: lMargin, right: rMargin },
+    margin: { top: 30, left: lMargin, right: rMargin, bottom: 20 },
     styles: {
       fontSize: 7,
       cellPadding: 1.5,
@@ -1045,45 +1043,37 @@ export const reporte_clientes_transporte = (data) => {
     }
   })
 
-  // Agregar encabezado en todas las páginas
   const pageCount = doc.internal.getNumberOfPages()
+
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i)
     const pageCurrent = doc.internal.getCurrentPageInfo().pageNumber
 
-    // Título del reporte
     doc.setFontSize(13)
     doc.setFont('Helvetica', 'bold')
-    let texto = doc.splitTextToSize("REPARTO N° " + data[0][2].id_grupo, (pdfInMM - lMargin - rMargin))
-    doc.text(texto, lMargin, 10, 'left')
+    doc.text(`REPARTO N° ${data[0][2].id_grupo}`, lMargin, 10)
 
-    // Fecha de impresión
     doc.setFontSize(9)
-    doc.setFont('Helvetica', '')
-    texto = doc.splitTextToSize('Fecha Impresion: ' + fechaImpresion, (pdfInMM - lMargin - rMargin))
-    doc.text(texto, lMargin, 15, 'left')
+    doc.setFont('Helvetica', 'normal')
+    doc.text(`Fecha Impresion: ${fechaImpresion}`, lMargin, 15)
 
-    // Totales en el encabezado
     doc.setFontSize(9)
-    texto = doc.splitTextToSize('CONTADO: S/.' + data[0][2].contado, (pdfInMM - lMargin - rMargin))
-    doc.text(texto, 100, 10, 'left')
-
-    texto = doc.splitTextToSize('CREDITO: S/.' + data[0][2].credito, (pdfInMM - lMargin - rMargin))
-    doc.text(texto, 100, 14, 'left')
-
-    texto = doc.splitTextToSize('MONTO TOTAL: S/.' + data[0][2].total, (pdfInMM - lMargin - rMargin))
-    doc.text(texto, 150, 10, 'left')
-
-    texto = doc.splitTextToSize('PESO TOTAL: ' + data[0][2].peso + ' KG', (pdfInMM - lMargin - rMargin))
-    doc.text(texto, 150, 14, 'left')
+    doc.text(`CONTADO: S/.${data[0][2].contado}`, 100, 10)
+    doc.text(`CREDITO: S/.${data[0][2].credito}`, 100, 14)
+    doc.text(`MONTO TOTAL: S/.${data[0][2].total}`, 150, 10)
+    doc.text(`PESO TOTAL: ${data[0][2].peso} KG`, 150, 14)
 
     doc.setDrawColor(0, 0, 0)
     doc.setLineWidth(0.2)
     doc.line(lMargin, 24, pdfInMM - rMargin, 24)
 
-    // Paginación
     doc.setFontSize(9)
-    doc.text(170, 290, 'PAG: ' + pageCurrent + '/' + pageCount)
+    const pageHeight = doc.internal.pageSize.getHeight()
+    doc.text(`PAG: ${pageCurrent}/${pageCount}`, 170, pageHeight - 10)
   }
-  window.open(doc.output('bloburl'))
+
+  const blob = doc.output('blob')
+  const url = URL.createObjectURL(blob)
+  window.open(url)
+  URL.revokeObjectURL(url)
 }

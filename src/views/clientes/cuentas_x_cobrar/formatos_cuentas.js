@@ -69,7 +69,7 @@ export function reporte_liquidacion_cuota(cuenta, cuota, pagos = []) {
   if (pagos.length) {
     pagos.forEach(p => {
       tablaPagosBody.push([
-        { text: String(p.nombre || ""), style: "tableCell" },
+        { text: `${p.nombre || ""}${p.numero_operacion ? ` - OP: ${p.numero_operacion}` : ""}`, style: "tableCell" },
         { text: fMoneda(p.monto, moneda), style: "tableCell", alignment: "right" },
         { text: fFechaHora(p.fecha), style: "tableCell", alignment: "center" }
       ]);

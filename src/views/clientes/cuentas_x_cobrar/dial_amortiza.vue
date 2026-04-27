@@ -45,6 +45,15 @@
               </template>
             </v-text-field>
           </v-col>
+          <v-col cols="12" v-if="pago.monto > 0 && pago.nombre !== 'EFECTIVO'">
+            <v-text-field
+              v-model="pago.numeroOperacion"
+              label="Número de operación / Voucher"
+              placeholder="Ej: 1234567890"
+              outlined dense
+              clearable
+            />
+          </v-col>
         </v-row>
 
         <div class="mt-2 mb-1 caption grey--text" v-if="diferenciaPagos !== 0">
@@ -121,7 +130,8 @@ export default {
 
       this.pagos = (this.$store?.state?.modopagos || []).map(nombre => ({
         nombre,
-        monto: 0
+        monto: 0,
+        numeroOperacion: ''
       }))
 
       if (this.montoCuota > 0 && this.pagos.length > 0) {
@@ -151,7 +161,8 @@ export default {
           .map(p => ({
             nombre: p.nombre,
             monto: Number(p.monto),
-            fecha: ahora
+            fecha: ahora,
+            numero_operacion: p.nombre !== 'EFECTIVO' ? (p.numeroOperacion || null) : null
           }))
 
         cuota.monto_original = Number(cuota.monto_original ?? cuota.monto ?? 0)

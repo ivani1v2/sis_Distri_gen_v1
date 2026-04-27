@@ -47,7 +47,7 @@
             </template>
           </v-alert>
 
-          <v-simple-table fixed-header dense height="250px">
+          <v-simple-table fixed-header dense height="400px">
             <template v-slot:default>
               <thead>
                 <tr>
@@ -78,6 +78,12 @@
                         <v-list-item @click="abonarCuota(index)" :disabled="item.estado === 'PAGADO'">
                           <v-list-item-icon><v-icon color="green">mdi-cash-plus</v-icon></v-list-item-icon>
                           <v-list-item-title>Abonar</v-list-item-title>
+                        </v-list-item>
+                        <v-list-item @click="item.imagen ? verImagen(item) : adjuntarImagen(item, index)">
+                          <v-list-item-icon><v-icon
+                              :color="item.imagen ? 'primary' : 'grey'">mdi-camera</v-icon></v-list-item-icon>
+                          <v-list-item-title>{{ item.imagen ? 'Ver comprobante' : 'Adjuntar comprobante'
+                            }}</v-list-item-title>
                         </v-list-item>
                         <v-list-item @click="imprime_constancia(item)" v-if="item.estado == 'PAGADO'">
                           <v-list-item-icon><v-icon color="warning">mdi-printer</v-icon></v-list-item-icon>
@@ -133,6 +139,55 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-dialog v-model="dialogAdjuntarImagen" max-width="500" persistent>
+      <v-card>
+        <v-toolbar dark color="primary" dense>
+          <v-toolbar-title>Adjuntar comprobante</v-toolbar-title>
+          <v-spacer></v-spacer>
+          <v-btn icon dark @click="dialogAdjuntarImagen = false"><v-icon>mdi-close</v-icon></v-btn>
+        </v-toolbar>
+        <v-card-text class="pa-4">
+          <p class="mb-2">Cuota: {{ monedaSimbolo }}{{ redondear(cuotaSeleccionada?.monto) }}</p>
+          <p class="mb-3">Vence: {{ conviertefecha(cuotaSeleccionada?.fecha_vence) }}</p>
+
+          <pagos_comprobantes ref="pagosComprobantes" :doc-ref="cuentaLocal.doc_ref"
+            :cuota-id="cuotaSeleccionadaIndex" />
+        </v-card-text>
+        <v-card-actions class="pa-3">
+          <v-spacer></v-spacer>
+          <v-btn text @click="dialogAdjuntarImagen = false">Cancelar</v-btn>
+          <v-btn color="primary" @click="guardarImagenCuota" :loading="guardandoImagen">Guardar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="dialogVerImagen" max-width="500" persistent>
+      <v-card>
+        <v-toolbar dark color="primary" dense>
+          <v-toolbar-title>Comprobante de pago</v-toolbar-title>
+          <v-spacer></v-spacer>
+          <v-btn icon dark @click="dialogVerImagen = false"><v-icon>mdi-close</v-icon></v-btn>
+        </v-toolbar>
+        <v-card-text class="pa-4 text-center">
+          <v-img :src="imagenParaVer" contain max-height="500" class="rounded-lg">
+            <template v-slot:placeholder>
+              <div class="text-center">
+                <v-progress-circular indeterminate size="50" color="primary"></v-progress-circular>
+                <div class="mt-3 grey--text">
+                  <v-icon small>mdi-image</v-icon>
+                  <span class="caption ml-1">Cargando imagen...</span>
+                </div>
+              </div>
+            </template>
+          </v-img>
+        </v-card-text>
+        <v-card-actions class="pa-3">
+          <v-spacer></v-spacer>
+          <v-btn text @click="dialogVerImagen = false">Cerrar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-dialog>
 </template>
 
@@ -144,10 +199,11 @@ import { reporte_liquidacion_cuota } from './formatos_cuentas'
 import d_amortiza from './dial_amortiza.vue'
 import d_editar from './dial_editar_cuota.vue'
 import d_nueva_cuota from './dial_nueva_cuota.vue'
+import pagos_comprobantes from './pagos_comprobantes.vue'
 
 export default {
   name: 'DialLiquidacionCliente',
-  components: { d_amortiza, d_editar, d_nueva_cuota },
+  components: { d_amortiza, d_editar, d_nueva_cuota, pagos_comprobantes },
   props: {
     value: { type: Boolean, default: false },
     cuenta: { type: Object, default: () => ({}) }
@@ -166,7 +222,14 @@ export default {
     montoTotalError: '',
     montoPendienteEdit: '',
     montoPendienteError: '',
-    cuentaLocal: {}
+    cuentaLocal: {},
+    dialogAdjuntarImagen: false,
+    dialogVerImagen: false,
+    cuotaSeleccionada: null,
+    cuotaSeleccionadaIndex: null,
+    imagenParaVer: null,
+    guardandoImagen: false,
+    cargandoImagen: false
   }),
   watch: {
     cuenta: {
@@ -197,7 +260,6 @@ export default {
     },
   },
   methods: {
-    // Utilidades
     conviertefecha(date) {
       return date ? moment.unix(date).format('DD/MM/YY') : '--'
     },
@@ -209,44 +271,65 @@ export default {
       return colores[estado] || 'grey'
     },
 
+    adjuntarImagen(cuota, index) {
+      this.cuotaSeleccionada = cuota
+      this.cuotaSeleccionadaIndex = index
+      this.dialogAdjuntarImagen = true
+    },
+
+    verImagen(cuota) {
+      if (cuota.imagen?.url) {
+        this.imagenParaVer = cuota.imagen.url
+        this.dialogVerImagen = true
+      }
+    },
+    async guardarImagenCuota() {
+      this.guardandoImagen = true
+      try {
+        const imagenData = await this.$refs.pagosComprobantes.guardarImagen()
+        if (imagenData) {
+          const datos = [...this.cuentaLocal.datos]
+          datos[this.cuotaSeleccionadaIndex].imagen = imagenData
+          await editaCuentaxCobrar(this.cuentaLocal.doc_ref, 'datos', datos)
+          this.cuentaLocal.datos = datos
+          this.$toast?.success?.('Comprobante guardado')
+        }
+        this.dialogAdjuntarImagen = false
+      } catch (error) {
+        console.error(error)
+        this.$toast?.error?.('Error al guardar imagen')
+      } finally {
+        this.guardandoImagen = false
+      }
+    },
+
     abonarCuota(index) {
-      if (!this.cuentaLocal?.datos || !Array.isArray(this.cuentaLocal.datos)) {
-        console.error('Error: cuentaLocal.datos no es un array válido')
-        return
-      }
-
-      if (!this.cuentaLocal.datos[index]) {
-        console.error('Error: No existe cuota en el índice', index)
-        return
-      }
-
-      console.log('Abriendo abono para índice:', index)
+      if (!this.cuentaLocal?.datos || !Array.isArray(this.cuentaLocal.datos)) return
+      if (!this.cuentaLocal.datos[index]) return
       this.item_selecto_cuota_index = index
       this.dialog_amortiza = true
     },
+
     editarCuota(item, index) {
       this.cuota_edit_index = index
       this.cuota_edit_monto = item.monto
       this.cuota_edit_fecha_str = moment.unix(item.fecha_vence).format('YYYY-MM-DD')
       this.dialog_editar_cuota = true
     },
+
     async eliminarCuota(index) {
       if (!this.cuentaLocal?.datos) return
-
       const cuotaEliminada = this.cuentaLocal.datos[index]
       const montoEliminado = parseFloat(cuotaEliminada.monto) || 0
-
       if (!confirm(`¿Eliminar esta cuota de ${this.monedaSimbolo}${this.redondear(montoEliminado)}?`)) return
 
       try {
         const datos = [...this.cuentaLocal.datos]
         datos.splice(index, 1)
-
         let nuevoPagado = parseFloat(this.cuentaLocal.pagado || 0)
         if (cuotaEliminada.estado === 'PAGADO' || cuotaEliminada.estado === 'ABONO') {
           nuevoPagado = Math.max(0, nuevoPagado - montoEliminado)
         }
-
         const montoTotal = parseFloat(this.cuentaLocal.monto_total) || 0
         const nuevoMontoPendiente = Math.max(0, montoTotal - nuevoPagado)
         const nuevoEstado = nuevoMontoPendiente <= 0 ? 'LIQUIDADO' : 'PENDIENTE'
@@ -260,19 +343,19 @@ export default {
         this.cuentaLocal.pagado = nuevoPagado
         this.cuentaLocal.monto_pendiente = nuevoMontoPendiente
         this.cuentaLocal.estado = nuevoEstado
-
         this.$emit('actualizar', this.cuentaLocal)
-
       } catch (error) {
-        console.error('Error al eliminar cuota:', error)
+        console.error(error)
         alert('Error al eliminar la cuota')
       }
     },
+
     imprime_constancia(cuota) {
       if (!this.cuentaLocal) return alert('No hay un crédito seleccionado.')
       const pagos = Array.isArray(cuota.pagos) ? cuota.pagos : []
       reporte_liquidacion_cuota(this.cuentaLocal, cuota, pagos)
     },
+
     abrirNuevaCuota() {
       if (!this.cuentaLocal) return alert('No hay un crédito seleccionado.')
       this.dialog_nueva_cuota = true
@@ -296,20 +379,18 @@ export default {
         this.montoTotalError = 'Ingrese un monto total valido'
         return
       }
-
       this.montoTotalError = ''
 
       if (!Number.isFinite(nuevoMontoPendiente) || nuevoMontoPendiente < 0) {
         this.montoPendienteError = 'Ingrese un monto pendiente válido'
         return
       }
-
       if (nuevoMontoPendiente > nuevoMontoTotal) {
         this.montoPendienteError = 'El pendiente no puede ser mayor al monto total'
         return
       }
-
       this.montoPendienteError = ''
+
       const nuevoPagado = Math.max(0, nuevoMontoTotal - nuevoMontoPendiente)
       const nuevoEstado = nuevoMontoPendiente <= 0 ? 'LIQUIDADO' : 'PENDIENTE'
 
@@ -329,7 +410,7 @@ export default {
         this.$emit('actualizar', { ...this.cuentaLocal })
         store.commit('dialogosnackbar', 'Montos actualizados')
       } catch (error) {
-        console.error('Error al actualizar monto pendiente:', error)
+        console.error(error)
         alert('No se pudo actualizar el monto pendiente')
       } finally {
         this.guardandoPendiente = false
@@ -339,7 +420,6 @@ export default {
 
     async eliminarCuenta() {
       if (!confirm(`¿Eliminar la cuenta del cliente ${this.cuentaLocal.nombre} (${this.cuentaLocal.doc_ref})?`)) return
-
       store.commit('dialogoprogress', 1)
       try {
         await editaCuentaxCobrar(this.cuentaLocal.doc_ref, 'estado', 'ELIMINADO')
@@ -347,7 +427,7 @@ export default {
         this.$emit('actualizar', { ...this.cuentaLocal, estado: 'ELIMINADO' })
         this.cerrar()
       } catch (error) {
-        console.error('Error al eliminar:', error)
+        console.error(error)
         alert('Ocurrió un error al eliminar.')
       } finally {
         store.commit('dialogoprogress', 1)
@@ -356,11 +436,9 @@ export default {
 
     actualizarItem(nuevo) {
       if (!nuevo?.datos) return
-
       const totalPagado = nuevo.datos.reduce((acc, cuota) => {
         return acc + ((cuota.estado === 'PAGADO' || cuota.estado === 'ABONO') ? (parseFloat(cuota.monto) || 0) : 0)
       }, 0)
-
       const montoTotal = parseFloat(nuevo.monto_total) || 0
       nuevo.monto_pendiente = Math.max(0, montoTotal - totalPagado)
       nuevo.pagado = totalPagado
@@ -373,27 +451,25 @@ export default {
       this.item_selecto_cuota_index = null
       this.$emit('actualizar', nuevo)
     },
+
     cerrarAmortiza() {
-      console.log('cerrarAmortiza - cerrando solo dial_amortiza')
       this.dialog_amortiza = false
       this.item_selecto_cuota_index = null
     },
 
     actualizarDespuesDeAbono(nuevo) {
       if (!nuevo?.datos) return
-
       const totalPagado = nuevo.datos.reduce((acc, cuota) => {
         return acc + ((cuota.estado === 'PAGADO' || cuota.estado === 'ABONO') ? (parseFloat(cuota.monto) || 0) : 0)
       }, 0)
-
       const montoTotal = parseFloat(nuevo.monto_total) || 0
       nuevo.monto_pendiente = Math.max(0, montoTotal - totalPagado)
       nuevo.pagado = totalPagado
       nuevo.estado = nuevo.monto_pendiente <= 0 ? 'LIQUIDADO' : 'PENDIENTE'
-
       this.cuentaLocal = nuevo
       this.$emit('actualizar', nuevo)
     },
+
     cerrar() {
       this.$emit('input', false)
       this.$emit('cerrar')
@@ -401,3 +477,20 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.avatar-active {
+  border: 3px solid #1976d2;
+  border-radius: 8px;
+}
+</style>
