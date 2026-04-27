@@ -386,35 +386,51 @@
                                 <v-list flat dense class="py-0 flex-grow-1">
                                     <v-list-item-group v-model="clienteForm.listas_precios" multiple
                                         active-class="blue--text text--darken-4" @change="mensajeListaPrecio">
-                                        <template v-for="(item, i) in listasPrecioOpc">
-                                            <v-list-item :key="item.value" :value="item.value" :disabled="permiso_edita"
-                                                class="px-4">
-                                                <template v-slot:default="{ active }">
-                                                    <v-list-item-action class="mr-3">
-                                                        <v-checkbox :input-value="active" color="primary"
-                                                            :disabled="permiso_edita" hide-details />
-                                                    </v-list-item-action>
+                                        <v-list-item v-for="item in listasPrecioOpc" :key="item.value"
+                                            :value="item.value" :disabled="permiso_edita" class="px-4">
+                                            <template v-slot:default="{ active }">
+                                                <v-list-item-action class="mr-3">
+                                                    <v-checkbox :input-value="active" color="primary"
+                                                        :disabled="permiso_edita" hide-details />
+                                                </v-list-item-action>
 
-                                                    <v-list-item-content>
-                                                        <v-list-item-title class="font-weight-medium">
-                                                            {{ item.text }}
-                                                        </v-list-item-title>
-                                                    </v-list-item-content>
-
-                                                    <v-list-item-icon v-if="active">
-                                                        <v-icon color="primary" small>mdi-check-circle</v-icon>
-                                                    </v-list-item-icon>
-                                                </template>
-                                            </v-list-item>
-
-                                            <v-divider v-if="i < listasPrecioOpc.length - 1"
-                                                :key="'div-' + item.value" />
-                                        </template>
+                                                <v-list-item-content>
+                                                    <v-list-item-title class="font-weight-medium">
+                                                        {{ item.text }}
+                                                    </v-list-item-title>
+                                                </v-list-item-content>
+                                                <v-list-item-icon v-if="active">
+                                                    <v-icon color="primary" small>mdi-check-circle</v-icon>
+                                                </v-list-item-icon>
+                                            </template>
+                                        </v-list-item>
                                     </v-list-item-group>
                                 </v-list>
                             </v-card>
                         </v-col>
-                        <v-col cols="12" :md="esListaPreciosActivo ? 6 : 12">
+                        <v-col cols="12" :md="6">
+                            <v-card outlined class="rounded-lg elevation-1 fill-height">
+                                <v-card-title class="text-subtitle-1 font-weight-bold">
+                                    <v-icon left color="primary">mdi-account</v-icon>
+                                    Imagen del cliente
+                                </v-card-title>
+                                <v-divider></v-divider>
+                                <v-card-text class="pt-4">
+                                    <v-row justify="center">
+                                        <v-col cols="12" class="text-center">
+                                            <imagen_cliente ref="imagenCliente" :cliente-doc="clienteForm.documento"
+                                                :cliente-id="clienteForm.id" :modo-pendiente="!clienteForm.id"
+                                                modo-activador="miniatura" />
+                                        </v-col>
+                                    </v-row>
+                                </v-card-text>
+                                <v-alert v-if="!$store.state.baseDatos?.imagen_cliente" type="warning" text dense
+                                    class="mt-3 text-caption">
+                                    Opción bloqueada por configuración global.
+                                </v-alert>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="12" :md="6">
                             <v-card outlined class="rounded-lg elevation-1 fill-height">
                                 <v-card-title class="text-subtitle-1 font-weight-bold">
                                     <v-icon left color="green">mdi-cellphone-check</v-icon>
@@ -471,9 +487,10 @@ import { mapActions } from 'vuex'
 import { departamento, provincia, distrito } from '../../ubigeos'
 import moment from 'moment'
 import 'moment/locale/es'
+import imagen_cliente from './dialogos/imagen_cliente.vue'
 
 export default {
-    components: { dial_tabla },
+    components: { dial_tabla, imagen_cliente },
     props: {
         cliente_selecto: { type: Object, default: null },
         vendedor: null,
@@ -563,7 +580,6 @@ export default {
             // 11 dígitos, tipo RUC y empieza en 20
             return doc.length === 11 && doc.startsWith('20') && tipo === 'RUC';
         },
-
         lineaCreditoHabilitado() {
             return this.$store.state.configuracion?.linea_credito_activo === true
         },
@@ -869,6 +885,12 @@ export default {
 
                 if (suma) {
                     await sumaContador('ordenclientes', String(parseInt(this.clienteForm.documento) + 1).padStart(4, '0'))
+                }
+                if (this.clienteForm.id && this.$refs.imagenCliente) {
+                    await this.$refs.imagenCliente.guardarImagenPendiente(
+                        this.clienteForm.documento,
+                        this.clienteForm.id
+                    )
                 }
 
                 this.$emit('actualizar', this.clienteForm)

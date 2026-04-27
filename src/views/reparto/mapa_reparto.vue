@@ -104,6 +104,8 @@
                         </template>
                         <span>Llamar</span>
                     </v-tooltip>
+                    <imagen_cliente v-if="clienteDocSeleccionado" :cliente-doc="clienteDocSeleccionado"
+                        :cliente-id="clienteIdSeleccionado" modo-activador="icono" :solo-lectura="true" />
 
                     <!-- entregar -->
                     <v-spacer></v-spacer>
@@ -184,9 +186,10 @@
                 </div>
             </v-card-text>
         </v-card>
-        <dial_rechaza v-if="dial_rechazo" :item_selecto="clienteSeleccionado" :grupo="grupo" @cerrar="dial_rechazo = false"
-            @guardado="clienteSeleccionado = null; stopBlink(); dial_rechazo = false" />
-        <acepta_pedido v-if="dial_aceptado" :item_selecto="clienteSeleccionado" :grupo="grupo" @cerrar="dial_aceptado = false"
+        <dial_rechaza v-if="dial_rechazo" :item_selecto="clienteSeleccionado" :grupo="grupo"
+            @cerrar="dial_rechazo = false" @guardado="clienteSeleccionado = null; stopBlink(); dial_rechazo = false" />
+        <acepta_pedido v-if="dial_aceptado" :item_selecto="clienteSeleccionado" :grupo="grupo"
+            @cerrar="dial_aceptado = false"
             @guardado="clienteSeleccionado = null; stopBlink(); dial_aceptado = false" />
     </v-dialog>
 </template>
@@ -197,6 +200,7 @@ import store from '@/store/index'
 import { llamarCliente, enviarWhatsApp, irGoogleMaps, copiarUrlMaps, chipColor, chipColorEntrega, estadoColorTexto } from './funciones'
 import acepta_pedido from './dialogos/acepta_pedido.vue'
 import dial_rechaza from './dialogos/rechaza_pedido.vue'
+import imagen_cliente from '../clientes/dialogos/imagen_cliente.vue'
 export default {
     name: "dial_mapa",
     props: {
@@ -206,7 +210,8 @@ export default {
     },
     components: {
         dial_rechaza,
-        acepta_pedido
+        acepta_pedido,
+        imagen_cliente
     },
     data() {
         return {
@@ -290,6 +295,12 @@ export default {
     computed: {
         // ...lo que ya tienes...
         isMobile() { return this.$vuetify.breakpoint.smAndDown; },
+        clienteDocSeleccionado() {
+            return String(this.clienteSeleccionado?.dni || this.clienteSeleccionado?.documento || this.clienteSeleccionado?.id || '').trim() || null;
+        },
+        clienteIdSeleccionado() {
+            return String(this.clienteSeleccionado?.dni || this.clienteSeleccionado?.documento || this.clienteSeleccionado?.id || '').trim() || null;
+        },
         ubicacionActual() {
             return store.state.ubicacion_actual || null; // NUEVO
         },

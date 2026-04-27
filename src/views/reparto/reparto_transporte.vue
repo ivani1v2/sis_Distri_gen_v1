@@ -14,8 +14,8 @@
                 <v-select v-if="!isMobile" v-model="estadoFiltro" :items="estadosEntrega" outlined dense hide-details
                     class="ml-2" label="Estado" />
                 <v-spacer></v-spacer>
-                <v-btn v-if="!isMobile" small :color="hasObservacion ? 'warning' : 'blue-grey'" dark rounded depressed lock class="mt-1 mr-2"
-                    @click="dial_observacion = true">
+                <v-btn v-if="!isMobile" small :color="hasObservacion ? 'warning' : 'blue-grey'" dark rounded depressed
+                    lock class="mt-1 mr-2" @click="dial_observacion = true">
                     <v-icon left>mdi-note-edit</v-icon>
                     Observación
                 </v-btn>
@@ -95,7 +95,7 @@
                         <td style="font-size:75%;">{{ pedido.total }}</td>
                         <td style="font-size:75%;">
                             <v-row dense>
-                                <v-col cols="4" class="text-center">
+                                <v-col cols="3" class="text-center">
                                     <v-menu offset-y>
                                         <template v-slot:activator="{ on, attrs }">
                                             <v-btn :disabled="!pedido.latitud || !pedido.longitud" color="info" x-small
@@ -119,16 +119,25 @@
                                                         color="success">mdi-map-marker</v-icon></v-list-item-icon>
                                                 <v-list-item-title>Ver Mapa</v-list-item-title>
                                             </v-list-item>
+                                            <v-list-item
+                                                v-if="$store.state.baseDatos?.imagen_cliente && clienteDocFromPedido(pedido)">
+                                                <v-list-item-title class="d-flex align-center">
+                                                    <imagen_cliente :cliente-doc="clienteDocFromPedido(pedido)"
+                                                        :cliente-id="clienteIdFromPedido(pedido)" modo-activador="icono"
+                                                        :solo-lectura="true" />
+                                                    <span class="mr-2 ml-5">Ver imagen</span>
+                                                </v-list-item-title>
+                                            </v-list-item>
                                         </v-list>
                                     </v-menu>
                                 </v-col>
-                                <v-col cols="4" class="text-center">
+                                <v-col cols="3" class="text-center">
                                     <v-btn :disabled="pedido.estado_entrega != 'pendiente'" x-small color="success"
                                         @click="item_selecto = pedido; dial_aceptado = !dial_aceptado">
                                         <v-icon small>mdi-check</v-icon>
                                     </v-btn>
                                 </v-col>
-                                <v-col cols="4" class="text-center">
+                                <v-col cols="3" class="text-center">
                                     <v-btn :disabled="pedido.estado_entrega != 'pendiente'" x-small color="error"
                                         @click="item_selecto = pedido; dial_rechazo = !dial_rechazo">
                                         <v-icon small>mdi-close</v-icon>
@@ -189,6 +198,15 @@
                                                     color="success">mdi-map-marker</v-icon></v-list-item-icon>
                                             <v-list-item-title>Ver Mapa</v-list-item-title>
                                         </v-list-item>
+                                        <v-list-item
+                                            v-if="$store.state.baseDatos?.imagen_cliente && clienteDocFromPedido(pedido)">
+                                            <v-list-item-title class="d-flex align-center">
+                                                <imagen_cliente :cliente-doc="clienteDocFromPedido(pedido)"
+                                                    :cliente-id="clienteIdFromPedido(pedido)" modo-activador="icono"
+                                                    :solo-lectura="true" />
+                                                <span class="mr-2 ml-5">Ver imagen</span>
+                                            </v-list-item-title>
+                                        </v-list-item>
                                     </v-list>
                                 </v-menu>
                             </v-col>
@@ -213,13 +231,14 @@
                                     </v-list>
                                 </v-menu>
                             </v-col>
-                            <v-col cols="3" class="text-center">
+
+                            <v-col cols="1" class="text-center">
                                 <v-btn :disabled="pedido.estado_entrega != 'pendiente'" x-small color="warning"
                                     @click="item_selecto = pedido; dial_aceptado = !dial_aceptado">
                                     <v-icon small>mdi-check</v-icon>
                                 </v-btn>
                             </v-col>
-                            <v-col cols="3" class="text-center">
+                            <v-col cols="2" class="text-center">
                                 <v-btn :disabled="pedido.estado_entrega != 'pendiente'" x-small color="error"
                                     @click="item_selecto = pedido; dial_rechazo = !dial_rechazo">
                                     <v-icon small>mdi-close</v-icon>
@@ -231,29 +250,29 @@
             </v-row>
             <div class="text-center py-4" v-if="displayedPedidos.length < pedidosFiltrados.length">
                 <v-btn small outlined @click="verMas">Ver más ({{ displayedPedidos.length }}/{{ pedidosFiltrados.length
-                    }})</v-btn>
+                }})</v-btn>
             </div>
         </v-container>
         <dial_mapas v-model="dialogoMapa"
             :clienteEnMapa="{ nombre: item_selecto.cliente, latitud: item_selecto.latitud, longitud: item_selecto.longitud, documento: item_selecto.dni }"
-            :ver-todos="false" :guardar_auto="false" @cierra="dialogoMapa = false" />
+            :ver-todos="false" :guardar_auto="false" :ocultar_acciones="true" @cierra="dialogoMapa = false" />
         <mapa_reparto v-model="dialogoMapa_reparto" :clientes="pedidosFiltrados" :grupo="repartoActual" />
         <dial_rechaza v-if="dial_rechazo" :item_selecto="item_selecto" @cerrar="dial_rechazo = false"
-            @guardado=" dial_rechazo = false" :grupo="repartoActual" />            
-            <div v-if="isMobile && !dialogoMapa_reparto && pedidosFiltrados.length > 0" class="fab-mobile">                
-                <v-btn color="success" dark class="mb-2" @click="estadoFiltro = 'todos'; dialogoMapa_reparto = true">
-                    Mapa
-                    <v-icon>mdi-map-marker</v-icon>
-                </v-btn>
-            </div>
-            <acepta_pedido v-if="dial_aceptado" :item_selecto="item_selecto" @cerrar="dial_aceptado = false"
-            @guardado=" dial_aceptado = false" :grupo="repartoActual" />
-            <cobranza_reparto v-if="dial_cobranza" :pedidos="pedidosFiltrados" :grupo="repartoActual"
-            @cerrar="dial_cobranza = false" />
-            <observacion_entrega_dialog v-model="dial_observacion" :grupo="repartoActual"
-            :observacion-actual="observacionEntrega" @guardado="onObservacionGuardada" />
-            <busca_reparto v-if="dial_repartos" v-model="dial_repartos" @seleccionado="ver_reparto" />
+            @guardado=" dial_rechazo = false" :grupo="repartoActual" />
+        <div v-if="isMobile && !dialogoMapa_reparto && pedidosFiltrados.length > 0" class="fab-mobile">
+            <v-btn color="success" dark class="mb-2" @click="estadoFiltro = 'todos'; dialogoMapa_reparto = true">
+                Mapa
+                <v-icon>mdi-map-marker</v-icon>
+            </v-btn>
         </div>
+        <acepta_pedido v-if="dial_aceptado" :item_selecto="item_selecto" @cerrar="dial_aceptado = false"
+            @guardado=" dial_aceptado = false" :grupo="repartoActual" />
+        <cobranza_reparto v-if="dial_cobranza" :pedidos="pedidosFiltrados" :grupo="repartoActual"
+            @cerrar="dial_cobranza = false" />
+        <observacion_entrega_dialog v-model="dial_observacion" :grupo="repartoActual"
+            :observacion-actual="observacionEntrega" @guardado="onObservacionGuardada" />
+        <busca_reparto v-if="dial_repartos" v-model="dial_repartos" @seleccionado="ver_reparto" />
+    </div>
 </template>
 
 <script>
@@ -267,9 +286,10 @@ import busca_reparto from './dialogos/buscar_reparto.vue'
 import acepta_pedido from './dialogos/acepta_pedido.vue'
 import cobranza_reparto from './dialogos/cobranza_reparto.vue'
 import observacion_entrega_dialog from './dialogos/observacion_entrega_dialog.vue'
+import imagen_cliente from '../clientes/dialogos/imagen_cliente.vue'
 import { llamarCliente, enviarWhatsApp, irGoogleMaps, copiarUrlMaps, chipColor, chipColorEntrega } from './funciones'
 export default {
-    components: { dial_mapas, mapa_reparto, dial_rechaza, busca_reparto, acepta_pedido, cobranza_reparto, observacion_entrega_dialog },
+    components: { dial_mapas, mapa_reparto, dial_rechaza, busca_reparto, acepta_pedido, cobranza_reparto, observacion_entrega_dialog, imagen_cliente },
     data() {
         return {
             dial_cobranza: false,
@@ -370,6 +390,12 @@ export default {
         }
     },
     methods: {
+        clienteDocFromPedido(pedido) {
+            return String(pedido?.dni || '').trim() || null;
+        },
+        clienteIdFromPedido(pedido) {
+            return String(pedido?.dni || '').trim() || null;
+        },
         onObservacionGuardada(valor) {
             this.observacionEntrega = valor || '';
         },

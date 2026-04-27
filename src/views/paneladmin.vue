@@ -158,6 +158,9 @@
                                 <v-col cols="12" sm="6" md="4">
                                     <v-checkbox v-model="form.mod_activos" label="Modulo activos" />
                                 </v-col>
+                                <v-col cols="12" sm="6" md="4">
+                                    <v-checkbox v-model="form.imagen_cliente" label="Fotos Cliente" />
+                                </v-col>
                                 <v-col cols="6" sm="6" md="4">
                                     <v-text-field dense outlined v-model.trim="form.ruc_asociado"
                                         label="RUC ASOCIADO" />
@@ -322,7 +325,8 @@ export default {
                 ruc_asociado: '',
                 bigquery: false,
                 kardex_avanzado: false,
-                num_usuarios: ''
+                num_usuarios: '',
+                imagen_cliente: false
             })
         },
 
@@ -511,6 +515,7 @@ export default {
                 { key: 'bigquery', label: 'BIGQUERY' },
                 { key: 'kardex_avanzado', label: 'KARDEX AVANZADO' },
                 { key: 'mod_activos', label: 'MODULO ACTIVOS' },
+                { key: 'imagen_cliente', label: 'IMAGEN CLIENTE' },
                 { key: 'ruc_asociado', label: 'RUC ASOCIADO' },
                 // agrega más campos si los necesitas
             ]

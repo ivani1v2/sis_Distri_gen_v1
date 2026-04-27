@@ -108,12 +108,17 @@
                             </v-chip>
                             <span v-else>-</span>
                         </td>
-                        <td width="150">
+                        <td width="180">
                             <v-row>
-                                <v-col cols="6" class="text-center">
+                                
+                                <v-col cols="4" class="text-center">
+                                    <imagen_cliente v-if="item.documento && item.documento !== 'SIN DOCUMENTO'"
+                                        :cliente-doc="item.documento" :cliente-id="item.id" modo-activador="icono" />
+                                </v-col>
+                                <v-col cols="4" class="text-center">
                                     <v-icon color="green" @click="editar(item)">mdi-lead-pencil</v-icon>
                                 </v-col>
-                                <v-col cols="6" class="text-center">
+                                <v-col cols="4" class="text-center">
                                     <v-icon color="blue" @click="abrirMapa(item)">mdi-map-marker</v-icon>
                                 </v-col>
                             </v-row>
@@ -143,6 +148,8 @@
                                 </div>
                             </div>
                             <div class="actions">
+                                <imagen_cliente v-if="item.documento && item.documento !== 'SIN DOCUMENTO'"
+                                    :cliente-doc="item.documento" :cliente-id="item.id" modo-activador="icono" />
                                 <v-btn icon small @click="abrirMapa(item)">
                                     <v-icon>mdi-map-marker</v-icon>
                                 </v-btn>
@@ -253,8 +260,9 @@ import store from '@/store/index'
 import { eliminaCliente, edita_campo_Cliente } from "../../db"
 import dial_tabla_zona from './dialogos/tablas_zona.vue'
 import { colClientes, crearOActualizarCliente } from '../../db_firestore'
+import imagen_cliente from './dialogos/imagen_cliente.vue'
 export default {
-    components: { dial_mapa, mapa_clientes, nuevo_cli, dial_tabla_zona },
+    components: { dial_mapa, mapa_clientes, nuevo_cli, dial_tabla_zona, imagen_cliente },
 
     data: () => ({
         dialtabla_zona: false,

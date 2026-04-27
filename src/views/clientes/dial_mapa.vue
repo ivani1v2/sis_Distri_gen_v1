@@ -28,7 +28,7 @@
                                 lng: Number(u.ubicacion.lng)
                             }" :icon="'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png'"
                             :title="u.nombre || u.codigo || 'Vendedor'" />
-                        <GmapMarker v-if="verTodos" v-for="(cli, i) in clientes" :key="cli.id || cli.documento || i"
+                        <GmapMarker v-for="(cli, i) in (verTodos ? clientes : [])" :key="cli.id || cli.documento || i"
                             v-show="isValidCoord(cli.latitud, cli.longitud)"
                             :position="{ lat: Number(cli.latitud), lng: Number(cli.longitud) }" :title="cli.nombre"
                             :draggable="false" :icon="iconoPorEstado(cli)" @click="abreInfoCliente(cli)" />
@@ -55,7 +55,7 @@
                                     Doc: {{ clienteSeleccionado.documento }}
                                 </div>
 
-                                <div class="mt-2" style="display:flex; gap:8px; align-items:center;">
+                                <div v-if="!ocultar_acciones" class="mt-2" style="display:flex; gap:8px; align-items:center;">
                                     <v-btn x-small color="primary" @click="navegarCliente" title="Navegar">
                                         <v-icon left small>mdi-navigation</v-icon> Ir
                                     </v-btn>
@@ -91,7 +91,7 @@
                                     Doc: {{ clienteSeleccionado.documento }}
                                 </div>
 
-                                <div class="mt-2" style="display:flex; gap:8px; align-items:center;">
+                                <div v-if="!ocultar_acciones" class="mt-2" style="display:flex; gap:8px; align-items:center;">
                                     <v-btn x-small color="primary" @click="navegarCliente" title="Navegar">
                                         <v-icon left small>mdi-navigation</v-icon> Ir
                                     </v-btn>
@@ -150,7 +150,8 @@ export default {
         clienteEnMapa: Object,
         guardar_auto: Boolean,
         clientes: { type: Array, default: () => [] },
-        verTodos: { type: Boolean, default: false }
+        verTodos: { type: Boolean, default: false },
+        ocultar_acciones: { type: Boolean, default: false }
     },
     data() {
         return {

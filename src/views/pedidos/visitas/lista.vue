@@ -111,6 +111,10 @@
 
                     <!-- Dirección (tooltip con _dir y texto truncado _dirTrunc que ya preparaste) -->
                     <template v-slot:[`item._dir`]="{ item }">
+                        <imagen_cliente v-if="$store.state.baseDatos?.imagen_cliente && clienteDocFromItem(item)"
+                            :cliente-doc="clienteDocFromItem(item)" :cliente-id="clienteIdFromItem(item)"
+                            modo-activador="icono" />
+
                         <span style="font-size:75%">
                             <v-tooltip top>
                                 <template v-slot:activator="{ on, attrs }">
@@ -216,12 +220,16 @@
                                     </template>
                                     <span>Ubicación</span>
                                 </v-tooltip>
+
+                                <imagen_cliente v-if="$store.state.baseDatos?.imagen_cliente && clienteDocFromItem(item)" :cliente-doc="clienteDocFromItem(item)"
+                                    :cliente-id="clienteIdFromItem(item)" modo-activador="icono" />
                             </v-list-item-action>
                         </v-list-item>
 
                         <v-divider />
 
                         <v-card-actions class="py-1">
+
                             <v-btn x-small text color="info" @click="vender(item)"
                                 v-if="$store.state.permisos.venta_directa">
                                 <v-icon left small>mdi-cash-register</v-icon> Vender
@@ -333,10 +341,11 @@ import { loadFiltros, saveFiltros } from '../../../guarda_navegador';
 import { colClientes, colRuta_x_dia } from '../../../db_firestore'
 import dial_histo_cliente from '../../clientes/dialogos/historial_compras.vue'
 import dial_deudas_cliente from '../../clientes/dialogos/dial_deudas_cliente.vue'
+import imagen_cliente from '../../clientes/dialogos/imagen_cliente.vue'
 moment.locale('es')
 export default {
     name: 'ListaClientesVisitas',
-    components: { nuevo_cli, dial_mapas, dial_detalle_ped, busca_clis, dial_histo_cliente, dial_deudas_cliente },
+    components: { nuevo_cli, dial_mapas, dial_detalle_ped, busca_clis, dial_histo_cliente, dial_deudas_cliente, imagen_cliente },
     data: () => ({
         headers: [
             { text: 'Cliente', value: 'nombre' },
@@ -504,6 +513,12 @@ export default {
         if (this.observer) this.observer.disconnect();
     },
     methods: {
+        clienteDocFromItem(item) {
+            return String(item?.documento || '').trim() || null;
+        },
+        clienteIdFromItem(item) {
+            return String(item?.documento || '').trim() || null;
+        },
         getRowKey(item) {
             return item.id || `row_${Math.random()}`;
         },
