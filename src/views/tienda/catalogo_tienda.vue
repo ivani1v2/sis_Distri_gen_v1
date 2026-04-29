@@ -426,9 +426,20 @@
                                 </v-avatar>
                             </div>
                         </div>
+                        <div v-if="tipoDialogo === 'promocion' && imagenesDialogo.length" class="mt-3">
+                            <v-btn small rounded color="#1034a6" class="white--text" @click="abrirPreviewPromocion">
+                                <v-icon left small>mdi-eye</v-icon>
+                                Preview
+                            </v-btn>
+                        </div>
                         <div class="mt-2 text-caption grey--text">
-                            {{ ['producto', 'promocion'].includes(tipoDialogo) ? 'Sube una o varias fotos' :
-                                'Sube una foto clara' }}
+                            {{
+                                tipoDialogo === 'promocion'
+                                    ? 'Sube una o varias fotos. Se recortan y guardan a 600x600 px.'
+                                    : ['producto', 'promocion'].includes(tipoDialogo)
+                                        ? 'Sube una o varias fotos'
+                                        : 'Sube una foto clara'
+                            }}
                         </div>
                         <input ref="fileCreate" type="file" accept="image/*" style="display:none"
                             :multiple="['producto', 'promocion'].includes(tipoDialogo)"
@@ -569,8 +580,9 @@
                 </v-card-text>
 
                 <v-card-actions class="pa-4 pt-0">
-                    <v-btn block x-large color="#1034a6" rounded depressed class="tienda-save-btn"
-                        :disabled="deshabilitarGuardar" @click="guardarItem">
+                    <v-btn block x-large color="#1034a6" rounded depressed
+                        class="tienda-save-btn white--text font-weight-bold" :disabled="deshabilitarGuardar"
+                        @click="guardarItem">
                         Confirmar y Guardar
                     </v-btn>
                 </v-card-actions>
@@ -578,6 +590,30 @@
         </v-dialog>
         <dial_config v-if="dial_config" @cerrar="dial_config = false" @guardado="onConfigGuardado"
             @sincronizar-todo="onConfigSincronizarTodo" />
+
+        <v-dialog v-model="previewPromocionVisible" max-width="760" scrollable>
+            <v-card class="rounded-xl overflow-hidden">
+                <v-toolbar flat color="white">
+                    <v-toolbar-title class="font-weight-black">Preview de promoción</v-toolbar-title>
+                    <v-spacer />
+                    <v-btn icon @click="previewPromocionVisible = false"><v-icon>mdi-close</v-icon></v-btn>
+                </v-toolbar>
+
+                <v-card-text>
+                    <div class="preview-promo-frame mx-auto">
+                        <v-img :src="imagenPreviewPromocion || placeholderImg" cover class="fill-height" />
+                    </div>
+
+                    <div v-if="imagenesDialogo.length > 1" class="d-flex flex-wrap justify-center mt-4">
+                        <v-btn v-for="(imagen, index) in imagenesDialogo" :key="index" small text class="ma-1"
+                            :color="index === promoPreviewIndex ? '#1034a6' : 'grey darken-1'"
+                            @click="promoPreviewIndex = index">
+                            Imagen {{ index + 1 }}
+                        </v-btn>
+                    </div>
+                </v-card-text>
+            </v-card>
+        </v-dialog>
 
         <dial_crop ref="dlgCrop" @confirmado="onCropConfirmado" @cerrar="onCropCerrado" />
 
@@ -643,6 +679,8 @@ export default {
                 nombre: "",
                 codigosProductos: [],
                 marcasRelacionadas: [],
+                descripcion: "",
+                mostrarEnInicio: false,
             },
             formGrupoPrecio: {
                 nombre: "",
@@ -682,6 +720,8 @@ export default {
             previewDialogo: "",
             archivoDialogo: null,
             imagenesDialogo: [],
+            previewPromocionVisible: false,
+            promoPreviewIndex: 0,
             editMode: false,
             editId: "",
             placeholderImg:
@@ -820,6 +860,10 @@ export default {
             const principal = (this.imagenesDialogo || [])[0] || {}
             return principal.preview || principal.fotoUrl || principal.thumbB64 || this.placeholderImg
         },
+        imagenPreviewPromocion() {
+            const principal = (this.imagenesDialogo || [])[this.promoPreviewIndex] || (this.imagenesDialogo || [])[0] || {}
+            return principal.preview || principal.fotoUrl || principal.thumbB64 || this.placeholderImg
+        },
     },
     watch: {
         tiendaSincronizada(nuevoValor, valorAnterior) {
@@ -868,7 +912,7 @@ export default {
                 const productoStore = (productosStore || []).find(prod => String(prod.id) === String(idStore)) || {}
 
                 return {
-                    id: item.id || "",
+                    id: String(item.id || ""),
                     nombre: item.nombre || "",
                     precio: Number(item.precio || 0),
                     marca: item.marca || "",
@@ -909,6 +953,8 @@ export default {
             const promocionesJson = filtrarActualizados(this.promociones).map(item => ({
                 id: item.id || "",
                 nombre: item.nombre || "",
+                descripcion: item.descripcion || "",
+                mostrarEnInicio: !!item.mostrarEnInicio,
                 codigosProductos: Array.isArray(item.codigosProductos) ? item.codigosProductos.map(x => String(x)) : [],
                 marcasRelacionadas: Array.isArray(item.marcasRelacionadas) ? item.marcasRelacionadas.filter(Boolean) : [],
                 imagenes: this.normalizarImagenesPromocion(item),
@@ -968,8 +1014,8 @@ export default {
                 })
 
                 const response = await axios.post(
-                    "https://us-central1-domo-tienda.cloudfunctions.net/back_tienda",
-                    //"http://localhost:5001/domo-tienda/us-central1/back_tienda",
+                    //"https://us-central1-domo-tienda.cloudfunctions.net/back_tienda",
+                    "http://127.0.0.1:5001/domo-tienda/us-central1/back_tienda",
                     {
                         bd: String(bd),
                         metodo: "sincroniza_productos",
@@ -1047,6 +1093,8 @@ export default {
                 nombre: "",
                 codigosProductos: [],
                 marcasRelacionadas: [],
+                descripcion: "",
+                mostrarEnInicio: false,
             }
         },
         crearFormGrupoPrecioBase() {
@@ -1082,6 +1130,8 @@ export default {
                 marcasRelacionadas: Array.isArray(promocion.marcasRelacionadas)
                     ? promocion.marcasRelacionadas.filter(Boolean)
                     : base.marcasRelacionadas,
+                descripcion: promocion.descripcion || base.descripcion,
+                mostrarEnInicio: promocion.mostrarEnInicio !== undefined ? !!promocion.mostrarEnInicio : base.mostrarEnInicio,
             }
         },
 
@@ -1163,6 +1213,8 @@ export default {
             const { fotoUrl, thumbB64, rutaStorage, ...resto } = promocion || {}
             return {
                 ...resto,
+                descripcion: promocion?.descripcion || "",
+                mostrarEnInicio: !!promocion?.mostrarEnInicio,
                 imagenes: this.normalizarImagenesPromocion(promocion),
                 codigosProductos: Array.isArray(promocion?.codigosProductos)
                     ? promocion.codigosProductos.map(item => String(item))
@@ -1187,6 +1239,7 @@ export default {
                 esNueva: false,
                 orden: index + 1,
             }))
+            this.promoPreviewIndex = 0
         },
         async agregarArchivosDialogoProducto(files = []) {
             const lista = Array.isArray(files) ? files.filter(Boolean) : []
@@ -1210,6 +1263,7 @@ export default {
                 ...imagen,
                 orden: index + 1,
             }))
+            if (this.tipoDialogo === "promocion") this.promoPreviewIndex = 0
         },
         async construirImagenesProductoDesdeDialogo(id, tipoStorage = "producto") {
             const imagenes = []
@@ -1249,6 +1303,8 @@ export default {
                 marcasRelacionadas: Array.isArray(this.formPromocion.marcasRelacionadas)
                     ? this.formPromocion.marcasRelacionadas.filter(Boolean)
                     : [],
+                descripcion: String(this.formPromocion.descripcion || "").trim(),
+                mostrarEnInicio: !!this.formPromocion.mostrarEnInicio,
                 imagenes: this.normalizarImagenesPromocion(actual),
             }
         },
@@ -1995,6 +2051,8 @@ export default {
             this.previewDialogo = ""
             this.archivoDialogo = null
             this.imagenesDialogo = []
+            this.previewPromocionVisible = false
+            this.promoPreviewIndex = 0
             this.dlgAdd = true
         },
         cerrarDialogo() {
@@ -2003,6 +2061,8 @@ export default {
             this.previewDialogo = ""
             this.archivoDialogo = null
             this.imagenesDialogo = []
+            this.previewPromocionVisible = false
+            this.promoPreviewIndex = 0
             this.editMode = false
             this.editId = ""
             this.productoSelId = null
@@ -2080,6 +2140,22 @@ export default {
                         ? ((this.promociones || []).find(x => x.id === id)?.orden || 1)
                         : this.promociones.length + 1
                 }
+                if (esPromocion && this.formPromocion.mostrarEnInicio) {
+                    const otrasPromos = (this.promociones || []).filter(p => p.id !== id)
+                    for (const otra of otrasPromos) {
+                        if (otra.mostrarEnInicio) {
+                            const otraActualizada = {
+                                ...otra,
+                                mostrarEnInicio: false,
+                                updatedAt: Date.now()
+                            }
+                            await guarda_datos_tienda(`promociones/${otra.id}`, otraActualizada)
+                            const idx = this.promociones.findIndex(p => p.id === otra.id)
+                            if (idx >= 0) this.$set(this.promociones, idx, otraActualizada)
+                        }
+                    }
+                }
+
                 if (esGrupoPrecio) {
                     orden = this.editMode
                         ? ((this.gruposPrecio || []).find(x => x.id === id)?.orden || 1)
@@ -2230,6 +2306,10 @@ export default {
             } finally {
                 store.commit("dialogoprogress")
             }
+        },
+        abrirPreviewPromocion() {
+            if (!this.imagenesDialogo.length) return
+            this.previewPromocionVisible = true
         },
         async eliminarItem(tipo, id) {
             try {
@@ -2734,6 +2814,16 @@ export default {
 .tienda-banner {
     border: 1px solid #e8eefc !important;
     background: linear-gradient(90deg, rgba(30, 58, 138, 0.08) 0%, rgba(255, 255, 255, 1) 60%);
+}
+
+.preview-promo-frame {
+    width: 100%;
+    max-width: 600px;
+    aspect-ratio: 1 / 1;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
 }
 
 @media (max-width: 960px) {

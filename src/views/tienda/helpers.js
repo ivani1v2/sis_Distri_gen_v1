@@ -14,7 +14,7 @@ export const IMAGE_PRESETS = {
   },
   crop: {
     producto: { size: 1400, quality: 0.88 },
-    promocion: { size: 1600, quality: 0.9 },
+    promocion: { size: 600, quality: 0.92 },
     marca: { size: 1000, quality: 0.86 },
     categoria: { size: 1000, quality: 0.86 },
     general: { size: 1200, quality: 0.88 },

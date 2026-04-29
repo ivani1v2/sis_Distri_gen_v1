@@ -1,6 +1,6 @@
 <template>
     <!-- ====================== DIALOGO CROP ====================== -->
-    <v-dialog v-model="dial" max-width="720" persistent>
+    <v-dialog v-model="dial" max-width="980" persistent>
         <v-card class="rounded-xl">
             <v-toolbar flat color="white">
                 <v-btn icon @click="cierre"><v-icon>mdi-close</v-icon></v-btn>
@@ -12,27 +12,41 @@
             </v-toolbar>
 
             <v-card-text>
-                <div class="crop-wrap">
-                    <img ref="cropImg" :src="cropSrc" style="max-width:100%; display:block;" />
-                </div>
+                <v-row>
+                    <v-col cols="12" md="8">
+                        <div class="crop-wrap">
+                            <img ref="cropImg" :src="cropSrc" style="max-width:100%; display:block;" />
+                        </div>
 
-                <div class="mt-4">
-                    <div class="text-caption grey--text mb-1">Zoom</div>
-                    <v-slider v-model="cropZoom" :min="1" :max="3" :step="0.01" hide-details @input="onZoomChange" />
-                </div>
+                        <div class="mt-4">
+                            <div class="text-caption grey--text mb-1">Zoom</div>
+                            <v-slider v-model="cropZoom" :min="1" :max="3" :step="0.01" hide-details @input="onZoomChange" />
+                        </div>
 
-                <div class="d-flex justify-center mt-2">
-                    <v-btn small class="mr-2" @click="rotar(-90)">
-                        <v-icon left small>mdi-rotate-left</v-icon> Rotar
-                    </v-btn>
-                    <v-btn small @click="rotar(90)">
-                        <v-icon left small>mdi-rotate-right</v-icon> Rotar
-                    </v-btn>
-                </div>
+                        <div class="d-flex justify-center mt-2">
+                            <v-btn small class="mr-2" @click="rotar(-90)">
+                                <v-icon left small>mdi-rotate-left</v-icon> Rotar
+                            </v-btn>
+                            <v-btn small @click="rotar(90)">
+                                <v-icon left small>mdi-rotate-right</v-icon> Rotar
+                            </v-btn>
+                        </div>
 
-                <div class="text-caption grey--text mt-3">
-                    Tip: arrastra la imagen para centrar. Usa el zoom para alejar/acercar (fondo blanco automático).
-                </div>
+                        <div class="text-caption grey--text mt-3">
+                            Tip: arrastra la imagen para centrar. Usa el zoom para alejar/acercar.
+                        </div>
+                    </v-col>
+
+                    <v-col cols="12" md="4">
+                        <div class="text-caption grey--text mb-2 text-center">Vista previa 600x600</div>
+                        <div class="preview-shell mx-auto">
+                            <div class="crop-preview"></div>
+                        </div>
+                        <div class="text-caption grey--text mt-3 text-center px-2">
+                            La imagen se guarda recortada al centro en formato cuadrado. Puedes moverla o acercarla antes de confirmar.
+                        </div>
+                    </v-col>
+                </v-row>
             </v-card-text>
         </v-card>
     </v-dialog>
@@ -91,6 +105,7 @@ export default {
                     center: true,
                     responsive: true,
                     zoomOnWheel: true,
+                    preview: ".crop-preview",
                 })
             })
         },
@@ -194,6 +209,22 @@ export default {
     height: 380px;
     background: #f5f5f5;
     border-radius: 12px;
+    overflow: hidden;
+}
+
+.preview-shell {
+    width: 100%;
+    max-width: 260px;
+    aspect-ratio: 1 / 1;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+}
+
+.crop-preview {
+    width: 100%;
+    height: 100%;
     overflow: hidden;
 }
 </style>

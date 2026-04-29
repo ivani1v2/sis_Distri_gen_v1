@@ -14,14 +14,14 @@
                     No hay promociones registradas.
                 </v-alert>
 
-                <draggable v-model="localItems" :animation="200" handle=".drag-handle" @end="emitirReorden"
-                    tag="div" class="d-flex flex-wrap">
+                <draggable v-model="localItems" :animation="200" handle=".drag-handle" @end="emitirReorden" tag="div"
+                    class="d-flex flex-wrap">
                     <div v-for="(item, index) in localItems" :key="item.id" class="pa-2" style="width: 240px;">
                         <v-card class="rounded-xl overflow-hidden" outlined>
                             <v-hover v-slot="{ hover }">
                                 <div style="position: relative;">
                                     <v-img :src="principalFoto(item)" :lazy-src="principalThumb(item)" height="180"
-                                        class="grey lighten-4" />
+                                        cover class="grey lighten-4 promo-img" />
 
                                     <v-fade-transition>
                                         <div v-if="hover" class="d-flex align-center justify-center"
@@ -52,6 +52,13 @@
                                             #{{ item.orden || (index + 1) }}
                                         </v-chip>
                                     </div>
+                                    <div v-if="item.mostrarEnInicio" class="pa-2"
+                                        style="position:absolute; right:0; top:0; z-index: 1;">
+                                        <v-chip x-small color="amber" dark class="font-weight-bold">
+                                            <v-icon left size="10">mdi-home</v-icon>
+                                            Inicio
+                                        </v-chip>
+                                    </div>
                                 </div>
                             </v-hover>
 
@@ -66,7 +73,6 @@
                                     {{ resumenMarcas(item) }}
                                 </div>
                             </v-card-text>
-
                             <input :ref="'file_' + item.id" type="file" accept="image/*" style="display:none"
                                 @change="seleccionarFoto($event, item.id)" />
                         </v-card>
@@ -88,10 +94,11 @@
                 <v-col cols="12">
                     <v-autocomplete :value="localValue.codigosProductos" :items="productosAutocomplete"
                         item-text="autocompleteLabel" item-value="autocompleteId" label="Productos de la promocion"
-                        prepend-inner-icon="mdi-barcode" multiple chips deletable-chips outlined dense hide-details="auto"
-                        @change="actualizarCodigos($event)">
+                        prepend-inner-icon="mdi-barcode" multiple chips deletable-chips outlined dense
+                        hide-details="auto" @change="actualizarCodigos($event)">
                         <template #selection="{ item, index }">
-                            <v-chip v-if="index < 3" small class="ma-1" close @click:close="quitarCodigo(codigoItem(item))">
+                            <v-chip v-if="index < 3" small class="ma-1" close
+                                @click:close="quitarCodigo(codigoItem(item))">
                                 {{ codigoItem(item) }}
                             </v-chip>
                             <span v-else-if="index === 3" class="grey--text text-caption">
@@ -105,8 +112,24 @@
             <v-row dense class="mt-2">
                 <v-col cols="12">
                     <v-autocomplete :value="localValue.marcasRelacionadas" :items="arrayMarca"
-                        label="Marcas relacionadas" prepend-inner-icon="mdi-tag-multiple" multiple chips
-                        deletable-chips outlined dense hide-details="auto" @change="actualizarMarcas($event)" />
+                        label="Marcas relacionadas" prepend-inner-icon="mdi-tag-multiple" multiple chips deletable-chips
+                        outlined dense hide-details="auto" @change="actualizarMarcas($event)" />
+                </v-col>
+            </v-row>
+
+            <v-row dense class="mt-2">
+                <v-col cols="12">
+                    <v-textarea :value="localValue.descripcion" label="Descripcion de la promocion"
+                        prepend-inner-icon="mdi-text" outlined dense auto-grow rows="3" hide-details="auto"
+                        @input="actualizarCampo('descripcion', $event)" />
+                </v-col>
+            </v-row>
+
+            <v-row dense class="mt-2">
+                <v-col cols="12">
+                    <v-switch :input-value="Boolean(localValue.mostrarEnInicio)" inset color="primary"
+                        label="Mostrar en inicio" hide-details="auto"
+                        @change="actualizarCampo('mostrarEnInicio', $event)" />
                 </v-col>
             </v-row>
         </v-container>
@@ -158,6 +181,8 @@ export default {
                     ? this.value.codigosProductos.map(item => String(item))
                     : [],
                 marcasRelacionadas: Array.isArray(this.value?.marcasRelacionadas) ? [...this.value.marcasRelacionadas] : [],
+                descripcion: this.value?.descripcion || "",
+                mostrarEnInicio: Boolean(this.value?.mostrarEnInicio),
             }
         },
         productosAutocomplete() {
@@ -188,7 +213,7 @@ export default {
         actualizarCampo(campo, valor) {
             this.$emit("input", {
                 ...this.localValue,
-                [campo]: valor || "",
+                [campo]: valor ?? "",
             })
         },
         actualizarCodigos(valor) {
@@ -251,3 +276,11 @@ export default {
     },
 }
 </script>
+
+<style scoped>
+.promo-img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+</style>
