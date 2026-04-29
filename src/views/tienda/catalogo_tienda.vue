@@ -1014,8 +1014,8 @@ export default {
                 })
 
                 const response = await axios.post(
-                    //"https://us-central1-domo-tienda.cloudfunctions.net/back_tienda",
-                    "http://127.0.0.1:5001/domo-tienda/us-central1/back_tienda",
+                    "https://us-central1-domo-tienda.cloudfunctions.net/back_tienda",
+                    //"http://127.0.0.1:5001/domo-tienda/us-central1/back_tienda",
                     {
                         bd: String(bd),
                         metodo: "sincroniza_productos",
