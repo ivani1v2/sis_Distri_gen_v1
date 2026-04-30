@@ -139,7 +139,7 @@
                     <v-col cols="12" sm="4">
                         <h4 class="text-subtitle-1">
                             FECHA TRASLADO: <span class="primary--text">{{ conviertefecha(cabecera_total.fecha_traslado)
-                            }}</span>
+                                }}</span>
                         </h4>
                         <!-- Chip de transporte asignado -->
                         <div v-if="cabecera_total.d_transporte?.usuario_nombre" class="mt-1">
@@ -164,7 +164,7 @@
                             TOTAL VENTA: <span class="green--text text--darken-2">{{ moneda }} {{ t_general }}</span>
                         </h4>
                         <span class="caption">Contado: {{ moneda }} {{ t_contado }} | Crédito: {{ moneda }} {{ t_credito
-                            }}</span>
+                        }}</span>
                     </v-col>
                 </v-row>
             </v-card-text>
@@ -220,7 +220,7 @@
                                 </v-chip>
                             </td>
                             <td class="text-right caption red--text">{{ item.moneda }}{{ redondear(item.pendiente_pago)
-                            }}</td>
+                                }}</td>
                             <td class="text-right caption font-weight-bold">{{ item.moneda }}{{ redondear(item.total) }}
                             </td>
                             <td class="text-center">
@@ -303,7 +303,7 @@
                                     S/.{{ d.precio }}
                                     <strong v-if="d.preciodescuento != 0" class="red--text ml-1">(-S/.{{
                                         d.preciodescuento
-                                    }})</strong>
+                                        }})</strong>
                                 </td>
                                 <td class="text-right caption font-weight-bold">S/.{{
                                     redondear((Number(d.total_antes_impuestos)
@@ -326,7 +326,7 @@
                 <v-card-text class="pt-4">
                     <div class="mb-3 text-subtitle-2 grey--text text--darken-1">
                         Anulando comprobante: <strong class="error--text">{{ comp_anular ? comp_anular.numeracion : ''
-                        }}</strong>
+                            }}</strong>
                     </div>
 
                     <v-select dense outlined clearable :items="motivos_predeterminados"
@@ -445,8 +445,12 @@
                             :class="modo_impresion_comp === 'descarga' ? 'white--text' : ''">
                             <v-icon left small>mdi-download</v-icon> Descargar
                         </v-btn>
+                        <v-btn value="unido" small :color="modo_impresion_comp === 'unido' ? 'teal' : ''"
+                            :class="modo_impresion_comp === 'unido' ? 'white--text' : ''">
+                            <v-icon left small>mdi-file-pdf-box</v-icon> Desc.Unido
+                        </v-btn>
                     </v-btn-toggle>
-                    <v-row justify="center" class="mb-4">
+                    <v-row justify="center" class="mb-4" v-if="modo_impresion_comp !== 'unido'">
                         <v-col cols="8" sm="6" md="5">
                             <v-text-field v-model.number="copias_comprobante" label="Copias" type="number" min="1"
                                 max="10" dense outlined hide-details prepend-inner-icon="mdi-content-copy"
@@ -502,7 +506,7 @@
                 <v-toolbar class="text-caption"
                     :color="guia_individual_tipo === 'transporte' ? 'purple darken-1' : 'cyan darken-1'" dense dark>
                     <v-toolbar-title>{{ guia_individual_tipo === 'transporte' ? 'Guía Transporte' : 'Guía Remisión'
-                    }}</v-toolbar-title>
+                        }}</v-toolbar-title>
                     <v-spacer></v-spacer>
                     <v-btn icon @click="dialogo_guia_individual = false">
                         <v-icon>mdi-close</v-icon>
@@ -891,48 +895,48 @@ export default {
     },
     methods: {
         async revertirSeleccionadosPendiente() {
-  const seleccionados = this.desserts.filter(d =>
-    d.consolida === true && d.estado === "ANULADO"
-  );
+            const seleccionados = this.desserts.filter(d =>
+                d.consolida === true && d.estado === "ANULADO"
+            );
 
-  if (!seleccionados.length) {
-    this.$store.commit("dialogosnackbar", "Seleccione comprobantes ANULADOS para revertir.");
-    return;
-  }
+            if (!seleccionados.length) {
+                this.$store.commit("dialogosnackbar", "Seleccione comprobantes ANULADOS para revertir.");
+                return;
+            }
 
-  if (!confirm(`¿Seguro que desea revertir ${seleccionados.length} comprobante(s) ANULADO(s) a PENDIENTE?`)) return;
+            if (!confirm(`¿Seguro que desea revertir ${seleccionados.length} comprobante(s) ANULADO(s) a PENDIENTE?`)) return;
 
-  try {
-    store.commit("dialogoprogress", true);
+            try {
+                store.commit("dialogoprogress", true);
 
-    const updates = {};
+                const updates = {};
 
-    seleccionados.forEach(item => {
-      updates[`${item.numeracion}/estado`] = "PENDIENTE";
-      updates[`${item.numeracion}/motivo_anulacion`] = null;
-      updates[`${item.numeracion}/fecha_anulacion`] = null;
-      updates[`${item.numeracion}/usuario_anulacion`] = null;
+                seleccionados.forEach(item => {
+                    updates[`${item.numeracion}/estado`] = "PENDIENTE";
+                    updates[`${item.numeracion}/motivo_anulacion`] = null;
+                    updates[`${item.numeracion}/fecha_anulacion`] = null;
+                    updates[`${item.numeracion}/usuario_anulacion`] = null;
 
-      item.estado = "PENDIENTE";
-      item.consolida = false;
-    });
+                    item.estado = "PENDIENTE";
+                    item.consolida = false;
+                });
 
-    await all_Cabecera_p(this.router_grupo).update(updates);
+                await all_Cabecera_p(this.router_grupo).update(updates);
 
-    await this.recalcula_cabecera();
-    await this.actualizaEstadoReparto();
+                await this.recalcula_cabecera();
+                await this.actualizaEstadoReparto();
 
-    this.consolida_t = false;
-    this.filtrarLista();
+                this.consolida_t = false;
+                this.filtrarLista();
 
-    this.$store.commit("dialogosnackbar", "Comprobantes revertidos a PENDIENTE correctamente.");
-  } catch (error) {
-    console.error(error);
-    this.$store.commit("dialogosnackbar", "Error al revertir comprobantes.");
-  } finally {
-    store.commit("dialogoprogress", false);
-  }
-},
+                this.$store.commit("dialogosnackbar", "Comprobantes revertidos a PENDIENTE correctamente.");
+            } catch (error) {
+                console.error(error);
+                this.$store.commit("dialogosnackbar", "Error al revertir comprobantes.");
+            } finally {
+                store.commit("dialogoprogress", false);
+            }
+        },
         abrirDialTransporte() {
             this.dial_transporte_show = true;
         },
@@ -1616,6 +1620,10 @@ export default {
             this.dialogoExporta = false
         },
         async imprime_comprobante(tamano) {
+            if (this.modo_impresion_comp === 'unido') {
+                return this.imprime_comprobante_unido(tamano);
+            }
+
             const array = this.desserts.filter(
                 item => item.consolida === true && item.estado !== 'ANULADO'
             );
@@ -2374,6 +2382,52 @@ export default {
                 this.$store.commit('dialogoprogress');
             }
         },
+        async imprime_comprobante_unido(tamano) {
+            const array = this.desserts.filter(
+                item => item.consolida === true && item.estado !== 'ANULADO'
+            );
+            if (!array.length) {
+                this.$store.commit('dialogosnackbar', 'Seleccione al menos un comprobante.');
+                return;
+            }
+            this.dialogo_imprime = false;
+            this.printDialog = true;
+            this.printTotal = array.length;
+            try {
+                const comprobantes = [];
+
+                for (let i = 0; i < array.length; i++) {
+                    const data = { ...array[i] };
+                    const snapshot = await all_detalle_p(this.router_grupo, data.numeracion).once("value");
+                    if (!snapshot.exists()) continue;
+                    const arraydatos = snapshot.val();
+                    const docCliente = await colClientes().doc(String(data.dni)).get();
+                    if (docCliente.exists) {
+                        const datas = docCliente.data() || {};
+                        data.referencia = this.getReferenciaPrincipal(datas) || datas.referencia || '';
+                    }
+                    comprobantes.push({
+                        cabecera: data,
+                        detalle: arraydatos
+                    });
+                    this.printDone = i + 1;
+                }
+
+                const { pdfGeneraUnido } = await import('../../pdf_comprobantes');
+                await pdfGeneraUnido(
+                    comprobantes,
+                    tamano,
+                    'descarga'
+                );
+                this.$store.commit('dialogosnackbar', `${comprobantes.length} comprobantes unificados en un solo PDF`);
+            } catch (error) {
+                console.error('Error:', error);
+                this.printError = `Error: ${error.message}`;
+                this.$store.commit('dialogosnackbar', 'Error al unir: ' + error.message);
+            } finally {
+                this.printDialog = false;
+            }
+        }
     }
 }
 </script>

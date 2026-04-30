@@ -6,7 +6,7 @@ import "jspdf-autotable";
 import QR from "qrcode-base64";
 let ventanaImpresionActual = null;
 let resolvers = {};
-
+import { PDFDocument } from 'pdf-lib';
 
 function permite_impresion_host() {
   if (store?.state?.esmovil) return false;
@@ -548,6 +548,9 @@ export const impresion58 = async (arrays, qr, modo = 'abre', copias = 1, docId =
     case 'descarga':
       doc.save(arrays.serie + "-" + arrays.correlativo + '.pdf');
       break;
+    case 'buffer':
+      return doc.output("arraybuffer");
+      break;
   }
 };
 
@@ -998,6 +1001,9 @@ export const impresion80 = async (arrays, qr, modo = 'abre', copias = 1, docId =
       break;
     case 'descarga':
       doc.save(arrays.serie + "-" + arrays.correlativo + '.pdf');
+      break;
+    case 'buffer':
+      return doc.output("arraybuffer");
       break;
   }
 };
@@ -1580,6 +1586,9 @@ async function impresionA4(arrays, qr, modo = 'abre', copias = 1, docId = Date.n
     case 'descarga':
       doc.save(arrays.serie + "-" + arrays.correlativo + '.pdf');
       break;
+    case 'buffer':
+      return doc.output("arraybuffer");
+      break;
   }
 }
 export const generaQR = (array) => {
@@ -1593,4 +1602,53 @@ export const generaQR = (array) => {
     size: 600,
   });
   return imgData;
+};
+
+export const pdfGeneraGuiaUnido = async (listaGuias, formato, modo = "descarga") => {
+  try {
+    const pdfCombinado = await PDFDocument.create();
+    const guiasProcesadas = [];
+
+    for (let i = 0; i < listaGuias.length; i++) {
+      const guiaData = listaGuias[i];
+
+      const pdfBuffer = await generaGuia(
+        guiaData,
+        formato,
+        'buffer',
+        1
+      );
+      if (pdfBuffer instanceof ArrayBuffer) {
+        const pdfIndividual = await PDFDocument.load(pdfBuffer);
+        const paginas = await pdfCombinado.copyPages(pdfIndividual,
+          pdfIndividual.getPageIndices()
+        );
+        paginas.forEach(pagina => pdfCombinado.addPage(pagina));
+        guiasProcesadas.push(guiaData.serie + '-' + guiaData.correlativo);
+      }
+    }
+    if (guiasProcesadas.length === 0) {
+      throw new Error('No se pudo procesar ninguna guía');
+    }
+    const pdfBytes = await pdfCombinado.save();
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+
+    if (modo === 'descarga') {
+      const link = document.createElement('a');
+      const nombreArchivo = `guias_unidas_${Date.now()}.pdf`;
+      link.href = URL.createObjectURL(blob);
+      link.download = nombreArchivo;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      return { success: true, count: guiasProcesadas.length };
+    } else if (modo === 'abre') {
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      return { success: true, count: guiasProcesadas.length };
+    }
+    return pdfBytes;
+  } catch (error) {
+    console.error('Error en pdfGeneraGuiaUnido:', error);
+    throw error;
+  }
 };

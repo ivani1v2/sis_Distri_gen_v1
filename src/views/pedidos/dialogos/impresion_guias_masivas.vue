@@ -23,12 +23,16 @@
                             :class="modo_impresion_guia === 'descarga' ? 'white--text' : ''">
                             <v-icon left small>mdi-download</v-icon> Descargar
                         </v-btn>
+                        <v-btn value="unido" small :color="modo_impresion_guia === 'unido' ? 'purple' : ''"
+                            :class="modo_impresion_guia === 'unido' ? 'white--text' : ''">
+                            <v-icon left small>mdi-file-pdf-box</v-icon> Unir Todo
+                        </v-btn>
                     </v-btn-toggle>
 
-                    <v-row justify="center" class="mb-1">
+                    <v-row justify="center" class="mb-1" v-if="modo_impresion_guia !== 'unido'">
                         <v-col cols="8" sm="6" md="5">
-                            <v-text-field v-model.number="copias_guia" label="Copias" type="number" min="1"
-                                max="10" dense outlined hide-details prepend-inner-icon="mdi-content-copy"
+                            <v-text-field v-model.number="copias_guia" label="Copias" type="number" min="1" max="10"
+                                dense outlined hide-details prepend-inner-icon="mdi-content-copy"
                                 background-color="grey lighten-4" class="rounded-lg">
                                 <template v-slot:append>
                                     <v-btn icon small @click="copias_guia = Math.min(copias_guia + 1, 10)">
@@ -70,7 +74,8 @@
                         <h5 class="text-subtitle-1 font-weight-bold mb-1">
                             {{ modo_impresion_guia === 'descarga' ? 'Descargando guías...' : 'Imprimiendo guías...' }}
                         </h5>
-                        <div class="caption mb-2">Formato: {{ formatoGuiaActual === 'A4' ? 'PDF A4' : 'Ticket 80mm' }}</div>
+                        <div class="caption mb-2">Formato: {{ formatoGuiaActual === 'A4' ? 'PDF A4' : 'Ticket 80mm' }}
+                        </div>
                         <div class="caption mb-2">{{ printGuiaDone }} de {{ printGuiaTotal }}</div>
                         <v-progress-linear :value="printGuiaPercent" height="15" color="teal" rounded>
                             <template v-slot:default="{ value }">
@@ -192,7 +197,9 @@ export default {
         },
         async imprimirGuiasFormato(formato) {
             if (!this.guiasPendientes.length) return;
-
+            if (this.modo_impresion_guia === 'unido') {
+                return this.imprimirGuiasUnidas(formato);
+            }
             this.formatoGuiaActual = formato;
             this.imprimiendo = true;
             await new Promise(resolve => setTimeout(resolve, 300));
@@ -296,7 +303,49 @@ export default {
             this.printGuiaError = '';
             this.modo_impresion_guia = 'abre';
             this.copias_guia = 1;
-        }
+        },
+        async imprimirGuiasUnidas(formato) {
+            if (!this.guiasPendientes.length) {
+                store.commit('dialogosnackbar', 'No hay guías seleccionadas.');
+                return;
+            }
+
+            this.imprimiendo = true;
+            this.printGuiaTotal = this.guiasPendientes.length;
+            this.printGuiaDone = 0;
+
+            try {
+                const guias = [];
+
+                for (let i = 0; i < this.guiasPendientes.length; i++) {
+                    const item = this.guiasPendientes[i];
+                    const snapshot = await buscaGuiaremision(item.guia_id).once("value");
+
+                    if (!snapshot.exists()) {
+                        throw new Error(`No se encontró la guía ${item.numeracion}`);
+                    }
+
+                    const datosGuia = snapshot.val();
+                    guias.push(datosGuia);
+                    this.printGuiaDone = i + 1;
+                }
+
+                const { pdfGeneraGuiaUnido } = await import('../../../pdf_guia');
+                await pdfGeneraGuiaUnido(guias, formato, 'descarga');
+
+                store.commit('dialogosnackbar', `${guias.length} guías unificadas en un solo PDF`);
+
+                setTimeout(() => {
+                    this.cerrar();
+                }, 1500);
+            } catch (error) {
+                console.error('Error uniendo guías:', error);
+                this.printGuiaError = `Error: ${error.message}`;
+                store.commit('dialogosnackbar', 'Error al unir guías: ' + error.message);
+            } finally {
+                this.imprimiendo = false;
+            }
+        },
     }
 }
 </script>
