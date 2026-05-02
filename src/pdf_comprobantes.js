@@ -7,6 +7,7 @@ import { NumerosALetras } from "numero-a-letras";
 let modo_genera = "abre";
 let copias_genera = 1;
 import axios from "axios";
+import { PDFDocument } from 'pdf-lib';
 
 let ventanaImpresionActual = null;
 let resolvers = {};
@@ -657,6 +658,9 @@ async function impresion58(arraydatos, qr, cabecera) {
         arraycabe.serie + "-" + arraycabe.correlativoDocEmitido + ".pdf",
       );
       break;
+    case "buffer":
+      return doc.output("arraybuffer");
+      break;
   }
 }
 async function impresion80(arraydatos, qr, cabecera) {
@@ -1187,6 +1191,9 @@ async function impresion80(arraydatos, qr, cabecera) {
       doc.save(
         arraycabe.serie + "-" + arraycabe.correlativoDocEmitido + ".pdf",
       );
+      break;
+    case "buffer":
+      return doc.output("arraybuffer");
       break;
   }
 }
@@ -1739,6 +1746,9 @@ async function impresionA4(array, qr, arraycabecera) {
       doc.save(
         arraycabe.serie + "-" + arraycabe.correlativoDocEmitido + ".pdf",
       );
+      break;
+    case "buffer":
+      return doc.output("arraybuffer");
       break;
   }
 }
@@ -2315,6 +2325,9 @@ async function impresionA5_vertical(array, qr, arraycabecera) {
         arraycabe.serie + "-" + arraycabe.correlativoDocEmitido + ".pdf",
       );
       break;
+    case "buffer":
+      return doc.output("arraybuffer");
+      break;
   }
 }
 async function impresionA5_horizontal(array, qr, arraycabecera) {
@@ -2453,7 +2466,7 @@ async function impresionA5_horizontal(array, qr, arraycabecera) {
   );
   doc.text(texto, boxX + boxW / 2, ySerieA5, "center");
 
-  const yHeaderBottom = Math.max(linea, boxY + boxH) +4;
+  const yHeaderBottom = Math.max(linea, boxY + boxH) + 4;
 
   // --- Marco de datos de cliente ---
   doc.setFontSize(7.5);
@@ -3455,3 +3468,57 @@ function dibujarQrPagoUniversal(doc, qrRegistro, posY, tipo = "A4") {
 
   return posY;
 }
+
+export const pdfGeneraUnido = async (listaComprobantes, medida, modo = "descarga") => {
+  try {
+    const pdfCombinado = await PDFDocument.create();
+    const comprobantesProcesados = [];
+
+    for (let i = 0; i < listaComprobantes.length; i++) {
+      const comprobante = listaComprobantes[i];
+      const pdfBuffer = await pdfGenera(
+        comprobante.detalle,
+        comprobante.cabecera,
+        medida,
+        'buffer',
+        1
+      );
+
+      if (pdfBuffer instanceof ArrayBuffer) {
+        const pdfIndividual = await PDFDocument.load(pdfBuffer);
+        const paginas = await pdfCombinado.copyPages(pdfIndividual,
+          pdfIndividual.getPageIndices()
+        );
+        paginas.forEach(pagina => pdfCombinado.addPage(pagina));
+        comprobantesProcesados.push(comprobante.cabecera.numeracion);
+      }
+    }
+
+    if (comprobantesProcesados.length === 0) {
+      throw new Error('No se pudo procesar ningún comprobante');
+    }
+
+    const pdfBytes = await pdfCombinado.save();
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+
+    if (modo === 'descarga') {
+      const link = document.createElement('a');
+      const nombreArchivo = `comp_${Date.now()}.pdf`;
+      link.href = URL.createObjectURL(blob);
+      link.download = nombreArchivo;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      return { success: true, count: comprobantesProcesados.length };
+    } else if (modo === 'abre') {
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      return { success: true, count: comprobantesProcesados.length };
+    }
+
+    return pdfBytes;
+
+  } catch (error) {
+    console.error('Error en pdfGeneraUnido:', error);
+    throw error;
+  }
+};
